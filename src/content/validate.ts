@@ -12,6 +12,9 @@ import {
   type HudFixed,
   type LegendEntry,
   type LevelDef,
+  type LevelMark,
+  MAX_MARK_NOTE,
+  MAX_MARK_REF,
   type ObjectDef,
   type PackManifest,
   type Params,
@@ -47,9 +50,10 @@ export class ContentError extends Error {
   }
 }
 
-const MAX_LEVEL_SIZE = 256;
-const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const HUD_LABEL_PATTERN = /^[A-Za-z0-9 -]{1,8}$/;
+export const MAX_LEVEL_SIZE_LIMIT = 256;
+const MAX_LEVEL_SIZE = MAX_LEVEL_SIZE_LIMIT;
+export const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+export const HUD_LABEL_PATTERN = /^[A-Za-z0-9 -]{1,8}$/;
 const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 type Rec = Record<string, unknown>;
@@ -59,7 +63,7 @@ function isRecord(value: unknown): value is Rec {
 }
 
 /** Накопитель ошибок с вспомогательными читалками полей. */
-class Checker {
+export class Checker {
   readonly issues: ContentIssue[] = [];
 
   fail(path: string, message: string): void {
@@ -567,6 +571,52 @@ export function validateLevel(
     });
   }
 
+  // Исследовательские пометки (необязательны).
+  const marks: LevelMark[] = [];
+  const markIds = new Set<string>();
+  const rawMarks = rec['marks'] === undefined ? [] : rec['marks'];
+  if (!Array.isArray(rawMarks)) {
+    c.fail('$.marks', 'ожидался массив пометок');
+  } else {
+    rawMarks.forEach((value: unknown, index: number) => {
+      const path = `$.marks[${index}]`;
+      const mark = c.record(value, path);
+      if (!mark) return;
+      const markId = c.str(mark, 'id', path, ID_PATTERN);
+      if (markIds.has(markId)) c.fail(`${path}.id`, `идентификатор «${markId}» уже занят`);
+      markIds.add(markId);
+      const w = c.int(mark, 'w', path, 1, MAX_LEVEL_SIZE, 1);
+      const h = c.int(mark, 'h', path, 1, MAX_LEVEL_SIZE, 1);
+      const x = c.int(mark, 'x', path, 0, MAX_LEVEL_SIZE);
+      const y = c.int(mark, 'y', path, 0, MAX_LEVEL_SIZE);
+      if (x + w > width || y + h > height) {
+        c.fail(path, `область (${x}, ${y}) ${w}×${h} выходит за карту ${width}×${height}`);
+      }
+      const status = mark['status'];
+      if (status !== 'unknown' && status !== 'assumed' && status !== 'confirmed') {
+        c.fail(`${path}.status`, `ожидалось «unknown», «assumed» или «confirmed», получено ${JSON.stringify(status)}`);
+      }
+      const note = mark['note'] === undefined ? '' : mark['note'];
+      if (typeof note !== 'string' || note.length > MAX_MARK_NOTE) {
+        c.fail(`${path}.note`, `заметка — строка не длиннее ${MAX_MARK_NOTE} символов`);
+      }
+      const ref = mark['ref'] === undefined ? '' : mark['ref'];
+      if (typeof ref !== 'string' || ref.length > MAX_MARK_REF) {
+        c.fail(`${path}.ref`, `ссылка на референс — строка не длиннее ${MAX_MARK_REF} символов`);
+      }
+      marks.push({
+        id: markId,
+        x,
+        y,
+        w,
+        h,
+        status: status === 'assumed' || status === 'confirmed' ? status : 'unknown',
+        note: typeof note === 'string' ? note : '',
+        ref: typeof ref === 'string' ? ref : '',
+      });
+    });
+  }
+
   const id = c.str(rec, 'id', '$', ID_PATTERN);
   const level: LevelDef = {
     schemaVersion: c.schemaVersion(rec, '$'),
@@ -581,6 +631,7 @@ export function validateLevel(
     start,
     objects,
     transitions,
+    marks,
   };
   c.done(source);
   return level;
