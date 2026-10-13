@@ -1,4 +1,4 @@
-import type { PackManifest, RuleParams } from '../../src/content/schema';
+import type { FireRules, PackManifest, RuleParams } from '../../src/content/schema';
 import { assemblePack } from '../../src/content/validate';
 import {
   createContext,
@@ -9,6 +9,12 @@ import {
 } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
 import { loadRawDemoPack } from './content';
+
+/** Правила стрельбы демо-профиля (в тестах стрельба всегда включена). */
+export function fire(params: RuleParams): FireRules {
+  if (!params.fire) throw new Error('в этих правилах стрельба отключена');
+  return params.fire;
+}
 
 export interface LevelSpec {
   id?: string;

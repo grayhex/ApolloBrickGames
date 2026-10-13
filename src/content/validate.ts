@@ -2,8 +2,13 @@ import {
   SCHEMA_VERSION,
   type AssetCatalog,
   type AssetDef,
+  type AssetProvenance,
   type ContentPack,
   type ContentStatus,
+  DEFAULT_LCD_COLORS,
+  type FireRules,
+  type HudFixed,
+  type HudFont,
   type LegendEntry,
   type LevelDef,
   type ObjectDef,
@@ -44,6 +49,7 @@ export class ContentError extends Error {
 const MAX_LEVEL_SIZE = 256;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const HUD_LABEL_PATTERN = /^[A-Za-z0-9 -]{1,8}$/;
+const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 type Rec = Record<string, unknown>;
 
@@ -146,6 +152,27 @@ export function validateScreenProfile(raw: unknown, source = 'screen'): ScreenPr
     c.fail('$.hud.position', `ожидалось «top» или «bottom», получено ${JSON.stringify(position)}`);
   }
 
+  // Необязательные части HUD: фиксированные тестовые значения и шрифт из ресурса.
+  let fixed: HudFixed | null = null;
+  if (hud['fixed'] !== undefined) {
+    const f = c.record(hud['fixed'], '$.hud.fixed') ?? {};
+    fixed = {
+      lives: c.int(f, 'lives', '$.hud.fixed', 0, 9),
+      label: c.str(f, 'label', '$.hud.fixed', HUD_LABEL_PATTERN),
+      score: c.int(f, 'score', '$.hud.fixed', 0, 99999),
+    };
+  }
+  let font: HudFont | null = null;
+  if (hud['font'] !== undefined) {
+    const f = c.record(hud['font'], '$.hud.font') ?? {};
+    const glyphs = c.str(f, 'glyphs', '$.hud.font');
+    if (new Set(glyphs).size !== glyphs.length) c.fail('$.hud.font.glyphs', 'символы шрифта не должны повторяться');
+    font = { asset: c.str(f, 'asset', '$.hud.font'), glyphs };
+  }
+  const rawColors = rec['colors'] === undefined ? {} : (c.record(rec['colors'], '$.colors') ?? {});
+  const color = (key: 'background' | 'ink'): string =>
+    c.str(rawColors, key, '$.colors', COLOR_PATTERN, DEFAULT_LCD_COLORS[key]);
+
   const profile: ScreenProfile = {
     schemaVersion: c.schemaVersion(rec, '$'),
     id: c.str(rec, 'id', '$', ID_PATTERN),
@@ -154,8 +181,15 @@ export function validateScreenProfile(raw: unknown, source = 'screen'): ScreenPr
       columns: c.int(viewport, 'columns', '$.viewport', 1, 64),
       rows: c.int(viewport, 'rows', '$.viewport', 1, 64),
     },
-    hud: { rows: c.int(hud, 'rows', '$.hud', 0, 4), position: position === 'bottom' ? 'bottom' : 'top' },
+    hud: {
+      rows: c.int(hud, 'rows', '$.hud', 0, 4),
+      position: position === 'bottom' ? 'bottom' : 'top',
+      iconPx: c.int(hud, 'iconPx', '$.hud', 1, 64, c.int(rec, 'cellPx', '$', 1, 64)),
+      fixed,
+      font,
+    },
     cellPx: c.int(rec, 'cellPx', '$', 1, 64),
+    colors: { background: color('background'), ink: color('ink') },
   };
   c.done(source);
   return profile;
@@ -188,6 +222,31 @@ export function validateAssetCatalog(raw: unknown, env: ValidationEnv, source = 
     } else if (def['kind'] === 'image') {
       const fallbackGlyph = c.str(def, 'fallbackGlyph', path, undefined, 'unknown');
       checkGlyph(fallbackGlyph, `${path}.fallbackGlyph`);
+      let provenance: AssetProvenance | null = null;
+      if (def['provenance'] !== undefined) {
+        const pr = c.record(def['provenance'], `${path}.provenance`) ?? {};
+        const status = pr['status'];
+        if (status !== 'draft' && status !== 'confirmed' && status !== 'blocked') {
+          c.fail(`${path}.provenance.status`, `ожидалось «draft», «confirmed» или «blocked», получено ${JSON.stringify(status)}`);
+        }
+        const sources: string[] = [];
+        if (Array.isArray(pr['sources'])) {
+          pr['sources'].forEach((source: unknown, index: number) => {
+            if (typeof source === 'string' && source !== '') sources.push(source);
+            else c.fail(`${path}.provenance.sources[${index}]`, 'ожидалась непустая строка');
+          });
+        } else {
+          c.fail(`${path}.provenance.sources`, 'ожидался массив ссылок на референсы');
+        }
+        provenance = {
+          status: status === 'confirmed' || status === 'blocked' ? status : 'draft',
+          sources,
+          note: typeof pr['note'] === 'string' ? pr['note'] : '',
+          anchor: typeof pr['anchor'] === 'string' ? pr['anchor'] : 'cell-top-left',
+        };
+      }
+      const mirror = def['mirrorWhenLeft'];
+      if (mirror !== undefined && typeof mirror !== 'boolean') c.fail(`${path}.mirrorWhenLeft`, 'ожидалось true/false');
       assets[id] = {
         kind: 'image',
         src: c.str(def, 'src', path),
@@ -196,6 +255,8 @@ export function validateAssetCatalog(raw: unknown, env: ValidationEnv, source = 
         frames: c.int(def, 'frames', path, 1, 256, 1),
         frameTicks: c.int(def, 'frameTicks', path, 1, 10_000, 1),
         fallbackGlyph,
+        mirrorWhenLeft: mirror === true,
+        provenance,
       };
     } else {
       c.fail(`${path}.kind`, `ожидалось «placeholder» или «image», получено ${JSON.stringify(def['kind'])}`);
@@ -223,8 +284,20 @@ export function validateRuleSet(raw: unknown, env: ValidationEnv, source = 'rule
   const move = c.record(p['move'], '$.params.move') ?? {};
   const jump = c.record(p['jump'], '$.params.jump') ?? {};
   const fall = c.record(p['fall'], '$.params.fall') ?? {};
-  const fire = c.record(p['fire'], '$.params.fire') ?? {};
-  const projectile = c.record(fire['projectile'], '$.params.fire.projectile') ?? {};
+  const fireRules = (): FireRules => {
+    const fire = c.record(p['fire'], '$.params.fire') ?? {};
+    const projectile = c.record(fire['projectile'], '$.params.fire.projectile') ?? {};
+    return {
+      intervalTicks: c.int(fire, 'intervalTicks', '$.params.fire', 1, 1000),
+      holdRepeat: c.bool(fire, 'holdRepeat', '$.params.fire'),
+      maxProjectiles: c.int(fire, 'maxProjectiles', '$.params.fire', 1, 16),
+      projectile: {
+        cellsPerStep: c.int(projectile, 'cellsPerStep', '$.params.fire.projectile', 1, 64),
+        stepTicks: c.int(projectile, 'stepTicks', '$.params.fire.projectile', 1, 1000),
+        maxRangeCells: c.int(projectile, 'maxRangeCells', '$.params.fire.projectile', 1, 1000),
+      },
+    };
+  };
 
   const triggers: string[] = [];
   if (Array.isArray(jump['triggers'])) {
@@ -254,16 +327,7 @@ export function validateRuleSet(raw: unknown, env: ValidationEnv, source = 'rule
     },
     jump: { triggers, table, stepTicks: c.int(jump, 'stepTicks', '$.params.jump', 1, 1000) },
     fall: { periodTicks: c.int(fall, 'periodTicks', '$.params.fall', 1, 1000) },
-    fire: {
-      intervalTicks: c.int(fire, 'intervalTicks', '$.params.fire', 1, 1000),
-      holdRepeat: c.bool(fire, 'holdRepeat', '$.params.fire'),
-      maxProjectiles: c.int(fire, 'maxProjectiles', '$.params.fire', 1, 16),
-      projectile: {
-        cellsPerStep: c.int(projectile, 'cellsPerStep', '$.params.fire.projectile', 1, 64),
-        stepTicks: c.int(projectile, 'stepTicks', '$.params.fire.projectile', 1, 1000),
-        maxRangeCells: c.int(projectile, 'maxRangeCells', '$.params.fire.projectile', 1, 1000),
-      },
-    },
+    fire: p['fire'] === null ? null : fireRules(),
     lives: c.int(p, 'lives', '$.params', 1, 99),
     timerLimitTicks: c.int(p, 'timerLimitTicks', '$.params', 0, 1_000_000),
     deathDelayTicks: c.int(p, 'deathDelayTicks', '$.params', 0, 10_000),
@@ -476,7 +540,7 @@ export function validatePackManifest(raw: unknown, source = 'manifest'): PackMan
     firstLevel: c.str(rec, 'firstLevel', '$'),
     sprites: {
       hero: c.str(sprites, 'hero', '$.sprites'),
-      projectile: c.str(sprites, 'projectile', '$.sprites'),
+      projectile: sprites['projectile'] === undefined ? null : c.str(sprites, 'projectile', '$.sprites'),
       life: c.str(sprites, 'life', '$.sprites'),
     },
   };
@@ -526,8 +590,27 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
     }
   }
   for (const [role, assetId] of Object.entries(manifest.sprites)) {
-    if (!(assetId in assets.assets)) {
+    if (assetId !== null && !(assetId in assets.assets)) {
       issues.push(`sprites.${role}: ресурс «${assetId}» не найден в каталоге «${assets.id}»`);
+    }
+  }
+  const { font, fixed } = screen.hud;
+  if (font) {
+    const fontAsset = assets.assets[font.asset];
+    if (!fontAsset) {
+      issues.push(`screen.hud.font.asset: ресурс «${font.asset}» не найден в каталоге «${assets.id}»`);
+    } else if (fontAsset.kind !== 'image' || fontAsset.frames !== font.glyphs.length) {
+      issues.push(
+        `screen.hud.font: «${font.asset}» должен быть картинкой с ${font.glyphs.length} кадрами (по числу символов «${font.glyphs}»)`,
+      );
+    }
+    if (fixed) {
+      const text = `${fixed.label}${String(fixed.score).padStart(5, '0')}`;
+      for (const char of text) {
+        if (char !== ' ' && !font.glyphs.includes(char)) {
+          issues.push(`screen.hud.fixed: символа «${char}» нет в шрифте HUD «${font.glyphs}»`);
+        }
+      }
     }
   }
   if (issues.length > 0) throw new ContentError(manifest.id, issues);

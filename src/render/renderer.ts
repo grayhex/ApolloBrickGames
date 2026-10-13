@@ -2,16 +2,13 @@ import type { LevelDef, ScreenProfile } from '../content/schema';
 import type { GameState } from '../core/state';
 import type { AssetStore } from './assets';
 import type { CameraPos } from './camera';
-import { drawText, FONT_HEIGHT, textWidth } from './font';
+import { drawText as drawBuiltinText, FONT_HEIGHT, textWidth } from './font';
 import { computeLayout, type Layout } from './layout';
-
-/** Нейтральная монохромная «LCD-подобная» палитра. Это не цвета оригинала. */
-export const LCD_BG = '#a9b79a';
-export const LCD_INK = '#202a1e';
 
 export interface Sprites {
   hero: string;
-  projectile: string;
+  /** null — снарядов в этих правилах нет. */
+  projectile: string | null;
   life: string;
 }
 
@@ -39,12 +36,16 @@ export class Renderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly screen: ScreenProfile;
   private readonly assets: AssetStore;
+  private readonly bg: string;
+  private readonly ink: string;
   private layout: Layout;
 
   constructor(canvas: HTMLCanvasElement, screen: ScreenProfile, assets: AssetStore) {
     this.canvas = canvas;
     this.screen = screen;
     this.assets = assets;
+    this.bg = screen.colors.background;
+    this.ink = screen.colors.ink;
     this.logicalWidth = screen.viewport.columns * screen.cellPx;
     this.logicalHeight = (screen.viewport.rows + screen.hud.rows) * screen.cellPx;
     this.layout = computeLayout(this.logicalWidth, this.logicalHeight, 1, this.logicalWidth, this.logicalHeight);
@@ -83,7 +84,7 @@ export class Renderer {
 
     ctx.setTransform(layout.scale, 0, 0, layout.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = LCD_BG;
+    ctx.fillStyle = this.bg;
     ctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
 
     ctx.save();
@@ -114,7 +115,7 @@ export class Renderer {
         const wy = camera.y + cy;
         const char = level.rows[wy]?.[wx];
         const asset = char === undefined ? null : level.legend[char]?.asset;
-        if (asset) this.assets.draw(ctx, asset, tick, cx * cell, cy * cell + playTop, cell, LCD_INK);
+        if (asset) this.assets.draw(ctx, asset, tick, cx * cell, cy * cell + playTop, cell, this.ink);
       }
     }
 
@@ -124,21 +125,27 @@ export class Renderer {
       for (let dy = 0; dy < def.h; dy++) {
         for (let dx = 0; dx < def.w; dx++) {
           const p = this.cellToPixel(camera, object.x + dx, object.y + dy, playTop);
-          this.assets.draw(ctx, def.asset, tick, p.x, p.y, cell, LCD_INK);
+          this.assets.draw(ctx, def.asset, tick, p.x, p.y, cell, this.ink);
         }
       }
     });
 
-    for (const projectile of state.projectiles) {
-      const p = this.cellToPixel(camera, projectile.x, projectile.y, playTop);
-      this.assets.draw(ctx, sprites.projectile, tick, p.x, p.y, cell, LCD_INK, projectile.dir === -1);
+    const projectileSprite = sprites.projectile;
+    if (projectileSprite) {
+      for (const projectile of state.projectiles) {
+        const p = this.cellToPixel(camera, projectile.x, projectile.y, playTop);
+        const flip = projectile.dir === -1 && this.assets.mirrorsWhenLeft(projectileSprite);
+        this.assets.draw(ctx, projectileSprite, tick, p.x, p.y, cell, this.ink, flip);
+      }
     }
 
     // В фазе смерти герой мигает.
     const blink = state.phase === 'dead' && Math.floor(state.tick / 2) % 2 === 1;
     if (!blink) {
       const p = this.cellToPixel(camera, state.hero.x, state.hero.y, playTop);
-      this.assets.draw(ctx, sprites.hero, tick, p.x, p.y, cell, LCD_INK, state.hero.facing === -1);
+      // Зеркало для взгляда влево — только если ресурс это допускает (в каталоге по умолчанию — нет).
+      const flip = state.hero.facing === -1 && this.assets.mirrorsWhenLeft(sprites.hero);
+      this.assets.draw(ctx, sprites.hero, tick, p.x, p.y, cell, this.ink, flip);
     }
   }
 
@@ -180,24 +187,45 @@ export class Renderer {
     }
   }
 
-  /** HUD: жизни слева, подпись участка по центру, счёт справа. Значения временные (demo). */
+  /**
+   * HUD: значки жизни слева, подпись по центру, пятизначное число справа.
+   * Значения — из состояния игры либо фиксированные тестовые (`hud.fixed`); это не структура оригинала.
+   */
   private drawHud(ctx: CanvasRenderingContext2D, input: RenderInput, top: number, height: number): void {
     const { state, level, sprites } = input;
-    const { cellPx: cell } = this.screen;
-    const iconSize = Math.min(cell, height);
-    const lives = Math.min(state.lives, 5);
+    const { hud } = this.screen;
+    const lives = Math.min(hud.fixed ? hud.fixed.lives : state.lives, 5);
+    const label = hud.fixed ? hud.fixed.label : level.hudLabel;
+    const score = String(Math.min(hud.fixed ? hud.fixed.score : state.score, 99999)).padStart(5, '0');
+
+    const icon = Math.min(hud.iconPx, height);
+    const iconY = top + Math.floor((height - icon) / 2);
     for (let i = 0; i < lives; i++) {
-      this.assets.draw(ctx, sprites.life, state.worldTick, i * iconSize, top, iconSize, LCD_INK);
+      this.assets.draw(ctx, sprites.life, state.worldTick, i * icon + (i > 0 ? i : 0), iconY, icon, this.ink);
     }
 
-    const textY = top + Math.floor((height - FONT_HEIGHT) / 2);
-    const label = level.hudLabel;
-    drawText(ctx, label, Math.floor((this.logicalWidth - textWidth(label)) / 2), textY, LCD_INK);
-    const score = String(Math.min(state.score, 99999)).padStart(5, '0');
-    drawText(ctx, score, this.logicalWidth - textWidth(score) - 1, textY, LCD_INK);
+    const margin = Math.max(1, Math.floor(this.screen.cellPx / 8));
+    const font = hud.font;
+    const fontDef = font ? this.assets.def(font.asset) : undefined;
+    if (font && fontDef?.kind === 'image' && this.assets.hasImage(font.asset)) {
+      const textY = top + Math.floor((height - fontDef.frameHeight) / 2);
+      const width = (text: string): number => text.length * fontDef.frameWidth;
+      const drawText = (text: string, x: number): void => {
+        [...text].forEach((char, index) => {
+          const frame = font.glyphs.indexOf(char);
+          if (frame >= 0) this.assets.drawFrame(ctx, font.asset, frame, x + index * fontDef.frameWidth, textY);
+        });
+      };
+      drawText(label, Math.floor((this.logicalWidth - width(label)) / 2));
+      drawText(score, this.logicalWidth - width(score) - margin);
+    } else {
+      const textY = top + Math.floor((height - FONT_HEIGHT) / 2);
+      drawBuiltinText(ctx, label, Math.floor((this.logicalWidth - textWidth(label)) / 2), textY, this.ink);
+      drawBuiltinText(ctx, score, this.logicalWidth - textWidth(score) - margin, textY, this.ink);
+    }
 
-    ctx.fillStyle = LCD_INK;
-    const separatorY = this.screen.hud.position === 'top' ? top + height - 1 : top;
+    ctx.fillStyle = this.ink;
+    const separatorY = hud.position === 'top' ? top + height - 1 : top;
     ctx.fillRect(0, separatorY, this.logicalWidth, 1);
   }
 }

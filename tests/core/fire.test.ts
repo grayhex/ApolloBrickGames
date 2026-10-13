@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contextFor, corridor, startedGame } from '../helpers/builders';
+import { contextFor, corridor, fire, startedGame } from '../helpers/builders';
 import { idle, run } from '../helpers/script';
 
 const fireOnce = { press: ['fire'], held: ['fire'], ticks: 1 } as const;
@@ -70,7 +70,7 @@ describe('выстрел и снаряд', () => {
     const ctx = contextFor(
       [{ rows: ['..........', '..........', '....#.....', '##########'], start: { x: 1, y: 2 } }],
       (p) => {
-        p.fire.projectile.cellsPerStep = 8;
+        fire(p).projectile.cellsPerStep = 8;
       },
     );
     const game = startedGame(ctx);
@@ -92,7 +92,7 @@ describe('выстрел и снаряд', () => {
         },
       ],
       (p) => {
-        p.fire.projectile.cellsPerStep = 12;
+        fire(p).projectile.cellsPerStep = 12;
       },
     );
     const game = startedGame(ctx);
@@ -114,9 +114,9 @@ describe('выстрел и снаряд', () => {
 
   it('удержание огня повторяет выстрелы с заданным интервалом', () => {
     const ctx = contextFor([{ rows: corridor(60), start: { x: 1, y: 1 } }], (p) => {
-      p.fire.maxProjectiles = 16;
-      p.fire.projectile.maxRangeCells = 100;
-      p.fire.projectile.cellsPerStep = 1;
+      fire(p).maxProjectiles = 16;
+      fire(p).projectile.maxRangeCells = 100;
+      fire(p).projectile.cellsPerStep = 1;
     });
     const game = startedGame(ctx);
     const events = run(game, { held: ['fire'], ticks: 13 });
@@ -127,8 +127,8 @@ describe('выстрел и снаряд', () => {
 
   it('быстрые повторные нажатия внутри интервала не дают лишних выстрелов', () => {
     const ctx = contextFor([{ rows: corridor(60), start: { x: 1, y: 1 } }], (p) => {
-      p.fire.holdRepeat = false;
-      p.fire.maxProjectiles = 16;
+      fire(p).holdRepeat = false;
+      fire(p).maxProjectiles = 16;
     });
     const game = startedGame(ctx);
     const events = run(game, { press: ['fire'] }, { press: ['fire'] }, { press: ['fire'] });
@@ -137,10 +137,10 @@ describe('выстрел и снаряд', () => {
 
   it('лимит снарядов: пока снаряд в полёте, новый не создаётся', () => {
     const ctx = contextFor([{ rows: corridor(60), start: { x: 1, y: 1 } }], (p) => {
-      p.fire.maxProjectiles = 1;
-      p.fire.intervalTicks = 1;
-      p.fire.projectile.cellsPerStep = 1;
-      p.fire.projectile.maxRangeCells = 100;
+      fire(p).maxProjectiles = 1;
+      fire(p).intervalTicks = 1;
+      fire(p).projectile.cellsPerStep = 1;
+      fire(p).projectile.maxRangeCells = 100;
     });
     const game = startedGame(ctx);
     const events = run(game, { held: ['fire'], ticks: 8 });
@@ -160,7 +160,7 @@ describe('выстрел и снаряд', () => {
         },
       ],
       (p) => {
-        p.fire.projectile.cellsPerStep = 1;
+        fire(p).projectile.cellsPerStep = 1;
       },
     );
     const game = startedGame(ctx);

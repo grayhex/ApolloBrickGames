@@ -87,7 +87,7 @@ export async function startApp(): Promise<void> {
   const manifestUrl = new URL(`${import.meta.env.BASE_URL}content/demo/pack.json`, window.location.href).href;
   const { pack, assetsUrl } = await loadContentPack(manifestUrl, validationEnv(DEMO_BEHAVIORS, GLYPH_NAMES));
 
-  const assets = new AssetStore(pack.assets, assetsUrl);
+  const assets = new AssetStore(pack.assets, assetsUrl, pack.screen.colors.ink);
   const assetWarnings = await assets.load();
   for (const warning of assetWarnings) console.warn(warning);
 

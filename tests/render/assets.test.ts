@@ -11,15 +11,16 @@ const catalog: AssetCatalog = {
   status: 'demo',
   assets: {
     block: { kind: 'placeholder', glyph: 'block' },
-    hero: { kind: 'image', src: 'img/hero.png', frameWidth: 8, frameHeight: 8, frames: 4, frameTicks: 3, fallbackGlyph: 'hero' },
-    lost: { kind: 'image', src: 'img/lost.png', frameWidth: 8, frameHeight: 8, frames: 1, frameTicks: 1, fallbackGlyph: 'unknown' },
+    hero: { kind: 'image', src: 'img/hero.png', frameWidth: 8, frameHeight: 8, frames: 4, frameTicks: 3, fallbackGlyph: 'hero', mirrorWhenLeft: false, provenance: null },
+    lost: { kind: 'image', src: 'img/lost.png', frameWidth: 8, frameHeight: 8, frames: 1, frameTicks: 1, fallbackGlyph: 'unknown', mirrorWhenLeft: false, provenance: null },
   },
 };
 
 describe('AssetStore', () => {
   it('загружает картинки по адресу относительно каталога; недоступные заменяются заглушкой с предупреждением', async () => {
     const requested: string[] = [];
-    const store = new AssetStore(catalog, 'https://example.test/CrocodileMario/content/demo/assets.json', async (url) => {
+    const store = new AssetStore(catalog, 'https://example.test/CrocodileMario/content/demo/assets.json', '#223344', async (url, ink) => {
+      expect(ink).toBe('#223344');
       requested.push(url);
       return url.endsWith('hero.png') ? ({} as CanvasImageSource) : null;
     });
@@ -33,7 +34,7 @@ describe('AssetStore', () => {
   });
 
   it('кадр анимации выбирается по такту симуляции', () => {
-    const store = new AssetStore(catalog, 'https://example.test/a.json', async () => null);
+    const store = new AssetStore(catalog, 'https://example.test/a.json', '#000000', async () => null);
     const frames = [0, 1, 2, 3, 4, 5, 6, 9, 11, 12].map((tick) => store.frameIndex('hero', tick));
     expect(frames).toEqual([0, 0, 0, 1, 1, 1, 2, 3, 3, 0]);
     expect(store.frameIndex('block', 99)).toBe(0);

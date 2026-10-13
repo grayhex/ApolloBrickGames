@@ -452,6 +452,7 @@ export class Game implements SimApi {
     const s = this.state;
     const hero = s.hero;
     const fire = this.ctx.rules.params.fire;
+    if (!fire) return; // стрельбы в этих правилах нет
     if (hero.fireCooldown > 0) hero.fireCooldown -= 1;
 
     const wantsFire = (frame.pressed & FIRE) !== 0 || (fire.holdRepeat && (frame.held & FIRE) !== 0);
@@ -476,7 +477,9 @@ export class Game implements SimApi {
 
   private updateProjectiles(): void {
     const s = this.state;
-    const { stepTicks } = this.ctx.rules.params.fire.projectile;
+    const fire = this.ctx.rules.params.fire;
+    if (!fire) return;
+    const { stepTicks } = fire.projectile;
     const survivors: ProjectileState[] = [];
     for (const projectile of s.projectiles) {
       projectile.timer += 1;
@@ -485,7 +488,7 @@ export class Game implements SimApi {
         continue;
       }
       projectile.timer = 0;
-      if (this.advanceProjectile(projectile)) survivors.push(projectile);
+      if (this.advanceProjectile(projectile, fire.projectile)) survivors.push(projectile);
     }
     s.projectiles = survivors;
   }
@@ -495,9 +498,11 @@ export class Game implements SimApi {
    * поэтому быстрый снаряд не пролетает сквозь стену или цель.
    * Возвращает false, если снаряд удалён.
    */
-  private advanceProjectile(projectile: ProjectileState): boolean {
+  private advanceProjectile(
+    projectile: ProjectileState,
+    { cellsPerStep, maxRangeCells }: { cellsPerStep: number; maxRangeCells: number },
+  ): boolean {
     const level = this.level;
-    const { cellsPerStep, maxRangeCells } = this.ctx.rules.params.fire.projectile;
 
     // Объект мог сам зайти в клетку снаряда (патруль едет навстречу).
     if (this.projectileHitsAt(projectile.x, projectile.y)) return false;
