@@ -9,6 +9,13 @@ export interface View {
   scale: number;
   tx: number;
   ty: number;
+  /** Высота клетки относительно её ширины (у LCD-клетки 128 × 112 это 0,875); по умолчанию 1. */
+  ratio?: number;
+}
+
+/** CSS-пикселей на клетку по вертикали. */
+export function yScale(view: View): number {
+  return view.scale * (view.ratio ?? 1);
 }
 
 export const MIN_SCALE = 4;
@@ -20,11 +27,11 @@ export function clampScale(scale: number): number {
 
 /** Точка холста (CSS-пиксели) → координаты карты в клетках (дробные). */
 export function screenToWorld(view: View, sx: number, sy: number): Pt {
-  return { x: (sx - view.tx) / view.scale, y: (sy - view.ty) / view.scale };
+  return { x: (sx - view.tx) / view.scale, y: (sy - view.ty) / yScale(view) };
 }
 
 export function worldToScreen(view: View, wx: number, wy: number): Pt {
-  return { x: view.tx + wx * view.scale, y: view.ty + wy * view.scale };
+  return { x: view.tx + wx * view.scale, y: view.ty + wy * yScale(view) };
 }
 
 /** Клетка под точкой холста. */
@@ -38,7 +45,7 @@ export function zoomAt(view: View, factor: number, sx: number, sy: number): View
   const scale = clampScale(view.scale * factor);
   if (scale === view.scale) return view;
   const k = scale / view.scale;
-  return { scale, tx: sx - (sx - view.tx) * k, ty: sy - (sy - view.ty) * k };
+  return { ...view, scale, tx: sx - (sx - view.tx) * k, ty: sy - (sy - view.ty) * k };
 }
 
 export function panBy(view: View, dx: number, dy: number): View {
@@ -46,16 +53,16 @@ export function panBy(view: View, dx: number, dy: number): View {
 }
 
 /** Вписать область (в клетках) в холст с отступом. */
-export function fitView(viewW: number, viewH: number, cols: number, rows: number, margin = 24): View {
+export function fitView(viewW: number, viewH: number, cols: number, rows: number, margin = 24, ratio = 1): View {
   const availW = Math.max(1, viewW - margin * 2);
   const availH = Math.max(1, viewH - margin * 2);
-  const scale = clampScale(Math.min(availW / Math.max(1, cols), availH / Math.max(1, rows)));
-  return { scale, tx: (viewW - cols * scale) / 2, ty: (viewH - rows * scale) / 2 };
+  const scale = clampScale(Math.min(availW / Math.max(1, cols), availH / Math.max(1, rows * ratio)));
+  return { scale, ratio, tx: (viewW - cols * scale) / 2, ty: (viewH - rows * scale * ratio) / 2 };
 }
 
 /** Изменение размера холста: центр видимой области остаётся на месте, масштаб тот же. */
 export function resizeKeepCenter(view: View, oldW: number, oldH: number, newW: number, newH: number): View {
-  return { scale: view.scale, tx: view.tx + (newW - oldW) / 2, ty: view.ty + (newH - oldH) / 2 };
+  return { ...view, tx: view.tx + (newW - oldW) / 2, ty: view.ty + (newH - oldH) / 2 };
 }
 
 /** Пересчёт clientX/clientY события мыши в CSS-координаты холста (учитывает масштаб и рамку элемента). */

@@ -84,4 +84,23 @@ describe('координаты рабочей области', () => {
     expect(visibleCells(view, 800, 600, 13, 6)).toEqual({ x0: 0, y0: 0, x1: 13, y1: 6 });
     expect(visibleCells({ scale: 32, tx: -64, ty: 0 }, 160, 96, 13, 6)).toEqual({ x0: 2, y0: 0, x1: 7, y1: 3 });
   });
+
+  it('неквадратная клетка LCD (128 × 112): клетка под курсором считается по своей высоте, zoom и вписывание сохраняют пропорцию', () => {
+    const v: View = { scale: 64, ratio: 0.875, tx: 10, ty: 20 };
+    // Высота клетки 56 CSS-пикселей: строка 3 начинается на 20 + 3 * 56 = 188.
+    expect(cellAtScreen(v, 10 + 64 * 2, 187)).toEqual({ x: 2, y: 2 });
+    expect(cellAtScreen(v, 10 + 64 * 2, 189)).toEqual({ x: 2, y: 3 });
+    expect(worldToScreen(v, 1, 1)).toEqual({ x: 74, y: 76 });
+    const zoomed = zoomAt(v, 1.5, 200, 100);
+    expect(zoomed.ratio).toBe(0.875);
+    expect(cellAtScreen(zoomed, 200, 100)).toEqual(cellAtScreen(v, 200, 100));
+    const fit = fitView(800, 600, 13, 6, 20, 0.875);
+    expect(fit.ratio).toBe(0.875);
+    const br = worldToScreen(fit, 13, 6);
+    const tl = worldToScreen(fit, 0, 0);
+    expect(tl.x + br.x).toBeCloseTo(800, 6);
+    expect(tl.y + br.y).toBeCloseTo(600, 6);
+    expect(resizeKeepCenter(fit, 800, 600, 900, 700).ratio).toBe(0.875);
+  });
 });
+

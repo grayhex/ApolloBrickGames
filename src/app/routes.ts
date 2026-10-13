@@ -1,5 +1,5 @@
 /** Маршруты на hash: работают в подкаталоге /CrocodileMario/ без переписывания адресов на сервере. */
-export type RouteName = 'room' | 'tech' | 'sheet';
+export type RouteName = 'room' | 'tech' | 'sheet' | 'editor';
 
 export function parseRoute(hash: string): RouteName {
   const path = hash.replace(/^#\/?/, '').split(/[?#]/)[0] ?? '';
@@ -8,6 +8,8 @@ export function parseRoute(hash: string): RouteName {
       return 'tech';
     case 'sheet':
       return 'sheet';
+    case 'editor':
+      return 'editor';
     default:
       return 'room';
   }
