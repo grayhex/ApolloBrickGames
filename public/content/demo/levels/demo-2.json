@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-2",
+  "status": "demo",
+  "hudLabel": "D-2",
+  "width": 20,
+  "height": 14,
+  "legend": {
+    ".": {
+      "collision": "empty"
+    },
+    "o": {
+      "collision": "empty",
+      "asset": "tile.deco"
+    },
+    "#": {
+      "collision": "solid",
+      "asset": "tile.block"
+    },
+    "=": {
+      "collision": "solid",
+      "asset": "tile.platform"
+    }
+  },
+  "rows": [
+    "....................",
+    ".........=====......",
+    "....................",
+    "....................",
+    "...=====............",
+    "....................",
+    "....................",
+    ".........=====......",
+    "....................",
+    "....................",
+    "....=====...........",
+    ".................oo.",
+    "....................",
+    "####################"
+  ],
+  "start": {
+    "x": 1,
+    "y": 12
+  },
+  "objects": [
+    {
+      "id": "hazard-2",
+      "type": "hazard",
+      "x": 10,
+      "y": 12,
+      "w": 3,
+      "h": 1,
+      "asset": "obj.hazard"
+    },
+    {
+      "id": "patrol-2",
+      "type": "patroller",
+      "x": 5,
+      "y": 3,
+      "asset": "obj.patroller",
+      "params": {
+        "range": 1,
+        "stepTicks": 3,
+        "hp": 1,
+        "score": 200
+      }
+    },
+    {
+      "id": "finish-2",
+      "type": "finish",
+      "x": 11,
+      "y": 0,
+      "asset": "obj.finish",
+      "params": {
+        "score": 1000
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from": "finish-2",
+      "to": null
+    }
+  ]
+}

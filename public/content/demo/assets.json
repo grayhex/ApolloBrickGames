@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-assets",
+  "status": "demo",
+  "assets": {
+    "tile.block": { "kind": "placeholder", "glyph": "block" },
+    "tile.platform": { "kind": "placeholder", "glyph": "platform" },
+    "tile.deco": { "kind": "placeholder", "glyph": "deco" },
+    "hero": { "kind": "placeholder", "glyph": "hero" },
+    "life": { "kind": "placeholder", "glyph": "life" },
+    "projectile": { "kind": "placeholder", "glyph": "projectile" },
+    "obj.target": { "kind": "placeholder", "glyph": "target" },
+    "obj.patroller": { "kind": "placeholder", "glyph": "patroller" },
+    "obj.hazard": { "kind": "placeholder", "glyph": "hazard" },
+    "obj.finish": { "kind": "placeholder", "glyph": "finish" }
+  }
+}

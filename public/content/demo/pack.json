@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-pack",
+  "title": "Технический демо-пакет (не оригинальный контент)",
+  "status": "demo",
+  "version": 1,
+  "screen": "screen.json",
+  "rules": "rules.json",
+  "assets": "assets.json",
+  "levels": ["levels/demo-1.json", "levels/demo-2.json"],
+  "firstLevel": "demo-1",
+  "sprites": { "hero": "hero", "projectile": "projectile", "life": "life" }
+}
