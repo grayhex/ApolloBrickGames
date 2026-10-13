@@ -14,6 +14,7 @@ import {
   MIN_STICK_THRESHOLD,
   needsGamepadSetup,
 } from '../input/settings';
+import { h } from './dom';
 import type { InputHub } from './hub';
 
 const ACTION_LABELS: Record<Action, string> = {
@@ -30,19 +31,6 @@ const ACTION_LABELS: Record<Action, string> = {
 };
 
 type Capture = { device: 'keyboard' | 'gamepad'; action: Action };
-
-type Child = Node | string;
-
-function h<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  attrs: Record<string, string> = {},
-  ...children: Child[]
-): HTMLElementTagNameMap[K] {
-  const element = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) element.setAttribute(name, value);
-  element.append(...children);
-  return element;
-}
 
 function describeList(sources: readonly string[]): string {
   return sources.length === 0 ? 'не назначено' : sources.map(describeSource).join(' · ');
@@ -92,7 +80,12 @@ export class SettingsDialog {
   }
 
   close(): void {
-    if (this.dialog.open) this.dialog.close();
+    if (!this.dialog.open) return;
+    this.dialog.close();
+    // Браузер возвращает фокус на кнопку, открывшую диалог, а событие `close` приходит позже:
+    // возвращаем управление игре сразу, чтобы Enter/Space не нажали эту кнопку (onClose идемпотентен).
+    this.endCapture();
+    this.options.onClose();
   }
 
   /** Состояние геймпада изменилось — перерисовать, если диалог открыт. */

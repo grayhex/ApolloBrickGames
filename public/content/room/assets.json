@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "id": "room-assets",
+  "status": "demo",
+  "assets": {
+    "tile.ground": {
+      "kind": "image",
+      "src": "../../graphics/lcd/block.svg",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frames": 1,
+      "fallbackGlyph": "block",
+      "provenance": {
+        "status": "draft",
+        "sources": ["ф4 (1-09, крупный план): рамка и сердце", "ф3 (1-02): блоки в ряд"],
+        "note": "Рамка и сердце видны нерезко; верхний и нижний ряды деталей внутри блока — оценка. Нужен резкий крупный фрагмент блока и соседних ячеек.",
+        "anchor": "cell-top-left"
+      }
+    },
+    "hero": {
+      "kind": "image",
+      "src": "../../graphics/lcd/hero.svg",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frames": 1,
+      "fallbackGlyph": "hero",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "blocked",
+        "sources": ["ф4: фигурка в воздухе", "ф3: фигурка у блока", "ф1: фигурка у колонны"],
+        "note": "Героя на референсах несколько пикселей: силуэт — наброск. Нет крупного резкого кадра, нет различий направлений и прыжка; одинаковый силуэт в обе стороны, зеркало не считается подтверждённым.",
+        "anchor": "cell-bottom-center"
+      }
+    },
+    "life": {
+      "kind": "image",
+      "src": "../../graphics/lcd/life.svg",
+      "frameWidth": 8,
+      "frameHeight": 8,
+      "frames": 1,
+      "fallbackGlyph": "life",
+      "provenance": {
+        "status": "blocked",
+        "sources": ["ф1, ф2, ф3: мелкие метки слева в верхней строке"],
+        "note": "Форма меток неразличима; назначение (жизни/попытки) не подтверждено. Нужна верхняя строка крупно.",
+        "anchor": "cell-top-left"
+      }
+    },
+    "hud.digits": {
+      "kind": "image",
+      "src": "../../graphics/lcd/digits.svg",
+      "frameWidth": 9,
+      "frameHeight": 12,
+      "frames": 11,
+      "fallbackGlyph": "unknown",
+      "provenance": {
+        "status": "draft",
+        "sources": ["ф4: 0, 1, 9", "ф1–ф3: 0, 1, 2, 3 и дефис"],
+        "note": "Семисегментная форма. Не наблюдались 4–8 (восстановлены по стандартной схеме); скосы и скругления сегментов не измерены.",
+        "anchor": "frame-top-left"
+      }
+    }
+  }
+}

@@ -497,6 +497,7 @@ export function validateLevel(
     id,
     status: c.status(rec, '$'),
     hudLabel: c.str(rec, 'hudLabel', '$', HUD_LABEL_PATTERN, id.toUpperCase().slice(0, 8)),
+    note: typeof rec['note'] === 'string' ? rec['note'] : '',
     width,
     height,
     legend,

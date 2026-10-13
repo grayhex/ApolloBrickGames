@@ -1,4 +1,5 @@
 import type { DeathCause, GameState } from '../core';
+import { describeSource, type Bindings } from '../input/bindings';
 import type { GamepadStatus } from '../input/gamepad';
 
 /** Почему игра на паузе (для подсказки в оверлее). */
@@ -86,4 +87,16 @@ export function keyboardStatusText(active: boolean): string {
 export function timerText(state: GameState, tickRateHz: number, limitTicks: number): string {
   if (limitTicks <= 0) return 'выкл.';
   return `${Math.max(0, Math.ceil(state.timerTicks / tickRateHz))} с`;
+}
+
+/** Краткая подсказка по клавишам — по текущим привязкам, поэтому после переназначения она меняется. */
+export function controlsHint(bindings: Bindings, withFire: boolean): string {
+  const keys = (...actions: (keyof Bindings)[]): string => {
+    const list = [...new Set(actions.flatMap((action) => bindings[action]))].map(describeSource);
+    return list.length === 0 ? 'не назначено' : list.join(' · ');
+  };
+  const parts = [`Ходьба: ${keys('left', 'right')}`, `Прыжок: ${keys('jump')}`];
+  if (withFire) parts.push(`Огонь: ${keys('fire')}`);
+  parts.push(`Старт: ${keys('start')}`, `Пауза: ${keys('pause')}`);
+  return parts.join(' — ') + '. Геймпад: крестовина или левый стик, нижняя кнопка — прыжок, Start — старт/пауза.';
 }

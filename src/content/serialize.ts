@@ -11,6 +11,7 @@ export function levelToJson(level: LevelDef): Record<string, unknown> {
     id: level.id,
     status: level.status,
     hudLabel: level.hudLabel,
+    ...(level.note === '' ? {} : { note: level.note }),
     width: level.width,
     height: level.height,
     legend: Object.fromEntries(

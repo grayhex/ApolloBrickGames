@@ -18,17 +18,24 @@ function loadImage(url: string): Promise<CanvasImageSource | null> {
   });
 }
 
-/** Загрузка картинки; при ошибке — null (тогда рисуется заглушка). */
-export const browserImageLoader: ImageLoader = async (url, ink) => {
-  if (!/\.svg(\?.*)?$/i.test(url)) return loadImage(url);
+const isSvg = (url: string): boolean => /\.svg(\?.*)?$/i.test(url);
+
+/** SVG по адресу → data-URL с подставленным цветом LCD. null — файл недоступен. */
+export async function tintedSvgDataUrl(url: string, ink: string): Promise<string | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
-    const text = tintSvg(await response.text(), ink);
-    return loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`);
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(tintSvg(await response.text(), ink))}`;
   } catch {
     return null;
   }
+}
+
+/** Загрузка картинки; при ошибке — null (тогда рисуется заглушка). */
+export const browserImageLoader: ImageLoader = async (url, ink) => {
+  if (!isSvg(url)) return loadImage(url);
+  const dataUrl = await tintedSvgDataUrl(url, ink);
+  return dataUrl ? loadImage(dataUrl) : null;
 };
 
 /**

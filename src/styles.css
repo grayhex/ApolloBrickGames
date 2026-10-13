@@ -108,7 +108,6 @@ body {
 
 .game-area canvas {
   display: block;
-  background: var(--lcd);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -226,6 +225,11 @@ input:focus-visible {
   color: var(--warn);
 }
 
+.status__hint {
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
 .status__content {
   color: var(--muted);
   font-size: 0.8rem;
@@ -239,7 +243,10 @@ input:focus-visible {
 }
 
 .debug[hidden],
-.fatal[hidden] {
+.fatal[hidden],
+.sheet[hidden],
+#row-timer[hidden],
+.toolbar__check[hidden] {
   display: none;
 }
 
@@ -383,4 +390,105 @@ input:focus-visible {
   .settings__table th {
     width: auto;
   }
+}
+
+.shell__footer {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.shell__footer a {
+  color: var(--muted);
+}
+
+/* Контрольный лист ресурсов (#/sheet) */
+.route-sheet .stage,
+.route-sheet .toolbar,
+.route-sheet .status,
+.route-sheet .debug {
+  display: none;
+}
+
+.sheet {
+  display: grid;
+  gap: 16px;
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.sheet p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sheet__renders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sheet__renders figure {
+  margin: 0;
+}
+
+.sheet__renders canvas {
+  display: block;
+  image-rendering: pixelated;
+  border: 1px solid var(--line);
+}
+
+.sheet figcaption {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.sheet th,
+.sheet td {
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet__swatch {
+  display: inline-block;
+  padding: 8px;
+  line-height: 0;
+  border: 1px solid var(--line);
+}
+
+.sheet__swatch img {
+  image-rendering: pixelated;
+}
+
+.sheet__status {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font: 700 0.75rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  border: 1px solid currentColor;
+}
+
+.sheet__status--draft {
+  color: var(--warn);
+}
+
+.sheet__status--blocked {
+  color: var(--danger);
+}
+
+.sheet__status--confirmed {
+  color: var(--accent);
 }

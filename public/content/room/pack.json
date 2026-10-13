@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-room-pack",
+  "title": "Однокомнатное демо: тестовая карта, не оригинальный уровень",
+  "status": "demo",
+  "version": 1,
+  "screen": "screen.json",
+  "rules": "rules.json",
+  "assets": "assets.json",
+  "levels": ["levels/demo-room.json"],
+  "firstLevel": "demo-room",
+  "sprites": { "hero": "hero", "life": "life" }
+}

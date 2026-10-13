@@ -16,11 +16,13 @@ import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { browserStorage, needsGamepadSetup } from '../input/settings';
 import { InputHub } from './hub';
+import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { GameSession } from './session';
 import { SettingsDialog } from './settingsUi';
 import { FixedStepper } from './stepper';
 import {
+  controlsHint,
   gamepadStatusText,
   keyboardStatusText,
   overlayView,
@@ -54,7 +56,8 @@ function namesOf(mask: number): string {
   return names.length === 0 ? '—' : names.join(' ');
 }
 
-export async function startApp(): Promise<void> {
+export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
+  const route = GAME_ROUTES[routeName];
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
@@ -65,6 +68,11 @@ export async function startApp(): Promise<void> {
     overlayAction: byId<HTMLButtonElement>('overlay-action'),
     focusHint: byId<HTMLElement>('focus-hint'),
     badge: byId<HTMLElement>('badge'),
+    subtitle: byId<HTMLElement>('subtitle'),
+    rowTimer: byId<HTMLElement>('row-timer'),
+    controlsHint: byId<HTMLElement>('controls-hint'),
+    debugToggle: byId<HTMLElement>('debug-toggle'),
+    routeLink: byId<HTMLAnchorElement>('route-link'),
     btnPause: byId<HTMLButtonElement>('btn-pause'),
     btnRestart: byId<HTMLButtonElement>('btn-restart'),
     btnSettings: byId<HTMLButtonElement>('btn-settings'),
@@ -83,8 +91,17 @@ export async function startApp(): Promise<void> {
     settings: byId<HTMLDialogElement>('settings'),
   };
 
+  // Подписи маршрута ставятся до загрузки данных, чтобы страница не «мигала».
+  refs.badge.textContent = route.badge;
+  refs.subtitle.textContent = route.subtitle;
+  refs.btnRestart.textContent = route.restartLabel;
+  refs.routeLink.href = route.otherRoute.hash;
+  refs.routeLink.textContent = route.otherRoute.label;
+  // Отладка — для разработки: в основной комнате флажок скрыт, `?debug` его возвращает.
+  refs.debugToggle.hidden = routeName === 'room' && !new URLSearchParams(window.location.search).has('debug');
+
   // ── Данные: статические JSON, проверка при загрузке ──────────────────────
-  const manifestUrl = new URL(`${import.meta.env.BASE_URL}content/demo/pack.json`, window.location.href).href;
+  const manifestUrl = new URL(`${import.meta.env.BASE_URL}${route.manifest}`, window.location.href).href;
   const { pack, assetsUrl } = await loadContentPack(manifestUrl, validationEnv(DEMO_BEHAVIORS, GLYPH_NAMES));
 
   const assets = new AssetStore(pack.assets, assetsUrl, pack.screen.colors.ink);
@@ -98,8 +115,7 @@ export async function startApp(): Promise<void> {
   const renderer = new Renderer(refs.canvas, pack.screen, assets);
   const audio: AudioPort = new NullAudio();
   const { sprites } = pack.manifest;
-  const isDemo = [pack.manifest, pack.screen, pack.rules, pack.assets, ...pack.levels].some((part) => part.status === 'demo');
-  refs.badge.hidden = !isDemo;
+  refs.rowTimer.hidden = ctx.rules.params.timerLimitTicks <= 0;
   refs.statusContent.textContent = `Контент: ${pack.manifest.title} (id ${pack.manifest.id}, v${pack.manifest.version}); правила ${pack.rules.id} v${pack.rules.version}; ${ctx.rules.params.tickRateHz} тактов/с — значения демо, не установленные параметры оригинала.`;
 
   // ── Состояние оболочки ───────────────────────────────────────────────────
@@ -228,6 +244,7 @@ export async function startApp(): Promise<void> {
     keyboard: cachedText(refs.statusKeyboard),
     gamepad: cachedText(refs.statusGamepad),
     timer: cachedText(refs.statusTimer),
+    hint: cachedText(refs.controlsHint),
     overlayTitle: cachedText(refs.overlayTitle),
     overlayHint: cachedText(refs.overlayHint),
     debug: cachedText(refs.debugText),
@@ -276,6 +293,7 @@ export async function startApp(): Promise<void> {
     setText.keyboard(keyboardStatusText(keyboardActive));
     const setup = gamepadStatus.kind === 'active' && needsGamepadSetup(hub.settings, gamepadStatus.pad);
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
+    setText.hint(controlsHint(hub.settings.keyboard, route.fireHint));
     setText.timer(timerText(s, ctx.rules.params.tickRateHz, ctx.rules.params.timerLimitTicks));
 
     const warnings: string[] = [...assetWarnings];

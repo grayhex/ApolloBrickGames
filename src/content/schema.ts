@@ -163,6 +163,8 @@ export interface LevelDef {
   status: ContentStatus;
   /** Подпись в HUD; формат подписи оригинала не установлен. */
   hudLabel: string;
+  /** Пояснение к уровню (происхождение, допущения). Метаданные: в симуляции не участвуют. */
+  note: string;
   width: number;
   height: number;
   legend: Record<string, LegendEntry>;

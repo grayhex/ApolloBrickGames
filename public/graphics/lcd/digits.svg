@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="99" height="12" viewBox="0 0 99 12" fill="currentColor" shape-rendering="crispEdges">
+  <!-- ЧЕРНОВИК. Цифры 0–9 и «-», полоса из 11 кадров 9×12 (8×12 знак + 1 зазор), привязка — левый верхний угол кадра. Семисегментная форма: на ф1–ф4 различимы 0, 1, 2, 3, 9 и дефис; 4–8 не наблюдались — восстановлены по стандартной схеме. Скосы и скругления сегментов оригинала не измерены. -->
+  <path d="M1 0h6v2h-6z M6 1h2v5h-2z M6 6h2v5h-2z M1 10h6v2h-6z M0 6h2v5h-2z M0 1h2v5h-2z"/> <!-- 0 -->
+  <path d="M15 1h2v5h-2z M15 6h2v5h-2z"/> <!-- 1 -->
+  <path d="M19 0h6v2h-6z M24 1h2v5h-2z M19 5h6v2h-6z M18 6h2v5h-2z M19 10h6v2h-6z"/> <!-- 2 -->
+  <path d="M28 0h6v2h-6z M33 1h2v5h-2z M28 5h6v2h-6z M33 6h2v5h-2z M28 10h6v2h-6z"/> <!-- 3 -->
+  <path d="M36 1h2v5h-2z M37 5h6v2h-6z M42 1h2v5h-2z M42 6h2v5h-2z"/> <!-- 4 -->
+  <path d="M46 0h6v2h-6z M45 1h2v5h-2z M46 5h6v2h-6z M51 6h2v5h-2z M46 10h6v2h-6z"/> <!-- 5 -->
+  <path d="M55 0h6v2h-6z M54 1h2v5h-2z M55 5h6v2h-6z M54 6h2v5h-2z M55 10h6v2h-6z M60 6h2v5h-2z"/> <!-- 6 -->
+  <path d="M64 0h6v2h-6z M69 1h2v5h-2z M69 6h2v5h-2z"/> <!-- 7 -->
+  <path d="M73 0h6v2h-6z M78 1h2v5h-2z M78 6h2v5h-2z M73 10h6v2h-6z M72 6h2v5h-2z M72 1h2v5h-2z M73 5h6v2h-6z"/> <!-- 8 -->
+  <path d="M82 0h6v2h-6z M87 1h2v5h-2z M87 6h2v5h-2z M82 10h6v2h-6z M81 1h2v5h-2z M82 5h6v2h-6z"/> <!-- 9 -->
+  <path d="M91 5h6v2h-6z"/> <!-- - -->
+</svg>
