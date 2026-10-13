@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-rules",
+  "status": "demo",
+  "version": 1,
+  "params": {
+    "tickRateHz": 20,
+    "move": { "repeatDelayTicks": 4, "repeatIntervalTicks": 3 },
+    "jump": { "triggers": ["jump"], "table": [-1, -1, -1, 0, 0], "stepTicks": 2 },
+    "fall": { "periodTicks": 2 },
+    "fire": {
+      "intervalTicks": 4,
+      "holdRepeat": true,
+      "maxProjectiles": 2,
+      "projectile": { "cellsPerStep": 2, "stepTicks": 1, "maxRangeCells": 10 }
+    },
+    "lives": 3,
+    "timerLimitTicks": 1800,
+    "deathDelayTicks": 20
+  }
+}

@@ -1,0 +1,86 @@
+export type Phase = 'ready' | 'playing' | 'paused' | 'dead' | 'completed' | 'gameOver';
+export type DeathCause = 'enemy' | 'hazard' | 'pit' | 'time';
+
+/** Координаты — целые клетки карты; (0, 0) — левый верхний угол, y растёт вниз. */
+export interface HeroState {
+  x: number;
+  y: number;
+  facing: 1 | -1;
+  /** Направление, которое удерживается сейчас (0 — нет). */
+  moveDir: -1 | 0 | 1;
+  /** Сколько тактов подряд удерживается направление (для повтора шага). */
+  moveHold: number;
+  /** Индекс фазы прыжка в таблице; -1 — не прыгает. */
+  jumpIndex: number;
+  jumpTimer: number;
+  fallTimer: number;
+  airborne: boolean;
+  fireCooldown: number;
+}
+
+export interface ProjectileState {
+  id: number;
+  x: number;
+  y: number;
+  dir: 1 | -1;
+  travelled: number;
+  timer: number;
+}
+
+/** Состояние объекта уровня; индекс совпадает с индексом в LevelDef.objects. */
+export interface ObjectState {
+  id: string;
+  x: number;
+  y: number;
+  active: boolean;
+  hp: number;
+  dir: 1 | -1;
+  timer: number;
+}
+
+export interface StateMeta {
+  rulesId: string;
+  rulesVersion: number;
+  contentId: string;
+  contentVersion: number;
+}
+
+/** Всё состояние симуляции — простые данные, сериализуется через JSON. */
+export interface GameState {
+  stateVersion: 1;
+  meta: StateMeta;
+  seed: number;
+  rng: number;
+  /** Все вызовы step(), включая паузу и меню. */
+  tick: number;
+  /** Только такты, в которые мир действительно считался. */
+  worldTick: number;
+  phase: Phase;
+  levelId: string;
+  hero: HeroState;
+  projectiles: ProjectileState[];
+  nextProjectileId: number;
+  objects: ObjectState[];
+  score: number;
+  lives: number;
+  timerTicks: number;
+  /** Обратный отсчёт фазы `dead`. */
+  phaseTimer: number;
+  deathCause: DeathCause | null;
+}
+
+/** События для внешних систем (звук, HUD). Ядро само ничего не воспроизводит. */
+export type GameEventBody =
+  | { type: 'phaseChanged'; from: Phase; to: Phase }
+  | { type: 'levelStarted'; levelId: string }
+  | { type: 'shot'; x: number; y: number; dir: 1 | -1 }
+  | { type: 'hit'; x: number; y: number; targetId: string; destroyed: boolean }
+  | { type: 'projectileBlocked'; x: number; y: number }
+  | { type: 'jump'; x: number; y: number }
+  | { type: 'land'; x: number; y: number }
+  | { type: 'death'; cause: DeathCause; x: number; y: number }
+  | { type: 'levelCompleted'; levelId: string; next: string | null }
+  | { type: 'gameOver' }
+  | { type: 'gameCompleted' };
+
+export type GameEvent = GameEventBody & { tick: number };

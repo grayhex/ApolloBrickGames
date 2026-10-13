@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "room-screen",
+  "status": "demo",
+  "viewport": { "columns": 13, "rows": 7 },
+  "hud": {
+    "rows": 1,
+    "position": "top",
+    "iconPx": 8,
+    "fixed": { "lives": 3, "label": "0-00", "score": 0 },
+    "font": { "asset": "hud.digits", "glyphs": "0123456789-" }
+  },
+  "cellPx": 16,
+  "colors": { "background": "#c3c5c2", "ink": "#3d434d" }
+}
