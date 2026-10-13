@@ -18,20 +18,58 @@
       </header>
 
       <section class="stage" id="stage" aria-label="Игра">
-        <div
-          class="game-area"
-          id="game-area"
-          tabindex="0"
-          role="application"
-          aria-label="Игровая область. Стрелки или WASD — движение, Пробел или Z — прыжок, X — огонь, Enter — старт, Esc или P — пауза."
-        >
-          <canvas id="screen" aria-hidden="true"></canvas>
-          <div class="overlay" id="overlay" hidden>
-            <p class="overlay__title" id="overlay-title"></p>
-            <p class="overlay__hint" id="overlay-hint"></p>
-            <button type="button" class="btn btn--primary" id="overlay-action"></button>
+        <div class="lid" id="lid" data-shell="blue">
+          <div class="lid__face">
+            <i class="lid__screw lid__screw--tl" aria-hidden="true"></i>
+            <i class="lid__screw lid__screw--tr" aria-hidden="true"></i>
+            <i class="lid__screw lid__screw--bl" aria-hidden="true"></i>
+            <i class="lid__screw lid__screw--br" aria-hidden="true"></i>
+            <div class="lid__leds" aria-hidden="true" title="Светодиоды оригинала: пока только оформление, поведение не установлено">
+              <i class="led led--red"></i><i class="led led--yellow"></i><i class="led led--green"></i>
+            </div>
+            <div class="lid__bezel">
+              <div class="lid__window" id="lcd-window">
+                <div
+                  class="game-area"
+                  id="game-area"
+                  tabindex="0"
+                  role="application"
+                  aria-label="Игровая область. Стрелки или WASD — движение, Пробел или Z — прыжок, X — огонь, Enter — старт, Esc или P — пауза."
+                >
+                  <canvas id="screen" aria-hidden="true"></canvas>
+                  <div class="overlay" id="overlay" hidden>
+                    <p class="overlay__title" id="overlay-title"></p>
+                    <p class="overlay__hint" id="overlay-hint"></p>
+                    <button type="button" class="btn btn--primary" id="overlay-action"></button>
+                  </div>
+                  <p class="focus-hint" id="focus-hint" hidden>Кликните по игре, чтобы управлять с клавиатуры</p>
+                </div>
+              </div>
+            </div>
+            <svg class="lid__art" viewBox="0 0 640 140" aria-hidden="true" focusable="false">
+              <defs>
+                <g id="art-figure" fill="none" stroke-linejoin="round" stroke-linecap="round">
+            <polygon points="20,6 22,5.4 27,5.4 29,7 31,8 32,10 34,11 33.7,13 31,13.6 30,18 27.2,21 24.2,22.3 21,20.4 18.8,18 18.5,13.4 17.2,12.6 17.2,9.7 19,7.5" />
+            <polygon points="17.4,25.5 19.2,24.2 21.2,25 25.7,25 28.4,24.2 30.7,25.7 31.7,28.4 30,31.3 25.7,35.1 23.5,35.2 19.1,32.1 16.7,29.2" />
+            <polygon points="4.1,22.8 5.7,23.2 7.1,24.4 9.8,25.5 8.1,27 6.4,27.1 4.6,28 4.2,25.8" />
+            <polygon points="38.6,25.2 40.6,24.9 42.2,23.9 44,24.5 44.5,27 42.5,28.1 40.7,27.6 38.1,27.9 37.7,26.4" />
+            <polygon points="7.1,36.1 9,36.1 10.4,38.1 13.5,39.3 15.4,38.4 18,35.9 20.3,36.8 18.2,40 15.9,42 12.2,42.4 9.3,41.5 7.1,39.2 6.4,37.3" />
+            <polygon points="28.7,36.4 30.5,36.4 32.1,38.6 34.9,39.8 37.3,38.5 40.4,38.1 40,40.1 37.2,42 34.6,42.4 31.9,40.8 29.4,38.7" />
+                </g>
+              </defs>
+              <use href="#art-figure" transform="translate(16 14) scale(1.7)" />
+              <use href="#art-figure" transform="translate(203 0) scale(1.7)" />
+              <use href="#art-figure" transform="translate(456 2) scale(1.7)" />
+              <g class="lid__mountain" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 134 L90 118 L180 106 L270 92 L350 66 L388 50 L412 58 L450 66 L520 96 L590 118 L638 134 Z" />
+                <path d="M150 124 L260 106 L330 94" />
+                <path d="M240 129 L330 113 L380 78" />
+                <path d="M388 52 L394 84 L420 104" />
+                <path d="M440 82 L470 98 L520 112" />
+              </g>
+            </svg>
           </div>
-          <p class="focus-hint" id="focus-hint" hidden>Кликните по игре, чтобы управлять с клавиатуры</p>
+          <i class="lid__hinge" aria-hidden="true"></i>
         </div>
       </section>
 
@@ -39,6 +77,17 @@
         <button type="button" class="btn" id="btn-pause">Пауза</button>
         <button type="button" class="btn" id="btn-restart">Рестарт</button>
         <button type="button" class="btn" id="btn-settings">Настройки…</button>
+        <label class="toolbar__check" id="shell-toggle" hidden>
+          Корпус
+          <select id="sel-shell">
+            <option value="blue">синий</option>
+            <option value="red">красный</option>
+            <option value="white">белый</option>
+          </select>
+        </label>
+        <label class="toolbar__check" id="ghost-toggle" hidden>
+          <input type="checkbox" id="chk-ghost" /> Неактивные сегменты
+        </label>
         <label class="toolbar__check" id="debug-toggle"><input type="checkbox" id="chk-debug" /> Отладка</label>
       </div>
 

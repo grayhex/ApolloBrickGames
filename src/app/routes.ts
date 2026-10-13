@@ -21,6 +21,8 @@ export interface GameRoute {
   restartLabel: string;
   /** Показывать ли в подсказке управление огнём. */
   fireHint: boolean;
+  /** Оформлять ли экран как крышку корпуса (рамка, светодиоды, рисунок). */
+  lid: boolean;
   /** Ссылка на соседний маршрут (внизу страницы). */
   otherRoute: { hash: string; label: string };
 }
@@ -33,6 +35,7 @@ export const GAME_ROUTES: Record<'room' | 'tech', GameRoute> = {
       'Искусственная тестовая карта, не оригинальный уровень. Тайминги прыжка временные, графика — черновик по неполным референсам.',
     restartLabel: 'Сброс',
     fireHint: false,
+    lid: true,
     otherRoute: { hash: '#/tech', label: 'Техническая демоверсия движка (для разработки)' },
   },
   tech: {
@@ -41,6 +44,7 @@ export const GAME_ROUTES: Record<'room' | 'tech', GameRoute> = {
     subtitle: 'Техническая демоверсия движка: оригинальный контент ещё не восстановлен, уровни и правила — временные.',
     restartLabel: 'Рестарт',
     fireHint: true,
+    lid: false,
     otherRoute: { hash: '#/', label: 'Однокомнатное демо' },
   },
 };

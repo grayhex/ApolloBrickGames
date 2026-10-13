@@ -1,3 +1,4 @@
+import { screenSize } from '../content/schema';
 import { cueForEvent, NullAudio, type AudioPort } from '../audio/audio';
 import {
   actionBit,
@@ -14,7 +15,7 @@ import { AssetStore } from '../render/assets';
 import { GLYPH_NAMES } from '../render/glyphs';
 import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
-import { browserStorage, needsGamepadSetup } from '../input/settings';
+import { browserStorage, needsGamepadSetup, SHELLS } from '../input/settings';
 import { InputHub } from './hub';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
@@ -61,6 +62,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
+    lid: byId<HTMLElement>('lid'),
+    lcdWindow: byId<HTMLElement>('lcd-window'),
+    shellToggle: byId<HTMLElement>('shell-toggle'),
+    selShell: byId<HTMLSelectElement>('sel-shell'),
     canvas: byId<HTMLCanvasElement>('screen'),
     overlay: byId<HTMLElement>('overlay'),
     overlayTitle: byId<HTMLElement>('overlay-title'),
@@ -72,6 +77,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     rowTimer: byId<HTMLElement>('row-timer'),
     controlsHint: byId<HTMLElement>('controls-hint'),
     debugToggle: byId<HTMLElement>('debug-toggle'),
+    ghostToggle: byId<HTMLElement>('ghost-toggle'),
+    chkGhost: byId<HTMLInputElement>('chk-ghost'),
     routeLink: byId<HTMLAnchorElement>('route-link'),
     btnPause: byId<HTMLButtonElement>('btn-pause'),
     btnRestart: byId<HTMLButtonElement>('btn-restart'),
@@ -208,10 +215,29 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   window.addEventListener('gamepaddisconnected', () => hub.poll());
   hub.attach();
 
-  const resize = (): void => {
-    renderer.resize(refs.stage.clientWidth, refs.stage.clientHeight, window.devicePixelRatio);
+  // Окно LCD: пропорции берутся из профиля экрана, Canvas вписывается в него без растяжения.
+  const logical = screenSize(pack.screen);
+  refs.lid.style.setProperty('--lcd-aspect', `${logical.width} / ${logical.height}`);
+  refs.lid.style.setProperty('--lcd-bg', pack.screen.colors.background);
+  refs.stage.classList.toggle('stage--plain', !route.lid);
+  refs.shellToggle.hidden = !route.lid;
+  const applyShell = (): void => {
+    refs.lid.dataset['shell'] = hub.settings.display.shell;
+    refs.selShell.value = hub.settings.display.shell;
   };
-  new ResizeObserver(resize).observe(refs.stage);
+  applyShell();
+  refs.selShell.addEventListener('change', () => {
+    hub.updateSettings((s) => {
+      s.display.shell = SHELLS.find((shell) => shell === refs.selShell.value) ?? 'blue';
+    });
+    applyShell();
+    refocusGame();
+  });
+
+  const resize = (): void => {
+    renderer.resize(refs.lcdWindow.clientWidth, refs.lcdWindow.clientHeight, window.devicePixelRatio);
+  };
+  new ResizeObserver(resize).observe(refs.lcdWindow);
   window.addEventListener('resize', resize);
   resize();
 
@@ -234,6 +260,18 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   refs.btnSettings.addEventListener('click', () => settingsDialog.open());
   refs.btnStep.addEventListener('click', () => {
     session.stepWhilePaused();
+    refocusGame();
+  });
+  // Слой неактивных сегментов: значение по умолчанию задаёт профиль экрана, выбор пользователя сохраняется.
+  const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
+  refs.ghostToggle.hidden = !renderer.hasGhostLayer;
+  refs.chkGhost.checked = ghostOn();
+  renderer.setGhost(ghostOn());
+  refs.chkGhost.addEventListener('change', () => {
+    hub.updateSettings((s) => {
+      s.display.ghost = refs.chkGhost.checked;
+    });
+    renderer.setGhost(refs.chkGhost.checked);
     refocusGame();
   });
   refs.chkDebug.addEventListener('change', () => {

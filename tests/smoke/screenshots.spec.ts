@@ -15,7 +15,6 @@ test('комната: старт и прыжок', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.goto('./');
   await page.waitForSelector('#game-area[data-phase="ready"]');
-  await page.locator('.stage').screenshot({ path: `${dir}/demo-room-ready.png` });
   await page.keyboard.press('Enter');
   await page.keyboard.down('ArrowRight');
   await page.waitForTimeout(700);
@@ -25,9 +24,25 @@ test('комната: старт и прыжок', async ({ page }) => {
   await page.screenshot({ path: `${dir}/demo-room-page.png` });
 });
 
-test('контрольный лист ресурсов', async ({ page }) => {
+test('комната: красный и белый корпус', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
-  await page.goto('./#/sheet');
-  await page.waitForSelector('#sheet table');
-  await page.screenshot({ path: `${dir}/asset-sheet.png`, fullPage: true });
+  await page.goto('./');
+  await page.waitForSelector('#game-area[data-phase="ready"]');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#game-area[data-phase="playing"]');
+  for (const shell of ['red', 'white']) {
+    await page.selectOption('#sel-shell', shell);
+    await page.locator('#stage').screenshot({ path: `${dir}/demo-room-${shell}.png` });
+  }
+});
+
+test.describe('контрольный лист', () => {
+  test.use({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 1 });
+
+  test('сцены с фотографий в рендере игры', async ({ page }) => {
+    mkdirSync(dir, { recursive: true });
+    await page.goto('./#/sheet');
+    await page.waitForSelector('#ref-scene-2');
+    await page.locator('.sheet__scenes').screenshot({ path: `${dir}/asset-sheet.png` });
+  });
 });
