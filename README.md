@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/brand/crocodile-mario-logo.png" alt="Crocodile Mario" width="420">
+</p>
+
 # Crocodile Mario — браузерная реконструкция
 
 > **Статус: техническая демоверсия движка. Оригинальный контент ещё не восстановлен.**
@@ -98,8 +102,9 @@ src/
   audio/     порт аудио (no-op)
   app/       оболочка: цикл, сессия, устройства, интерфейс, настройки
 public/content/demo/   демо-пакет: pack.json, screen.json, rules.json, assets.json, levels/*.json
+public/brand/          логотип для страницы (исходники — в docs/brand/)
 tests/       Vitest (core, content, input, render, app) и Playwright (smoke)
-docs/        architecture.md, content-format.md, reference-status.md, manual-gamepad-check.md, references/
+docs/        architecture.md, content-format.md, reference-status.md, manual-gamepad-check.md, references/, brand/
 ```
 
 ## Документация

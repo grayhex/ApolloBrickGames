@@ -90,6 +90,10 @@ test.afterEach(async ({ page }) => {
 test('демо загружается под /CrocodileMario/: ENGINE DEMO, готов к старту, Canvas нарисован', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator('#badge')).toHaveText('ENGINE DEMO');
+  // Логотип в заголовке: картинка действительно загрузилась под базовым путём (alt остаётся именем заголовка).
+  const logo = page.getByRole('heading', { name: 'Crocodile Mario' }).locator('img');
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
   await expect.poll(phase(page)).toBe('ready');
   await expect(page.locator('#overlay-title')).toHaveText('Готов к старту');
 
