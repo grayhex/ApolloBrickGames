@@ -13,6 +13,9 @@ import type { PadInfo } from './gamepad';
 export const SETTINGS_KEY = 'crocodile-mario:settings:v1';
 export const SETTINGS_VERSION = 1;
 
+export const SHELLS = ['blue', 'red', 'white'] as const;
+export type Shell = (typeof SHELLS)[number];
+
 export const MIN_STICK_THRESHOLD = 0.1;
 export const MAX_STICK_THRESHOLD = 0.9;
 export const DEFAULT_STICK_THRESHOLD = 0.5;
@@ -27,6 +30,12 @@ export interface Settings {
     /** Выбранное устройство (id); null — автоматически. */
     preferredId: string | null;
   };
+  display: {
+    /** Слой неактивных сегментов: true/false — выбор пользователя, null — как задано профилем экрана. */
+    ghost: boolean | null;
+    /** Цвет корпуса вокруг экрана. */
+    shell: Shell;
+  };
 }
 
 export interface StorageLike {
@@ -39,6 +48,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
+    display: { ghost: null, shell: 'blue' },
   };
 }
 
@@ -67,6 +77,8 @@ export function sanitizeSettings(raw: unknown): Settings {
   }
   const threshold = gamepad['stickThreshold'];
   const preferred = gamepad['preferredId'];
+  const display =
+    typeof record['display'] === 'object' && record['display'] !== null ? (record['display'] as Record<string, unknown>) : {};
 
   return {
     version: SETTINGS_VERSION,
@@ -78,6 +90,10 @@ export function sanitizeSettings(raw: unknown): Settings {
           ? clamp(threshold, MIN_STICK_THRESHOLD, MAX_STICK_THRESHOLD)
           : DEFAULT_STICK_THRESHOLD,
       preferredId: typeof preferred === 'string' && preferred !== '' ? preferred : null,
+    },
+    display: {
+      ghost: typeof display['ghost'] === 'boolean' ? display['ghost'] : null,
+      shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
     },
   };
 }

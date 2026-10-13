@@ -3,11 +3,16 @@
   "id": "demo-room-pack",
   "title": "Однокомнатное демо: тестовая карта, не оригинальный уровень",
   "status": "demo",
-  "version": 1,
+  "version": 2,
   "screen": "screen.json",
   "rules": "rules.json",
   "assets": "assets.json",
-  "levels": ["levels/demo-room.json"],
+  "levels": [
+    "levels/demo-room.json"
+  ],
   "firstLevel": "demo-room",
-  "sprites": { "hero": "hero", "life": "life" }
+  "sprites": {
+    "hero": "cell.player",
+    "life": "hud.life"
+  }
 }

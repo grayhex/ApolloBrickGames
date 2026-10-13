@@ -3,61 +3,488 @@
   "id": "room-assets",
   "status": "demo",
   "assets": {
-    "tile.ground": {
+    "cell.player": {
       "kind": "image",
-      "src": "../../graphics/lcd/block.svg",
-      "frameWidth": 16,
-      "frameHeight": 16,
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 4,
+        "y": 4
+      },
       "frames": 1,
-      "fallbackGlyph": "block",
-      "provenance": {
-        "status": "draft",
-        "sources": ["ф4 (1-09, крупный план): рамка и сердце", "ф3 (1-02): блоки в ряд"],
-        "note": "Рамка и сердце видны нерезко; верхний и нижний ряды деталей внутри блока — оценка. Нужен резкий крупный фрагмент блока и соседних ячеек.",
-        "anchor": "cell-top-left"
-      }
-    },
-    "hero": {
-      "kind": "image",
-      "src": "../../graphics/lcd/hero.svg",
-      "frameWidth": 16,
-      "frameHeight": 16,
-      "frames": 1,
-      "fallbackGlyph": "hero",
+      "fallbackGlyph": "unknown",
       "mirrorWhenLeft": false,
       "provenance": {
-        "status": "blocked",
-        "sources": ["ф4: фигурка в воздухе", "ф3: фигурка у блока", "ф1: фигурка у колонны"],
-        "note": "Героя на референсах несколько пикселей: силуэт — наброск. Нет крупного резкого кадра, нет различий направлений и прыжка; одинаковый силуэт в обе стороны, зеркало не считается подтверждённым.",
-        "anchor": "cell-bottom-center"
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/cell_player.png (Персонаж — центральные сегменты)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "cell-center"
       }
     },
-    "life": {
+    "cell.obstacle": {
       "kind": "image",
-      "src": "../../graphics/lcd/life.svg",
-      "frameWidth": 8,
-      "frameHeight": 8,
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 136,
+        "y": 4
+      },
       "frames": 1,
-      "fallbackGlyph": "life",
-      "provenance": {
-        "status": "blocked",
-        "sources": ["ф1, ф2, ф3: мелкие метки слева в верхней строке"],
-        "note": "Форма меток неразличима; назначение (жизни/попытки) не подтверждено. Нужна верхняя строка крупно.",
-        "anchor": "cell-top-left"
-      }
-    },
-    "hud.digits": {
-      "kind": "image",
-      "src": "../../graphics/lcd/digits.svg",
-      "frameWidth": 9,
-      "frameHeight": 12,
-      "frames": 11,
       "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
       "provenance": {
         "status": "draft",
-        "sources": ["ф4: 0, 1, 9", "ф1–ф3: 0, 1, 2, 3 и дефис"],
-        "note": "Семисегментная форма. Не наблюдались 4–8 (восстановлены по стандартной схеме); скосы и скругления сегментов не измерены.",
-        "anchor": "frame-top-left"
+        "sources": [
+          "docs/references/raw/png/1x/cell_obstacle.png (Препятствие — персонаж выключен)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "cell-center"
+      }
+    },
+    "cell.all_on": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 268,
+        "y": 4
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/cell_all_on.png (Все сегменты ячейки включены)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "cell-center"
+      }
+    },
+    "cell.ghost": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 400,
+        "y": 4
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/cell_ghost.png (Неактивные сегменты)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "cell-center"
+      }
+    },
+    "cell.empty": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 532,
+        "y": 4
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/cell_empty.png (Пустая прозрачная ячейка)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "cell-center"
+      }
+    },
+    "cell.object": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 664,
+        "y": 4
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/cell_object.png (Небольшой предмет / метка с фотографии)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "cell-center"
+      }
+    },
+    "hud.life": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 48,
+      "frameHeight": 48,
+      "origin": {
+        "x": 796,
+        "y": 4
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/life.png (Индикатор жизни)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.lives3": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 136,
+      "frameHeight": 48,
+      "origin": {
+        "x": 848,
+        "y": 4
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/lives_3.png (Три жизни)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.0": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 4,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_0.png (Семисегментный символ 0)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.1": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 72,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_1.png (Семисегментный символ 1)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.2": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 140,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_2.png (Семисегментный символ 2)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.3": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 208,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_3.png (Семисегментный символ 3)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.4": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 276,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_4.png (Семисегментный символ 4)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.5": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 344,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_5.png (Семисегментный символ 5)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.6": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 412,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_6.png (Семисегментный символ 6)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.7": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 480,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_7.png (Семисегментный символ 7)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.8": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 548,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_8.png (Семисегментный символ 8)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.9": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 616,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_9.png (Семисегментный символ 9)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.minus": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 684,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_minus.png (Семисегментный символ minus)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.blank": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 752,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_blank.png (Семисегментный символ blank)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.digit.ghost": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 64,
+      "frameHeight": 104,
+      "origin": {
+        "x": 820,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/digit_ghost.png (Выключенные сегменты цифры)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
+      }
+    },
+    "hud.dot": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_atlas.png",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "origin": {
+        "x": 888,
+        "y": 120
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "docs/references/raw/png/1x/dot.png (Точка)",
+          "docs/references/raw/atlas/lcd_atlas.json"
+        ],
+        "note": "Реконструкция владельца по двум фотографиям; контуры приблизительные, не извлечённые оригинальные ресурсы; электрическое разбиение дисплея не установлено (docs/references/raw/README_RU.md).",
+        "anchor": "frame-center"
       }
     }
   }

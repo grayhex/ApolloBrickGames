@@ -7,8 +7,9 @@ import {
   type ContentStatus,
   DEFAULT_LCD_COLORS,
   type FireRules,
+  type Hud,
+  type HudDigits,
   type HudFixed,
-  type HudFont,
   type LegendEntry,
   type LevelDef,
   type ObjectDef,
@@ -146,32 +147,30 @@ export function validateScreenProfile(raw: unknown, source = 'screen'): ScreenPr
   if (!rec) return c.abort(source);
 
   const viewport = c.record(rec['viewport'], '$.viewport') ?? {};
-  const hud = c.record(rec['hud'], '$.hud') ?? {};
-  const position = hud['position'];
-  if (position !== 'top' && position !== 'bottom') {
-    c.fail('$.hud.position', `ожидалось «top» или «bottom», получено ${JSON.stringify(position)}`);
-  }
+  const cell = c.record(rec['cell'], '$.cell') ?? {};
+  const rawMargin = rec['margin'] === undefined ? {} : (c.record(rec['margin'], '$.margin') ?? {});
+  const margin = {
+    left: c.int(rawMargin, 'left', '$.margin', 0, 2048, 0),
+    right: c.int(rawMargin, 'right', '$.margin', 0, 2048, 0),
+    top: c.int(rawMargin, 'top', '$.margin', 0, 2048, 0),
+    bottom: c.int(rawMargin, 'bottom', '$.margin', 0, 2048, 0),
+  };
+  const cellSize = { width: c.int(cell, 'width', '$.cell', 1, 1024), height: c.int(cell, 'height', '$.cell', 1, 1024) };
 
-  // Необязательные части HUD: фиксированные тестовые значения и шрифт из ресурса.
-  let fixed: HudFixed | null = null;
-  if (hud['fixed'] !== undefined) {
-    const f = c.record(hud['fixed'], '$.hud.fixed') ?? {};
-    fixed = {
-      lives: c.int(f, 'lives', '$.hud.fixed', 0, 9),
-      label: c.str(f, 'label', '$.hud.fixed', HUD_LABEL_PATTERN),
-      score: c.int(f, 'score', '$.hud.fixed', 0, 99999),
-    };
-  }
-  let font: HudFont | null = null;
-  if (hud['font'] !== undefined) {
-    const f = c.record(hud['font'], '$.hud.font') ?? {};
-    const glyphs = c.str(f, 'glyphs', '$.hud.font');
-    if (new Set(glyphs).size !== glyphs.length) c.fail('$.hud.font.glyphs', 'символы шрифта не должны повторяться');
-    font = { asset: c.str(f, 'asset', '$.hud.font'), glyphs };
-  }
   const rawColors = rec['colors'] === undefined ? {} : (c.record(rec['colors'], '$.colors') ?? {});
   const color = (key: 'background' | 'ink'): string =>
     c.str(rawColors, key, '$.colors', COLOR_PATTERN, DEFAULT_LCD_COLORS[key]);
+
+  const smoothing = rec['smoothing'];
+  if (smoothing !== undefined && typeof smoothing !== 'boolean') c.fail('$.smoothing', 'ожидалось true/false');
+
+  let ghost: ScreenProfile['ghost'] = null;
+  if (rec['ghost'] !== undefined && rec['ghost'] !== null) {
+    const g = c.record(rec['ghost'], '$.ghost') ?? {};
+    ghost = { asset: c.str(g, 'asset', '$.ghost'), enabled: g['enabled'] === undefined ? true : c.bool(g, 'enabled', '$.ghost') };
+  }
+
+  const hud = validateHud(c, rec['hud'], cellSize, margin);
 
   const profile: ScreenProfile = {
     schemaVersion: c.schemaVersion(rec, '$'),
@@ -181,18 +180,90 @@ export function validateScreenProfile(raw: unknown, source = 'screen'): ScreenPr
       columns: c.int(viewport, 'columns', '$.viewport', 1, 64),
       rows: c.int(viewport, 'rows', '$.viewport', 1, 64),
     },
-    hud: {
-      rows: c.int(hud, 'rows', '$.hud', 0, 4),
-      position: position === 'bottom' ? 'bottom' : 'top',
-      iconPx: c.int(hud, 'iconPx', '$.hud', 1, 64, c.int(rec, 'cellPx', '$', 1, 64)),
-      fixed,
-      font,
-    },
-    cellPx: c.int(rec, 'cellPx', '$', 1, 64),
+    cell: cellSize,
+    margin,
     colors: { background: color('background'), ink: color('ink') },
+    smoothing: smoothing === true,
+    ghost,
+    hud,
   };
   c.done(source);
   return profile;
+}
+
+function validateHud(
+  c: Checker,
+  raw: unknown,
+  cell: { width: number; height: number },
+  margin: { top: number; bottom: number },
+): Hud {
+  const hud = c.record(raw, '$.hud') ?? {};
+  let fixed: HudFixed | null = null;
+  if (hud['fixed'] !== undefined && hud['fixed'] !== null) {
+    const f = c.record(hud['fixed'], '$.hud.fixed') ?? {};
+    fixed = {
+      lives: c.int(f, 'lives', '$.hud.fixed', 0, 9),
+      label: c.str(f, 'label', '$.hud.fixed', HUD_LABEL_PATTERN),
+      score: c.int(f, 'score', '$.hud.fixed', 0, 99999),
+    };
+  }
+
+  if (hud['kind'] === 'lcd') {
+    const lives = c.record(hud['lives'], '$.hud.lives') ?? {};
+    const digits = (key: 'label' | 'score'): HudDigits => {
+      const d = c.record(hud[key], `$.hud.${key}`) ?? {};
+      const path = `$.hud.${key}`;
+      return {
+        x: c.int(d, 'x', path, -4096, 4096),
+        y: c.int(d, 'y', path, -4096, 4096),
+        pitch: c.int(d, 'pitch', path, 1, 1024),
+        slots: c.int(d, 'slots', path, 1, 16),
+      };
+    };
+    const rawFont = c.record(hud['font'], '$.hud.font') ?? {};
+    const glyphs: Record<string, string> = {};
+    for (const [char, asset] of Object.entries(c.record(rawFont['glyphs'], '$.hud.font.glyphs') ?? {})) {
+      if (char.length !== 1) c.fail(`$.hud.font.glyphs["${char}"]`, 'ключ — ровно один символ');
+      if (typeof asset === 'string' && asset !== '') glyphs[char] = asset;
+      else c.fail(`$.hud.font.glyphs["${char}"]`, 'ожидался идентификатор ресурса');
+    }
+    return {
+      kind: 'lcd',
+      fixed,
+      lives: {
+        asset: c.str(lives, 'asset', '$.hud.lives'),
+        x: c.int(lives, 'x', '$.hud.lives', -4096, 4096),
+        y: c.int(lives, 'y', '$.hud.lives', -4096, 4096),
+        width: c.int(lives, 'width', '$.hud.lives', 1, 1024),
+        height: c.int(lives, 'height', '$.hud.lives', 1, 1024),
+        pitch: c.int(lives, 'pitch', '$.hud.lives', 1, 1024),
+      },
+      label: digits('label'),
+      score: digits('score'),
+      font: {
+        width: c.int(rawFont, 'width', '$.hud.font', 1, 512),
+        height: c.int(rawFont, 'height', '$.hud.font', 1, 512),
+        glyphs,
+        ghost: rawFont['ghost'] === undefined || rawFont['ghost'] === null ? null : c.str(rawFont, 'ghost', '$.hud.font'),
+      },
+    };
+  }
+
+  if (hud['kind'] !== 'builtin') {
+    c.fail('$.hud.kind', `ожидалось «builtin» или «lcd», получено ${JSON.stringify(hud['kind'])}`);
+  }
+  const position = hud['position'];
+  if (position !== 'top' && position !== 'bottom') {
+    c.fail('$.hud.position', `ожидалось «top» или «bottom», получено ${JSON.stringify(position)}`);
+  }
+  const side = position === 'bottom' ? 'bottom' : 'top';
+  if (margin[side] < 5) c.fail('$.margin', `для встроенного HUD нужна полоса margin.${side} не меньше 5 пикселей`);
+  return {
+    kind: 'builtin',
+    position: side,
+    iconPx: c.int(hud, 'iconPx', '$.hud', 1, 512, Math.min(cell.width, cell.height)),
+    fixed,
+  };
 }
 
 // ── Каталог ресурсов ───────────────────────────────────────────────────────
@@ -245,6 +316,7 @@ export function validateAssetCatalog(raw: unknown, env: ValidationEnv, source = 
           anchor: typeof pr['anchor'] === 'string' ? pr['anchor'] : 'cell-top-left',
         };
       }
+      const origin = def['origin'] === undefined ? {} : (c.record(def['origin'], `${path}.origin`) ?? {});
       const mirror = def['mirrorWhenLeft'];
       if (mirror !== undefined && typeof mirror !== 'boolean') c.fail(`${path}.mirrorWhenLeft`, 'ожидалось true/false');
       assets[id] = {
@@ -252,6 +324,10 @@ export function validateAssetCatalog(raw: unknown, env: ValidationEnv, source = 
         src: c.str(def, 'src', path),
         frameWidth: c.int(def, 'frameWidth', path, 1, 4096),
         frameHeight: c.int(def, 'frameHeight', path, 1, 4096),
+        origin: {
+          x: c.int(origin, 'x', `${path}.origin`, 0, 65535, 0),
+          y: c.int(origin, 'y', `${path}.origin`, 0, 65535, 0),
+        },
         frames: c.int(def, 'frames', path, 1, 256, 1),
         frameTicks: c.int(def, 'frameTicks', path, 1, 10_000, 1),
         fallbackGlyph,
@@ -595,22 +671,26 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
       issues.push(`sprites.${role}: ресурс «${assetId}» не найден в каталоге «${assets.id}»`);
     }
   }
-  const { font, fixed } = screen.hud;
-  if (font) {
-    const fontAsset = assets.assets[font.asset];
-    if (!fontAsset) {
-      issues.push(`screen.hud.font.asset: ресурс «${font.asset}» не найден в каталоге «${assets.id}»`);
-    } else if (fontAsset.kind !== 'image' || fontAsset.frames !== font.glyphs.length) {
-      issues.push(
-        `screen.hud.font: «${font.asset}» должен быть картинкой с ${font.glyphs.length} кадрами (по числу символов «${font.glyphs}»)`,
-      );
-    }
-    if (fixed) {
-      const text = `${fixed.label}${String(fixed.score).padStart(5, '0')}`;
-      for (const char of text) {
-        if (char !== ' ' && !font.glyphs.includes(char)) {
-          issues.push(`screen.hud.fixed: символа «${char}» нет в шрифте HUD «${font.glyphs}»`);
-        }
+  const needAsset = (assetId: string, where: string): void => {
+    if (!(assetId in assets.assets)) issues.push(`${where}: ресурс «${assetId}» не найден в каталоге «${assets.id}»`);
+  };
+  if (screen.ghost) needAsset(screen.ghost.asset, 'screen.ghost.asset');
+  const { hud } = screen;
+  if (hud.kind === 'lcd') {
+    needAsset(hud.lives.asset, 'screen.hud.lives.asset');
+    for (const [char, assetId] of Object.entries(hud.font.glyphs)) needAsset(assetId, `screen.hud.font.glyphs["${char}"]`);
+    if (hud.font.ghost) needAsset(hud.font.ghost, 'screen.hud.font.ghost');
+    if (hud.fixed) {
+      const label = hud.fixed.label;
+      const score = String(hud.fixed.score).padStart(hud.score.slots, '0');
+      if (label.length > hud.label.slots) {
+        issues.push(`screen.hud.fixed.label: «${label}» длиннее числа позиций (${hud.label.slots})`);
+      }
+      if (score.length > hud.score.slots) {
+        issues.push(`screen.hud.fixed.score: ${hud.fixed.score} не помещается в ${hud.score.slots} позиций`);
+      }
+      for (const char of `${label}${score}`) {
+        if (!(char in hud.font.glyphs)) issues.push(`screen.hud.fixed: символа «${char}» нет в шрифте HUD`);
       }
     }
   }

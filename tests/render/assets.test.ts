@@ -11,8 +11,8 @@ const catalog: AssetCatalog = {
   status: 'demo',
   assets: {
     block: { kind: 'placeholder', glyph: 'block' },
-    hero: { kind: 'image', src: 'img/hero.png', frameWidth: 8, frameHeight: 8, frames: 4, frameTicks: 3, fallbackGlyph: 'hero', mirrorWhenLeft: false, provenance: null },
-    lost: { kind: 'image', src: 'img/lost.png', frameWidth: 8, frameHeight: 8, frames: 1, frameTicks: 1, fallbackGlyph: 'unknown', mirrorWhenLeft: false, provenance: null },
+    hero: { kind: 'image', src: 'img/hero.png', frameWidth: 8, frameHeight: 8, origin: { x: 0, y: 0 }, frames: 4, frameTicks: 3, fallbackGlyph: 'hero', mirrorWhenLeft: false, provenance: null },
+    lost: { kind: 'image', src: 'img/lost.png', frameWidth: 8, frameHeight: 8, origin: { x: 24, y: 40 }, frames: 1, frameTicks: 1, fallbackGlyph: 'unknown', mirrorWhenLeft: false, provenance: null },
   },
 };
 

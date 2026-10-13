@@ -86,7 +86,7 @@ describe('однокомнатное демо: данные', () => {
   });
 
   it('у героя нет зеркального варианта без подтверждения', () => {
-    const hero = pack.assets.assets['hero'];
+    const hero = pack.assets.assets[pack.manifest.sprites.hero];
     expect(hero?.kind === 'image' && hero.mirrorWhenLeft).toBe(false);
   });
 });
@@ -111,7 +111,7 @@ describe('однокомнатное демо: механика', () => {
     const events = run(game, { press: ['jump'], held: ['jump'], ticks: 80 });
     expect(events.filter((e) => e.type === 'jump')).toHaveLength(1);
     expect(events.filter((e) => e.type === 'land')).toHaveLength(1);
-    expect(game.state.hero).toMatchObject({ x: 1, y: 5, airborne: false });
+    expect(game.state.hero).toMatchObject({ x: 1, y: 4, airborne: false });
     const again = run(game, idle(1), { press: ['jump'], held: ['jump'], ticks: 4 });
     expect(again.filter((e) => e.type === 'jump')).toHaveLength(1);
   });
@@ -123,15 +123,15 @@ describe('однокомнатное демо: механика', () => {
       game.step(makeFrame({ pressed: ['jump'], held: ['jump'] })); // жмём на каждом такте
       top = Math.min(top, game.state.hero.y);
     }
-    expect(top).toBe(2);
+    expect(top).toBe(1); // старт на полу y = 4, подъём на 3 клетки
   });
 
   it('под платформой голова упирается в потолок, на платформу можно запрыгнуть', () => {
     const game = started();
     run(game, { held: ['right'], ticks: 10 }); // x = 4: под платформой (x = 3..5, y = 4)
-    expect(game.state.hero).toMatchObject({ x: 4, y: 5 });
+    expect(game.state.hero).toMatchObject({ x: 4, y: 4 });
     run(game, idle(1), { press: ['jump'], held: ['jump'] });
-    expect(game.state.hero.y).toBe(5); // потолок над головой
+    expect(game.state.hero.y).toBe(4); // потолок над головой
   });
 
   it('герой не покидает комнату, как бы ни управлять', () => {
@@ -144,7 +144,7 @@ describe('однокомнатное демо: механика', () => {
       expect(x).toBeGreaterThanOrEqual(0);
       expect(x).toBeLessThanOrEqual(12);
       expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThanOrEqual(5);
+      expect(y).toBeLessThanOrEqual(4);
     }
   });
 
@@ -171,7 +171,7 @@ describe('однокомнатное демо: механика', () => {
     run(game, { held: ['right'], ticks: 12 }, { press: ['jump'], held: ['jump'], ticks: 3 });
     game.reset();
     expect(game.state.phase).toBe('ready');
-    expect(game.state.hero).toMatchObject({ x: 1, y: 5, airborne: false, jumpIndex: -1 });
+    expect(game.state.hero).toMatchObject({ x: 1, y: 4, airborne: false, jumpIndex: -1 });
     expect(game.state.tick).toBe(0);
   });
 
@@ -181,12 +181,12 @@ describe('однокомнатное демо: механика', () => {
     const ctx = createContext(assemblePack(raw, validationEnv(undefined, GLYPH_NAMES)));
     const game = new Game(ctx);
     game.step(makeFrame({ pressed: ['start'] }));
-    let top = 5;
+    let top = 4;
     for (let i = 0; i < 30; i++) {
       game.step(makeFrame({ pressed: i === 0 ? ['jump'] : [] }));
       top = Math.min(top, game.state.hero.y);
     }
-    expect(top).toBe(3);
+    expect(top).toBe(2); // таблица [-1, -1, 0]: подъём на 2 клетки
   });
 
   it('графика не определяет коллизии: замена ресурсов не меняет механику', () => {
@@ -221,6 +221,6 @@ describe('однокомнатное демо: replay', () => {
     expect(events.filter((e) => e.type === 'land').length).toBeGreaterThanOrEqual(2);
     expect(events.some((e) => e.type === 'shot' || e.type === 'death')).toBe(false);
     expect(game.state.phase).toBe('playing');
-    expect(game.state.hero).toMatchObject({ x: 4, y: 3, airborne: false }); // стоит на платформе
+    expect(game.state.hero).toMatchObject({ x: 4, y: 2, airborne: false }); // стоит на платформе (y = 3)
   });
 });

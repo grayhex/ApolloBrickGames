@@ -137,4 +137,17 @@ describe('сохранение настроек', () => {
     saveSettings(storage, settings);
     expect(loadSettings(storage).keyboard.fire).toEqual([]);
   });
+
+  it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
+    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue' });
+    const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
+    expect(saved.display).toEqual({ ghost: false, shell: 'red' });
+    const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
+    expect(junk.display).toEqual({ ghost: null, shell: 'blue' });
+    const storage = memoryStorage();
+    const settings = defaultSettings();
+    settings.display = { ghost: true, shell: 'white' };
+    saveSettings(storage, settings);
+    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white' });
+  });
 });

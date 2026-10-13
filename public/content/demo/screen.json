@@ -2,7 +2,19 @@
   "schemaVersion": 1,
   "id": "demo-screen",
   "status": "demo",
-  "viewport": { "columns": 13, "rows": 7 },
-  "hud": { "rows": 1, "position": "top" },
-  "cellPx": 8
+  "viewport": {
+    "columns": 13,
+    "rows": 7
+  },
+  "cell": {
+    "width": 8,
+    "height": 8
+  },
+  "margin": {
+    "top": 8
+  },
+  "hud": {
+    "kind": "builtin",
+    "position": "top"
+  }
 }
