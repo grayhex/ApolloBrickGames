@@ -7,21 +7,36 @@ import { createContext, validationEnv, type GameContext } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const demoDir = join(root, 'public', 'content', 'demo');
+const contentDir = join(root, 'public', 'content');
 
 export function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
-export function loadRawDemoPack(): RawPack {
-  const manifest = readJson(join(demoDir, 'pack.json')) as { levels: string[] };
+/** Сырые файлы пакета из public/content/<имя>/. */
+export function loadRawPack(name: string): RawPack {
+  const dir = join(contentDir, name);
+  const manifest = readJson(join(dir, 'pack.json')) as { levels: string[] };
   return {
     manifest,
-    screen: readJson(join(demoDir, 'screen.json')),
-    rules: readJson(join(demoDir, 'rules.json')),
-    assets: readJson(join(demoDir, 'assets.json')),
-    levels: manifest.levels.map((file) => readJson(join(demoDir, file))),
+    screen: readJson(join(dir, 'screen.json')),
+    rules: readJson(join(dir, 'rules.json')),
+    assets: readJson(join(dir, 'assets.json')),
+    levels: manifest.levels.map((file) => readJson(join(dir, file))),
   };
+}
+
+export function loadRawDemoPack(): RawPack {
+  return loadRawPack('demo');
+}
+
+/** Однокомнатное демо (основной маршрут). */
+export function loadRoomPack(): ContentPack {
+  return assemblePack(loadRawPack('room'), validationEnv(undefined, GLYPH_NAMES));
+}
+
+export function roomContext(): GameContext {
+  return createContext(loadRoomPack());
 }
 
 export function loadDemoPack(): ContentPack {

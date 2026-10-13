@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Браузерный smoke-тест: загрузка демо → старт → движение/прыжок/огонь → пауза/продолжение → рестарт.
+ * Браузерный smoke-тест технического демо (#1, маршрут #/tech): загрузка → старт → движение/прыжок/огонь →
+ * пауза/продолжение → рестарт. Основная комната (#2) проверяется в room.spec.ts.
  * Геймпад проверяется подставным navigator.getGamepads(); физический контроллер здесь не используется.
  * Состояние читается из data-* игровой области (стабильный контракт оболочки), а не из пикселей.
  */
@@ -87,8 +88,8 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
 });
 
-test('демо загружается под /CrocodileMario/: ENGINE DEMO, готов к старту, Canvas нарисован', async ({ page }) => {
-  await page.goto('./');
+test('техническое демо загружается под /CrocodileMario/: ENGINE DEMO, готов к старту, Canvas нарисован', async ({ page }) => {
+  await page.goto('./#/tech');
   await expect(page.locator('#badge')).toHaveText('ENGINE DEMO');
   // Логотип в заголовке: картинка действительно загрузилась под базовым путём (alt остаётся именем заголовка).
   const logo = page.getByRole('heading', { name: 'Crocodile Mario' }).locator('img');
@@ -109,7 +110,7 @@ test('демо загружается под /CrocodileMario/: ENGINE DEMO, го
 });
 
 test('старт → движение, прыжок, выстрел → пауза/продолжение → рестарт', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./#/tech');
   await expect.poll(phase(page)).toBe('ready');
   const start = await snapshot(page);
   await startGame(page);
@@ -160,7 +161,7 @@ test('старт → движение, прыжок, выстрел → пауз
 });
 
 test('потеря фокуса окна: пауза; зажатые клавиши не дают прыжка и скачка после явного продолжения', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./#/tech');
   await startGame(page);
   const floorY = (await snapshot(page)).heroY;
 
@@ -189,7 +190,7 @@ test('потеря фокуса окна: пауза; зажатые клави�
 
 test('геймпад (подставной провайдер): активация, старт, ходьба, прыжок, отключение → пауза', async ({ page }) => {
   await installFakeGamepad(page);
-  await page.goto('./');
+  await page.goto('./#/tech');
   await expect.poll(phase(page)).toBe('ready');
 
   // Подсказка «нажмите кнопку», затем активация нажатием.
@@ -243,7 +244,7 @@ test('геймпад (подставной провайдер): активаци
 });
 
 test('настройки: диалог ставит игру на паузу и не пропускает клавиши в мир', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./#/tech');
   await startGame(page);
   await page.getByRole('button', { name: 'Настройки…' }).click();
   await expect(page.locator('dialog#settings')).toBeVisible();
@@ -262,7 +263,7 @@ test('настройки: диалог ставит игру на паузу и 
 });
 
 test('Canvas сохраняет пропорции и не растягивается при изменении окна', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./#/tech');
   const ratio = async (): Promise<number> => {
     const box = await page.locator('#screen').boundingBox();
     return (box?.width ?? 0) / (box?.height ?? 1);

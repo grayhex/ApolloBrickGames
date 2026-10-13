@@ -100,3 +100,43 @@ describe('loadContentPack', () => {
     await expect(loadContentPack(`${base}pack.json`, env, async () => ({}))).rejects.toThrow(/levels/);
   });
 });
+
+import { parseRoute, GAME_ROUTES } from '../../src/app/routes';
+import { controlsHint } from '../../src/app/viewModel';
+import { DEFAULT_KEYBOARD_BINDINGS, cloneBindings } from '../../src/input/bindings';
+
+describe('маршруты', () => {
+  it('по умолчанию — однокомнатное демо; техническое демо и контрольный лист — отдельные маршруты', () => {
+    for (const hash of ['', '#', '#/', '#/room', '#/что-то-неизвестное']) expect(parseRoute(hash), hash).toBe('room');
+    expect(parseRoute('#/tech')).toBe('tech');
+    expect(parseRoute('#/sheet')).toBe('sheet');
+    expect(parseRoute('#/tech?debug=1')).toBe('tech');
+  });
+
+  it('основной маршрут не ведёт на технические участки #1', () => {
+    expect(GAME_ROUTES.room.manifest).toBe('content/room/pack.json');
+    expect(GAME_ROUTES.tech.manifest).toBe('content/demo/pack.json');
+    expect(GAME_ROUTES.room.fireHint).toBe(false);
+  });
+});
+
+describe('подсказка по клавишам', () => {
+  it('строится из привязок; огонь — только если он есть в сцене', () => {
+    const room = controlsHint(DEFAULT_KEYBOARD_BINDINGS, false);
+    expect(room).toContain('Ходьба: ← · A · → · D');
+    expect(room).toContain('Прыжок: Пробел · Z');
+    expect(room).toContain('Старт: Enter');
+    expect(room).toContain('Пауза: Esc · P');
+    expect(room).not.toContain('Огонь');
+    expect(controlsHint(DEFAULT_KEYBOARD_BINDINGS, true)).toContain('Огонь: X');
+  });
+
+  it('после переназначения подсказка меняется', () => {
+    const custom = cloneBindings(DEFAULT_KEYBOARD_BINDINGS);
+    custom.jump = ['k:KeyJ'];
+    custom.pause = [];
+    const text = controlsHint(custom, false);
+    expect(text).toContain('Прыжок: J');
+    expect(text).toContain('Пауза: не назначено');
+  });
+});
