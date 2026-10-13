@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Crocodile Mario: техническая демоверсия браузерного движка. Оригинальный контент ещё не восстановлен." />
+    <link rel="icon" href="data:," />
+    <title>Crocodile Mario — движок (демо)</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="shell__header">
+        <h1>Crocodile Mario</h1>
+        <span class="badge" id="badge" role="note">ENGINE DEMO</span>
+        <p class="shell__sub">
+          Техническая демоверсия движка: оригинальный контент ещё не восстановлен, уровни и правила — временные.
+        </p>
+      </header>
+
+      <section class="stage" id="stage" aria-label="Игра">
+        <div
+          class="game-area"
+          id="game-area"
+          tabindex="0"
+          role="application"
+          aria-label="Игровая область. Стрелки или WASD — движение, Пробел или Z — прыжок, X — огонь, Enter — старт, Esc или P — пауза."
+        >
+          <canvas id="screen" aria-hidden="true"></canvas>
+          <div class="overlay" id="overlay" hidden>
+            <p class="overlay__title" id="overlay-title"></p>
+            <p class="overlay__hint" id="overlay-hint"></p>
+            <button type="button" class="btn btn--primary" id="overlay-action"></button>
+          </div>
+          <p class="focus-hint" id="focus-hint" hidden>Кликните по игре, чтобы управлять с клавиатуры</p>
+        </div>
+      </section>
+
+      <div class="toolbar" role="toolbar" aria-label="Управление игрой">
+        <button type="button" class="btn" id="btn-pause">Пауза</button>
+        <button type="button" class="btn" id="btn-restart">Рестарт</button>
+        <button type="button" class="btn" id="btn-settings">Настройки…</button>
+        <label class="toolbar__check"><input type="checkbox" id="chk-debug" /> Отладка</label>
+      </div>
+
+      <section class="status" aria-live="polite" aria-label="Состояние ввода">
+        <p><strong>Клавиатура:</strong> <span id="status-keyboard"></span></p>
+        <p><strong>Геймпад:</strong> <span id="status-gamepad"></span></p>
+        <p><strong>Таймер участка (demo):</strong> <span id="status-timer"></span></p>
+        <p class="status__warn" id="status-warning" hidden></p>
+        <p class="status__content" id="status-content"></p>
+      </section>
+
+      <aside class="debug" id="debug" hidden aria-label="Отладочная панель">
+        <h2>Отладка</h2>
+        <pre id="debug-text"></pre>
+        <div class="debug__row">
+          <label><input type="checkbox" id="chk-grid" /> Сетка</label>
+          <label><input type="checkbox" id="chk-collisions" /> Коллизии</label>
+          <button type="button" class="btn" id="btn-step">Шаг (1 такт, на паузе)</button>
+          <button type="button" class="btn" id="btn-debug-restart">Перезапуск демо</button>
+        </div>
+      </aside>
+
+      <section class="fatal" id="fatal" role="alert" hidden>
+        <h2>Не удалось запустить игру</h2>
+        <pre id="fatal-text"></pre>
+      </section>
+    </main>
+
+    <dialog class="settings" id="settings"></dialog>
+    <noscript>Для игры нужен JavaScript.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
