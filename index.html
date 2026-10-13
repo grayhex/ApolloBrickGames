@@ -13,10 +13,8 @@
         <h1 class="shell__title">
           <img class="logo" src="/brand/crocodile-mario-logo.png" width="1000" height="443" alt="Crocodile Mario" />
         </h1>
-        <span class="badge" id="badge" role="note">ENGINE DEMO</span>
-        <p class="shell__sub">
-          Техническая демоверсия движка: оригинальный контент ещё не восстановлен, уровни и правила — временные.
-        </p>
+        <span class="badge" id="badge" role="note">DEMO — тестовая комната</span>
+        <p class="shell__sub" id="subtitle"></p>
       </header>
 
       <section class="stage" id="stage" aria-label="Игра">
@@ -41,13 +39,14 @@
         <button type="button" class="btn" id="btn-pause">Пауза</button>
         <button type="button" class="btn" id="btn-restart">Рестарт</button>
         <button type="button" class="btn" id="btn-settings">Настройки…</button>
-        <label class="toolbar__check"><input type="checkbox" id="chk-debug" /> Отладка</label>
+        <label class="toolbar__check" id="debug-toggle"><input type="checkbox" id="chk-debug" /> Отладка</label>
       </div>
 
       <section class="status" aria-live="polite" aria-label="Состояние ввода">
         <p><strong>Клавиатура:</strong> <span id="status-keyboard"></span></p>
         <p><strong>Геймпад:</strong> <span id="status-gamepad"></span></p>
-        <p><strong>Таймер участка (demo):</strong> <span id="status-timer"></span></p>
+        <p id="row-timer"><strong>Таймер участка (demo):</strong> <span id="status-timer"></span></p>
+        <p class="status__hint" id="controls-hint"></p>
         <p class="status__warn" id="status-warning" hidden></p>
         <p class="status__content" id="status-content"></p>
       </section>
@@ -62,6 +61,10 @@
           <button type="button" class="btn" id="btn-debug-restart">Перезапуск демо</button>
         </div>
       </aside>
+
+      <p class="shell__footer"><a id="route-link" href="#/">Однокомнатное демо</a></p>
+
+      <section class="sheet" id="sheet" hidden aria-label="Контрольный лист ресурсов"></section>
 
       <section class="fatal" id="fatal" role="alert" hidden>
         <h2>Не удалось запустить игру</h2>
