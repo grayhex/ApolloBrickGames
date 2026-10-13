@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -30,7 +31,7 @@ const snap = (page: Page): Promise<Snap> =>
     };
   });
 
-const FLOOR_Y = 5;
+const FLOOR_Y = 4;
 const phase = (page: Page) => async () => (await snap(page)).phase;
 
 async function ready(page: Page): Promise<void> {
@@ -104,7 +105,7 @@ test('клавиатура: ходьба до уступа, прыжок и пр
     w.__minY = w.__lastY;
     new MutationObserver(() => {
       const y = Number(el.dataset['heroY']);
-      if (y < w.__lastY && w.__lastY === 5) w.__takeoffs += 1;
+      if (y < w.__lastY && w.__lastY === 4) w.__takeoffs += 1;
       w.__lastY = y;
       w.__minY = Math.min(w.__minY, y);
     }).observe(el, { attributes: true, attributeFilter: ['data-hero-y'] });
@@ -203,25 +204,25 @@ test('геймпад (подставной) управляет той же ко�
   await expect.poll(async () => (await snap(page)).heroY, { timeout: 5000 }).toBe(FLOOR_Y);
 });
 
-test('рендер: фон и сегменты в цветах LCD-профиля, блоки на своих клетках, герой — в клетке героя', async ({ page }) => {
+test('рендер игры: цвета LCD-профиля владельца, препятствия и фигурка на своих клетках', async ({ page }) => {
   await ready(page);
   const result = await page.evaluate(() => {
     const canvas = document.getElementById('screen') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     const { width, height } = canvas;
-    const cols = 13;
-    const rows = 8; // строка HUD + 7 строк поля
-    const cw = width / cols;
-    const ch = height / rows;
+    const scale = width / 1728; // логический холст 1728 × 864
     const data = ctx.getImageData(0, 0, width, height).data;
-    const BG = [0xc3, 0xc5, 0xc2];
-    const INK = [0x3d, 0x43, 0x4d];
-    const near = (i: number, c: number[]): boolean => [0, 1, 2].every((k) => Math.abs((data[i + k] ?? 0) - (c[k] ?? 0)) < 12);
-    const inkRatio = (col: number, row: number): number => {
+    const near = (i: number, c: number[]): boolean => [0, 1, 2].every((k) => Math.abs((data[i + k] ?? 0) - (c[k] ?? 0)) < 10);
+    const BG = [173, 179, 140]; // #adb38c
+    const INK = [48, 58, 48]; // #303a30
+    const inkShare = (col: number, row: number): number => {
+      // клетка поля 128 × 112, поле начинается в (32, 154)
+      const x0 = Math.round((32 + col * 128) * scale);
+      const y0 = Math.round((154 + row * 112) * scale);
       let ink = 0;
       let total = 0;
-      for (let y = Math.floor(row * ch) + 1; y < Math.floor((row + 1) * ch) - 1; y++) {
-        for (let x = Math.floor(col * cw) + 1; x < Math.floor((col + 1) * cw) - 1; x++) {
+      for (let y = y0 + 2; y < Math.round((154 + (row + 1) * 112) * scale) - 2; y++) {
+        for (let x = x0 + 2; x < Math.round((32 + (col + 1) * 128) * scale) - 2; x++) {
           total += 1;
           if (near((y * width + x) * 4, INK)) ink += 1;
         }
@@ -229,28 +230,106 @@ test('рендер: фон и сегменты в цветах LCD-профил�
       return ink / total;
     };
     let bg = 0;
-    let ink = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (near(i, BG)) bg += 1;
-      else if (near(i, INK)) ink += 1;
-    }
-    const total = width * height;
+    for (let i = 0; i < data.length; i += 4) if (near(i, BG)) bg += 1;
     return {
-      bgShare: bg / total,
-      inkShare: ink / total,
-      ground: inkRatio(6, 7), // нижний ряд — блок земли
-      hero: inkRatio(1, 6), // клетка героя на старте (1, 5) → строка 6 с учётом HUD
-      empty: inkRatio(11, 3), // пустая клетка воздуха
-      step: inkRatio(9, 6), // уступ (x = 9, y = 5)
+      bgShare: bg / (width * height),
+      ground: inkShare(6, 5), // нижний ряд — препятствие
+      step: inkShare(9, 4), // уступ
+      hero: inkShare(1, 4), // клетка героя на старте (1, 4)
+      empty: inkShare(11, 1), // воздух (виден только слой неактивных сегментов)
     };
   });
-  expect(result.bgShare).toBeGreaterThan(0.5);
-  expect(result.inkShare).toBeGreaterThan(0.05);
-  expect(result.ground).toBeGreaterThan(0.25);
-  expect(result.ground).toBeLessThan(0.75); // не сплошной чёрный квадрат
-  expect(result.step).toBeGreaterThan(0.25);
-  expect(result.hero).toBeGreaterThan(0.1);
+  expect(result.bgShare).toBeGreaterThan(0.4); // подложка и слабый слой неактивных сегментов преобладают
+  expect(result.ground).toBeGreaterThan(0.45); // тёмный прямоугольник с вырезом под фигурку
+  expect(result.ground).toBeLessThan(0.9); // а не сплошной квадрат
+  expect(result.step).toBeGreaterThan(0.45);
+  expect(result.hero).toBeGreaterThan(0.05);
+  expect(result.hero).toBeLessThan(result.ground);
   expect(result.empty).toBe(0);
+});
+
+for (const n of [1, 2]) {
+  test(`сверка с эталоном владельца: сцена ${n} с фотографии рендерится так же, как reference_${n}_obstacle.png`, async ({ page }) => {
+    await page.goto('./#/sheet');
+    await page.waitForSelector(`#ref-scene-${n}`);
+    const reference = readFileSync(`docs/references/raw/screens/reference_${n}_obstacle.png`).toString('base64');
+    const diff = await page.evaluate(
+      async ({ n, reference }) => {
+        const canvas = document.getElementById(`ref-scene-${n}`) as HTMLCanvasElement;
+        const img = new Image();
+        img.src = `data:image/png;base64,${reference}`;
+        await img.decode();
+        if (img.width !== canvas.width || img.height !== canvas.height) {
+          return { size: `${canvas.width}×${canvas.height} против ${img.width}×${img.height}`, board: -1, hud: -1, total: 0 };
+        }
+        const mine = (canvas.getContext('2d') as CanvasRenderingContext2D).getImageData(0, 0, canvas.width, canvas.height).data;
+        const scratch = document.createElement('canvas');
+        scratch.width = img.width;
+        scratch.height = img.height;
+        const sctx = scratch.getContext('2d') as CanvasRenderingContext2D;
+        sctx.drawImage(img, 0, 0);
+        const theirs = sctx.getImageData(0, 0, img.width, img.height).data;
+        let board = 0;
+        let hud = 0;
+        for (let i = 0; i < mine.length; i += 4) {
+          const d = Math.max(
+            Math.abs((mine[i] ?? 0) - (theirs[i] ?? 0)),
+            Math.abs((mine[i + 1] ?? 0) - (theirs[i + 1] ?? 0)),
+            Math.abs((mine[i + 2] ?? 0) - (theirs[i + 2] ?? 0)),
+          );
+          if (d > 40) {
+            if (Math.floor(i / 4 / canvas.width) < 154) hud += 1;
+            else board += 1;
+          }
+        }
+        return { size: '', board, hud, total: canvas.width * canvas.height };
+      },
+      { n, reference },
+    );
+    expect(diff.size).toBe(''); // размеры холста совпадают с эталоном (1728 × 864 / 1088)
+    expect(diff.board).toBe(0); // игровое поле совпадает попиксельно
+    expect(diff.hud / diff.total).toBeLessThan(0.0025); // HUD — в пределах однопиксельных краёв символов
+  });
+}
+
+test('корпус вокруг экрана: три светодиода, выбор цвета сохраняется после перезагрузки', async ({ page }) => {
+  await ready(page);
+  await expect(page.locator('#lid .led')).toHaveCount(3);
+  await expect(page.locator('#lid .lid__screw')).toHaveCount(4);
+  await expect(page.locator('#lid')).toHaveAttribute('data-shell', 'blue');
+  await page.selectOption('#sel-shell', 'white');
+  await expect(page.locator('#lid')).toHaveAttribute('data-shell', 'white');
+  await page.reload();
+  await expect(page.locator('#lid')).toHaveAttribute('data-shell', 'white');
+  await expect(page.locator('#sel-shell')).toHaveValue('white');
+  // Окно LCD сохраняет пропорции холста, Canvas целиком помещается в нём.
+  const fits = await page.evaluate(() => {
+    const win = (document.getElementById('lcd-window') as HTMLElement).getBoundingClientRect();
+    const canvas = (document.getElementById('screen') as HTMLElement).getBoundingClientRect();
+    return canvas.width <= win.width + 1 && canvas.height <= win.height + 1 && Math.abs(win.width / win.height - 2) < 0.02;
+  });
+  expect(fits).toBe(true);
+});
+
+test('слой неактивных сегментов переключается и запоминается', async ({ page }) => {
+  await ready(page);
+  const emptyCellInk = (): Promise<number> =>
+    page.evaluate(() => {
+      const canvas = document.getElementById('screen') as HTMLCanvasElement;
+      const scale = canvas.width / 1728;
+      const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+      const x = Math.round((32 + 11 * 128 + 64) * scale);
+      const y = Math.round((154 + 1 * 112 + 56) * scale);
+      const [r = 0, g = 0, b = 0] = ctx.getImageData(x, y, 1, 1).data;
+      return Math.abs(r - 173) + Math.abs(g - 179) + Math.abs(b - 140);
+    });
+  await expect(page.locator('#chk-ghost')).toBeChecked();
+  const withGhost = await emptyCellInk();
+  await page.locator('#chk-ghost').uncheck();
+  await expect.poll(emptyCellInk).toBe(0); // чистая подложка
+  expect(withGhost).toBeGreaterThan(0);
+  await page.reload();
+  await expect(page.locator('#chk-ghost')).not.toBeChecked();
 });
 
 test('Canvas сохраняет пропорции при изменении окна', async ({ page }) => {
@@ -267,10 +346,14 @@ test('Canvas сохраняет пропорции при изменении о�
   expect(Math.abs((await ratio()) - wide)).toBeLessThan(0.05);
 });
 
-test('контрольный лист ресурсов открывается и перечисляет ресурсы со статусами', async ({ page }) => {
+test('контрольный лист ресурсов открывается: сцены с фотографий, все ресурсы атласа со статусами', async ({ page }) => {
   await page.goto('./#/sheet');
   await expect(page.getByRole('heading', { name: 'Контрольный лист ресурсов (комната demo-room)' })).toBeVisible();
-  for (const id of ['tile.ground', 'hero', 'life', 'hud.digits']) await expect(page.locator('#sheet code', { hasText: id })).toBeVisible();
-  await expect(page.locator('.sheet__status--blocked').first()).toBeVisible();
-  await expect(page.locator('#sheet canvas')).toHaveCount(2);
+  for (const id of ['cell.player', 'cell.obstacle', 'cell.ghost', 'hud.life', 'hud.digit.0', 'hud.digit.ghost']) {
+    await expect(page.locator('#sheet code', { hasText: new RegExp(`^${id.replace('.', '\\.')}$`) })).toBeVisible();
+  }
+  await expect(page.locator('.sheet__status--draft').first()).toBeVisible();
+  await expect(page.locator('.sheet__scene')).toHaveCount(2);
+  await expect(page.locator('.sheet__asset')).toHaveCount(22); // весь атлас владельца
+  await expect(page.locator('.sheet__status--confirmed')).toHaveCount(0); // подтверждённых пока нет
 });

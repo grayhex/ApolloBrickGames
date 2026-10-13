@@ -28,12 +28,14 @@ describe('примеры из docs/content-format.md', () => {
     expect(validatePackManifest(pack).id).toBe('demo-pack');
     const parsedScreen = validateScreenProfile(screen);
     expect(parsedScreen.viewport.columns).toBe(13);
-    expect(parsedScreen.hud.font?.glyphs).toBe('0123456789-');
-    expect(parsedScreen.colors.ink).toBe('#3d434d');
+    expect(parsedScreen.cell).toEqual({ width: 128, height: 112 });
+    expect(parsedScreen.hud.kind).toBe('lcd');
+    expect(parsedScreen.colors.ink).toBe('#303a30');
     expect(validateRuleSet(rules, env).params.tickRateHz).toBe(20);
     expect(validateAssetCatalog(assets, env).assets['hero']).toMatchObject({
       kind: 'image',
       mirrorWhenLeft: false,
+      origin: { x: 4, y: 4 },
       provenance: { status: 'blocked' },
     });
     const demoAssets = validateAssetCatalog(loadRawDemoPack().assets, env);

@@ -1,0 +1,10 @@
+{
+  "mask_geometry_overlap_area": 0,
+  "high_alpha_overlap_pixels": 0,
+  "png_sizes_and_rgba": "passed",
+  "atlas_frame_pixels": "passed",
+  "html_javascript_errors": 0,
+  "html_layer_toggles": "passed",
+  "html_alternate_layouts": "passed",
+  "note": "Эти проверки относятся к целостности файлов, не к исторической точности реконструкции."
+}

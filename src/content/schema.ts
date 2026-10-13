@@ -17,16 +17,58 @@ export type Params = Record<string, ParamValue>;
 /** Фиксированные тестовые значения индикаторов: не состояние игры и не структура оригинала. */
 export interface HudFixed {
   lives: number;
-  /** Подпись в центре строки; символы — из шрифта HUD. */
+  /** Подпись; символы — из шрифта HUD. */
   label: string;
   score: number;
 }
 
-/** Шрифт HUD из ресурса: кадры полосы идут в порядке `glyphs`. */
-export interface HudFont {
+/** Значки жизни: один ресурс, повторённый по горизонтали (координаты — в логических пикселях экрана). */
+export interface HudLives {
   asset: string;
-  glyphs: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  pitch: number;
 }
+
+/** Ряд цифровых позиций: левый верхний угол первой позиции, шаг и число позиций. */
+export interface HudDigits {
+  x: number;
+  y: number;
+  pitch: number;
+  slots: number;
+}
+
+/** Шрифт HUD из отдельных ресурсов-символов; размер символа на экране может отличаться от размера спрайта. */
+export interface HudFont {
+  /** Размер символа на экране. */
+  width: number;
+  height: number;
+  /** Символ → идентификатор ресурса. */
+  glyphs: Record<string, string>;
+  /** Выключенные сегменты позиции (рисуются под символом, если слой неактивных сегментов включён). */
+  ghost: string | null;
+}
+
+export type Hud =
+  | {
+      /** Встроенный шрифт 3 × 5 в полосе поля `margin.top` / `margin.bottom`. */
+      kind: 'builtin';
+      position: 'top' | 'bottom';
+      /** Размер значка жизни в логических пикселях. */
+      iconPx: number;
+      fixed: HudFixed | null;
+    }
+  | {
+      /** Спрайты в явных координатах (LCD-раскладка). */
+      kind: 'lcd';
+      fixed: HudFixed | null;
+      lives: HudLives;
+      label: HudDigits;
+      score: HudDigits;
+      font: HudFont;
+    };
 
 export interface ScreenProfile {
   schemaVersion: number;
@@ -34,25 +76,28 @@ export interface ScreenProfile {
   status: ContentStatus;
   /** Видимая область игрового поля в клетках. */
   viewport: { columns: number; rows: number };
-  /**
-   * HUD — отдельная область вне игрового поля. `fixed: null` — значения из состояния игры;
-   * `font: null` — встроенный шрифт 3×5.
-   */
-  hud: {
-    rows: number;
-    position: 'top' | 'bottom';
-    /** Размер значка жизни в логических пикселях (по умолчанию — клетка). */
-    iconPx: number;
-    fixed: HudFixed | null;
-    font: HudFont | null;
-  };
-  /** Размер клетки в логических пикселях Canvas (до масштабирования). */
-  cellPx: number;
+  /** Размер клетки в логических пикселях (не обязательно квадрат). */
+  cell: { width: number; height: number };
+  /** Поля вокруг поля игры; HUD располагается в верхнем (или нижнем) поле. */
+  margin: { left: number; right: number; top: number; bottom: number };
   /** Цвета LCD: подложка и активные сегменты («чернила»). */
   colors: { background: string; ink: string };
+  /** Сглаживание при масштабировании: нужно для растровой графики, у пиксельных заглушек выключено. */
+  smoothing: boolean;
+  /** Слой неактивных сегментов под каждой клеткой. `enabled` — включён ли по умолчанию. */
+  ghost: { asset: string; enabled: boolean } | null;
+  hud: Hud;
 }
 
 export const DEFAULT_LCD_COLORS = { background: '#a9b79a', ink: '#202a1e' } as const;
+
+/** Размер логического холста экрана: поле + поля вокруг. */
+export function screenSize(screen: ScreenProfile): { width: number; height: number } {
+  return {
+    width: screen.margin.left + screen.viewport.columns * screen.cell.width + screen.margin.right,
+    height: screen.margin.top + screen.viewport.rows * screen.cell.height + screen.margin.bottom,
+  };
+}
 
 // ── Каталог ресурсов ───────────────────────────────────────────────────────
 
@@ -76,7 +121,9 @@ export type AssetDef =
       src: string;
       frameWidth: number;
       frameHeight: number;
-      /** Кадры лежат в одну горизонтальную полосу. */
+      /** Где в исходном файле начинается первый кадр (для атласа — левый верхний угол прямоугольника ресурса). */
+      origin: { x: number; y: number };
+      /** Кадры лежат в одну горизонтальную полосу, начиная с `origin`. */
       frames: number;
       /** Сколько тактов показывается один кадр. */
       frameTicks: number;

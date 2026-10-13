@@ -8,10 +8,10 @@ import {
   validateScreenProfile,
   type RawPack,
 } from '../../src/content/validate';
-import type { AssetCatalog } from '../../src/content/schema';
+import { screenSize, type AssetCatalog } from '../../src/content/schema';
 import { validationEnv } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
-import { loadRawDemoPack } from '../helpers/content';
+import { loadRawDemoPack, loadRawPack } from '../helpers/content';
 import { rawLevel } from '../helpers/builders';
 
 const env = validationEnv(undefined, GLYPH_NAMES);
@@ -155,12 +155,30 @@ describe('валидация профиля экрана, ресурсов и п
   const screen = loadRawDemoPack().screen as Record<string, unknown>;
   const rules = loadRawDemoPack().rules as { params: Record<string, unknown> } & Record<string, unknown>;
 
-  it('профиль экрана: размеры и положение HUD', () => {
-    expect(validateScreenProfile(screen).viewport).toEqual({ columns: 13, rows: 7 });
-    expect(issuesOf(() => validateScreenProfile({ ...screen, cellPx: 0 }))).toMatch(/cellPx/);
-    expect(issuesOf(() => validateScreenProfile({ ...screen, hud: { rows: 1, position: 'left' } }))).toMatch(
-      /hud\.position/,
-    );
+  it('профиль экрана: клетка, поля, встроенный HUD', () => {
+    const parsed = validateScreenProfile(screen);
+    expect(parsed.viewport).toEqual({ columns: 13, rows: 7 });
+    expect(parsed.cell).toEqual({ width: 8, height: 8 });
+    expect(parsed.margin).toEqual({ left: 0, right: 0, top: 8, bottom: 0 });
+    expect(parsed.hud.kind).toBe('builtin');
+    expect(screenSize(parsed)).toEqual({ width: 104, height: 64 });
+    expect(issuesOf(() => validateScreenProfile({ ...screen, cell: { width: 0, height: 8 } }))).toMatch(/cell\.width/);
+    expect(issuesOf(() => validateScreenProfile({ ...screen, hud: { kind: 'builtin', position: 'left' } }))).toMatch(/hud\.position/);
+    expect(issuesOf(() => validateScreenProfile({ ...screen, hud: { kind: 'wide' } }))).toMatch(/hud\.kind/);
+    expect(issuesOf(() => validateScreenProfile({ ...screen, margin: {} }))).toMatch(/margin\.top не меньше 5/);
+  });
+
+  it('профиль экрана: прямоугольная ячейка и LCD-раскладка HUD (комната)', () => {
+    const room = loadRawPack('room').screen;
+    const parsed = validateScreenProfile(room);
+    expect(parsed.cell).toEqual({ width: 128, height: 112 });
+    expect(screenSize(parsed)).toEqual({ width: 1728, height: 864 }); // как у эталонных экранов владельца
+    expect(parsed.smoothing).toBe(true);
+    expect(parsed.ghost).toEqual({ asset: 'cell.ghost', enabled: true });
+    expect(parsed.hud.kind).toBe('lcd');
+    const broken = { ...(room as Record<string, unknown>), hud: { kind: 'lcd', lives: {}, label: {}, score: {}, font: {} } };
+    expect(issuesOf(() => validateScreenProfile(broken))).toMatch(/hud\.lives/);
+    expect(issuesOf(() => validateScreenProfile({ ...(room as object), colors: { background: 'green', ink: '#000000' } }))).toMatch(/colors\.background/);
   });
 
   it('ресурсы: неизвестная заглушка и битое описание картинки', () => {
@@ -237,6 +255,21 @@ describe('сборка пакета и ссылки между файлами', 
     expect(issuesOf(() => assemblePack(dup, env))).toMatch(/уровень «demo-1» объявлен дважды/);
     const short = mutate((r) => r.levels.pop());
     expect(issuesOf(() => assemblePack(short, env))).toMatch(/в манифесте 2 файлов уровней, загружено 1/);
+  });
+
+  it('комната: HUD и слой неактивных сегментов ссылаются на существующие ресурсы и символы', () => {
+    const room = (change: (raw: RawPack) => void): RawPack => {
+      const raw = loadRawPack('room');
+      change(raw);
+      return raw;
+    };
+    expect(assemblePack(room(() => undefined), env).screen.hud.kind).toBe('lcd');
+    const ghost = room((r) => ((r.screen as { ghost: { asset: string } }).ghost.asset = 'cell.nope'));
+    expect(issuesOf(() => assemblePack(ghost, env))).toMatch(/screen\.ghost\.asset: ресурс «cell\.nope» не найден/);
+    const glyph = room((r) => delete (r.assets as { assets: Record<string, unknown> }).assets['hud.digit.minus']);
+    expect(issuesOf(() => assemblePack(glyph, env))).toMatch(/font\.glyphs\["-"\]: ресурс «hud\.digit\.minus» не найден/);
+    const label = room((r) => ((r.screen as { hud: { fixed: { label: string } } }).hud.fixed.label = '0-0Z0'));
+    expect(issuesOf(() => assemblePack(label, env))).toMatch(/длиннее числа позиций|нет в шрифте/);
   });
 
   it('ошибка в одном уровне не даёт собрать «частично сломанную» сцену', () => {

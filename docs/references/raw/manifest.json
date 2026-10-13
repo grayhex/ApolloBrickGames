@@ -1,0 +1,447 @@
+{
+  "name": "Crocodile Mario — reconstructed LCD graphics",
+  "provenance": "Реконструкция по двум предоставленным фотографиям; не оригинальные файлы и не дамп LCD.",
+  "cell": {
+    "width": 128,
+    "height": 112,
+    "anchor": [
+      64,
+      56
+    ],
+    "png_scales": [
+      1,
+      2,
+      4
+    ],
+    "trimmed": false,
+    "gap_between_player_and_obstacle": 2.55
+  },
+  "palette": {
+    "segment": "#303A30",
+    "background": "#ADB38C",
+    "ghost_opacity": 0.075,
+    "paper": "#F4F2E9",
+    "text": "#202A24",
+    "muted": "#697166",
+    "line": "#D5D8CC"
+  },
+  "states": {
+    "empty": [],
+    "player": [
+      "cell_player"
+    ],
+    "obstacle": [
+      "cell_obstacle"
+    ],
+    "all_on": [
+      "cell_player",
+      "cell_obstacle"
+    ],
+    "ghost": [
+      "cell_ghost"
+    ]
+  },
+  "notes": [
+    "У препятствия персонаж выключен; маски не пересекаются.",
+    "cell_all_on позволяет проверить совмещение и вариант полного заполнения блока.",
+    "Сетка и дополнительные индикаторы восстановлены приблизительно.",
+    "Индивидуальные сегменты — программное разбиение, не достоверная электрическая схема."
+  ],
+  "segments": [
+    {
+      "id": "player_head",
+      "group": "player",
+      "svg": "svg/segments/player_head.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    },
+    {
+      "id": "player_torso",
+      "group": "player",
+      "svg": "svg/segments/player_torso.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    },
+    {
+      "id": "player_hand_left",
+      "group": "player",
+      "svg": "svg/segments/player_hand_left.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    },
+    {
+      "id": "player_hand_right",
+      "group": "player",
+      "svg": "svg/segments/player_hand_right.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    },
+    {
+      "id": "player_foot_left",
+      "group": "player",
+      "svg": "svg/segments/player_foot_left.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    },
+    {
+      "id": "player_foot_right",
+      "group": "player",
+      "svg": "svg/segments/player_foot_right.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    },
+    {
+      "id": "wall_01",
+      "group": "obstacle",
+      "svg": "svg/segments/wall_01.svg",
+      "anchor": [
+        64,
+        56
+      ]
+    }
+  ],
+  "assets": {
+    "cell_player": {
+      "width": 128,
+      "height": 112,
+      "anchor": [
+        64.0,
+        56.0
+      ],
+      "label_ru": "Персонаж — центральные сегменты",
+      "svg": "svg/cell_player.svg",
+      "png": {
+        "1x": "png/1x/cell_player.png",
+        "2x": "png/2x/cell_player.png",
+        "4x": "png/4x/cell_player.png"
+      }
+    },
+    "cell_obstacle": {
+      "width": 128,
+      "height": 112,
+      "anchor": [
+        64.0,
+        56.0
+      ],
+      "label_ru": "Препятствие — персонаж выключен",
+      "svg": "svg/cell_obstacle.svg",
+      "png": {
+        "1x": "png/1x/cell_obstacle.png",
+        "2x": "png/2x/cell_obstacle.png",
+        "4x": "png/4x/cell_obstacle.png"
+      }
+    },
+    "cell_all_on": {
+      "width": 128,
+      "height": 112,
+      "anchor": [
+        64.0,
+        56.0
+      ],
+      "label_ru": "Все сегменты ячейки включены",
+      "svg": "svg/cell_all_on.svg",
+      "png": {
+        "1x": "png/1x/cell_all_on.png",
+        "2x": "png/2x/cell_all_on.png",
+        "4x": "png/4x/cell_all_on.png"
+      }
+    },
+    "cell_ghost": {
+      "width": 128,
+      "height": 112,
+      "anchor": [
+        64.0,
+        56.0
+      ],
+      "label_ru": "Неактивные сегменты",
+      "svg": "svg/cell_ghost.svg",
+      "png": {
+        "1x": "png/1x/cell_ghost.png",
+        "2x": "png/2x/cell_ghost.png",
+        "4x": "png/4x/cell_ghost.png"
+      }
+    },
+    "cell_empty": {
+      "width": 128,
+      "height": 112,
+      "anchor": [
+        64.0,
+        56.0
+      ],
+      "label_ru": "Пустая прозрачная ячейка",
+      "svg": "svg/cell_empty.svg",
+      "png": {
+        "1x": "png/1x/cell_empty.png",
+        "2x": "png/2x/cell_empty.png",
+        "4x": "png/4x/cell_empty.png"
+      }
+    },
+    "cell_object": {
+      "width": 128,
+      "height": 112,
+      "anchor": [
+        64.0,
+        56.0
+      ],
+      "label_ru": "Небольшой предмет / метка с фотографии",
+      "svg": "svg/cell_object.svg",
+      "png": {
+        "1x": "png/1x/cell_object.png",
+        "2x": "png/2x/cell_object.png",
+        "4x": "png/4x/cell_object.png"
+      }
+    },
+    "life": {
+      "width": 48,
+      "height": 48,
+      "anchor": [
+        24.0,
+        24.0
+      ],
+      "label_ru": "Индикатор жизни",
+      "svg": "svg/life.svg",
+      "png": {
+        "1x": "png/1x/life.png",
+        "2x": "png/2x/life.png",
+        "4x": "png/4x/life.png"
+      }
+    },
+    "lives_3": {
+      "width": 136,
+      "height": 48,
+      "anchor": [
+        68.0,
+        24.0
+      ],
+      "label_ru": "Три жизни",
+      "svg": "svg/lives_3.svg",
+      "png": {
+        "1x": "png/1x/lives_3.png",
+        "2x": "png/2x/lives_3.png",
+        "4x": "png/4x/lives_3.png"
+      }
+    },
+    "digit_0": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 0",
+      "svg": "svg/digit_0.svg",
+      "png": {
+        "1x": "png/1x/digit_0.png",
+        "2x": "png/2x/digit_0.png",
+        "4x": "png/4x/digit_0.png"
+      }
+    },
+    "digit_1": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 1",
+      "svg": "svg/digit_1.svg",
+      "png": {
+        "1x": "png/1x/digit_1.png",
+        "2x": "png/2x/digit_1.png",
+        "4x": "png/4x/digit_1.png"
+      }
+    },
+    "digit_2": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 2",
+      "svg": "svg/digit_2.svg",
+      "png": {
+        "1x": "png/1x/digit_2.png",
+        "2x": "png/2x/digit_2.png",
+        "4x": "png/4x/digit_2.png"
+      }
+    },
+    "digit_3": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 3",
+      "svg": "svg/digit_3.svg",
+      "png": {
+        "1x": "png/1x/digit_3.png",
+        "2x": "png/2x/digit_3.png",
+        "4x": "png/4x/digit_3.png"
+      }
+    },
+    "digit_4": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 4",
+      "svg": "svg/digit_4.svg",
+      "png": {
+        "1x": "png/1x/digit_4.png",
+        "2x": "png/2x/digit_4.png",
+        "4x": "png/4x/digit_4.png"
+      }
+    },
+    "digit_5": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 5",
+      "svg": "svg/digit_5.svg",
+      "png": {
+        "1x": "png/1x/digit_5.png",
+        "2x": "png/2x/digit_5.png",
+        "4x": "png/4x/digit_5.png"
+      }
+    },
+    "digit_6": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 6",
+      "svg": "svg/digit_6.svg",
+      "png": {
+        "1x": "png/1x/digit_6.png",
+        "2x": "png/2x/digit_6.png",
+        "4x": "png/4x/digit_6.png"
+      }
+    },
+    "digit_7": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 7",
+      "svg": "svg/digit_7.svg",
+      "png": {
+        "1x": "png/1x/digit_7.png",
+        "2x": "png/2x/digit_7.png",
+        "4x": "png/4x/digit_7.png"
+      }
+    },
+    "digit_8": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 8",
+      "svg": "svg/digit_8.svg",
+      "png": {
+        "1x": "png/1x/digit_8.png",
+        "2x": "png/2x/digit_8.png",
+        "4x": "png/4x/digit_8.png"
+      }
+    },
+    "digit_9": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ 9",
+      "svg": "svg/digit_9.svg",
+      "png": {
+        "1x": "png/1x/digit_9.png",
+        "2x": "png/2x/digit_9.png",
+        "4x": "png/4x/digit_9.png"
+      }
+    },
+    "digit_minus": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ minus",
+      "svg": "svg/digit_minus.svg",
+      "png": {
+        "1x": "png/1x/digit_minus.png",
+        "2x": "png/2x/digit_minus.png",
+        "4x": "png/4x/digit_minus.png"
+      }
+    },
+    "digit_blank": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Семисегментный символ blank",
+      "svg": "svg/digit_blank.svg",
+      "png": {
+        "1x": "png/1x/digit_blank.png",
+        "2x": "png/2x/digit_blank.png",
+        "4x": "png/4x/digit_blank.png"
+      }
+    },
+    "digit_ghost": {
+      "width": 64,
+      "height": 104,
+      "anchor": [
+        32.0,
+        52.0
+      ],
+      "label_ru": "Выключенные сегменты цифры",
+      "svg": "svg/digit_ghost.svg",
+      "png": {
+        "1x": "png/1x/digit_ghost.png",
+        "2x": "png/2x/digit_ghost.png",
+        "4x": "png/4x/digit_ghost.png"
+      }
+    },
+    "dot": {
+      "width": 16,
+      "height": 16,
+      "anchor": [
+        8.0,
+        8.0
+      ],
+      "label_ru": "Точка",
+      "svg": "svg/dot.svg",
+      "png": {
+        "1x": "png/1x/dot.png",
+        "2x": "png/2x/dot.png",
+        "4x": "png/4x/dot.png"
+      }
+    }
+  }
+}

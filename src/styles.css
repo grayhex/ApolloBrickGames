@@ -83,15 +83,226 @@ body {
   display: none;
 }
 
-/* Сцена: Canvas сам подбирает размер под контейнер (целый масштаб, без растягивания). */
+/* ── Сцена: крышка корпуса вокруг LCD ──────────────────────────────────────
+   Размеры внутри крышки — в cqw (доля ширины сцены), поэтому она масштабируется целиком.
+   Цвета корпуса — оценка по фотографиям владельца (docs/visual-spec.md). */
 .stage {
+  container-type: inline-size;
+  width: 100%;
+  /* Крышка почти квадратная (по фото), поэтому ширину ограничиваем и высотой окна. */
+  max-width: clamp(360px, calc(100dvh - 260px), 820px);
+  margin: 0 auto;
+}
+
+.lid {
+  --rim: #2456c9;
+  --rim-dark: #1a3fa0;
+  --face: #dcd8c6;
+  --face-2: #cdc9b6;
+  --shade: #c2beaa;
+  --bezel-hi: #ebe8da;
+  --bezel-lo: #c4bfaa;
+  --art: #dc8a22;
+  --lcd-bg: #adb38c;
+  --lcd-aspect: 2 / 1;
+  position: relative;
+  padding: 4.4cqw 4.4cqw 4.8cqw;
+  background: linear-gradient(170deg, var(--rim), var(--rim-dark));
+  border-radius: 7cqw 7cqw 8cqw 8cqw;
+  box-shadow: 0 1.6cqw 3.6cqw rgba(0, 0, 0, 0.55);
+}
+
+/* Белый корпус: светлая лицевая панель и розоватый рисунок — по фото жёлтого корпуса, где панель такая же. */
+.lid[data-shell='white'] {
+  --rim: #f6f6f3;
+  --rim-dark: #d9d9d4;
+  --face: #e0e1e5;
+  --face-2: #cfd0d6;
+  --shade: #c4c5cc;
+  --bezel-hi: #f2f2f4;
+  --bezel-lo: #c2c3cb;
+  --art: #e0786e;
+}
+
+.lid[data-shell='red'] {
+  --rim: #c92d40;
+  --rim-dark: #96202f;
+  --face: #e4e3e1;
+  --face-2: #d2d1cf;
+  --shade: #c6c5c3;
+  --bezel-hi: #f3f2f0;
+  --bezel-lo: #c4c2c0;
+  --art: #d9645a;
+}
+
+.lid__face {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 5cqw 3.9cqw 2.4cqw;
+  background: linear-gradient(180deg, var(--face), var(--face-2));
+  border-radius: 4cqw 4cqw 7cqw 7cqw;
+  box-shadow: inset 0 0.3cqw 0.6cqw rgba(255, 255, 255, 0.5), inset 0 -0.4cqw 0.8cqw rgba(0, 0, 0, 0.18);
+}
+
+.lid__screw {
+  position: absolute;
+  width: 4cqw;
+  height: 4cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #ffffff, #c4c4c4 52%, #8a8a8a);
+  box-shadow: 0 0 0 0.35cqw var(--shade), inset 0 0 0.5cqw rgba(0, 0, 0, 0.45);
+}
+
+.lid__screw::before,
+.lid__screw::after {
+  content: '';
+  position: absolute;
+  inset: 44% 15%;
+  background: rgba(40, 40, 40, 0.55);
+  border-radius: 1px;
+  transform: rotate(38deg);
+}
+
+.lid__screw::after {
+  transform: rotate(128deg);
+}
+
+.lid__screw--tl {
+  top: 6cqw;
+  left: 5cqw;
+}
+
+.lid__screw--tr {
+  top: 5.4cqw;
+  right: 4cqw;
+}
+
+.lid__screw--bl {
+  bottom: 9cqw;
+  left: 3.4cqw;
+}
+
+.lid__screw--br {
+  bottom: 9cqw;
+  right: 3.6cqw;
+}
+
+.lid__leds {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 44%;
+  height: 6.6cqw;
+  margin: 0 auto 9.5cqw;
+  padding: 0 1cqw;
+  background: var(--face-2);
+  border-radius: 3cqw;
+  box-shadow: inset 0 0.35cqw 0.6cqw rgba(0, 0, 0, 0.2), 0 0.2cqw 0 var(--bezel-hi);
+}
+
+.led {
+  display: block;
+  width: 4.4cqw;
+  height: 4.4cqw;
+  border-radius: 50%;
+  box-shadow: inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.35), 0 0 1.3cqw var(--glow);
+}
+
+.led--red {
+  --glow: rgba(255, 70, 50, 0.75);
+  background: radial-gradient(circle at 38% 32%, #ffd8d0 0 12%, #ff4638 38%, #a8120e);
+}
+
+.led--yellow {
+  --glow: rgba(245, 220, 60, 0.7);
+  background: radial-gradient(circle at 38% 32%, #fffbc0 0 12%, #f1d52f 40%, #a88c10);
+}
+
+.led--green {
+  --glow: rgba(60, 210, 160, 0.7);
+  background: radial-gradient(circle at 38% 32%, #d4fff0 0 12%, #3fd1a0 40%, #0f6e52);
+}
+
+/* Окно LCD в углублённой рамке с фаской: разные цвета сторон дают диагональные «швы» по углам. */
+.lid__bezel {
+  margin-bottom: 2.5cqw;
+  padding: 0.6cqw;
+  background: linear-gradient(180deg, var(--bezel-hi), var(--face-2));
+  border: 3.6cqw solid;
+  border-color: var(--bezel-lo) var(--bezel-hi) var(--bezel-hi) var(--bezel-lo);
+  border-radius: 0.5cqw;
+}
+
+.lid__window {
   display: grid;
   place-items: center;
-  height: clamp(240px, 58vh, 640px);
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: var(--lcd-aspect);
+  background: var(--lcd-bg);
+  box-shadow: 0 0 0 0.35cqw rgba(0, 0, 0, 0.55), inset 0 0 1.4cqw rgba(0, 0, 0, 0.25);
+}
+
+.lid__art {
+  display: block;
+  width: 88%;
+  height: auto;
+  margin: 0 auto;
+  stroke: var(--art);
+  stroke-width: 2.2;
+}
+
+.lid__art #art-figure {
+  stroke-width: 1.3;
+}
+
+.lid__hinge {
+  position: absolute;
+  left: 34%;
+  bottom: -1cqw;
+  width: 32%;
+  height: 3.6cqw;
+  background: linear-gradient(#1d1d1d, #060606);
+  border-radius: 0 0 1cqw 1cqw;
+}
+
+/* Без корпуса (технические маршруты): просто окно с игрой. */
+.stage--plain .lid {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.stage--plain .lid__face {
+  padding: 0;
+  gap: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.stage--plain .lid__screw,
+.stage--plain .lid__leds,
+.stage--plain .lid__art,
+.stage--plain .lid__hinge {
+  display: none;
+}
+
+.stage--plain .lid__bezel {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+.stage--plain .lid__window {
+  max-height: 640px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
-  overflow: hidden;
+  box-shadow: none;
 }
 
 .game-area {
@@ -426,19 +637,18 @@ input:focus-visible {
   font-size: 0.9rem;
 }
 
-.sheet__renders {
-  display: flex;
-  flex-wrap: wrap;
+.sheet__scenes {
+  display: grid;
   gap: 16px;
 }
 
-.sheet__renders figure {
+.sheet__scenes figure {
   margin: 0;
 }
 
-.sheet__renders canvas {
+.sheet__scene,
+.sheet__asset {
   display: block;
-  image-rendering: pixelated;
   border: 1px solid var(--line);
 }
 
@@ -460,17 +670,6 @@ input:focus-visible {
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
-}
-
-.sheet__swatch {
-  display: inline-block;
-  padding: 8px;
-  line-height: 0;
-  border: 1px solid var(--line);
-}
-
-.sheet__swatch img {
-  image-rendering: pixelated;
 }
 
 .sheet__status {

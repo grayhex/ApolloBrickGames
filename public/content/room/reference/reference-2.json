@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "reference-2",
+  "status": "demo",
+  "hudLabel": "3-01",
+  "note": "Композиция по фотографии 2 из комплекта владельца (docs/references/raw/layouts/reference_2.json). Не уровень и не правило игры.",
+  "width": 13,
+  "height": 8,
+  "legend": {
+    ".": {
+      "collision": "empty"
+    },
+    "#": {
+      "collision": "solid",
+      "asset": "cell.obstacle"
+    },
+    "O": {
+      "collision": "empty",
+      "asset": "cell.object"
+    }
+  },
+  "rows": [
+    "#####.#######",
+    "#############",
+    "#############",
+    "#############",
+    "#############",
+    "#########.###",
+    "#############",
+    "#############"
+  ],
+  "start": {
+    "x": 5,
+    "y": 0
+  },
+  "objects": [],
+  "transitions": []
+}

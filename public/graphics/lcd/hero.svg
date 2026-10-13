@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" shape-rendering="crispEdges">
-  <!-- ЧЕРНОВИК. Герой, ячейка 16×16, привязка — середина нижней кромки ячейки (стоит на опоре). Силуэт оценён по крошечной фигурке на ф1–ф4; отдельного спрайта прыжка и отличия направлений на референсах не видно. -->
-  <path d="M5 1h6v2H5z M3 3h10v1H3z"/>
-  <path fill-rule="evenodd" d="M5 4h6v3H5z M6 5h1v1H6z M9 5h1v1H9z"/>
-  <path d="M1 7h5v2H1z M10 7h5v2h-5z M6 7h4v4H6z"/>
-  <path d="M5 11h2v3H5z M9 11h2v3H9z M3 14h4v2H3z M9 14h4v2H9z"/>
-</svg>

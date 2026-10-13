@@ -1,4 +1,4 @@
-import type { LevelDef, ScreenProfile } from '../content/schema';
+import { screenSize, type HudFixed, type LevelDef, type ScreenProfile } from '../content/schema';
 import type { GameState } from '../core/state';
 import type { AssetStore } from './assets';
 import type { CameraPos } from './camera';
@@ -23,12 +23,16 @@ export interface RenderInput {
   camera: CameraPos;
   sprites: Sprites;
   debug: DebugOverlay;
+  /** Подменить значения HUD (контрольный лист показывает значения с фотографий). */
+  hudOverride?: HudFixed;
+  /** Не рисовать героя (сцена с фотографии без фигурки). */
+  hideHero?: boolean;
 }
 
 /**
- * Canvas-рендерер. Рисует в логических пикселях профиля экрана (cellPx на клетку);
- * масштаб до физических пикселей задаёт computeLayout, поэтому размер окна и
- * devicePixelRatio правил игры не меняют.
+ * Canvas-рендерер. Рисует в логических пикселях профиля экрана (поле из клеток width × height
+ * и поля вокруг него); масштаб до физических пикселей задаёт computeLayout, поэтому размер окна
+ * и devicePixelRatio правил игры не меняют.
  */
 export class Renderer {
   readonly logicalWidth: number;
@@ -36,20 +40,28 @@ export class Renderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly screen: ScreenProfile;
   private readonly assets: AssetStore;
-  private readonly bg: string;
-  private readonly ink: string;
   private layout: Layout;
+  private ghostEnabled: boolean;
 
   constructor(canvas: HTMLCanvasElement, screen: ScreenProfile, assets: AssetStore) {
     this.canvas = canvas;
     this.screen = screen;
     this.assets = assets;
-    this.bg = screen.colors.background;
-    this.ink = screen.colors.ink;
-    this.logicalWidth = screen.viewport.columns * screen.cellPx;
-    this.logicalHeight = (screen.viewport.rows + screen.hud.rows) * screen.cellPx;
-    this.layout = computeLayout(this.logicalWidth, this.logicalHeight, 1, this.logicalWidth, this.logicalHeight);
+    this.ghostEnabled = screen.ghost?.enabled ?? false;
+    const size = screenSize(screen);
+    this.logicalWidth = size.width;
+    this.logicalHeight = size.height;
+    this.layout = computeLayout(size.width, size.height, 1, size.width, size.height);
     this.applyLayout();
+  }
+
+  /** Слой неактивных сегментов (если он есть в профиле): включить или выключить. */
+  setGhost(enabled: boolean): void {
+    this.ghostEnabled = enabled && this.screen.ghost !== null;
+  }
+
+  get hasGhostLayer(): boolean {
+    return this.screen.ghost !== null;
   }
 
   /** Подогнать Canvas под контейнер. Вызывать при resize, смене DPR/масштаба страницы. */
@@ -77,45 +89,55 @@ export class Renderer {
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
     const { screen, layout } = this;
-    const { cellPx: cell, viewport, hud } = screen;
-    const hudHeight = hud.rows * cell;
-    const playTop = hud.position === 'top' ? hudHeight : 0;
-    const hudTop = hud.position === 'top' ? 0 : viewport.rows * cell;
+    const { cell, margin, viewport, colors } = screen;
 
     ctx.setTransform(layout.scale, 0, 0, layout.scale, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = this.bg;
+    ctx.imageSmoothingEnabled = screen.smoothing;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = colors.background;
     ctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, playTop, viewport.columns * cell, viewport.rows * cell);
+    ctx.rect(margin.left, margin.top, viewport.columns * cell.width, viewport.rows * cell.height);
     ctx.clip();
-    this.drawWorld(ctx, input, playTop);
-    if (input.debug.grid || input.debug.collisions) this.drawDebug(ctx, input, playTop);
+    this.drawWorld(ctx, input);
+    if (input.debug.grid || input.debug.collisions) this.drawDebug(ctx, input);
     ctx.restore();
 
-    if (hud.rows > 0) this.drawHud(ctx, input, hudTop, hudHeight);
+    this.drawHud(ctx, input);
   }
 
-  private cellToPixel(cam: CameraPos, wx: number, wy: number, playTop: number): { x: number; y: number } {
-    const cell = this.screen.cellPx;
-    return { x: (wx - cam.x) * cell, y: (wy - cam.y) * cell + playTop };
+  /** Левый верхний угол клетки карты в логических пикселях экрана. */
+  private cellOrigin(cam: CameraPos, wx: number, wy: number): { x: number; y: number } {
+    const { cell, margin } = this.screen;
+    return { x: margin.left + (wx - cam.x) * cell.width, y: margin.top + (wy - cam.y) * cell.height };
   }
 
-  private drawWorld(ctx: CanvasRenderingContext2D, input: RenderInput, playTop: number): void {
+  private drawWorld(ctx: CanvasRenderingContext2D, input: RenderInput): void {
     const { state, level, camera, sprites } = input;
-    const { cellPx: cell, viewport } = this.screen;
+    const { cell, viewport, colors, ghost } = this.screen;
+    const ink = colors.ink;
     const tick = state.worldTick;
+
+    // Слой неактивных сегментов под всем остальным (необязательный).
+    if (this.ghostEnabled && ghost) {
+      for (let cy = 0; cy < viewport.rows; cy++) {
+        for (let cx = 0; cx < viewport.columns; cx++) {
+          const p = this.cellOrigin({ x: 0, y: 0 }, cx, cy);
+          this.assets.draw(ctx, ghost.asset, tick, p.x, p.y, cell.width, cell.height, ink);
+        }
+      }
+    }
 
     // Статический слой: что рисовать, решает легенда уровня; проходимость отсюда не берётся.
     for (let cy = 0; cy < viewport.rows; cy++) {
       for (let cx = 0; cx < viewport.columns; cx++) {
-        const wx = camera.x + cx;
-        const wy = camera.y + cy;
-        const char = level.rows[wy]?.[wx];
+        const char = level.rows[camera.y + cy]?.[camera.x + cx];
         const asset = char === undefined ? null : level.legend[char]?.asset;
-        if (asset) this.assets.draw(ctx, asset, tick, cx * cell, cy * cell + playTop, cell, this.ink);
+        if (!asset) continue;
+        const p = this.cellOrigin({ x: 0, y: 0 }, cx, cy);
+        this.assets.draw(ctx, asset, tick, p.x, p.y, cell.width, cell.height, ink);
       }
     }
 
@@ -124,8 +146,8 @@ export class Renderer {
       if (!object || !object.active || !def.asset) return;
       for (let dy = 0; dy < def.h; dy++) {
         for (let dx = 0; dx < def.w; dx++) {
-          const p = this.cellToPixel(camera, object.x + dx, object.y + dy, playTop);
-          this.assets.draw(ctx, def.asset, tick, p.x, p.y, cell, this.ink);
+          const p = this.cellOrigin(camera, object.x + dx, object.y + dy);
+          this.assets.draw(ctx, def.asset, tick, p.x, p.y, cell.width, cell.height, ink);
         }
       }
     });
@@ -133,33 +155,37 @@ export class Renderer {
     const projectileSprite = sprites.projectile;
     if (projectileSprite) {
       for (const projectile of state.projectiles) {
-        const p = this.cellToPixel(camera, projectile.x, projectile.y, playTop);
+        const p = this.cellOrigin(camera, projectile.x, projectile.y);
         const flip = projectile.dir === -1 && this.assets.mirrorsWhenLeft(projectileSprite);
-        this.assets.draw(ctx, projectileSprite, tick, p.x, p.y, cell, this.ink, flip);
+        this.assets.draw(ctx, projectileSprite, tick, p.x, p.y, cell.width, cell.height, ink, flip);
       }
     }
 
     // В фазе смерти герой мигает.
     const blink = state.phase === 'dead' && Math.floor(state.tick / 2) % 2 === 1;
-    if (!blink) {
-      const p = this.cellToPixel(camera, state.hero.x, state.hero.y, playTop);
+    if (!blink && !input.hideHero) {
+      const p = this.cellOrigin(camera, state.hero.x, state.hero.y);
       // Зеркало для взгляда влево — только если ресурс это допускает (в каталоге по умолчанию — нет).
       const flip = state.hero.facing === -1 && this.assets.mirrorsWhenLeft(sprites.hero);
-      this.assets.draw(ctx, sprites.hero, tick, p.x, p.y, cell, this.ink, flip);
+      this.assets.draw(ctx, sprites.hero, tick, p.x, p.y, cell.width, cell.height, ink, flip);
     }
   }
 
   /** Отладка: сетка и коллизии (занятые тайлы, области объектов, клетка героя). */
-  private drawDebug(ctx: CanvasRenderingContext2D, input: RenderInput, playTop: number): void {
+  private drawDebug(ctx: CanvasRenderingContext2D, input: RenderInput): void {
     const { state, level, camera, debug } = input;
-    const { cellPx: cell, viewport } = this.screen;
-    ctx.lineWidth = 1;
+    const { cell, viewport } = this.screen;
+    const line = Math.max(1, Math.round(Math.min(cell.width, cell.height) / 16));
+    ctx.lineWidth = line;
+    const box = (x: number, y: number, w: number, h: number): void =>
+      ctx.strokeRect(x + line / 2, y + line / 2, w - line, h - line);
 
     if (debug.grid) {
-      ctx.strokeStyle = 'rgba(32, 42, 30, 0.22)';
+      ctx.strokeStyle = 'rgba(32, 42, 30, 0.35)';
       for (let cy = 0; cy < viewport.rows; cy++) {
         for (let cx = 0; cx < viewport.columns; cx++) {
-          ctx.strokeRect(cx * cell + 0.5, cy * cell + playTop + 0.5, cell - 1, cell - 1);
+          const p = this.cellOrigin({ x: 0, y: 0 }, cx, cy);
+          box(p.x, p.y, cell.width, cell.height);
         }
       }
     }
@@ -170,7 +196,8 @@ export class Renderer {
         for (let cx = 0; cx < viewport.columns; cx++) {
           const char = level.rows[camera.y + cy]?.[camera.x + cx];
           if (char !== undefined && level.legend[char]?.collision === 'solid') {
-            ctx.strokeRect(cx * cell + 0.5, cy * cell + playTop + 0.5, cell - 1, cell - 1);
+            const p = this.cellOrigin({ x: 0, y: 0 }, cx, cy);
+            box(p.x, p.y, cell.width, cell.height);
           }
         }
       }
@@ -178,54 +205,78 @@ export class Renderer {
       level.objects.forEach((def, index) => {
         const object = state.objects[index];
         if (!object || !object.active) return;
-        const p = this.cellToPixel(camera, object.x, object.y, playTop);
-        ctx.strokeRect(p.x + 0.5, p.y + 0.5, def.w * cell - 1, def.h * cell - 1);
+        const p = this.cellOrigin(camera, object.x, object.y);
+        box(p.x, p.y, def.w * cell.width, def.h * cell.height);
       });
       ctx.strokeStyle = 'rgba(20, 150, 40, 0.95)';
-      const hero = this.cellToPixel(camera, state.hero.x, state.hero.y, playTop);
-      ctx.strokeRect(hero.x + 0.5, hero.y + 0.5, cell - 1, cell - 1);
+      const hero = this.cellOrigin(camera, state.hero.x, state.hero.y);
+      box(hero.x, hero.y, cell.width, cell.height);
     }
   }
 
+  /** Значения HUD: подмена → фиксированные тестовые → состояние игры. */
+  private hudValues(input: RenderInput): { lives: number; label: string; score: number } {
+    const fixed = input.hudOverride ?? this.screen.hud.fixed;
+    if (fixed) return fixed;
+    return { lives: input.state.lives, label: input.level.hudLabel, score: input.state.score };
+  }
+
+  private drawHud(ctx: CanvasRenderingContext2D, input: RenderInput): void {
+    const values = this.hudValues(input);
+    if (this.screen.hud.kind === 'lcd') this.drawLcdHud(ctx, input, values);
+    else this.drawBuiltinHud(ctx, input, values);
+  }
+
+  /** HUD из спрайтов в явных координатах: значки жизни, подпись, число. */
+  private drawLcdHud(ctx: CanvasRenderingContext2D, input: RenderInput, values: { lives: number; label: string; score: number }): void {
+    const hud = this.screen.hud;
+    if (hud.kind !== 'lcd') return;
+    const ink = this.screen.colors.ink;
+    const tick = input.state.worldTick;
+
+    for (let i = 0; i < Math.min(values.lives, 9); i++) {
+      this.assets.draw(ctx, hud.lives.asset, tick, hud.lives.x + i * hud.lives.pitch, hud.lives.y, hud.lives.width, hud.lives.height, ink);
+    }
+
+    const row = (text: string, digits: { x: number; y: number; pitch: number; slots: number }): void => {
+      const padded = text.slice(-digits.slots).padStart(digits.slots, ' ');
+      [...padded].forEach((char, index) => {
+        const x = digits.x + index * digits.pitch;
+        if (this.ghostEnabled && hud.font.ghost) {
+          this.assets.draw(ctx, hud.font.ghost, tick, x, digits.y, hud.font.width, hud.font.height, ink);
+        }
+        const asset = hud.font.glyphs[char];
+        if (asset) this.assets.draw(ctx, asset, tick, x, digits.y, hud.font.width, hud.font.height, ink);
+      });
+    };
+    row(values.label, hud.label);
+    row(String(Math.min(values.score, 10 ** hud.score.slots - 1)).padStart(hud.score.slots, '0'), hud.score);
+  }
+
   /**
-   * HUD: значки жизни слева, подпись по центру, пятизначное число справа.
-   * Значения — из состояния игры либо фиксированные тестовые (`hud.fixed`); это не структура оригинала.
+   * Встроенный HUD (пиксельные заглушки): значки жизни слева, подпись по центру, пятизначное число справа
+   * в полосе поля. Значения — из состояния игры либо фиксированные тестовые.
    */
-  private drawHud(ctx: CanvasRenderingContext2D, input: RenderInput, top: number, height: number): void {
-    const { state, level, sprites } = input;
-    const { hud } = this.screen;
-    const lives = Math.min(hud.fixed ? hud.fixed.lives : state.lives, 5);
-    const label = hud.fixed ? hud.fixed.label : level.hudLabel;
-    const score = String(Math.min(hud.fixed ? hud.fixed.score : state.score, 99999)).padStart(5, '0');
+  private drawBuiltinHud(ctx: CanvasRenderingContext2D, input: RenderInput, values: { lives: number; label: string; score: number }): void {
+    const { hud, margin, cell, colors, viewport } = this.screen;
+    if (hud.kind !== 'builtin') return;
+    const height = hud.position === 'top' ? margin.top : margin.bottom;
+    const top = hud.position === 'top' ? 0 : margin.top + viewport.rows * cell.height;
+    const ink = colors.ink;
+    const score = String(Math.min(values.score, 99999)).padStart(5, '0');
 
     const icon = Math.min(hud.iconPx, height);
     const iconY = top + Math.floor((height - icon) / 2);
-    for (let i = 0; i < lives; i++) {
-      this.assets.draw(ctx, sprites.life, state.worldTick, i * icon + (i > 0 ? i : 0), iconY, icon, this.ink);
+    for (let i = 0; i < Math.min(values.lives, 5); i++) {
+      this.assets.draw(ctx, input.sprites.life, input.state.worldTick, i * icon + (i > 0 ? i : 0), iconY, icon, icon, ink);
     }
 
-    const margin = Math.max(1, Math.floor(this.screen.cellPx / 8));
-    const font = hud.font;
-    const fontDef = font ? this.assets.def(font.asset) : undefined;
-    if (font && fontDef?.kind === 'image' && this.assets.hasImage(font.asset)) {
-      const textY = top + Math.floor((height - fontDef.frameHeight) / 2);
-      const width = (text: string): number => text.length * fontDef.frameWidth;
-      const drawText = (text: string, x: number): void => {
-        [...text].forEach((char, index) => {
-          const frame = font.glyphs.indexOf(char);
-          if (frame >= 0) this.assets.drawFrame(ctx, font.asset, frame, x + index * fontDef.frameWidth, textY);
-        });
-      };
-      drawText(label, Math.floor((this.logicalWidth - width(label)) / 2));
-      drawText(score, this.logicalWidth - width(score) - margin);
-    } else {
-      const textY = top + Math.floor((height - FONT_HEIGHT) / 2);
-      drawBuiltinText(ctx, label, Math.floor((this.logicalWidth - textWidth(label)) / 2), textY, this.ink);
-      drawBuiltinText(ctx, score, this.logicalWidth - textWidth(score) - margin, textY, this.ink);
-    }
+    const marginX = Math.max(1, Math.floor(cell.width / 8));
+    const textY = top + Math.floor((height - FONT_HEIGHT) / 2);
+    drawBuiltinText(ctx, values.label, Math.floor((this.logicalWidth - textWidth(values.label)) / 2), textY, ink);
+    drawBuiltinText(ctx, score, this.logicalWidth - textWidth(score) - marginX, textY, ink);
 
-    ctx.fillStyle = this.ink;
-    const separatorY = hud.position === 'top' ? top + height - 1 : top;
-    ctx.fillRect(0, separatorY, this.logicalWidth, 1);
+    ctx.fillStyle = ink;
+    ctx.fillRect(0, hud.position === 'top' ? top + height - 1 : top, this.logicalWidth, 1);
   }
 }

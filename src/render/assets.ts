@@ -93,41 +93,57 @@ export class AssetStore {
     return Math.floor(tick / def.frameTicks) % def.frames;
   }
 
-  /** Рисует ресурс в квадрат size × size (клетка). */
+  /** Рисует ресурс в прямоугольник width × height (клетка, значок, символ HUD). */
   draw(
     ctx: CanvasRenderingContext2D,
     id: string,
     tick: number,
     x: number,
     y: number,
-    size: number,
+    width: number,
+    height: number,
     ink: string,
     flipX = false,
   ): void {
     const def = this.def(id);
     if (!def) {
-      drawGlyph(ctx, 'unknown', x, y, size, ink, flipX);
+      this.drawGlyphFit(ctx, 'unknown', x, y, width, height, ink, flipX);
       return;
     }
     if (def.kind === 'placeholder') {
-      drawGlyph(ctx, def.glyph, x, y, size, ink, flipX);
+      this.drawGlyphFit(ctx, def.glyph, x, y, width, height, ink, flipX);
       return;
     }
     const image = this.images.get(id);
     if (!image) {
-      drawGlyph(ctx, def.fallbackGlyph, x, y, size, ink, flipX);
+      this.drawGlyphFit(ctx, def.fallbackGlyph, x, y, width, height, ink, flipX);
       return;
     }
-    this.drawImageFrame(ctx, image, def, this.frameIndex(id, tick), x, y, size, size, flipX);
+    this.drawImageFrame(ctx, image, def, this.frameIndex(id, tick), x, y, width, height, flipX);
   }
 
-  /** Рисует один кадр картинки в натуральном размере кадра (шрифт HUD, значки). false — картинки нет. */
+  /** Рисует один кадр картинки (по умолчанию — в натуральном размере кадра). false — картинки нет. */
   drawFrame(ctx: CanvasRenderingContext2D, id: string, frame: number, x: number, y: number, width?: number, height?: number): boolean {
     const def = this.def(id);
     const image = this.images.get(id);
     if (!def || def.kind !== 'image' || !image) return false;
     this.drawImageFrame(ctx, image, def, frame, x, y, width ?? def.frameWidth, height ?? def.frameHeight, false);
     return true;
+  }
+
+  /** Заглушка квадратная: вписываем её в прямоугольник по центру. */
+  private drawGlyphFit(
+    ctx: CanvasRenderingContext2D,
+    glyph: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    ink: string,
+    flipX: boolean,
+  ): void {
+    const size = Math.min(width, height);
+    drawGlyph(ctx, glyph, x + (width - size) / 2, y + (height - size) / 2, size, ink, flipX);
   }
 
   private drawImageFrame(
@@ -141,15 +157,16 @@ export class AssetStore {
     height: number,
     flipX: boolean,
   ): void {
-    const sx = frame * def.frameWidth;
+    const sx = def.origin.x + frame * def.frameWidth;
+    const sy = def.origin.y;
     if (!flipX) {
-      ctx.drawImage(image, sx, 0, def.frameWidth, def.frameHeight, x, y, width, height);
+      ctx.drawImage(image, sx, sy, def.frameWidth, def.frameHeight, x, y, width, height);
       return;
     }
     ctx.save();
     ctx.translate(x + width, y);
     ctx.scale(-1, 1);
-    ctx.drawImage(image, sx, 0, def.frameWidth, def.frameHeight, 0, 0, width, height);
+    ctx.drawImage(image, sx, sy, def.frameWidth, def.frameHeight, 0, 0, width, height);
     ctx.restore();
   }
 }
