@@ -58,7 +58,8 @@ npm run dev        # сервер разработки: http://localhost:5173
 Статическая сборка работает с любым базовым путём: `npm run build -- --base=/МОЙ_ПУТЬ/`
 (для `/CrocodileMario/` есть `npm run build:pages`). Файлы данных загружаются относительно `import.meta.env.BASE_URL`.
 Для Cloudflare в корне лежит `wrangler.jsonc` (статические ресурсы из `./dist`): там сайт открывается с корня, поэтому
-подходит обычная `npm run build` (базовый путь `/`), а не `build:pages`. Настройки GitHub Pages в репозитории не заданы.
+подходит обычная `npm run build` (базовый путь `/`), а не `build:pages`. Сборку запускает сам `wrangler deploy`
+(`build.command`), поэтому поле «Build command» в настройках Workers Builds может быть пустым — каталог `dist/` в Git не хранится. Настройки GitHub Pages в репозитории не заданы.
 
 ## Управление
 

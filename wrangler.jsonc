@@ -1,8 +1,10 @@
-
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "crocodilemario",
   "compatibility_date": "2026-10-13",
+  "build": {
+    "command": "npm run build"
+  },
   "assets": {
     "directory": "./dist"
   }
