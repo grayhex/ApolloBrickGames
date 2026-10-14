@@ -67,3 +67,48 @@ describe('подготовка к редактору: адресные ошиб�
     expect(() => validateLevel(badHp, assets, env)).toThrow(/«hp» — целое число 1…99/);
   });
 });
+
+describe('исследовательские пометки в общем формате уровня', () => {
+  const assets = validateAssetCatalog(loadRawDemoPack().assets, env);
+  const base = () => rawLevel({ rows: ['....', '....', '####'], start: { x: 0, y: 1 } });
+
+  it('пометки читаются, сериализуются и не влияют на симуляцию-данные; значения по умолчанию опускаются', () => {
+    const json = { ...base(), marks: [{ id: 'm1', x: 1, y: 0, w: 2, status: 'unknown', note: 'не видно', ref: 'Кадр 1' }, { id: 'm2', x: 3, y: 1, status: 'confirmed' }] };
+    const level = validateLevel(json, assets, env);
+    expect(level.marks).toEqual([
+      { id: 'm1', x: 1, y: 0, w: 2, h: 1, status: 'unknown', note: 'не видно', ref: 'Кадр 1' },
+      { id: 'm2', x: 3, y: 1, w: 1, h: 1, status: 'confirmed', note: '', ref: '' },
+    ]);
+    const out = levelToJson(level);
+    expect(out['marks']).toEqual([
+      { id: 'm1', x: 1, y: 0, w: 2, status: 'unknown', note: 'не видно', ref: 'Кадр 1' },
+      { id: 'm2', x: 3, y: 1, status: 'confirmed' },
+    ]);
+    expect(validateLevel(out, assets, env)).toEqual(level);
+  });
+
+  it('уровень без пометок не получает поле marks (файлы прежнего вида остаются каноническими)', () => {
+    const level = validateLevel(base(), assets, env);
+    expect(level.marks).toEqual([]);
+    expect(levelToJson(level)).not.toHaveProperty('marks');
+  });
+
+  it('ошибки пометок адресны: статус, область, повтор идентификатора, длина заметки', () => {
+    const json = {
+      ...base(),
+      marks: [
+        { id: 'a', x: 3, y: 2, w: 2, status: 'unknown' },
+        { id: 'a', x: 0, y: 0, status: 'maybe' },
+        { id: 'c', x: 0, y: 0, status: 'assumed', note: 'я'.repeat(501) },
+      ],
+    };
+    try {
+      validateLevel(json, assets, env);
+      throw new Error('ожидалась ошибка');
+    } catch (error) {
+      const paths = (error as ContentError).details.map((d) => d.path);
+      expect(paths).toEqual(expect.arrayContaining(['$.marks[0]', '$.marks[1].id', '$.marks[1].status', '$.marks[2].note']));
+    }
+  });
+});
+

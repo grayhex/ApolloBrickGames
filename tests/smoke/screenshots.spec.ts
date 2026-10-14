@@ -46,3 +46,39 @@ test.describe('контрольный лист', () => {
     await page.locator('.sheet__scenes').screenshot({ path: `${dir}/asset-sheet.png` });
   });
 });
+
+test.describe('редактор уровней', () => {
+  test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+
+  test('подложка, калибровка и тестовый запуск (искусственный референс)', async ({ page }) => {
+    mkdirSync(dir, { recursive: true });
+    await page.goto('./#/editor');
+    await page.waitForSelector('#editor-root[data-ready="true"]');
+    await page.setInputFiles('#editor-import', 'docs/editor-demo/artificial-room.crocodile-project.zip');
+    await page.waitForFunction(() => document.querySelector('#editor-map')?.getAttribute('data-refs') === '1');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${dir}/editor-overlay.png` });
+
+    await page.click('[data-mode="side"]');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${dir}/editor-side-by-side.png` });
+    await page.click('[data-mode="overlay"]');
+
+    await page.getByRole('button', { name: 'Калибровать углы…' }).click();
+    await page.waitForSelector('.calib');
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${dir}/editor-calibration.png` });
+    await page.getByRole('button', { name: 'Отмена' }).click();
+
+    await page.click('#editor-test-run');
+    await page.waitForSelector('#test-area[data-phase="playing"]');
+    await page.locator('#test-area').focus();
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(450);
+    await page.keyboard.up('ArrowRight');
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(260);
+    await page.screenshot({ path: `${dir}/editor-test.png` });
+  });
+});
+

@@ -7,7 +7,14 @@ const route = parseRoute(window.location.hash);
 // Смена маршрута — простая перезагрузка: у каждого маршрута свой пакет данных и свои обработчики.
 window.addEventListener('hashchange', () => window.location.reload());
 
-(route === 'sheet' ? startSheet() : startApp(route)).catch((error: unknown) => {
+const start =
+  route === 'sheet'
+    ? startSheet()
+    : route === 'editor'
+      ? import('./editor/ui/editorApp').then((module) => module.startEditor())
+      : startApp(route);
+
+start.catch((error: unknown) => {
   const box = document.getElementById('fatal');
   const text = document.getElementById('fatal-text');
   if (box && text) {

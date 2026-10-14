@@ -3,7 +3,7 @@ import type { LevelDef } from './schema';
 /**
  * Уровень → канонический JSON общего формата (тот же, что читает загрузчик игры).
  * Значения по умолчанию опускаются. Результат проходит validateLevel без правок —
- * это точка входа для будущего редактора уровней: один формат для игры и редактора.
+ * один формат для игры и встроенного редактора уровней.
  */
 export function levelToJson(level: LevelDef): Record<string, unknown> {
   return {
@@ -33,5 +33,19 @@ export function levelToJson(level: LevelDef): Record<string, unknown> {
       ...(Object.keys(object.params).length === 0 ? {} : { params: { ...object.params } }),
     })),
     transitions: level.transitions.map((transition) => ({ from: transition.from, to: transition.to })),
+    ...(level.marks.length === 0
+      ? {}
+      : {
+          marks: level.marks.map((mark) => ({
+            id: mark.id,
+            x: mark.x,
+            y: mark.y,
+            ...(mark.w === 1 ? {} : { w: mark.w }),
+            ...(mark.h === 1 ? {} : { h: mark.h }),
+            status: mark.status,
+            ...(mark.note === '' ? {} : { note: mark.note }),
+            ...(mark.ref === '' ? {} : { ref: mark.ref }),
+          })),
+        }),
   };
 }

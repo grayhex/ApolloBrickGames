@@ -204,6 +204,30 @@ export interface Transition {
   to: string | null;
 }
 
+/** Насколько можно верить наблюдению: «не видно/неизвестно», «предположение», «подтверждено». */
+export type ObservationStatus = 'unknown' | 'assumed' | 'confirmed';
+
+/**
+ * Исследовательская пометка области или клетки: что известно о карте, а что нет.
+ * Метаданные уровня — в симуляции не участвуют. «Пустая наблюдаемая клетка» — это отсутствие пометки;
+ * «неизвестная клетка» — пометка `unknown` (в `rows` в таком месте стоит символ пустой клетки лишь как заполнитель).
+ */
+export interface LevelMark {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  status: ObservationStatus;
+  /** Короткая заметка. */
+  note: string;
+  /** Название референса (кадра), по которому сделана пометка; пустая строка — без ссылки. */
+  ref: string;
+}
+
+export const MAX_MARK_NOTE = 500;
+export const MAX_MARK_REF = 80;
+
 export interface LevelDef {
   schemaVersion: number;
   id: string;
@@ -219,6 +243,8 @@ export interface LevelDef {
   start: { x: number; y: number };
   objects: ObjectDef[];
   transitions: Transition[];
+  /** Исследовательские пометки; по умолчанию пусто. Не участвуют в симуляции. */
+  marks: LevelMark[];
 }
 
 // ── Пакет контента ─────────────────────────────────────────────────────────
