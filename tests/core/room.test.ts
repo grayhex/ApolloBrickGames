@@ -6,11 +6,11 @@ import { assemblePack } from '../../src/content/validate';
 import type { LevelDef } from '../../src/content/schema';
 import { createContext, Game, makeFrame, playReplay, stateHash, validationEnv, type Replay } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
-import { demoRoomContext, levelOf, loadRawPack, loadRoomPack } from '../helpers/content';
+import { levelOf, loadRawSandboxPack, loadRoomPack, loadSandboxPack, SANDBOX_ID, sandboxContext } from '../helpers/content';
 import { Pilot } from '../helpers/pilot';
 import { idle, run } from '../helpers/script';
 
-const fixturePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'demo-room.replay.json');
+const fixturePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'sandbox-room.replay.json');
 
 /** Сценарий для fixture: ходьба → прыжок через уступ → приземление → граница → обратно → платформа. */
 function playRoomScenario(p: Pilot): void {
@@ -34,19 +34,20 @@ function playRoomScenario(p: Pilot): void {
 }
 
 if (process.env['UPDATE_FIXTURES']) {
-  const pilot = new Pilot(demoRoomContext());
+  const pilot = new Pilot(sandboxContext());
   playRoomScenario(pilot);
   writeFileSync(fixturePath, JSON.stringify(pilot.replay()) + '\n');
 }
 
-describe('тестовая комната demo-room: данные', () => {
-  const pack = loadRoomPack();
-  const room = levelOf(pack, 'demo-room') as LevelDef;
+describe('основной пакет и песочница sandbox-room: данные', () => {
+  const pack = loadSandboxPack();
+  const room = levelOf(pack, SANDBOX_ID) as LevelDef;
 
-  it('в пакете девять уровней MARIO (первый — стартовый), тестовый уровень по видео и песочница demo-room без переходов и объектов; явная пометка «не оригинальный уровень»', () => {
-    expect(pack.levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'demo-room']);
+  it('в пакете страницы девять уровней MARIO (первый — стартовый) и тестовый уровень по видео; песочница sandbox-room — только в тестах, без переходов и объектов, с пометкой «не оригинальный уровень»', () => {
+    expect(loadRoomPack().levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'custom-1']);
+    expect(pack.levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'custom-1', SANDBOX_ID]);
     expect(pack.manifest.firstLevel).toBe('mario-1');
-    expect(room.id).toBe('demo-room');
+    expect(room.id).toBe(SANDBOX_ID);
     expect(room.status).toBe('demo');
     expect(room.note).toMatch(/Искусственная тестовая карта; не оригинальный уровень/);
     expect(room.objects).toEqual([]);
@@ -99,7 +100,7 @@ describe('тестовая комната demo-room: данные', () => {
 
 describe('однокомнатное демо: механика', () => {
   const started = (): Game => {
-    const game = new Game(demoRoomContext());
+    const game = new Game(sandboxContext());
     game.step(makeFrame({ pressed: ['start'] }));
     return game;
   };
@@ -175,10 +176,10 @@ describe('однокомнатное демо: механика', () => {
   });
 
   it('другие значения таймингов меняют прыжок без правок кода (данные, а не константы)', () => {
-    const raw = loadRawPack('room');
+    const raw = loadRawSandboxPack();
     (raw.rules as { params: { jump: { table: number[] } } }).params.jump.table = [-1, -1, 0];
     const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));
-    const ctx = createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: 'demo-room' } });
+    const ctx = createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: SANDBOX_ID } });
     const game = new Game(ctx);
     game.step(makeFrame({ pressed: ['start'] }));
     let top = 4;
@@ -190,15 +191,15 @@ describe('однокомнатное демо: механика', () => {
   });
 
   it('графика не определяет коллизии: замена ресурсов не меняет механику', () => {
-    const withArt = demoRoomContext();
-    const raw = loadRawPack('room');
-    const level = raw.levels.find((l) => (l as { id: string }).id === 'demo-room') as { id: string; legend: Record<string, { collision: string; asset?: string }> };
-    expect(level.id).toBe('demo-room');
+    const withArt = sandboxContext();
+    const raw = loadRawSandboxPack();
+    const level = raw.levels.find((l) => (l as { id: string }).id === SANDBOX_ID) as { id: string; legend: Record<string, { collision: string; asset?: string }> };
+    expect(level.id).toBe(SANDBOX_ID);
     for (const entry of Object.values(level.legend)) delete entry.asset; // уровень вообще без рисунков
     const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));
-    const withoutArt = createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: 'demo-room' } });
+    const withoutArt = createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: SANDBOX_ID } });
 
-    const play = (ctx: ReturnType<typeof demoRoomContext>): string => {
+    const play = (ctx: ReturnType<typeof sandboxContext>): string => {
       const pilot = new Pilot(ctx);
       playRoomScenario(pilot);
       return stateHash(pilot.state);
@@ -212,13 +213,13 @@ describe('однокомнатное демо: replay', () => {
 
   it('fixture на месте и воспроизводится одинаково', () => {
     expect(existsSync(fixturePath)).toBe(true);
-    const a = playReplay(demoRoomContext(), fixture());
-    const b = playReplay(demoRoomContext(), fixture());
+    const a = playReplay(sandboxContext(), fixture());
+    const b = playReplay(sandboxContext(), fixture());
     expect(stateHash(a.game.state)).toBe(stateHash(b.game.state));
   });
 
   it('сценарий «движение → прыжок → приземление → граница → платформа» даёт ожидаемый итог', () => {
-    const { game, events } = playReplay(demoRoomContext(), fixture());
+    const { game, events } = playReplay(sandboxContext(), fixture());
     expect(events.filter((e) => e.type === 'jump').length).toBeGreaterThanOrEqual(2);
     expect(events.filter((e) => e.type === 'land').length).toBeGreaterThanOrEqual(2);
     expect(events.some((e) => e.type === 'shot' || e.type === 'death')).toBe(false);

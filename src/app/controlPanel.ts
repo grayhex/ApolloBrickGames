@@ -1,21 +1,23 @@
 import type { UserLevel } from '../editor/library';
-import type { Shell, Theme } from '../input/settings';
+import type { Music, Shell } from '../input/settings';
 import { h } from './dom';
 import { icon, type IconName } from './icons';
 import { onLangChange, t, type MsgKey } from './i18n';
-import { sameLevel, slotTitle, type LevelRef, type OriginalSlot } from './levels';
+import { sameLevel, slotTitle, type BundledLevel, type LevelRef, type OriginalSlot } from './levels';
 import { ShellPicker } from './shellPicker';
-import type { DeviceView } from './viewModel';
+import { formatRunTime, type RunView } from './speedrun';
+import { VIEWS, type View } from './view';
 
 export interface ControlPanelActions {
   pickShell(shell: Shell): void;
   toggleSound(): void;
   /** Громкость 0…1 от ползунка. `commit = false` — ползунок ещё тянут (звук меняется, сохранять рано); `true` — отпустили. */
   setVolume(volume: number, commit: boolean): void;
+  setMusic(music: Music): void;
   toggleGhost(): void;
-  toggleCompact(): void;
-  toggleTheme(): void;
+  setView(view: View): void;
   pickOriginal(number: number): void;
+  pickBundled(levelId: string): void;
   pickUser(projectId: string): void;
 }
 
@@ -25,40 +27,51 @@ export interface ControlPanelView {
   sound: boolean;
   /** Громкость 0…1. */
   volume: number;
+  music: Music;
   ghost: boolean | null;
-  compact: boolean;
-  theme: Theme;
+  view: View;
   level: LevelRef | null;
 }
 
 export interface ControlPanelOptions {
   slots: readonly OriginalSlot[];
+  /** Готовые пользовательские уровни пакета (их названия — из словаря). */
+  bundled: readonly BundledLevel[];
   actions: ControlPanelActions;
+  /** Темп игры (тактов в секунду): по нему такты спидрана переводятся в секунды. */
+  tickRateHz: number;
   /** Клик мышью или касанием: вернуть клавиатуру игре. С клавиатуры фокус остаётся на кнопке панели. */
   onPointerUse(): void;
 }
 
-interface Toggle {
-  button: HTMLButtonElement;
-  icon: HTMLElement;
-  label: HTMLElement;
-  /** Ключ подписи кнопки. */
-  text: MsgKey;
-}
+const MUSICS: readonly { id: Music; label: MsgKey }[] = [
+  { id: 'original', label: 'music.original' },
+  { id: 'remaster', label: 'music.remaster' },
+];
+
+const VIEW_LABELS: Record<View, { label: MsgKey; title: MsgKey }> = {
+  closed: { label: 'view.closed', title: 'view.closedTitle' },
+  full: { label: 'view.full', title: 'view.fullTitle' },
+  screen: { label: 'view.screen', title: 'view.screenTitle' },
+};
 
 /**
- * Правая панель страницы: быстрые кнопки (звук, сегменты, «только экран», фон), цвет корпуса текущей игры
- * и выбор уровней — оригинальные 1–9 и карты из редактора. DOM строится один раз, дальше меняются только
- * атрибуты, поэтому фокус и прокрутка при переключениях не сбиваются.
+ * Правая панель страницы («Пульт»): мини-блок «Звук» (вкл/выкл, громкость, музыка «Оригинал»/«Ремастер»), блок «Вид» (цвет игрушки,
+ * состояние «свёрнута / полная / только экран», слой сегментов), уровни (оригинальные 1–9 плитками, пользовательские — выпадающим
+ * списком) и выезжающий спидран-HUD. Индикатор устройства и смена фона живут в угловом меню (`CornerNav`). DOM строится один раз,
+ * дальше меняются только атрибуты и тексты, поэтому фокус и прокрутка при переключениях не сбиваются.
  */
 export class ControlPanel {
   private readonly root: HTMLElement;
   private readonly options: ControlPanelOptions;
   private readonly picker: ShellPicker;
-  private readonly toggles = new Map<'sound' | 'ghost' | 'compact' | 'theme', Toggle>();
+  private readonly soundToggle: { button: HTMLButtonElement; icon: HTMLElement; label: HTMLElement };
+  private readonly ghostToggle: HTMLButtonElement;
+  private readonly musicButtons = new Map<Music, HTMLButtonElement>();
+  private readonly viewButtons = new Map<View, HTMLButtonElement>();
   private readonly tiles = new Map<number, HTMLButtonElement>();
-  private readonly userList = h('ul', { class: 'uv', id: 'user-levels' });
-  private readonly devices = new Map<'keyboard' | 'gamepad', HTMLElement>();
+  private readonly tiles2: { tile: HTMLButtonElement; slot: OriginalSlot }[] = [];
+  private readonly userSelect = h('select', { class: 'pick', id: 'user-level' });
   private readonly volume = h('input', {
     type: 'range',
     class: 'vol__range',
@@ -71,43 +84,41 @@ export class ControlPanel {
   private readonly volumeRow = h('div', { class: 'vol', id: 'volume-row', 'data-muted': 'false' });
   private readonly volumeValue = h('output', { class: 'vol__value', for: 'volume' }, '25%');
   private readonly volumeIcon = h('span', { class: 'vol__icon' }, icon('sound'));
+  private readonly runToggle = h('button', { type: 'button', class: 'run__toggle', id: 'run-toggle', 'aria-expanded': 'false', 'aria-controls': 'run-panel' });
+  private readonly runBox = h('div', { class: 'run', id: 'run', 'data-open': 'false' });
+  private readonly runRows = h('ol', { class: 'run__rows', id: 'run-rows' });
+  private readonly runTotal = h('output', { class: 'run__time', id: 'run-total' }, '0:00.0');
+  private readonly runProgress = h('span', { class: 'run__progress', id: 'run-progress' });
+  private runSignature = '';
+  private runCells = new Map<string, HTMLElement>();
+  private lastRun: RunView | null = null;
   private users: readonly UserLevel[] = [];
   private userNote: MsgKey | null = null;
   private level: LevelRef | null = null;
-  private lastDevice = '';
-  private lastDeviceView: DeviceView | null = null;
   private lastView: ControlPanelView | null = null;
   /** Элементы с подписями: после смены языка тексты ставятся заново. */
   private readonly labels: { element: HTMLElement; key: MsgKey; attr?: string }[] = [];
-  private readonly tiles2: { tile: HTMLButtonElement; slot: OriginalSlot }[] = [];
 
   constructor(root: HTMLElement, options: ControlPanelOptions) {
     this.root = root;
     this.options = options;
     const { actions } = options;
+    const pointerUse = (event: MouseEvent): void => {
+      if (event.detail !== 0) options.onPointerUse(); // с клавиатуры (detail 0) фокус остаётся на кнопке
+    };
 
-    // ── Шапка: название и устройство ввода ───────────────────────────────
-    const keyboard = this.device('keyboard', 'keyboard', 'dev.keyboard');
-    const gamepad = this.device('gamepad', 'gamepad', 'dev.gamepad');
-    gamepad.hidden = true;
-    const top = h(
-      'header',
-      { class: 'side__top' },
-      this.label(h('h2', { class: 'side__title', id: 'ctl-title' }), 'ctl.title'),
-      this.label(h('div', { class: 'devs', id: 'devices', role: 'status' }, keyboard, gamepad), 'dev.aria', 'aria-label'),
-    );
+    const top = h('header', { class: 'side__top' }, this.label(h('h2', { class: 'side__title', id: 'ctl-title' }), 'ctl.title'));
 
-    // ── Быстрые кнопки ───────────────────────────────────────────────────
-    const quick = this.label(h('div', { class: 'quick', role: 'group' }), 'ctl.quick', 'aria-label');
-    quick.append(
-      this.toggle('sound', 'sound', 'tgl.sound', actions.toggleSound),
-      this.toggle('ghost', 'segments', 'tgl.ghost', actions.toggleGhost),
-      this.toggle('compact', 'screen', 'tgl.compact', actions.toggleCompact),
-      this.toggle('theme', 'sun', 'tgl.theme', actions.toggleTheme),
-    );
+    // ── Звук: вкл/выкл и громкость в одном ряду, ниже — музыка ───────────
+    const soundIcon = h('span', { class: 'tgl__icon' }, icon('sound'));
+    const soundLabel = h('span', { class: 'tgl__label' });
+    const soundButton = h('button', { type: 'button', class: 'tgl', id: 'tgl-sound', 'data-tgl': 'sound', 'aria-pressed': 'false' }, soundIcon, soundLabel);
+    soundButton.addEventListener('click', (event) => {
+      actions.toggleSound();
+      pointerUse(event);
+    });
+    this.soundToggle = { button: soundButton, icon: soundIcon, label: soundLabel };
     this.label(this.volume, 'vol.label', 'aria-label');
-
-    // ── Громкость ────────────────────────────────────────────────────────
     this.volume.addEventListener('input', () => {
       this.showVolume(Number(this.volume.value) / 100);
       actions.setVolume(Number(this.volume.value) / 100, false);
@@ -117,7 +128,27 @@ export class ControlPanel {
     this.volume.addEventListener('pointerup', () => options.onPointerUse());
     this.volumeRow.append(this.volumeIcon, this.volume, this.volumeValue);
 
-    // ── Цвет текущей игры ────────────────────────────────────────────────
+    const music = this.label(h('div', { class: 'seg', id: 'music', role: 'group' }), 'music.aria', 'aria-label');
+    for (const { id, label } of MUSICS) {
+      const button = h('button', { type: 'button', class: 'seg__btn', 'data-music': id, 'aria-pressed': 'false' });
+      this.label(button, label);
+      if (id === 'remaster') this.label(button, 'music.remasterNote', 'title');
+      button.addEventListener('click', (event) => {
+        actions.setMusic(id);
+        pointerUse(event);
+      });
+      this.musicButtons.set(id, button);
+      music.append(button);
+    }
+    const sound = h(
+      'section',
+      { class: 'side__sec side__sec--mini', id: 'blk-sound', 'aria-labelledby': 'snd-title' },
+      this.label(h('h3', { class: 'side__h', id: 'snd-title' }), 'snd.h'),
+      h('div', { class: 'snd' }, soundButton, this.volumeRow),
+      h('div', { class: 'side__cap side__cap--row' }, this.label(h('span', {}), 'music.h'), music),
+    );
+
+    // ── Вид: цвет, состояние игрушки, сегменты ───────────────────────────
     this.picker = new ShellPicker({
       id: 'shell-picker',
       label: t('clr.h'),
@@ -127,6 +158,33 @@ export class ControlPanel {
         if (byPointer) options.onPointerUse();
       },
     });
+    const state = this.label(h('div', { class: 'seg seg--3', id: 'view-state', role: 'group' }), 'view.aria', 'aria-label');
+    for (const view of VIEWS) {
+      const button = h('button', { type: 'button', class: 'seg__btn', id: `view-${view}`, 'data-view': view, 'aria-pressed': 'false' });
+      this.label(button, VIEW_LABELS[view].label);
+      this.label(button, VIEW_LABELS[view].title, 'title');
+      button.addEventListener('click', (event) => {
+        actions.setView(view);
+        pointerUse(event);
+      });
+      this.viewButtons.set(view, button);
+      state.append(button);
+    }
+    const ghostIcon = h('span', { class: 'tgl__icon' }, icon('segments'));
+    this.ghostToggle = h('button', { type: 'button', class: 'tgl', id: 'tgl-ghost', 'data-tgl': 'ghost', 'aria-pressed': 'false' }, ghostIcon, this.label(h('span', { class: 'tgl__label' }), 'tgl.ghost'));
+    this.ghostToggle.addEventListener('click', (event) => {
+      actions.toggleGhost();
+      pointerUse(event);
+    });
+    const view = h(
+      'section',
+      { class: 'side__sec', id: 'blk-view', 'aria-labelledby': 'view-title' },
+      this.label(h('h3', { class: 'side__h', id: 'view-title' }), 'view.h'),
+      this.label(h('p', { class: 'side__cap' }), 'clr.h'),
+      this.picker.root,
+      state,
+      this.ghostToggle,
+    );
 
     // ── Уровни ───────────────────────────────────────────────────────────
     const grid = this.label(h('div', { class: 'lvgrid', id: 'original-levels', role: 'group' }), 'lv.originalAria', 'aria-label');
@@ -140,34 +198,52 @@ export class ControlPanel {
       );
       tile.addEventListener('click', (event) => {
         if (open) actions.pickOriginal(slot.number);
-        if (event.detail !== 0) options.onPointerUse(); // и закрытый уровень не уводит клавиатуру от игры
+        pointerUse(event); // и закрытый уровень не уводит клавиатуру от игры
       });
       this.tiles.set(slot.number, tile);
       this.tiles2.push({ tile, slot });
       grid.append(tile);
     }
-    const editorText = h('span', {});
-    this.label(editorText, 'lv.editor');
-    const editor = h('a', { class: 'side__link', id: 'open-editor', href: '#/editor' }, icon('edit'), editorText);
-    this.label(editor, 'lv.editorTitle', 'title');
+    this.label(this.userSelect, 'lv.customAria', 'aria-label');
+    this.userSelect.addEventListener('change', () => {
+      const [kind, id = ''] = this.userSelect.value.split(':', 2);
+      if (kind === 'bundled') actions.pickBundled(id);
+      else if (kind === 'user') actions.pickUser(this.userSelect.value.slice('user:'.length));
+      options.onPointerUse();
+    });
     const levels = h(
       'section',
-      { class: 'side__sec', 'aria-labelledby': 'lv-title' },
+      { class: 'side__sec', id: 'blk-levels', 'aria-labelledby': 'lv-title' },
       this.label(h('h3', { class: 'side__h', id: 'lv-title' }), 'lv.h'),
       this.label(h('p', { class: 'side__cap' }), 'lv.original'),
       grid,
-      h('p', { class: 'side__cap side__cap--row' }, this.label(h('span', {}), 'lv.custom'), editor),
-      this.label(this.userList, 'lv.customAria', 'aria-label'),
+      this.label(h('p', { class: 'side__cap' }), 'lv.custom'),
+      this.userSelect,
     );
 
-    const colour = h(
-      'section',
-      { class: 'side__sec', 'aria-labelledby': 'clr-title' },
-      this.label(h('h3', { class: 'side__h', id: 'clr-title' }), 'clr.h'),
-      this.picker.root,
+    // ── Спидран: скрыт под переключателем, по щелчку выезжает ────────────
+    this.runToggle.append(icon('timer'), this.label(h('span', { class: 'run__title' }), 'run.toggle'), icon('chevron'));
+    this.label(this.runToggle, 'run.hint', 'title');
+    this.runToggle.addEventListener('click', (event) => {
+      const open = this.runBox.dataset['open'] !== 'true';
+      this.runBox.dataset['open'] = String(open);
+      this.runToggle.setAttribute('aria-expanded', String(open));
+      pointerUse(event);
+    });
+    const runPanel = h(
+      'div',
+      { class: 'run__panel', id: 'run-panel', role: 'region' },
+      h(
+        'div',
+        { class: 'run__in' },
+        this.runRows,
+        h('div', { class: 'run__sum' }, h('b', { class: 'run__sum-h' }, ''), this.runProgress, this.runTotal),
+      ),
     );
+    this.label(runPanel, 'run.aria', 'aria-label');
+    this.runBox.append(this.runToggle, runPanel);
 
-    this.root.replaceChildren(top, quick, this.volumeRow, colour, levels);
+    this.root.replaceChildren(top, sound, view, levels, this.runBox);
     this.setUserLevels([], null);
     this.relabel();
     onLangChange(() => this.relabel());
@@ -186,45 +262,19 @@ export class ControlPanel {
       else element.textContent = t(key);
     }
     for (const { tile, slot } of this.tiles2) tile.title = slotTitle(slot);
-    for (const toggle of this.toggles.values()) toggle.label.textContent = t(toggle.text);
     this.picker.relabel(t('clr.h'));
+    const sumHead = this.runBox.querySelector('.run__sum-h');
+    if (sumHead) sumHead.textContent = t('run.total');
     if (this.lastView) this.update(this.lastView);
-    if (this.lastDeviceView) {
-      this.lastDevice = '';
-      this.setDevices(this.lastDeviceView);
-    }
     this.setUserLevels(this.users, this.userNote);
+    this.runSignature = '';
+    if (this.lastRun) this.setRun(this.lastRun);
   }
 
-  private device(id: 'keyboard' | 'gamepad', name: IconName, key: MsgKey): HTMLElement {
-    const caption = this.label(h('span', { class: 'dev__label' }), key);
-    const element = h('span', { class: 'dev', 'data-device': id, 'data-state': 'ready' }, icon(name), caption);
-    this.label(element, key, 'title');
-    this.devices.set(id, element);
-    return element;
-  }
-
-  private toggle(id: 'sound' | 'ghost' | 'compact' | 'theme', name: IconName, text: MsgKey, action: () => void): HTMLButtonElement {
-    const iconHolder = h('span', { class: 'tgl__icon' }, icon(name));
-    const caption = h('span', { class: 'tgl__label' }, t(text));
-    const button = h('button', { type: 'button', class: 'tgl', id: `tgl-${id}`, 'data-tgl': id, 'aria-pressed': 'false' }, iconHolder, caption);
-    button.addEventListener('click', (event) => {
-      action();
-      if (event.detail !== 0) this.options.onPointerUse();
-    });
-    this.toggles.set(id, { button, icon: iconHolder, label: caption, text });
-    return button;
-  }
-
-  private setToggle(id: 'sound' | 'ghost' | 'compact' | 'theme', pressed: boolean, name: IconName, title: string): void {
-    const toggle = this.toggles.get(id);
-    if (!toggle) return;
-    toggle.button.setAttribute('aria-pressed', String(pressed));
-    toggle.button.title = title;
-    if (toggle.icon.dataset['icon'] !== name) {
-      toggle.icon.dataset['icon'] = name;
-      toggle.icon.replaceChildren(icon(name));
-    }
+  private setIcon(holder: HTMLElement, name: IconName): void {
+    if (holder.dataset['icon'] === name) return;
+    holder.dataset['icon'] = name;
+    holder.replaceChildren(icon(name));
   }
 
   /** Подпись и заливка ползунка (без побочных действий). */
@@ -240,25 +290,26 @@ export class ControlPanel {
     this.lastView = view;
     this.root.dataset['shell'] = view.shell;
     this.picker.set(view.shell);
-    this.setToggle('sound', view.sound, view.sound ? 'sound' : 'soundOff', t(view.sound ? 'tgl.soundOn' : 'tgl.soundOff'));
+
+    const sound = this.soundToggle;
+    sound.button.setAttribute('aria-pressed', String(view.sound));
+    sound.button.title = t(view.sound ? 'tgl.soundOn' : 'tgl.soundOff');
+    sound.label.textContent = t('tgl.sound');
+    this.setIcon(sound.icon, view.sound ? 'sound' : 'soundOff');
     // Пока ползунок тянут, значение не трогаем: его двигает сам пользователь.
     if (document.activeElement !== this.volume || this.volume.value !== String(Math.round(view.volume * 100))) {
       this.volume.value = String(Math.round(view.volume * 100));
     }
     this.showVolume(view.volume);
     this.volumeRow.dataset['muted'] = String(!view.sound);
-    const volumeIcon = view.sound ? 'sound' : 'soundOff';
-    if (this.volumeIcon.dataset['icon'] !== volumeIcon) {
-      this.volumeIcon.dataset['icon'] = volumeIcon;
-      this.volumeIcon.replaceChildren(icon(volumeIcon));
-    }
-    const ghost = this.toggles.get('ghost');
-    if (ghost) {
-      ghost.button.hidden = view.ghost === null;
-      this.setToggle('ghost', view.ghost === true, 'segments', t(view.ghost ? 'tgl.ghostOn' : 'tgl.ghostOff'));
-    }
-    this.setToggle('compact', view.compact, 'screen', t(view.compact ? 'tgl.compactOn' : 'tgl.compactOff'));
-    this.setToggle('theme', view.theme === 'light', view.theme === 'light' ? 'moon' : 'sun', t(view.theme === 'light' ? 'tgl.themeLight' : 'tgl.themeDark'));
+    this.setIcon(this.volumeIcon, view.sound ? 'sound' : 'soundOff');
+    for (const [id, button] of this.musicButtons) button.setAttribute('aria-pressed', String(view.music === id));
+
+    for (const [id, button] of this.viewButtons) button.setAttribute('aria-pressed', String(view.view === id));
+    this.ghostToggle.hidden = view.ghost === null;
+    this.ghostToggle.setAttribute('aria-pressed', String(view.ghost === true));
+    this.ghostToggle.title = t(view.ghost ? 'tgl.ghostOn' : 'tgl.ghostOff');
+
     this.level = view.level;
     this.markLevel();
   }
@@ -270,68 +321,76 @@ export class ControlPanel {
       if (on) tile.setAttribute('aria-current', 'true');
       else tile.removeAttribute('aria-current');
     }
-    for (const button of this.userList.querySelectorAll<HTMLButtonElement>('.uv__go')) {
-      const on = current !== null && sameLevel(current, { kind: 'user', projectId: button.dataset['project'] ?? '' });
-      if (on) button.setAttribute('aria-current', 'true');
-      else button.removeAttribute('aria-current');
-    }
+    const value = current?.kind === 'bundled' ? `bundled:${current.levelId}` : current?.kind === 'user' ? `user:${current.projectId}` : '';
+    if (this.userSelect.value !== value && [...this.userSelect.options].some((option) => option.value === value)) this.userSelect.value = value;
+    else if (value === '') this.userSelect.value = '';
   }
 
-  /** Значки «клавиатура / геймпад»: геймпад появляется при подключении; подсвечено то, чем играют сейчас. */
-  setDevices(view: DeviceView): void {
-    this.lastDeviceView = view;
-    const signature = `${view.keyboard}|${view.gamepad}|${view.padName ?? ''}`;
-    if (signature === this.lastDevice) return;
-    this.lastDevice = signature;
-    const keyboard = this.devices.get('keyboard');
-    const gamepad = this.devices.get('gamepad');
-    if (keyboard) keyboard.dataset['state'] = view.keyboard;
-    if (gamepad) {
-      gamepad.hidden = view.gamepad === 'hidden';
-      gamepad.dataset['state'] = view.gamepad === 'hidden' ? 'ready' : view.gamepad;
-      gamepad.title = view.padName ? t('dev.padNamed', { name: view.padName }) + (view.gamepad === 'ready' ? t('dev.padWait') : '') : t('dev.gamepad');
-    }
-    this.root.dataset['input'] = view.gamepad === 'on' ? 'gamepad' : 'keyboard';
-  }
-
-  /** Карты из редактора. `note` — почему список недоступен (например, нет хранилища браузера). */
+  /** Готовые уровни и карты из редактора — выпадающим списком. `note` — почему список карт недоступен (например, нет хранилища браузера). */
   setUserLevels(levels: readonly UserLevel[], note: MsgKey | null): void {
     this.users = levels;
     this.userNote = note;
-    const rows: HTMLElement[] = [];
-    for (const user of levels) {
+    const select = this.userSelect;
+    const options: HTMLElement[] = [h('option', { value: '' }, t('lv.pick'))];
+
+    const bundled = this.options.bundled;
+    if (bundled.length > 0) {
+      options.push(
+        h(
+          'optgroup',
+          { label: t('lv.group.built') },
+          ...bundled.map((level) => h('option', { value: `bundled:${level.levelId}`, title: t(level.title) }, t(level.name))),
+        ),
+      );
+    }
+    const maps = levels.map((user) => {
       const playable = user.problem === null;
-      const go = h(
-        'button',
-        {
-          type: 'button',
-          class: playable ? 'uv__go' : 'uv__go uv__go--bad',
-          'data-project': user.projectId,
-          title: playable ? t('lv.play', { name: user.name, w: user.width, h: user.height }) : t('lv.bad', { why: user.problem ?? '' }),
-          ...(playable ? {} : { 'aria-disabled': 'true' }),
-        },
-        h('span', { class: 'uv__ico' }, icon(playable ? 'play' : 'warn')),
-        h('span', { class: 'uv__text' }, h('span', { class: 'uv__name' }, user.name), ...(playable ? [] : [h('span', { class: 'uv__why' }, user.problem ?? '')])),
-        h('span', { class: 'uv__size' }, `${user.width}×${user.height}`),
+      const option = h(
+        'option',
+        { value: `user:${user.projectId}`, title: playable ? t('lv.play', { name: user.name, w: user.width, h: user.height }) : t('lv.bad', { why: user.problem ?? '' }), ...(playable ? {} : { disabled: '' }) },
+        playable ? `${user.name} (${user.width}×${user.height})` : `⚠ ${user.name}`,
       );
-      go.addEventListener('click', (event) => {
-        if (playable) this.options.actions.pickUser(user.projectId);
-        if (event.detail !== 0) this.options.onPointerUse();
-      });
-      const edit = h('a', { class: 'uv__edit', href: `#/editor?project=${encodeURIComponent(user.projectId)}`, title: t('lv.openEditor'), 'aria-label': t('lv.edit', { name: user.name }) }, icon('edit'));
-      rows.push(h('li', { class: 'uv__item', 'data-project': user.projectId }, go, edit));
-    }
-    if (rows.length === 0) {
-      rows.push(
-        h('li', { class: 'uv__empty' }, t(note ?? 'lv.empty')),
-      );
-    }
-    this.userList.replaceChildren(...rows);
+      return option;
+    });
+    options.push(h('optgroup', { label: t('lv.group.maps') }, ...(maps.length > 0 ? maps : [h('option', { value: '', disabled: '' }, t(note ?? 'lv.noMaps'))])));
+    select.replaceChildren(...options);
     this.markLevel();
   }
 
   /** Найденные сейчас карты (для проверок и повторной подсветки). */
   get userLevels(): readonly UserLevel[] {
     return this.users;
+  }
+
+  /** Спидран-HUD: время каждого уровня и общее время. Вызывается каждый кадр; DOM меняется, только если текст изменился. */
+  setRun(view: RunView): void {
+    this.lastRun = view;
+    const rate = this.options.tickRateHz;
+    const signature = view.rows.map((row) => row.levelId).join('|');
+    if (signature !== this.runSignature) {
+      this.runSignature = signature;
+      this.runCells.clear();
+      const rows = view.rows.map((row) => {
+        const slot = this.options.slots.find((s) => s.levelId === row.levelId);
+        const full = slot ? t('run.level', { n: slot.number }) : t('run.custom', { name: row.levelId });
+        const time = h('b', { class: 'run__time' });
+        this.runCells.set(row.levelId, time);
+        return h('li', { class: 'run__row', 'data-level': row.levelId, title: full }, h('span', { class: 'run__name' }, slot ? String(slot.number) : row.levelId), time);
+      });
+      this.runRows.replaceChildren(...rows);
+    }
+    for (const row of view.rows) {
+      const cell = this.runCells.get(row.levelId);
+      const item = cell?.parentElement;
+      if (!cell || !item) continue;
+      const text = row.ticks === null ? '—' : formatRunTime(row.ticks, rate);
+      if (cell.textContent !== text) cell.textContent = text;
+      if (item.dataset['state'] !== row.state) item.dataset['state'] = row.state;
+    }
+    const total = formatRunTime(view.totalTicks, rate);
+    if (this.runTotal.textContent !== total) this.runTotal.textContent = total;
+    this.runBox.dataset['finished'] = String(view.finished);
+    const progress = t('run.progress', { done: view.done, count: view.count });
+    if (this.runProgress.textContent !== progress) this.runProgress.textContent = progress;
   }
 }

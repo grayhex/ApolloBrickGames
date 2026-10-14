@@ -40,11 +40,30 @@ export function originalSlots(pack: ContentPack): OriginalSlot[] {
   });
 }
 
-/** Что запущено сейчас: оригинальный уровень по номеру или карта из редактора. */
-export type LevelRef = { kind: 'original'; number: number } | { kind: 'user'; projectId: string };
+/**
+ * Готовые пользовательские уровни: лежат в пакете, но не входят в девять оригинальных; стоят в выпадающем списке «Пользовательские»
+ * рядом с картами из редактора. Первый (`custom-1`) сгенерирован по общей логике движка (tools/levels/generate.mjs).
+ */
+export interface BundledLevel {
+  levelId: string;
+  /** Названия на текущем языке берутся из словаря по этим ключам. */
+  name: 'lv.gen1';
+  title: 'lv.gen1.title';
+}
 
-export const sameLevel = (a: LevelRef, b: LevelRef): boolean =>
-  a.kind === 'original' ? b.kind === 'original' && a.number === b.number : b.kind === 'user' && a.projectId === b.projectId;
+export const BUNDLED_LEVELS: readonly BundledLevel[] = [{ levelId: 'custom-1', name: 'lv.gen1', title: 'lv.gen1.title' }];
+
+/** Готовые уровни, которые есть в пакете. */
+export const bundledLevels = (pack: ContentPack): BundledLevel[] => BUNDLED_LEVELS.filter((b) => pack.levels.some((level) => level.id === b.levelId));
+
+/** Что запущено сейчас: оригинальный уровень по номеру, готовый пользовательский уровень или карта из редактора. */
+export type LevelRef = { kind: 'original'; number: number } | { kind: 'bundled'; levelId: string } | { kind: 'user'; projectId: string };
+
+export const sameLevel = (a: LevelRef, b: LevelRef): boolean => {
+  if (a.kind === 'original') return b.kind === 'original' && a.number === b.number;
+  if (a.kind === 'bundled') return b.kind === 'bundled' && a.levelId === b.levelId;
+  return b.kind === 'user' && a.projectId === b.projectId;
+};
 
 /**
  * Какая плитка подсвечена после начала участка `levelId`: когда игрок проходит уровень, игра сама переходит на следующий (`mario-N → mario-N+1`),
@@ -64,7 +83,7 @@ export function defaultLevelRef(pack: ContentPack): LevelRef {
 
 /**
  * С какого уровня начинается страница: `?level=N` (слот 1–9) или `?level=id` (любой уровень пакета, например `tunnel-run` —
- * тестовый уровень по видео, нужен тестам); иначе — первый уровень пакета. Уровень вне девяти слотов получает «слот 0»:
+ * тестовый уровень по видео, нужен тестам; `?level=custom-1` — готовый пользовательский уровень); иначе — первый уровень пакета. Уровень вне девяти слотов получает «слот 0»:
  * ни одна плитка панели не подсвечена. В игре уровень сменяется кнопками панели.
  */
 export function startingLevel(pack: ContentPack, query: string | null): { ref: LevelRef; pack: ContentPack } {
@@ -72,6 +91,8 @@ export function startingLevel(pack: ContentPack, query: string | null): { ref: L
   const number = /^\d+$/.test(query ?? '') ? Number.parseInt(query ?? '', 10) : Number.NaN;
   const slot = slots.find((s) => s.levelId !== null && (s.number === number || s.levelId === query));
   if (slot?.levelId) return { ref: { kind: 'original', number: slot.number }, pack: originalPack(pack, slot.levelId) };
+  const bundled = bundledLevels(pack).find((b) => b.levelId === query);
+  if (bundled) return { ref: { kind: 'bundled', levelId: bundled.levelId }, pack: originalPack(pack, bundled.levelId) };
   if (query !== null && pack.levels.some((level) => level.id === query)) return { ref: { kind: 'original', number: 0 }, pack: originalPack(pack, query) };
   return { ref: defaultLevelRef(pack), pack };
 }

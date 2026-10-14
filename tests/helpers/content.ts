@@ -38,9 +38,24 @@ export function loadRawDemoPack(): RawPack {
   return loadRawPack('demo');
 }
 
-/** Однокомнатное демо (основной маршрут). */
+/** Основной пакет (девять уровней MARIO и тестовый уровень по видео) — ровно то, что отдаёт страница. */
 export function loadRoomPack(): ContentPack {
   return assemblePack(loadRawPack('room'), validationEnv(undefined, GLYPH_NAMES));
+}
+
+/** Песочница для тестов механики и редактора: пустая комната 13 × 6 с полом и уступами. В пакет страницы не входит. */
+export const SANDBOX_ID = 'sandbox-room';
+
+/** Сырой основной пакет с песочницей `sandbox-room` последним уровнем (файл — tests/fixtures/sandbox-room.json). */
+export function loadRawSandboxPack(): RawPack {
+  const raw = loadRawPack('room');
+  raw.levels.push(readJson(join(root, 'tests', 'fixtures', 'sandbox-room.json')));
+  (raw.manifest as { levels: string[] }).levels.push('levels/sandbox-room.json');
+  return raw;
+}
+
+export function loadSandboxPack(): ContentPack {
+  return assemblePack(loadRawSandboxPack(), validationEnv(undefined, GLYPH_NAMES));
 }
 
 /**
@@ -58,10 +73,10 @@ export function marioContext(n: number): GameContext {
   return createContext({ ...pack, manifest: { ...pack.manifest, firstLevel: `mario-${n}` } });
 }
 
-/** Тот же пакет, но игра начинается с тестовой комнаты `demo-room` (песочница для тестов механики и редактора). */
-export function demoRoomContext(): GameContext {
-  const pack = loadRoomPack();
-  return createContext({ ...pack, manifest: { ...pack.manifest, firstLevel: 'demo-room' } });
+/** Пакет с песочницей, игра которого начинается с `sandbox-room` (герой на полу, свободный воздух). */
+export function sandboxContext(): GameContext {
+  const pack = loadSandboxPack();
+  return createContext({ ...pack, manifest: { ...pack.manifest, firstLevel: SANDBOX_ID } });
 }
 
 export function levelOf(pack: ContentPack, id: string): LevelDef {

@@ -74,14 +74,14 @@ describe('подсветка плитки следует за игрой', () =>
 
 describe('пакеты для запуска', () => {
   it('оригинальный уровень: игра начинается с него, остальной пакет не меняется', () => {
-    const launched = originalPack(pack, 'demo-room');
+    const launched = originalPack(pack, 'tunnel-run');
     expect(launched.levels).toBe(pack.levels);
-    expect(new Game(createContext(launched)).state.levelId).toBe('demo-room');
+    expect(new Game(createContext(launched)).state.levelId).toBe('tunnel-run');
     expect(new Game(createContext(pack)).state.levelId).toBe('mario-1'); // исходный пакет не тронут
   });
 
   it('карта из редактора: единственный уровень — её копия; правила и экран — как у игры', () => {
-    const level = levelOf(pack, 'demo-room');
+    const level = levelOf(pack, 'tunnel-run');
     const launched = userPack(pack, { ...level, id: 'my-map' });
     expect(launched.levels.map((l) => l.id)).toEqual(['my-map']);
     expect(launched.screen).toBe(pack.screen);

@@ -19,7 +19,7 @@
     "levels/mario-8.json",
     "levels/mario-9.json",
     "levels/tunnel-run.json",
-    "levels/demo-room.json"
+    "levels/custom-1.json"
   ],
   "firstLevel": "mario-1",
   "sprites": {

@@ -15,7 +15,7 @@ import { ARCHIVE_LIMITS } from '../archive';
 import { ImportError, parseDoc } from '../project';
 import { EditorSession, SaveFailedError, type SaveState } from '../session';
 import { EditorStore } from '../store';
-import { docFromLevel, newRoomDoc, slugify } from '../templates';
+import { newRoomDoc, slugify } from '../templates';
 import { ToolController } from '../tools';
 import type { EditorDoc, Pt, ToolName } from '../types';
 import { updateRef } from '../ops';
@@ -397,7 +397,7 @@ export async function startEditor(): Promise<void> {
         el('label', { class: 'check' }, floor, 'Добавить ряд земли внизу и старт над ним'),
         el('p', { class: 'muted' }, 'Размер берётся из видимого поля выбранного профиля. Это шаблон редактора, а не оригинальный уровень.'),
       ],
-      [{ label: 'Создать пустую комнату', primary: true }, { label: 'Копия demo-room (тестовая комната профиля «room»)' }, { label: 'Отмена' }],
+      [{ label: 'Создать пустую комнату', primary: true }, { label: 'Отмена' }],
     );
     if (choice === 0) {
       const packName = packSelect.value;
@@ -405,12 +405,6 @@ export async function startEditor(): Promise<void> {
       const title = name.value.trim() || 'Новая комната';
       const doc = newRoomDoc(bundle.pack, { projectId: projectId(), name: title, pack: packName, id: slugify(title, 'room'), floor: floor.checked });
       await adopt(doc, new Map(), `Создана карта «${title}».`);
-    } else if (choice === 1) {
-      if (!(await useBundle('room'))) return;
-      const level = bundle.pack.levels.find((l) => l.id === 'demo-room') ?? bundle.pack.levels[0];
-      if (!level) return;
-      const doc = docFromLevel(level, { projectId: projectId(), name: `${level.id} (копия для редактирования)`, pack: 'room', id: level.id });
-      await adopt(doc, new Map(), `Открыта копия «${level.id}».`);
     }
   }
 

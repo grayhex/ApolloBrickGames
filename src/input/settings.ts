@@ -21,6 +21,10 @@ export type Shell = (typeof SHELLS)[number];
 export const THEMES = ['dark', 'light'] as const;
 export type Theme = (typeof THEMES)[number];
 
+/** Музыка: запись оригинала или «ремастер» (новая аранжировка; пока ремастера нет — звучит та же мелодия). */
+export const MUSICS = ['original', 'remaster'] as const;
+export type Music = (typeof MUSICS)[number];
+
 export const MIN_STICK_THRESHOLD = 0.1;
 export const MAX_STICK_THRESHOLD = 0.9;
 export const DEFAULT_STICK_THRESHOLD = 0.5;
@@ -45,8 +49,8 @@ export interface Settings {
     sound: boolean;
     /** Громкость 0…1 (ползунок на странице); кнопка «Звук» заглушает независимо от неё. */
     volume: number;
-    /** Вид «только экран»: нижняя половина игрушки скрыта, крышка с экраном показана крупно. */
-    compact: boolean;
+    /** Какая музыка звучит в игре. */
+    music: Music;
     /** Фон страницы. */
     theme: Theme;
     /** Язык интерфейса игрушки: настройки, справка и панели. */
@@ -64,7 +68,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, compact: false, theme: 'dark', lang: DEFAULT_LANG },
+    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: DEFAULT_LANG },
   };
 }
 
@@ -115,7 +119,7 @@ export function sanitizeSettings(raw: unknown): Settings {
         typeof display['volume'] === 'number' && Number.isFinite(display['volume'])
           ? clamp(display['volume'], 0, 1)
           : DEFAULT_VOLUME,
-      compact: typeof display['compact'] === 'boolean' ? display['compact'] : false,
+      music: MUSICS.find((music) => music === display['music']) ?? 'original',
       theme: THEMES.find((theme) => theme === display['theme']) ?? 'dark',
       lang: isLang(display['lang']) ? display['lang'] : DEFAULT_LANG,
     },

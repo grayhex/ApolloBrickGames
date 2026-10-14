@@ -7,8 +7,11 @@
  * Первые ≈ 120 столбцов уровня 1 повторяют измеренную цепочку платформ по видео (разброс ± 2 столбца); остальное — допущения по общей логике:
  * сложность растёт с номером уровня (длиннее, шире провалы, уже площадки, выше колонны, больше врагов).
  *
- * Запуск: node tools/levels/generate.mjs  — перезаписывает public/content/room/levels/mario-1…9.json, список уровней в pack.json
- * и сценарии интро/входа в animations.json. Результат детерминирован (зерно на уровень), готовые файлы лежат в репозитории.
+ * Кроме девяти — один «пользовательский» уровень custom-1 (тот же движок и те же секции, свой профиль и зерно): он стоит в выпадающем
+ * списке пользовательских уровней в пульте рядом с картами из редактора и нужен, чтобы список не был пустым.
+ *
+ * Запуск: node tools/levels/generate.mjs  — перезаписывает public/content/room/levels/mario-1…9.json и custom-1.json, список уровней
+ * в pack.json и сценарии интро/входа в animations.json. Результат детерминирован (зерно на уровень), готовые файлы лежат в репозитории.
  * Проходимость проверяет тест tests/core/mario-levels.test.ts: поиск в ширину по настоящему движку (враги отключены).
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -360,6 +363,9 @@ const PROFILES = [
   { length: 256, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 12, bigN: 6, bigRange: 4, bonusN: 3, enemyP: 0.6, bigMax: 5, restMax: 4, hearts: 16, weights: { flat: 2, bigFlat: 2, chain: 5, pit: 3, pillars: 3, pillarHop: 3, gate: 2, stairs: 3 } },
 ];
 
+/** Профиль пользовательского уровня custom-1: средняя сложность, всё понемногу (допущение по общей логике геймплея). */
+const CUSTOM_PROFILE = { length: 190, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 2, stairsMax: 3, smallN: 6, bigN: 2, bigRange: 3, bonusN: 3, enemyP: 0.5, bigMax: 2, restMax: 5, hearts: 12, weights: { flat: 3, bigFlat: 2, chain: 4, pit: 2, pillars: 2, pillarHop: 2, stairs: 2, gate: 1 } };
+
 /** Короткая «подпись» уровня — что в нём нового (для примечания и документации). */
 const THEMES = [
   null,
@@ -502,9 +508,13 @@ function placeHearts(level, p) {
   level.heartCount = chosen.length;
 }
 
+/** n — номер уровня MARIO (1–9) или 'custom' — пользовательский уровень custom-1. */
 function buildLevel(n) {
-  const p = PROFILES[n];
-  const level = new Level(`mario-${n}`, `1-0${n}`, mulberry32(0x4d41524f + n * 7919));
+  const custom = n === 'custom';
+  const p = custom ? CUSTOM_PROFILE : PROFILES[n];
+  const level = custom
+    ? new Level('custom-1', 'U-01', mulberry32(0x55534552))
+    : new Level(`mario-${n}`, `1-0${n}`, mulberry32(0x4d41524f + n * 7919));
   level.bigCount = 0;
   let measured = 0;
   if (n === 1) {
@@ -550,6 +560,7 @@ function buildLevel(n) {
 }
 
 function toJson(n, { level, measured }, next) {
+  const custom = n === 'custom';
   const width = level.cols.length;
   const rows = Array.from({ length: ROWS }, (_, r) => level.cols.map((c) => (c.has(r) ? '#' : '.')).join(''));
   const marks = [
@@ -560,8 +571,9 @@ function toJson(n, { level, measured }, next) {
       w: width,
       h: ROWS,
       status: 'assumed',
-      note:
-        n === 1
+      note: custom
+        ? 'Сгенерированный пользовательский уровень: планировка собрана по общей логике движка (секции и пределы прыжка — как у уровней MARIO), не оригинальный уровень.'
+        : n === 1
           ? 'Геймплейное приближение: столбцы 0–119 — измеренная по видео цепочка платформ над провалами (разброс ±2 столбца, видео: попытки 108–225 с), дальше и враги/сердца — допущения.'
           : `Геймплейное приближение, не оригинальный уровень 1-0${n}: ${THEMES[n]}. Планировка — допущение по общей логике геймплея; владелец позже передаст прохождение для восстановления 1 в 1.`,
       ref: 'video: 19b50e99-Apollo-Tetris-Crocodile (геймплей)',
@@ -573,7 +585,9 @@ function toJson(n, { level, measured }, next) {
     id: level.id,
     status: 'demo',
     hudLabel: level.label,
-    note: `Геймплейное приближение уровня ${level.label} (MARIO, уровень ${n} из 9): ${THEMES[n]}. Не оригинальный уровень — расстановка придумана по общей логике геймплея на видео; враги и таймер — по видео геймплея (docs/video-observations.md §10).`,
+    note: custom
+      ? 'Сгенерированный пользовательский уровень «Генерация 1»: цепочки площадок, колонны, лестницы, створки и враги — по общей логике движка (tools/levels/generate.mjs). Не оригинальный уровень.'
+      : `Геймплейное приближение уровня ${level.label} (MARIO, уровень ${n} из 9): ${THEMES[n]}. Не оригинальный уровень — расстановка придумана по общей логике геймплея на видео; враги и таймер — по видео геймплея (docs/video-observations.md §10).`,
     width,
     height: ROWS,
     legend: { '.': { collision: 'empty' }, '#': { collision: 'solid', asset: 'cell.obstacle' } },
@@ -585,6 +599,11 @@ function toJson(n, { level, measured }, next) {
   };
 }
 
+function logLevel(json, objects) {
+  const count = (type) => objects.filter((o) => o.type === type).length;
+  console.log(`${json.id}  ${json.hudLabel}  ширина ${json.width}  провалы ${count('hazard')}  враги ${objects.filter((o) => o.type === 'patroller' && o.w === 1).length}/${objects.filter((o) => o.type === 'patroller' && o.w === 2).length}  сердца ${count('pickup')}`);
+}
+
 function main() {
   const ids = [];
   for (let n = 1; n <= 9; n++) {
@@ -592,16 +611,18 @@ function main() {
     const json = toJson(n, built, n < 9 ? `mario-${n + 1}` : null);
     writeFileSync(join(ROOM, 'levels', `mario-${n}.json`), JSON.stringify(json, null, 2) + '\n');
     ids.push(json.id);
-    const objects = built.level.objects;
-    const count = (type) => objects.filter((o) => o.type === type).length;
-    console.log(`${json.id}  ${json.hudLabel}  ширина ${json.width}  провалы ${count('hazard')}  враги ${objects.filter((o) => o.type === 'patroller' && o.w === 1).length}/${objects.filter((o) => o.type === 'patroller' && o.w === 2).length}  сердца ${count('pickup')}`);
+    logLevel(json, built.level.objects);
   }
+  const customBuilt = buildLevel('custom');
+  const customJson = toJson('custom', customBuilt, null);
+  writeFileSync(join(ROOM, 'levels', 'custom-1.json'), JSON.stringify(customJson, null, 2) + '\n');
+  logLevel(customJson, customBuilt.level.objects);
 
-  // Пакет: девять уровней первыми, дальше прежние (тестовый «туннель» по видео и песочница).
+  // Пакет: девять уровней первыми, дальше прежние (тестовый «туннель» по видео), последним — пользовательский.
   const packPath = join(ROOM, 'pack.json');
   const pack = JSON.parse(readFileSync(packPath, 'utf8'));
-  const keep = pack.levels.filter((file) => !/levels\/mario-\d\.json$/.test(file));
-  pack.levels = [...ids.map((id) => `levels/${id}.json`), ...keep];
+  const keep = pack.levels.filter((file) => !/levels\/(mario-\d|custom-\d)\.json$/.test(file));
+  pack.levels = [...ids.map((id) => `levels/${id}.json`), ...keep, 'levels/custom-1.json'];
   pack.firstLevel = 'mario-1';
   pack.title = 'Игрушка: девять уровней MARIO — геймплейное приближение (не оригинальные уровни)';
   writeFileSync(packPath, JSON.stringify(pack, null, 2) + '\n');
@@ -609,7 +630,7 @@ function main() {
   // Интро и сценарий выхода из ямы — одни и те же у всех уровней (общий старт по видео): копия сценария «туннеля».
   const animPath = join(ROOM, 'animations.json');
   const anim = JSON.parse(readFileSync(animPath, 'utf8'));
-  for (const id of ids) {
+  for (const id of [...ids, 'custom-1']) {
     anim.intro.routes[id] = anim.intro.routes['tunnel-run'];
     anim.entry.scripts[id] = anim.entry.scripts['tunnel-run'];
   }

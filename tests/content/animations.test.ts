@@ -138,7 +138,7 @@ describe('загрузка пакета с анимациями и общими 
     expect(loaded.assetsUrl).toBe(`${base}room/assets.json`);
     expect(requested).toContain(`${base}room/animations.json`);
     expect(loaded.pack.animations?.id).toBe('room-animations');
-    expect(loaded.pack.levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'demo-room']);
+    expect(loaded.pack.levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'custom-1']);
   });
 
   it('пакеты без объявленного файла анимаций загружаются как раньше', async () => {

@@ -61,7 +61,7 @@ export function newRoomDoc(base: ContentPack, options: NewDocOptions & { floor?:
   };
 }
 
-/** Редактируемая копия готового уровня пакета (например demo-room). */
+/** Редактируемая копия готового уровня пакета (например уровень MARIO или тестовая песочница). */
 export function docFromLevel(level: LevelDef, options: NewDocOptions): EditorDoc {
   return {
     projectId: options.projectId,
