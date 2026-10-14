@@ -329,8 +329,8 @@ test('«только экран»: нижняя половина скрывае�
   await expect(page.locator('#corner-compact')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#corner-compact')).toHaveAttribute('aria-label', 'Показать всю игрушку');
   await expect(page.locator('#game-area')).toBeFocused(); // клавиатура осталась у игры
-  const compact = await size();
-  expect(compact.screenW).toBeGreaterThan(whole.screenW * 1.6); // экран заметно крупнее
+  // Холст подгоняется под окно LCD на следующем кадре (ResizeObserver), поэтому ждём, а не меряем сразу.
+  await expect.poll(async () => (await size()).screenW).toBeGreaterThan(whole.screenW * 1.6); // экран заметно крупнее
   const fit = await page.evaluate(() => {
     const rect = (document.getElementById('toy') as HTMLElement).getBoundingClientRect();
     return { top: rect.top, bottom: rect.bottom, innerH: window.innerHeight, scrollH: document.documentElement.scrollHeight };

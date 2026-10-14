@@ -148,6 +148,7 @@ public/content/demo/   демо-пакет: pack.json, screen.json, rules.json, 
 public/content/room/   основной пакет (маршрут по умолчанию): экран, правила, ресурсы, анимации, levels/tunnel-run.json (тестовый уровень) и levels/demo-room.json (песочница для редактора и тестов), reference/ (сцены с фотографий)
 public/graphics/lcd/   LCD-графика владельца: атлас (lcd_atlas.png) и «сердечко»-снаряд (lcd_heart.png); описание — public/content/room/assets.json
 public/brand/          логотип на корпусе: цветной и белая печать
+tools/video-analysis/  скрипты разбора видео владельца (OpenCV): стабилизация, сетка клеток, герой, светодиоды и звук; видео в репозиторий не входит
 tests/       Vitest (core, content, input, render, app, editor) и Playwright (smoke); fixtures/ — replay и эталонные экраны владельца (reference/)
 docs/        architecture.md, content-format.md, editor.md, visual-spec.md, video-observations.md, reference-status.md, manual-gamepad-check.md, editor-demo/, screenshots/
 ```
