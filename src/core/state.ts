@@ -78,6 +78,8 @@ export type GameEventBody =
   | { type: 'projectileBlocked'; x: number; y: number }
   | { type: 'jump'; x: number; y: number }
   | { type: 'land'; x: number; y: number }
+  /** Голова героя упёрлась в блок над ним (x, y — клетка блока). Для эффектов отрисовки. */
+  | { type: 'bump'; x: number; y: number }
   | { type: 'death'; cause: DeathCause; x: number; y: number }
   | { type: 'levelCompleted'; levelId: string; next: string | null }
   | { type: 'gameOver' }

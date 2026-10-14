@@ -312,11 +312,11 @@ export class Game implements SimApi {
     this.checkHeroTouch();
   }
 
-  /** Клетка непроходима для героя. Левая/правая граница и потолок — стены, низ — провал. */
+  /** Клетка непроходима для героя. Левая/правая граница и потолок — стены, низ — провал (или земля, см. `bottomEdge`). */
   private blocked(x: number, y: number): boolean {
     const level = this.level;
     if (x < 0 || x >= level.width || y < 0) return true;
-    if (y >= level.height) return false;
+    if (y >= level.height) return this.ctx.rules.params.bottomEdge === 'floor';
     return tileSolid(level, x, y) || this.solidObjectAt(x, y);
   }
 
@@ -332,12 +332,25 @@ export class Game implements SimApi {
     return false;
   }
 
+  /** Удар головой в клетку: твёрдые объекты в ней получают `headHit` (например, ломаются). */
+  private headHitObjects(x: number, y: number): void {
+    const defs = this.level.def.objects;
+    const objects = this.state.objects;
+    for (let i = 0; i < objects.length; i++) {
+      const state = objects[i];
+      const def = defs[i];
+      if (!state || !def || !state.active || !overlaps(state, def, x, y)) continue;
+      const behavior = this.ctx.behaviors[def.type];
+      if (behavior?.solid) behavior.headHit?.(this, state, def);
+    }
+  }
+
   /** Шаг героя на одну клетку. false — путь закрыт. */
   private tryMoveHero(dx: number, dy: number): boolean {
     const hero = this.state.hero;
     const nx = hero.x + dx;
     const ny = hero.y + dy;
-    if (ny >= this.level.height) {
+    if (ny >= this.level.height && this.ctx.rules.params.bottomEdge !== 'floor') {
       hero.y = ny;
       this.die('pit');
       return true;
@@ -419,7 +432,14 @@ export class Game implements SimApi {
       if (hero.jumpTimer === 0) {
         const delta = jump.table[hero.jumpIndex] ?? 0;
         if (delta !== 0 && !this.moveVertical(delta)) {
-          if (this.alive(serial)) this.endJump(); // упёрлись в потолок или пол
+          if (this.alive(serial)) {
+            // Голова упёрлась в блок (за верхним краем карты блока нет — эффекта нет).
+            if (delta < 0 && hero.y > 0) {
+              this.emit({ type: 'bump', x: hero.x, y: hero.y - 1 });
+              this.headHitObjects(hero.x, hero.y - 1);
+            }
+            this.endJump(); // упёрлись в потолок или пол
+          }
           return;
         }
       }

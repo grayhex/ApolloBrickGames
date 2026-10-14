@@ -24,6 +24,27 @@ test('комната: старт и прыжок', async ({ page }) => {
   await page.screenshot({ path: `${dir}/demo-room-page.png` });
 });
 
+test('клип по видео: заливка, растворение, построение, отскок перекладины', async ({ page }) => {
+  mkdirSync(dir, { recursive: true });
+  await page.goto('./#/clip');
+  await page.waitForSelector('#game-area[data-phase="ready"]');
+  const shot = (name: string): Promise<Buffer> => page.locator('#stage').screenshot({ path: `${dir}/clip-${name}.png` });
+  await page.waitForTimeout(750);
+  await shot('intro-fill');
+  await page.waitForTimeout(800);
+  await shot('intro-dissolve');
+  await page.waitForTimeout(1650);
+  await shot('build');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#game-area[data-phase="playing"]');
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(190);
+  await shot('bump');
+  await page.waitForTimeout(1200);
+  await shot('room');
+});
+
 test('комната: красный и белый корпус', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.goto('./');

@@ -14,6 +14,7 @@ import {
 import { centerCamera, followCamera, type CameraArea, type CameraPos } from '../render/camera';
 import { AssetStore } from '../render/assets';
 import { GLYPH_NAMES } from '../render/glyphs';
+import { effectsWorld, LevelEffects, NO_EFFECTS, type EffectsFrame } from '../render/effects';
 import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { browserStorage, needsGamepadSetup, SHELLS } from '../input/settings';
@@ -59,7 +60,7 @@ function namesOf(mask: number): string {
   return names.length === 0 ? '—' : names.join(' ');
 }
 
-export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
+export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<void> {
   const route = GAME_ROUTES[routeName];
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
@@ -108,7 +109,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   refs.routeLink.href = route.otherRoute.hash;
   refs.routeLink.textContent = route.otherRoute.label;
   // Отладка — для разработки: в основной комнате флажок скрыт, `?debug` его возвращает.
-  refs.debugToggle.hidden = routeName === 'room' && !new URLSearchParams(window.location.search).has('debug');
+  refs.debugToggle.hidden = routeName !== 'tech' && !new URLSearchParams(window.location.search).has('debug');
 
   // ── Данные: статические JSON, проверка при загрузке ──────────────────────
   const manifestUrl = new URL(`${import.meta.env.BASE_URL}${route.manifest}`, window.location.href).href;
@@ -123,6 +124,9 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
   const game = new Game(ctx, seed);
   const renderer = new Renderer(refs.canvas, pack.screen, assets);
+  // Презентационные эффекты (отскок перекладины, интро участка) — только отрисовка, симуляцию не меняют.
+  const effects = new LevelEffects(pack.animations ?? null, { viewport: pack.screen.viewport, intro: true });
+  let fx: EffectsFrame = NO_EFFECTS;
   const { sprites } = pack.manifest;
   refs.rowTimer.hidden = ctx.rules.params.timerLimitTicks <= 0;
   refs.statusContent.textContent = `Контент: ${pack.manifest.title} (id ${pack.manifest.id}, v${pack.manifest.version}); правила ${pack.rules.id} v${pack.rules.version}; ${ctx.rules.params.tickRateHz} тактов/с — значения демо, не установленные параметры оригинала.`;
@@ -162,6 +166,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const onEvents = (events: readonly GameEvent[]): void => {
     for (const event of events) {
       if (event.type === 'levelStarted') snapCamera = true;
+      const world = effectsWorld(ctx, game.state);
+      if (world) effects.onEvent(event, world);
       const cue = cueForEvent(event);
       if (cue) audio.play(cue);
     }
@@ -349,7 +355,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('context', session.context);
     showLeds(ledState(s.phase, s.tick));
 
-    const overlay = overlayView(s, suspendReason);
+    // Пока идёт интро участка, оверлей «Старт» не закрывает поле (Enter всё равно запускает игру).
+    const overlay = fx.intro ? null : overlayView(s, suspendReason);
     refs.overlay.hidden = overlay === null;
     if (overlay) {
       setText.overlayTitle(overlay.title);
@@ -414,12 +421,14 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     camera = snapCamera ? centerCamera(target, area) : followCamera(camera, target, area);
     snapCamera = false;
 
+    fx = effects.frame(game.state, level);
     renderer.render({
       state: game.state,
       level,
       camera,
       sprites,
       debug: { grid: refs.chkGrid.checked, collisions: refs.chkCollisions.checked },
+      effects: fx,
     });
     updateUi();
   }

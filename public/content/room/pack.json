@@ -3,10 +3,11 @@
   "id": "demo-room-pack",
   "title": "Однокомнатное демо: тестовая карта, не оригинальный уровень",
   "status": "demo",
-  "version": 2,
+  "version": 3,
   "screen": "screen.json",
   "rules": "rules.json",
   "assets": "assets.json",
+  "animations": "animations.json",
   "levels": [
     "levels/demo-room.json"
   ],

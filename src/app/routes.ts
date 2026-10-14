@@ -1,11 +1,13 @@
 /** Маршруты на hash: работают в подкаталоге /CrocodileMario/ без переписывания адресов на сервере. */
-export type RouteName = 'room' | 'tech' | 'sheet' | 'editor';
+export type RouteName = 'room' | 'tech' | 'clip' | 'sheet' | 'editor';
 
 export function parseRoute(hash: string): RouteName {
   const path = hash.replace(/^#\/?/, '').split(/[?#]/)[0] ?? '';
   switch (path) {
     case 'tech':
       return 'tech';
+    case 'clip':
+      return 'clip';
     case 'sheet':
       return 'sheet';
     case 'editor':
@@ -29,7 +31,7 @@ export interface GameRoute {
   otherRoute: { hash: string; label: string };
 }
 
-export const GAME_ROUTES: Record<'room' | 'tech', GameRoute> = {
+export const GAME_ROUTES: Record<'room' | 'tech' | 'clip', GameRoute> = {
   room: {
     manifest: 'content/room/pack.json',
     badge: 'DEMO — тестовая комната',
@@ -39,6 +41,16 @@ export const GAME_ROUTES: Record<'room' | 'tech', GameRoute> = {
     fireHint: false,
     lid: true,
     otherRoute: { hash: '#/tech', label: 'Техническая демоверсия движка (для разработки)' },
+  },
+  clip: {
+    manifest: 'content/clip/pack.json',
+    badge: 'DEMO — по видео',
+    subtitle:
+      'Тестовый уровень по фрагменту видео владельца: интро, перекладина с отскоком, яма в арке. Физика и анимации — наблюдения по видео (черновик), не правила оригинала.',
+    restartLabel: 'Сброс',
+    fireHint: false,
+    lid: true,
+    otherRoute: { hash: '#/', label: 'Однокомнатное демо' },
   },
   tech: {
     manifest: 'content/demo/pack.json',

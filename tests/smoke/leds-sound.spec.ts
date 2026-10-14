@@ -45,7 +45,7 @@ async function ready(page: Page): Promise<void> {
   await page.waitForSelector('#game-area[data-phase="ready"]');
 }
 
-test('светодиоды следуют состоянию игры: готов — все горят, игра — зелёный, пауза — жёлтый мигает', async ({ page }) => {
+test('светодиоды: готов и игра — горят все три (как на видео), пауза — жёлтый мигает', async ({ page }) => {
   await ready(page);
   await expect.poll(() => led(page, 'Red')).toBe('on');
   expect([await led(page, 'Yellow'), await led(page, 'Green')]).toEqual(['on', 'on']);
@@ -53,9 +53,9 @@ test('светодиоды следуют состоянию игры: гото�
 
   await page.keyboard.press('Enter');
   await page.waitForSelector('#game-area[data-phase="playing"]');
-  await expect.poll(() => led(page, 'Red')).toBe('off');
-  expect([await led(page, 'Yellow'), await led(page, 'Green')]).toEqual(['off', 'on']);
-  await expect(page.locator('#lid .led--green.led--lit')).toHaveCount(1);
+  await expect.poll(() => led(page, 'Red')).toBe('on');
+  expect([await led(page, 'Yellow'), await led(page, 'Green')]).toEqual(['on', 'on']);
+  await expect(page.locator('#lid .led--lit')).toHaveCount(3);
 
   await page.keyboard.press('Escape');
   await page.waitForSelector('#game-area[data-phase="paused"]');

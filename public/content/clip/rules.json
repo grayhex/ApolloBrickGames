@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "clip-rules",
+  "status": "demo",
+  "version": 1,
+  "params": {
+    "tickRateHz": 20,
+    "move": { "repeatDelayTicks": 3, "repeatIntervalTicks": 3 },
+    "jump": { "triggers": ["jump"], "table": [-1, -1, -1], "stepTicks": 3 },
+    "fall": { "periodTicks": 3 },
+    "fire": null,
+    "lives": 3,
+    "timerLimitTicks": 0,
+    "deathDelayTicks": 0,
+    "bottomEdge": "floor"
+  }
+}
