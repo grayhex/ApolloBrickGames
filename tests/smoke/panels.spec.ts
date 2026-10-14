@@ -151,11 +151,11 @@ test('пульт: звук следует за SOUND, музыка, сегмен
   await expect(toggle('sound')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#game-area')).toBeFocused(); // после клика мышью клавиатура вернулась игре
 
-  // Музыка: «Оригинал» по умолчанию, «Ремастер» запоминается (звучит пока та же мелодия — об этом подсказка).
+  // Музыка: «Оригинал» по умолчанию, «Ремастер» запоминается (нет записи public/audio/remaster.m4a — звучит оригинал, об этом подсказка).
   const music = (id: string) => page.locator(`#music [data-music="${id}"]`);
   await expect(music('original')).toHaveAttribute('aria-pressed', 'true');
   await expect(music('remaster')).toHaveAttribute('aria-pressed', 'false');
-  await expect(music('remaster')).toHaveAttribute('title', /пока звучит та же мелодия/);
+  await expect(music('remaster')).toHaveAttribute('title', /звучит оригинальная мелодия/);
   await music('remaster').click();
   await expect(music('remaster')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#game-area')).toHaveAttribute('data-music', 'remaster');

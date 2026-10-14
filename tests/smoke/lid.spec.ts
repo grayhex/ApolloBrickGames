@@ -190,6 +190,31 @@ test.describe('раскрытие с анимацией', () => {
     expect(open.w).toBeLessThan(closed.w);
     expect(open.matrix === 'none' || /^matrix(3d)?\(/.test(open.matrix)).toBe(true);
 
+    // Пока крышка поворачивается, шарниров и шлейфа не видно (они за крышкой); после раскрытия проявляются.
+    await page.locator('#view-closed').click();
+    await expect.poll(async () => (await frame()).slot, { timeout: 3000 }).toBeLessThan(4);
+    await page.waitForTimeout(600); // поворот закончился, втулки проявились
+    await page.locator('#lid-cover').click();
+    const hingeOpacity = (): Promise<{ knuckle: number; band: number; slot: number }> =>
+      page.evaluate(() => ({
+        knuckle: Number(getComputedStyle(document.querySelector('.toy__knuckle') as HTMLElement).opacity),
+        band: Number(getComputedStyle(document.querySelector('.toy__band') as HTMLElement).opacity),
+        slot: (document.getElementById('lid-slot') as HTMLElement).getBoundingClientRect().height,
+      }));
+    const opening: { knuckle: number; band: number; slot: number }[] = [];
+    for (let i = 0; i < 12; i++) {
+      opening.push(await hingeOpacity());
+      await page.waitForTimeout(60);
+    }
+    const midFlip = opening.filter((o) => o.slot > 20 && o.slot < open.slot * 0.95);
+    expect(midFlip.length).toBeGreaterThan(0);
+    for (const o of midFlip) {
+      expect(o.knuckle).toBe(0);
+      expect(o.band).toBe(0);
+    }
+    await expect.poll(async () => (await hingeOpacity()).knuckle, { timeout: 3000 }).toBe(1);
+    await expect.poll(async () => (await hingeOpacity()).band, { timeout: 3000 }).toBe(1);
+
     // Обратно: тоже плавно.
     await page.locator('#view-closed').click();
     const back: number[] = [];

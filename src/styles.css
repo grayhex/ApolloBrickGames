@@ -1070,6 +1070,38 @@ body[data-chrome='toy'] {
   margin-top: -1.2cqw;
 }
 
+/* Пока крышка поворачивается, шарниров не видно — они за крышкой (иначе втулки мелькали бы поверх неё): при смене закрыто ↔ открыто
+   втулки гаснут сразу и проявляются, когда поворот закончен. Две одинаковые анимации с разными именами — чтобы запускалась каждая смена. */
+@keyframes hinge-show-open {
+  0%,
+  80% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes hinge-show-closed {
+  0%,
+  80% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.toy:not([data-closed]) .toy__knuckle {
+  animation: hinge-show-open calc(var(--flip, 0s) * 1.25) linear both;
+}
+
+.toy[data-closed] .toy__knuckle {
+  animation: hinge-show-closed calc(var(--flip, 0s) * 1.25) linear both;
+}
+
 .toy__band {
   /* Шлейф показывается только после полного раскрытия: появляется, когда крышка уже встала. */
   transition: opacity calc(var(--flip, 0s) * 0.25) ease var(--flip, 0s);

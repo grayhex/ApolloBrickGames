@@ -1,6 +1,7 @@
 import { screenSize, type ContentPack } from '../content/schema';
 import type { AudioPort } from '../audio/audio';
 import { WebAudioPort } from '../audio/beeper';
+import { fetchTrack } from '../audio/remaster';
 import { SoundDirector } from '../audio/director';
 import {
   actionBit,
@@ -219,7 +220,12 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   applyLangUi();
 
   // Звук: мелодия и эффекты, восстановленные по записи со звуком (src/audio); включается настройкой и жестом пользователя (политика браузеров).
-  const audio: AudioPort & { unlock(): void } = new WebAudioPort({ muted: !hub.settings.display.sound, volume: hub.settings.display.volume });
+  // Музыка «Ремастер» — готовая запись public/audio/remaster.m4a (грузится при первом выборе; нет файла — звучит оригинал).
+  const audio: AudioPort & { unlock(): void } = new WebAudioPort({
+    muted: !hub.settings.display.sound,
+    volume: hub.settings.display.volume,
+    remaster: fetchTrack(`${import.meta.env.BASE_URL}audio/remaster.m4a`),
+  });
   const unlockAudio = (): void => audio.unlock();
   window.addEventListener('keydown', unlockAudio);
   window.addEventListener('pointerdown', unlockAudio);
@@ -350,6 +356,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     refs.chkSound.checked = display.sound;
     audio.setMuted(!display.sound);
     audio.setVolume(display.volume);
+    audio.setMusic(display.music);
     if (route.lid) applyTheme(display.theme);
     corner?.setTheme(display.theme);
     refs.gameArea.dataset['music'] = display.music;
@@ -755,6 +762,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('gamepad', gamepadStatus.kind);
     setData('context', session.context);
     setData('power', powered ? 'on' : 'off');
+    setData('musicSource', audio.musicSource); // чем звучит мелодия: original (пищалка) или remaster (запись)
     setData('entry', entry.pending(s.phase) ? 'on' : 'off');
     setData('cameraX', camera.x);
     setData('intro', fx.intro ? 'on' : 'off');

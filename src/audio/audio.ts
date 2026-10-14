@@ -28,6 +28,9 @@ export type AudioCue =
  */
 export type MelodyKind = 'start' | 'tune' | 'ready';
 
+/** Какая музыка звучит в игре: мелодия-пищалка по записи игрушки или готовая запись «ремастера» (см. remaster.ts). */
+export type MusicKind = 'original' | 'remaster';
+
 /** Порт аудио: ядро событий не знает, чем и как воспроизводится звук. */
 export interface AudioPort {
   readonly muted: boolean;
@@ -35,6 +38,10 @@ export interface AudioPort {
   readonly volume: number;
   setMuted(muted: boolean): void;
   setVolume(volume: number): void;
+  /** Выбор музыки: «ремастер» подменяет мелодию (но не эффекты); нет записи — звучит оригинал. */
+  setMusic(music: MusicKind): void;
+  /** Чем звучит мелодия сейчас: `remaster` — играет запись, иначе — пищалка. */
+  readonly musicSource: MusicKind;
   /** Эффект: один канал, более слабый не перебивает звучащий сильный. */
   play(cue: AudioCue): void;
   /** Запустить мелодию с начала (прежняя обрывается). Часы идут и при заглушённом звуке — светодиоды бегут в такт. */
@@ -57,6 +64,8 @@ export class NullAudio implements AudioPort {
   muted = true;
   volume = 0.25;
   melodyKind: MelodyKind | null = null;
+  musicSource: MusicKind = 'original';
+  music: MusicKind = 'original';
 
   setMuted(muted: boolean): void {
     this.muted = muted;
@@ -64,6 +73,10 @@ export class NullAudio implements AudioPort {
 
   setVolume(volume: number): void {
     this.volume = volume;
+  }
+
+  setMusic(music: MusicKind): void {
+    this.music = music;
   }
 
   play(): void {
