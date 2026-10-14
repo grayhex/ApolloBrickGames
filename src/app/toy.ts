@@ -19,38 +19,6 @@ export const KEY_ACTIONS: Partial<Record<ToyKeyId, ActionMask>> = {
 
 const START = actionBit('start');
 const PAUSE = actionBit('pause');
-const UP = actionBit('up');
-const DOWN = actionBit('down');
-const LEFT = actionBit('left');
-const RIGHT = actionBit('right');
-
-/** Мёртвая зона крестовины пульта для телефона: доля радиуса от центра, где палец ничего не нажимает. */
-const DPAD_DEAD_ZONE = 0.2;
-/** Косинус угла к оси, начиная с которого направление считается нажатым: между осями — диагональ (две клавиши сразу). */
-const DPAD_AXIS = 0.4;
-
-/**
- * Крестовина пульта для телефона: положение пальца (x вправо, y вниз; −1…1 от центра зоны) → нажатые направления. 8 направлений:
- * около оси — одно, между осями (≈ 43° полосой) — два сразу, например «влево + вверх» — прыжок влево. Палец можно вести за пределы зоны —
- * направление определяется углом. В центре (мёртвая зона) ничего не нажато.
- */
-export function dpadMask(x: number, y: number): ActionMask {
-  const reach = Math.hypot(x, y);
-  if (reach < DPAD_DEAD_ZONE) return 0;
-  let mask = 0;
-  if (Math.abs(x) / reach > DPAD_AXIS) mask |= x < 0 ? LEFT : RIGHT;
-  if (Math.abs(y) / reach > DPAD_AXIS) mask |= y < 0 ? UP : DOWN;
-  return mask;
-}
-
-/** Лёгкий отклик на нажатие там, где браузер умеет вибрировать (Android); iOS вибрацию не даёт — молча ничего. */
-function buzz(ms = 8): void {
-  try {
-    if ('vibrate' in navigator) navigator.vibrate(ms);
-  } catch {
-    // Вибрация недоступна (политика браузера) — не страшно.
-  }
-}
 /** S./P. — одна кнопка старта и паузы: подсвечивается и от start, и от pause. */
 export const START_PAUSE_MASK: ActionMask = START | PAUSE;
 
@@ -80,11 +48,10 @@ export interface ToyHooks {
 /**
  * Кнопки корпуса: нажимаются мышью и пальцем (игровые — через общий слой ввода, как клавиши),
  * а подсвечиваются по любому источнику — клавиатура, геймпад, мышь. Кнопки не берут фокус,
- * чтобы клавиатура осталась у игры. На телефоне те же действия дублирует пульт под экраном (`[data-pad]`, крестовина
- * `[data-pad-zone="dpad"]` со стрелками `[data-pad-dir]`): одна кнопка может быть в нескольких местах, подсвечиваются все.
+ * чтобы клавиатура осталась у игры.
  */
 export class ToyPanel {
-  private readonly buttons = new Map<ToyKeyId, HTMLElement[]>();
+  private readonly buttons = new Map<ToyKeyId, HTMLElement>();
   private readonly lit = new Set<ToyKeyId>();
   /** Подсветка от указателей и горячих клавиш (ON/OFF, SOUND). */
   private readonly extra = new Map<ToyKeyId, number>();
@@ -95,28 +62,26 @@ export class ToyPanel {
     this.hub = hub;
     this.hooks = hooks;
     for (const id of TOY_KEY_IDS) {
-      const pressable = [...root.querySelectorAll<HTMLElement>(`[data-key="${id}"], [data-pad="${id}"]`)];
-      if (pressable.length === 0) continue;
-      for (const button of pressable) this.bind(id, button);
-      // Стрелки крестовины пульта только подсвечиваются: нажимает их сама зона (см. bindDpad).
-      this.buttons.set(id, [...pressable, ...root.querySelectorAll<HTMLElement>(`[data-pad-dir="${id}"]`)]);
+      const button = root.querySelector<HTMLElement>(`[data-key="${id}"]`);
+      if (!button) continue;
+      this.buttons.set(id, button);
+      this.bind(id, button);
     }
-    const zone = root.querySelector<HTMLElement>('[data-pad-zone="dpad"]');
-    if (zone) this.bindDpad(zone);
   }
 
   /** Подсветить нажатые кнопки по маске удерживаемых действий трекера. */
   sync(down: ActionMask): void {
     const wanted = pressedKeys(down);
     for (const id of this.extra.keys()) wanted.add(id);
-    for (const [id, elements] of this.buttons) {
+    for (const [id, button] of this.buttons) {
       const on = wanted.has(id);
       if (on === this.lit.has(id)) continue;
-      if (on) this.lit.add(id);
-      else this.lit.delete(id);
-      for (const element of elements) {
-        if (on) element.dataset['pressed'] = '';
-        else delete element.dataset['pressed'];
+      if (on) {
+        this.lit.add(id);
+        button.dataset['pressed'] = '';
+      } else {
+        this.lit.delete(id);
+        delete button.dataset['pressed'];
       }
     }
   }
@@ -143,7 +108,6 @@ export class ToyPanel {
       event.preventDefault(); // не забирать фокус у игры и не выделять текст
       button.setPointerCapture(event.pointerId);
       this.extra.set(id, event.pointerId);
-      if (event.pointerType !== 'mouse') buzz();
       if (id === 'onoff' || id === 'sound') {
         this.trigger(id);
       } else if (this.hooks.powered()) {
@@ -161,41 +125,5 @@ export class ToyPanel {
     button.addEventListener('pointercancel', release);
     button.addEventListener('lostpointercapture', release);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
-  }
-
-  /**
-   * Крестовина пульта для телефона — одна зона на все четыре стрелки: палец ведут по ней, и направление меняется без отрыва
-   * (с отдельными кнопками захват указателя держал бы первую). Диагонали — две стрелки сразу (`dpadMask`).
-   */
-  private bindDpad(zone: HTMLElement): void {
-    const last = new Map<number, number>();
-    const update = (event: PointerEvent): void => {
-      const rect = zone.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
-      const mask = this.hooks.powered() ? dpadMask(x, y) : 0;
-      if (mask !== 0 && mask !== (last.get(event.pointerId) ?? 0) && event.pointerType !== 'mouse') buzz(6);
-      last.set(event.pointerId, mask);
-      this.hub.screen.press(event.pointerId, mask);
-      this.sync(this.hub.tracker.down);
-    };
-    zone.addEventListener('pointerdown', (event) => {
-      if (event.pointerType === 'mouse' && event.button !== 0) return;
-      event.preventDefault();
-      zone.setPointerCapture(event.pointerId);
-      update(event);
-    });
-    zone.addEventListener('pointermove', (event) => {
-      if (zone.hasPointerCapture(event.pointerId)) update(event);
-    });
-    const release = (event: PointerEvent): void => {
-      last.delete(event.pointerId);
-      this.hub.screen.release(event.pointerId);
-      this.sync(this.hub.tracker.down);
-    };
-    zone.addEventListener('pointerup', release);
-    zone.addEventListener('pointercancel', release);
-    zone.addEventListener('lostpointercapture', release);
-    zone.addEventListener('contextmenu', (event) => event.preventDefault());
   }
 }

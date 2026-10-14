@@ -383,38 +383,6 @@
         </div>
       </section>
 
-      <!-- Пульт для телефона: на узком экране в виде «только экран» кнопок корпуса нет, поэтому под экраном рисуются свои — крупные.
-           Те же действия, что у кнопок корпуса (см. app/toy.ts): четыре верхние кнопки, крестовина (скольжение пальцем меняет направление), JUMP и FIRE. -->
-      <div class="deck" id="deck" role="group" aria-label="Кнопки для телефона" data-i18n-attrs="aria-label=deck.label">
-        <div class="deck__top">
-          <button type="button" class="pad pad--round" data-pad="onoff" tabindex="-1" aria-label="ON/OFF — включить или выключить" data-i18n-attrs="aria-label=key.onoff"><span class="pad__dome"></span><span class="pad__name">ON/OFF</span></button>
-          <button type="button" class="pad pad--round" data-pad="sp" tabindex="-1" aria-label="S./P. — старт и пауза" data-i18n-attrs="aria-label=key.sp"><span class="pad__dome"></span><span class="pad__name">S./P.</span></button>
-          <button type="button" class="pad pad--round" data-pad="sound" tabindex="-1" aria-label="SOUND — звук" data-i18n-attrs="aria-label=key.sound"><span class="pad__dome"></span><span class="pad__name">SOUND</span></button>
-          <button type="button" class="pad pad--round" data-pad="fire" tabindex="-1" aria-label="FIRE — огонь" data-i18n-attrs="aria-label=key.fire"><span class="pad__dome"></span><span class="pad__name">FIRE</span></button>
-        </div>
-        <div class="deck__main">
-          <div class="deck__dpad" data-pad-zone="dpad" role="group" aria-label="Стрелки" data-i18n-attrs="aria-label=deck.dpad">
-            <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
-              <defs>
-                <linearGradient id="deck-arm" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="80" y2="120"><stop class="ks-hi" offset="0"/><stop class="ks-mid" offset="0.5"/><stop class="ks-lo" offset="1"/></linearGradient>
-                <radialGradient id="deck-hub" cx="50%" cy="42%" r="60%"><stop class="ks-hi" offset="0"/><stop class="ks-mid" offset="0.6"/><stop class="ks-lo" offset="1"/></radialGradient>
-              </defs>
-              <circle class="dpad__well" cx="60" cy="60" r="58"/>
-              <path class="dpad__cross" d="M51 5H69a10 10 0 0 1 10 10V41H105a10 10 0 0 1 10 10V69a10 10 0 0 1-10 10H79V105a10 10 0 0 1-10 10H51a10 10 0 0 1-10-10V79H15a10 10 0 0 1-10-10V51a10 10 0 0 1 10-10H41V15a10 10 0 0 1 10-10Z"/>
-              <g class="dpad__arm" data-pad-dir="up"><rect x="41" y="5" width="38" height="55" rx="10"/><path d="M60 17 72 33H48Z"/></g>
-              <g class="dpad__arm" data-pad-dir="down"><rect x="41" y="60" width="38" height="55" rx="10"/><path d="M60 103 72 87H48Z"/></g>
-              <g class="dpad__arm" data-pad-dir="left"><rect x="5" y="41" width="55" height="38" rx="10"/><path d="M17 60 33 48V72Z"/></g>
-              <g class="dpad__arm" data-pad-dir="right"><rect x="60" y="41" width="55" height="38" rx="10"/><path d="M103 60 87 48V72Z"/></g>
-              <circle class="dpad__hub" cx="60" cy="60" r="13"/>
-            </svg>
-          </div>
-          <div class="deck__acts">
-            <button type="button" class="pad pad--fire" data-pad="fire" tabindex="-1" aria-label="FIRE — огонь" data-i18n-attrs="aria-label=key.fire"><span class="pad__name">FIRE</span></button>
-            <button type="button" class="pad pad--jump" data-pad="jump" tabindex="-1" aria-label="JUMP — прыжок" data-i18n-attrs="aria-label=key.jump"><span class="pad__name">JUMP</span></button>
-          </div>
-        </div>
-      </div>
-
       <aside class="side side--ctl" id="side-ctl" aria-labelledby="ctl-title"></aside>
       </div>
 

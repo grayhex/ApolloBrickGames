@@ -14,27 +14,3 @@ export const DEFAULT_VIEW: View = 'closed';
 export function parseView(value: string | null, powerOn = false): View {
   return VIEWS.find((view) => view === value) ?? (powerOn ? 'full' : DEFAULT_VIEW);
 }
-
-/**
- * Узкий экран (телефон в портрете и узкое окно): макет в одну колонку — игрушка сверху, панели под ней. В этом виде под экраном
- * (`«только экран»`) рисуется пульт с крупными кнопками: кнопок корпуса там нет, а касание экрана только запускает игру.
- * Тот же порог — в `styles.css` (`@media (max-width: 899px)`).
- */
-export const PHONE_QUERY = '(max-width: 899px)';
-
-/**
- * Нужен ли пульт для телефона: пока крышка закрыта — нет; иначе по выбору пользователя (`pad`), а без выбора (`null`) — только в «только экран»,
- * где кнопок корпуса нет. Ширину экрана не учитывает: на широком экране пульт скрывает CSS (`PHONE_QUERY`).
- */
-export function padWanted(view: View, pad: boolean | null): boolean {
-  return view !== 'closed' && (pad ?? view === 'screen');
-}
-
-/**
- * Вид после раскрытия крышки: на узком экране — «только экран» (там пульт для телефона), иначе — игрушка целиком. Если пульт выключен
- * явно (`pad === false`), на телефоне тоже открывается целиком — с настоящими кнопками корпуса.
- */
-export function openedView(phone: boolean, pad: boolean | null = null): View {
-  return phone && pad !== false ? 'screen' : 'full';
-}
-

@@ -17,7 +17,6 @@ export interface ControlPanelActions {
   setMusicVolume(volume: number, commit: boolean): void;
   setMusic(music: Music): void;
   toggleGhost(): void;
-  togglePad(): void;
   setView(view: View): void;
   pickOriginal(number: number): void;
   pickBundled(levelId: string): void;
@@ -34,8 +33,6 @@ export interface ControlPanelView {
   musicVolume: number;
   music: Music;
   ghost: boolean | null;
-  /** Пульт для телефона показан (с учётом вида); на широком экране переключатель скрыт — пульта там нет. */
-  pad: boolean;
   view: View;
   /** Игрушка включена: пока игра идёт, «Свёрнута» недоступна — сначала выключить (ON/OFF). */
   powered: boolean;
@@ -111,7 +108,6 @@ export class ControlPanel {
   private readonly picker: ShellPicker;
   private readonly soundToggle: { button: HTMLButtonElement; icon: HTMLElement; label: HTMLElement };
   private readonly ghostToggle: HTMLButtonElement;
-  private readonly padToggle: HTMLButtonElement;
   private soundBlock: HTMLElement | null = null;
   /** Ползунки связаны (музыка «Оригинал»): их двигает один и тот же уровень. */
   private linked = true;
@@ -224,12 +220,6 @@ export class ControlPanel {
       actions.toggleGhost();
       pointerUse(event);
     });
-    const padIcon = h('span', { class: 'tgl__icon' }, icon('gamepad'));
-    this.padToggle = h('button', { type: 'button', class: 'tgl tgl--sm tgl--pad', id: 'tgl-pad', 'data-tgl': 'pad', 'aria-pressed': 'false' }, padIcon, this.label(h('span', { class: 'tgl__label' }), 'tgl.pad'));
-    this.padToggle.addEventListener('click', (event) => {
-      actions.togglePad();
-      pointerUse(event);
-    });
     const view = h(
       'section',
       { class: 'side__sec', id: 'blk-view', 'aria-labelledby': 'view-title' },
@@ -237,7 +227,7 @@ export class ControlPanel {
       this.label(h('p', { class: 'side__cap' }), 'clr.h'),
       this.picker.root,
       state,
-      h('div', { class: 'side__row' }, this.ghostToggle, this.padToggle),
+      this.ghostToggle,
     );
 
     // ── Уровни ───────────────────────────────────────────────────────────
@@ -364,8 +354,6 @@ export class ControlPanel {
     this.ghostToggle.hidden = view.ghost === null;
     this.ghostToggle.setAttribute('aria-pressed', String(view.ghost === true));
     this.ghostToggle.title = t(view.ghost ? 'tgl.ghostOn' : 'tgl.ghostOff');
-    this.padToggle.setAttribute('aria-pressed', String(view.pad));
-    this.padToggle.title = t(view.pad ? 'tgl.padOn' : 'tgl.padOff');
 
     this.level = view.level;
     this.markLevel();
