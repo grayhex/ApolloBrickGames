@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "room-animations",
+  "status": "demo",
+  "bump": {
+    "ticks": 5
+  },
+  "intro": null
+}

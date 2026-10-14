@@ -128,7 +128,7 @@ describe('однокомнатное демо: механика', () => {
 
   it('под платформой голова упирается в потолок, на платформу можно запрыгнуть', () => {
     const game = started();
-    run(game, { held: ['right'], ticks: 10 }); // x = 4: под платформой (x = 3..5, y = 4)
+    run(game, { held: ['right'], ticks: 7 }); // шаги на 0-м, 3-м и 6-м тактах: x = 4, под платформой (x = 3..5, y = 4)
     expect(game.state.hero).toMatchObject({ x: 4, y: 4 });
     run(game, idle(1), { press: ['jump'], held: ['jump'] });
     expect(game.state.hero.y).toBe(4); // потолок над головой

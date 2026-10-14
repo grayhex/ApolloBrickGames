@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { FAST_BLINK_TICKS, ledState, SLOW_BLINK_TICKS } from '../../src/app/leds';
 
 describe('светодиоды (условная схема демо)', () => {
-  it('готов к старту — горят все три (как на фото устройства); идёт игра — только зелёный', () => {
+  it('готов к старту и в игре — горят все три постоянно (как на фото и на видео фрагмента)', () => {
     expect(ledState('ready', 0)).toEqual({ red: true, yellow: true, green: true });
     expect(ledState('ready', 123)).toEqual({ red: true, yellow: true, green: true });
-    expect(ledState('playing', 7)).toEqual({ red: false, yellow: false, green: true });
+    for (const tick of [0, 1, 7, 100]) expect(ledState('playing', tick)).toEqual({ red: true, yellow: true, green: true });
   });
 
   it('пауза — жёлтый мигает; смерть — красный мигает чаще; конец игры — красный горит', () => {

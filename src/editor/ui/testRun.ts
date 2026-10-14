@@ -9,6 +9,7 @@ import { createContext, Game, type GameEvent } from '../../core';
 import { centerCamera, followCamera, type CameraArea, type CameraPos } from '../../render/camera';
 import type { AssetStore } from '../../render/assets';
 import type { GamepadStatus } from '../../input/gamepad';
+import { effectsWorld, LevelEffects } from '../../render/effects';
 import { Renderer } from '../../render/renderer';
 import { makeTestPack } from '../testPack';
 import { button, el } from './el';
@@ -47,6 +48,7 @@ export class TestRunner {
   private game: Game | null = null;
   private session: GameSession | null = null;
   private renderer: Renderer | null = null;
+  private effects: LevelEffects | null = null;
   private start: TestStart | null = null;
   private camera: CameraPos = { x: 0, y: 0 };
   private snapCamera = true;
@@ -162,6 +164,9 @@ export class TestRunner {
     const ctx = createContext(testPack);
     this.game = new Game(ctx, 1);
     this.renderer = new Renderer(this.canvas, start.pack.screen, start.assets);
+    // Интро в тестовом запуске выключено (карту проверяют, а не смотрят заставку); отскок перекладины — как в игре.
+    const effects = new LevelEffects(start.pack.animations ?? null, { viewport: start.pack.screen.viewport, intro: false });
+    this.effects = effects;
     const ghostOn = this.hub.settings.display.ghost ?? start.pack.screen.ghost?.enabled ?? false;
     this.renderer.setGhost(ghostOn);
     (this.root.querySelector('#test-ghost') as HTMLInputElement).checked = ghostOn;
@@ -173,6 +178,8 @@ export class TestRunner {
       onEvents: (events: readonly GameEvent[]) => {
         for (const event of events) {
           if (event.type === 'levelStarted') this.snapCamera = true;
+          const world = this.game ? effectsWorld(ctx, this.game.state) : null;
+          if (world) effects.onEvent(event, world);
           const cue = cueForEvent(event);
           if (cue) this.audio.play(cue);
         }
@@ -206,6 +213,7 @@ export class TestRunner {
     this.game = null;
     this.session = null;
     this.renderer = null;
+    this.effects = null;
     this.root.hidden = true;
   }
 
@@ -262,6 +270,7 @@ export class TestRunner {
       camera: this.camera,
       sprites: start.pack.manifest.sprites,
       debug: { grid: false, collisions: false },
+      ...(this.effects ? { effects: this.effects.frame(game.state, level) } : {}),
     });
     this.updateUi(game);
   };

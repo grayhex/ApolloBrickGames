@@ -2,6 +2,7 @@ import { screenSize, type HudFixed, type LevelDef, type ScreenProfile } from '..
 import type { GameState } from '../core/state';
 import type { AssetStore } from './assets';
 import type { CameraPos } from './camera';
+import { NO_EFFECTS, type EffectsFrame } from './effects';
 import { drawText as drawBuiltinText, FONT_HEIGHT, textWidth } from './font';
 import { computeLayout, type Layout } from './layout';
 
@@ -27,6 +28,8 @@ export interface RenderInput {
   hudOverride?: HudFixed;
   /** Не рисовать героя (сцена с фотографии без фигурки). */
   hideHero?: boolean;
+  /** Презентационные эффекты кадра (интро, отскок перекладины); без них — обычная сцена. */
+  effects?: EffectsFrame;
 }
 
 /**
@@ -130,20 +133,45 @@ export class Renderer {
       }
     }
 
-    // Статический слой: что рисовать, решает легенда уровня; проходимость отсюда не берётся.
-    for (let cy = 0; cy < viewport.rows; cy++) {
-      for (let cx = 0; cx < viewport.columns; cx++) {
-        const char = level.rows[camera.y + cy]?.[camera.x + cx];
-        const asset = char === undefined ? null : level.legend[char]?.asset;
-        if (!asset) continue;
-        const p = this.cellOrigin({ x: 0, y: 0 }, cx, cy);
-        this.assets.draw(ctx, asset, tick, p.x, p.y, cell.width, cell.height, ink);
+    const fx = input.effects ?? NO_EFFECTS;
+    const hidden = fx.hiddenTiles;
+    const tileHidden = (wx: number, wy: number): boolean =>
+      hidden === 'all' || (hidden !== null && hidden.has(wy * level.width + wx));
+
+    // Заливка поля блоками (интро участка).
+    if (fx.fill) {
+      for (const c of fx.fill.cells) {
+        const p = this.cellOrigin({ x: 0, y: 0 }, c.x, c.y);
+        this.assets.draw(ctx, fx.fill.asset, tick, p.x, p.y, cell.width, cell.height, ink);
       }
+    }
+
+    // Статический слой: что рисовать, решает легенда уровня; проходимость отсюда не берётся.
+    if (hidden !== 'all') {
+      for (let cy = 0; cy < viewport.rows; cy++) {
+        for (let cx = 0; cx < viewport.columns; cx++) {
+          const wx = camera.x + cx;
+          const wy = camera.y + cy;
+          const char = level.rows[wy]?.[wx];
+          const asset = char === undefined ? null : level.legend[char]?.asset;
+          if (!asset) continue;
+          if (tileHidden(wx, wy)) continue;
+          const p = this.cellOrigin({ x: 0, y: 0 }, cx, cy);
+          this.assets.draw(ctx, asset, tick, p.x, p.y, cell.width, cell.height, ink);
+        }
+      }
+    }
+
+    // Дополнительные тайлы: копия перекладины над местом удара головой.
+    for (const tile of fx.extra) {
+      const p = this.cellOrigin(camera, tile.x, tile.y);
+      this.assets.draw(ctx, tile.asset, tick, p.x, p.y, cell.width, cell.height, ink);
     }
 
     level.objects.forEach((def, index) => {
       const object = state.objects[index];
-      if (!object || !object.active || !def.asset) return;
+      if (!fx.objects || !object || !object.active || !def.asset) return;
+      if (tileHidden(object.x, object.y)) return;
       for (let dy = 0; dy < def.h; dy++) {
         for (let dx = 0; dx < def.w; dx++) {
           const p = this.cellOrigin(camera, object.x + dx, object.y + dy);
@@ -163,8 +191,9 @@ export class Renderer {
 
     // В фазе смерти герой мигает.
     const blink = state.phase === 'dead' && Math.floor(state.tick / 2) % 2 === 1;
-    if (!blink && !input.hideHero) {
-      const p = this.cellOrigin(camera, state.hero.x, state.hero.y);
+    if (!blink && !input.hideHero && fx.hero !== 'hidden') {
+      const at = fx.hero === 'state' ? state.hero : fx.hero;
+      const p = this.cellOrigin(camera, at.x, at.y);
       // Зеркало для взгляда влево — только если ресурс это допускает (в каталоге по умолчанию — нет).
       const flip = state.hero.facing === -1 && this.assets.mirrorsWhenLeft(sprites.hero);
       this.assets.draw(ctx, sprites.hero, tick, p.x, p.y, cell.width, cell.height, ink, flip);

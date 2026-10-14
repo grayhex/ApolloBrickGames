@@ -1,15 +1,18 @@
 import {
   SCHEMA_VERSION,
+  type AnimationsDef,
   type AssetCatalog,
   type AssetDef,
   type AssetProvenance,
   type ContentPack,
+  type CellPos,
   type ContentStatus,
   DEFAULT_LCD_COLORS,
   type FireRules,
   type Hud,
   type HudDigits,
   type HudFixed,
+  type IntroAnimation,
   type LegendEntry,
   type LevelDef,
   type LevelMark,
@@ -412,6 +415,11 @@ export function validateRuleSet(raw: unknown, env: ValidationEnv, source = 'rule
     timerLimitTicks: c.int(p, 'timerLimitTicks', '$.params', 0, 1_000_000),
     deathDelayTicks: c.int(p, 'deathDelayTicks', '$.params', 0, 10_000),
   };
+  const bottomEdge = p['bottomEdge'];
+  if (bottomEdge === 'pit' || bottomEdge === 'floor') params.bottomEdge = bottomEdge;
+  else if (bottomEdge !== undefined) {
+    c.fail('$.params.bottomEdge', `ожидалось «pit» или «floor», получено ${JSON.stringify(bottomEdge)}`);
+  }
 
   const result: RuleSetDef = {
     schemaVersion: c.schemaVersion(rec, '$'),
@@ -654,6 +662,7 @@ export function validatePackManifest(raw: unknown, source = 'manifest'): PackMan
     c.fail('$.levels', 'ожидался непустой массив путей к файлам уровней');
   }
   const sprites = c.record(rec['sprites'], '$.sprites') ?? {};
+  const animations = rec['animations'] === undefined ? undefined : c.str(rec, 'animations', '$');
 
   const manifest: PackManifest = {
     schemaVersion: c.schemaVersion(rec, '$'),
@@ -672,8 +681,75 @@ export function validatePackManifest(raw: unknown, source = 'manifest'): PackMan
       life: c.str(sprites, 'life', '$.sprites'),
     },
   };
+  if (animations !== undefined) manifest.animations = animations;
   c.done(source);
   return manifest;
+}
+
+// ── Анимации ───────────────────────────────────────────────────────────────
+
+export const MAX_ANIMATION_TICKS = 1000;
+export const MAX_ROUTE_CELLS = 2048;
+
+export function validateAnimations(raw: unknown, source = 'animations'): AnimationsDef {
+  const c = new Checker();
+  const rec = c.record(raw, '$');
+  if (!rec) return c.abort(source);
+
+  let bump: AnimationsDef['bump'] = null;
+  if (rec['bump'] !== undefined && rec['bump'] !== null) {
+    const b = c.record(rec['bump'], '$.bump') ?? {};
+    bump = { ticks: c.int(b, 'ticks', '$.bump', 1, MAX_ANIMATION_TICKS) };
+  }
+
+  let intro: IntroAnimation | null = null;
+  if (rec['intro'] !== undefined && rec['intro'] !== null) {
+    const i = c.record(rec['intro'], '$.intro') ?? {};
+    const ticks = (key: string, min: number): number => c.int(i, key, '$.intro', min, MAX_ANIMATION_TICKS);
+    const coverage = i['coverage'];
+    if (typeof coverage !== 'number' || !(coverage >= 0 && coverage <= 1)) {
+      c.fail('$.intro.coverage', `ожидалось число от 0 до 1, получено ${JSON.stringify(coverage)}`);
+    }
+    const routes: Record<string, CellPos[]> = {};
+    const rawRoutes = i['routes'] === undefined ? {} : (c.record(i['routes'], '$.intro.routes') ?? {});
+    for (const [levelId, value] of Object.entries(rawRoutes)) {
+      const path = `$.intro.routes["${levelId}"]`;
+      if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ROUTE_CELLS) {
+        c.fail(path, `ожидался непустой массив клеток [x, y] (не более ${MAX_ROUTE_CELLS})`);
+        continue;
+      }
+      const cells: CellPos[] = [];
+      value.forEach((cell: unknown, index: number) => {
+        const ok =
+          Array.isArray(cell) &&
+          cell.length === 2 &&
+          cell.every((n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < MAX_LEVEL_SIZE);
+        if (ok) cells.push({ x: (cell as number[])[0] as number, y: (cell as number[])[1] as number });
+        else c.fail(`${path}[${index}]`, `ожидалась клетка [x, y] — два целых от 0 до ${MAX_LEVEL_SIZE - 1}`);
+      });
+      routes[levelId] = cells;
+    }
+    intro = {
+      blankTicks: ticks('blankTicks', 0),
+      fillTicks: ticks('fillTicks', 1),
+      holdTicks: ticks('holdTicks', 0),
+      dissolveTicks: ticks('dissolveTicks', 1),
+      emptyTicks: ticks('emptyTicks', 0),
+      coverage: typeof coverage === 'number' ? coverage : 0,
+      stepTicks: ticks('stepTicks', 1),
+      routes,
+    };
+  }
+
+  const result: AnimationsDef = {
+    schemaVersion: c.schemaVersion(rec, '$'),
+    id: c.str(rec, 'id', '$', ID_PATTERN),
+    status: c.status(rec, '$'),
+    bump,
+    intro,
+  };
+  c.done(source);
+  return result;
 }
 
 /** Файлы пакета, уже разобранные из JSON (до валидации). */
@@ -683,6 +759,8 @@ export interface RawPack {
   rules: unknown;
   assets: unknown;
   levels: unknown[];
+  /** Файл анимаций, если манифест его объявляет. */
+  animations?: unknown;
 }
 
 /** Проверяет все части пакета и ссылки между ними. Бросает ContentError. */
@@ -700,6 +778,11 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
   const levels = raw.levels.map((level, index) =>
     validateLevel(level, assets, env, manifest.levels[index] ?? `levels[${index}]`),
   );
+  if ((manifest.animations !== undefined) !== (raw.animations !== undefined)) {
+    throw new ContentError('manifest', ['файл анимаций объявлен в манифесте и загружен не одинаково']);
+  }
+  const animations =
+    manifest.animations !== undefined ? validateAnimations(raw.animations, manifest.animations) : undefined;
 
   const issues: string[] = [];
   const levelIds = new Set<string>();
@@ -714,6 +797,35 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
     for (const tr of level.transitions) {
       if (tr.to !== null && !levelIds.has(tr.to)) {
         issues.push(`уровень «${level.id}»: переход из «${tr.from}» ведёт в несуществующий уровень «${tr.to}»`);
+      }
+    }
+  }
+  if (animations?.intro) {
+    for (const [levelId, route] of Object.entries(animations.intro.routes)) {
+      const level = levels.find((l) => l.id === levelId);
+      const where = `animations.intro.routes["${levelId}"]`;
+      if (!level) {
+        issues.push(`${where}: уровень «${levelId}» не найден в пакете`);
+        continue;
+      }
+      const seen = new Set<string>();
+      route.forEach((cell, index) => {
+        if (cell.x >= level.width || cell.y >= level.height) {
+          issues.push(`${where}[${index}]: клетка ${cell.x},${cell.y} вне карты ${level.width}×${level.height}`);
+        }
+        const key = `${cell.x},${cell.y}`;
+        if (seen.has(key)) issues.push(`${where}[${index}]: клетка ${key} уже есть в маршруте`);
+        seen.add(key);
+        const prev = route[index - 1];
+        if (prev && Math.abs(prev.x - cell.x) + Math.abs(prev.y - cell.y) !== 1) {
+          issues.push(`${where}[${index}]: шаг ${prev.x},${prev.y} → ${key} должен быть на одну клетку по стороне`);
+        }
+      });
+      const last = route[route.length - 1];
+      if (last && (last.x !== level.start.x || last.y !== level.start.y)) {
+        issues.push(
+          `${where}: маршрут должен заканчиваться в точке старта уровня (${level.start.x},${level.start.y}), а не в ${last.x},${last.y}`,
+        );
       }
     }
   }
@@ -747,5 +859,5 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
   }
   if (issues.length > 0) throw new ContentError(manifest.id, issues);
 
-  return { manifest, screen, rules, assets, levels };
+  return animations ? { manifest, screen, rules, assets, levels, animations } : { manifest, screen, rules, assets, levels };
 }

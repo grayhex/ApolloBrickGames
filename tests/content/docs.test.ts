@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  validateAnimations,
   validateAssetCatalog,
   validateLevel,
   validatePackManifest,
@@ -19,12 +20,12 @@ const blocks = [...doc.matchAll(/```json\n([\s\S]*?)```/g)].map((match) => JSON.
 const env = validationEnv(undefined, GLYPH_NAMES);
 
 describe('примеры из docs/content-format.md', () => {
-  it('в документе пять JSON-примеров: пакет, экран, правила, ресурсы, уровень', () => {
-    expect(blocks).toHaveLength(5);
+  it('в документе шесть JSON-примеров: пакет, экран, правила, ресурсы, уровень, анимации', () => {
+    expect(blocks).toHaveLength(6);
   });
 
   it('все примеры проходят проверку', () => {
-    const [pack, screen, rules, assets, level] = blocks;
+    const [pack, screen, rules, assets, level, animations] = blocks;
     expect(validatePackManifest(pack).id).toBe('demo-pack');
     const parsedScreen = validateScreenProfile(screen);
     expect(parsedScreen.viewport.columns).toBe(13);
@@ -40,5 +41,8 @@ describe('примеры из docs/content-format.md', () => {
     });
     const demoAssets = validateAssetCatalog(loadRawDemoPack().assets, env);
     expect(validateLevel(level, demoAssets, env, 'пример').objects).toHaveLength(3);
+    const parsedAnimations = validateAnimations(animations);
+    expect(parsedAnimations.bump).toEqual({ ticks: 5 });
+    expect(parsedAnimations.intro?.routes['mini']).toHaveLength(5);
   });
 });

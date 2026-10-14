@@ -155,6 +155,11 @@ export interface RuleParams {
   /** 0 — таймер выключен. */
   timerLimitTicks: number;
   deathDelayTicks: number;
+  /**
+   * Что лежит за нижним краем карты: `pit` — провал (герой выпадает и погибает), `floor` — земля
+   * (нижний ряд карты рабочий, в нём можно стоять). По умолчанию `pit`.
+   */
+  bottomEdge?: 'pit' | 'floor';
 }
 
 export interface FireRules {
@@ -171,6 +176,42 @@ export interface RuleSetDef {
   /** Версия набора правил: попадает в replay. */
   version: number;
   params: RuleParams;
+}
+
+// ── Анимации (презентация, в симуляции не участвуют) ───────────────────────
+
+/** Клетка карты. */
+export interface CellPos {
+  x: number;
+  y: number;
+}
+
+/**
+ * Интро участка (наблюдение по видео фрагмента): пустой экран → поле заполняется блоками → пауза →
+ * блоки растворяются → герой пробегает маршрут и оставляет за собой твёрдые клетки. Все длительности — в тактах.
+ */
+export interface IntroAnimation {
+  blankTicks: number;
+  fillTicks: number;
+  holdTicks: number;
+  dissolveTicks: number;
+  emptyTicks: number;
+  /** Доля клеток поля, заполняемая блоками (остальные — «дырки»), 0…1. */
+  coverage: number;
+  /** Тактов на один шаг героя по маршруту. */
+  stepTicks: number;
+  /** id уровня → маршрут героя (соседние клетки; последняя — точка старта уровня). Без записи этап построения пропускается. */
+  routes: Record<string, CellPos[]>;
+}
+
+export interface AnimationsDef {
+  schemaVersion: number;
+  id: string;
+  status: ContentStatus;
+  /** Отскок перекладины: сколько тактов показывается копия блока над местом удара головой. null — без эффекта. */
+  bump: { ticks: number } | null;
+  /** Интро участка; null — без интро. */
+  intro: IntroAnimation | null;
 }
 
 // ── Уровень ────────────────────────────────────────────────────────────────
@@ -262,6 +303,8 @@ export interface PackManifest {
   assets: string;
   levels: string[];
   firstLevel: string;
+  /** Необязательный файл анимаций (отскок блока, интро участка). */
+  animations?: string;
   /** Идентификаторы ресурсов героя и снаряда (в ядре их нет). */
   sprites: { hero: string; projectile: string | null; life: string };
 }
@@ -272,6 +315,8 @@ export interface ContentPack {
   rules: RuleSetDef;
   assets: AssetCatalog;
   levels: LevelDef[];
+  /** Анимации (необязательны). */
+  animations?: AnimationsDef;
 }
 
 /** Описание числового параметра типа объекта: из него строятся и проверка, и поле инспектора. */

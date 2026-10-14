@@ -15,17 +15,16 @@ function blink(tick: number, half: number): boolean {
 }
 
 /**
- * Три светодиода над экраном как индикатор состояния игры. Логика оригинала НЕ установлена
- * (на фото при включённом экране горят все три) — это условная схема демо:
- * готов к старту — горят все три (как на фото); идёт игра — зелёный; пауза — жёлтый мигает;
- * герой погиб — красный мигает часто; игра окончена — красный; участок пройден — все три мигают.
+ * Три светодиода над экраном. Наблюдение по видео фрагмента (docs/video-observations.md): весь фрагмент
+ * (заставка, построение комнаты, игра) горят все три, мигания не замечено. Остальное — условная схема демо
+ * (логика оригинала не установлена): пауза — жёлтый мигает; герой погиб — красный мигает часто;
+ * игра окончена — красный; участок пройден — все три мигают.
  */
 export function ledState(phase: Phase, tick: number): LedState {
   switch (phase) {
     case 'ready':
-      return { red: true, yellow: true, green: true };
     case 'playing':
-      return { red: false, yellow: false, green: true };
+      return { red: true, yellow: true, green: true };
     case 'paused':
       return { red: false, yellow: blink(tick, SLOW_BLINK_TICKS), green: false };
     case 'dead':

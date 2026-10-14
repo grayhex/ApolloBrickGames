@@ -2,15 +2,16 @@
   "schemaVersion": 1,
   "id": "room-rules",
   "status": "demo",
-  "version": 1,
+  "version": 2,
   "params": {
     "tickRateHz": 20,
-    "move": { "repeatDelayTicks": 4, "repeatIntervalTicks": 3 },
-    "jump": { "triggers": ["jump"], "table": [-1, -1, -1, 0, 0], "stepTicks": 2 },
-    "fall": { "periodTicks": 2 },
+    "move": { "repeatDelayTicks": 3, "repeatIntervalTicks": 3 },
+    "jump": { "triggers": ["jump"], "table": [-1, -1, -1], "stepTicks": 3 },
+    "fall": { "periodTicks": 3 },
     "fire": null,
     "lives": 1,
     "timerLimitTicks": 0,
-    "deathDelayTicks": 0
+    "deathDelayTicks": 0,
+    "bottomEdge": "floor"
   }
 }

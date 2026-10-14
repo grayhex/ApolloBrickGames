@@ -45,7 +45,13 @@ export async function loadContentPack(
   load: FetchJson = fetchJson,
 ): Promise<LoadedContent> {
   const manifest = await load(manifestUrl);
-  const files = manifest as { screen?: unknown; rules?: unknown; assets?: unknown; levels?: unknown };
+  const files = manifest as {
+    screen?: unknown;
+    rules?: unknown;
+    assets?: unknown;
+    levels?: unknown;
+    animations?: unknown;
+  };
   const resolve = (path: unknown, field: string): string => {
     if (typeof path !== 'string' || path === '') {
       throw new ContentError('manifest', [`$.${field}: ожидался путь к файлу`]);
@@ -60,11 +66,15 @@ export async function loadContentPack(
   const assetsUrl = resolve(files.assets, 'assets');
   const levelUrls = levelPaths.map((path, index) => resolve(path, `levels[${index}]`));
 
-  const [screen, rules, assets, ...levels] = await Promise.all([
+  const animationsUrl = files.animations === undefined ? null : resolve(files.animations, 'animations');
+
+  const [screen, rules, assets, animations, ...levels] = await Promise.all([
     load(screenUrl),
     load(rulesUrl),
     load(assetsUrl),
+    animationsUrl === null ? Promise.resolve(undefined) : load(animationsUrl),
     ...levelUrls.map((url) => load(url)),
   ]);
-  return { pack: assemblePack({ manifest, screen, rules, assets, levels }, env), assetsUrl };
+  const raw = { manifest, screen, rules, assets, levels };
+  return { pack: assemblePack(animationsUrl === null ? raw : { ...raw, animations }, env), assetsUrl };
 }

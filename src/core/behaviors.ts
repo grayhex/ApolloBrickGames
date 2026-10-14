@@ -32,6 +32,8 @@ export interface ObjectBehavior extends ObjectTypeSpec {
   heroTouch?(sim: SimApi, state: ObjectState, def: ObjectDef): void;
   /** Снаряд вошёл в область объекта. true — снаряд поглощён. */
   projectileHit?(sim: SimApi, state: ObjectState, def: ObjectDef): boolean;
+  /** Герой ударился головой снизу о твёрдый объект (прыжок упёрся в него). */
+  headHit?(sim: SimApi, state: ObjectState, def: ObjectDef): void;
 }
 
 export type BehaviorRegistry = Readonly<Record<string, ObjectBehavior>>;
@@ -83,6 +85,34 @@ const target: ObjectBehavior = {
     state.hp = numberParam(def.params, 'hp', 1);
   },
   projectileHit: damage,
+};
+
+/**
+ * Пробиваемый блок: твёрдый, ломается ударами головой снизу (по умолчанию с третьего удара).
+ * Гипотеза по видео фрагмента: центральный блок крышки арки пережил два удара и исчез на третьем (один наблюдаемый случай).
+ */
+const brickParams: readonly ParamSpec[] = [
+  { key: 'hp', label: 'Прочность (ударов головой)', min: 1, max: 99, default: 3 },
+  { key: 'score', label: 'Очки за разрушение (demo)', min: 0, max: 1_000_000, default: 0 },
+];
+
+const brick: ObjectBehavior = {
+  label: 'Пробиваемый блок',
+  solid: true,
+  params: brickParams,
+  validateParams: validateBySpec(brickParams),
+  init: (def, state) => {
+    state.hp = numberParam(def.params, 'hp', 3);
+  },
+  headHit: (sim, state, def) => {
+    state.hp -= 1;
+    const destroyed = state.hp <= 0;
+    sim.emit({ type: 'hit', x: state.x, y: state.y, targetId: state.id, destroyed });
+    if (destroyed) {
+      state.active = false;
+      sim.addScore(numberParam(def.params, 'score', 0));
+    }
+  },
 };
 
 /** Патруль по горизонтали в пределах ±range клеток от точки появления. */
@@ -149,4 +179,4 @@ export function describeObjectTypes(
 }
 
 /** Обработчики демо-профиля. Тип объекта в данных → поведение в коде. */
-export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish };
+export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick };
