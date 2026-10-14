@@ -190,6 +190,38 @@ test.describe('раскрытие с анимацией', () => {
     expect(open.w).toBeLessThan(closed.w);
     expect(open.matrix === 'none' || /^matrix(3d)?\(/.test(open.matrix)).toBe(true);
 
+    // Геометрия: ось поворота крышки (её нижняя кромка) всё время совпадает с шарниром — нижней кромкой схлопывающегося места крышки.
+    // Раньше конечное значение transform «уплывало» вместе с размером игрушки, переход перезапускался и крышка отрывалась от шарнира.
+    await page.locator('#view-closed').click();
+    await expect.poll(async () => (await frame()).slot, { timeout: 3000 }).toBeLessThan(4);
+    await page.waitForTimeout(300);
+    await page.locator('#lid-cover').click();
+    const pivot = (): Promise<{ gap: number; transforms: number; slot: number; height: number }> =>
+      page.evaluate(() => {
+        const lid = document.getElementById('lid') as HTMLElement;
+        const m = new DOMMatrix(getComputedStyle(lid).transform);
+        const slot = (document.getElementById('lid-slot') as HTMLElement).getBoundingClientRect().height;
+        const height = lid.offsetHeight;
+        // Нижняя кромка крышки в слое слота: высота − сдвиг вверх; она должна лежать ровно на нижней границе слота.
+        return {
+          gap: Math.abs(height + m.m42 - slot),
+          transforms: document.getAnimations().filter((a) => (a as CSSTransition).transitionProperty === 'transform').length,
+          slot,
+          height,
+        };
+      });
+    const pivots: { gap: number; transforms: number; slot: number; height: number }[] = [];
+    for (let i = 0; i < 16; i++) {
+      pivots.push(await pivot());
+      await page.waitForTimeout(55);
+    }
+    for (const p of pivots) {
+      expect(p.gap).toBeLessThan(3);
+      expect(p.transforms).toBeLessThanOrEqual(1); // один переход, а не цепочка перезапусков
+    }
+    expect(pivots.some((p) => p.slot > 30 && p.slot < p.height - 30)).toBe(true); // проверены и промежуточные кадры
+    await expect.poll(async () => (await pivot()).slot, { timeout: 3000 }).toBeGreaterThan(200);
+
     // Пока крышка поворачивается, шарниров и шлейфа не видно (они за крышкой); после раскрытия проявляются.
     await page.locator('#view-closed').click();
     await expect.poll(async () => (await frame()).slot, { timeout: 3000 }).toBeLessThan(4);

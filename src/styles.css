@@ -976,12 +976,20 @@ body[data-chrome='toy'] {
   transition: grid-template-rows var(--flip, 0s) var(--flip-ease, ease), z-index 0s linear calc(var(--flip, 0s) * 0.5);
 }
 
+.toy__lidslot {
+  /* Перспектива — свойством родителя, а не функцией в `transform`: единицы размера (cqw, --stage-w) меняются, пока игрушка плавно
+     меняет размер, и конечное значение `transform` «уплывало» бы каждый кадр — переход перезапускался и крышка отставала от шарнира.
+     Точка схода — на шарнире (нижняя кромка слота). */
+  perspective: calc(var(--stage-w) * 2.4);
+  perspective-origin: 50% 100%;
+}
+
 .toy__lidslot > .lid {
   min-height: 0;
   align-self: start;
   transform-origin: 50% 100%;
   transform-style: preserve-3d;
-  transform: translateY(0) perspective(240cqw) rotateX(0deg);
+  transform: translateY(0) rotateX(0deg);
   transition: transform var(--flip, 0s) var(--flip-ease, ease);
 }
 
@@ -1057,15 +1065,11 @@ body[data-chrome='toy'] {
 }
 
 .toy[data-closed] .toy__lidslot > .lid {
-  transform: translateY(-100%) perspective(240cqw) rotateX(-180deg);
+  transform: translateY(-100%) rotateX(-180deg);
 }
 
 /* Закрытая (по фото): шарниры — две аккуратные разделённые втулки слева и справа, выглядывают из-за верхней кромки крышки;
    посередине ничего нет (шлейф уложен внутрь), кромка крышки ровная. */
-.toy__knuckle {
-  transition: margin-top var(--flip, 0s) var(--flip-ease, ease);
-}
-
 .toy[data-closed] .toy__knuckle {
   margin-top: -1.2cqw;
 }
