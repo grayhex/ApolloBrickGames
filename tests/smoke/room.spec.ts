@@ -264,9 +264,9 @@ test('рендер игры: цвета LCD-профиля владельца, �
     };
   });
   expect(result.bgShare).toBeGreaterThan(0.4); // подложка и слабый слой неактивных сегментов преобладают
-  expect(result.ground).toBeGreaterThan(0.35); // тёмный прямоугольник с вырезом под фигурку (экран в корпусе мелкий)
+  expect(result.ground).toBeGreaterThan(0.2); // тёмный прямоугольник со светлыми контурами фигурки (на мелком экране светлые линии размываются, доля «чернил» ≈ 0,3)
   expect(result.ground).toBeLessThan(0.9); // а не сплошной квадрат
-  expect(result.step).toBeGreaterThan(0.35);
+  expect(result.step).toBeGreaterThan(0.2);
   expect(result.hero).toBeGreaterThan(0.05);
   expect(result.hero).toBeLessThan(result.ground);
   expect(result.empty).toBe(0);
