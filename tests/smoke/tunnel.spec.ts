@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 /** Тестовый уровень по видео открывается явно: страница по умолчанию начинается с `mario-1`. */
-const TUNNEL = './?level=tunnel-run';
+const TUNNEL = './?level=tunnel-run&power=on';
 
 const area = (page: Page, key: string): Promise<string> =>
   page.evaluate((name) => document.getElementById('game-area')?.dataset[name] ?? '', key);

@@ -34,7 +34,9 @@
       "y": 40,
       "width": 44,
       "height": 44,
-      "pitch": 50
+      "pitch": 50,
+      "spare": true,
+      "max": 3
     },
     "label": {
       "x": 397,

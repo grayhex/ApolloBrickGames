@@ -36,7 +36,7 @@ const phase = (page: Page) => async () => (await snap(page)).phase;
 const entry = (page: Page) => (): Promise<string> => page.evaluate(() => document.getElementById('game-area')?.dataset['entry'] ?? '');
 
 /** Страница на тестовом уровне по видео (`tunnel-run`): на его геометрии выверены тесты ходьбы и рендера; по умолчанию страница начинается с `mario-1`. */
-async function ready(page: Page, query = '?level=tunnel-run'): Promise<void> {
+async function ready(page: Page, query = '?level=tunnel-run&power=on'): Promise<void> {
   await page.goto(`./${query}`);
   await expect.poll(phase(page)).toBe('ready');
 }
@@ -70,7 +70,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('по умолчанию открывается уровень 1 (mario-1) в игрушке; технического текста на странице нет', async ({ page }) => {
-  await ready(page, '');
+  await ready(page, '?power=on');
   expect((await snap(page)).level).toBe('mario-1');
   // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: игрушка, две панели по бокам и четыре кнопки в уголке.
   for (const id of ['#badge', '#subtitle', '#debug-toggle', '#row-timer', '#controls-hint', '#status-keyboard', '#status-gamepad', '#overlay', '#focus-hint', '.shell__footer']) {

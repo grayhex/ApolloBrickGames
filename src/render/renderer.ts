@@ -3,6 +3,7 @@ import type { GameState } from '../core/state';
 import type { AssetStore } from './assets';
 import type { CameraPos } from './camera';
 import { NO_EFFECTS, type EffectsFrame } from './effects';
+import { lifeIconCount, shownLives } from './hudLives';
 import { drawText as drawBuiltinText, FONT_HEIGHT, textWidth } from './font';
 import { dropoutRects } from './glitch';
 import { computeLayout, type Layout } from './layout';
@@ -277,7 +278,10 @@ export class Renderer {
   private hudValues(input: RenderInput): { lives: number; label: string; score: number } {
     const fixed = input.hudOverride ?? this.screen.hud.fixed;
     if (fixed) return fixed;
-    return { lives: input.state.lives, label: input.level.hudLabel, score: input.state.score };
+    const { hud } = this.screen;
+    // LCD-HUD может показывать запасные жизни: игра с 4 жизнями рисует три значка, последняя жизнь — ни одного.
+    const lives = hud.kind === 'lcd' ? shownLives(hud.lives, input.state.lives) : input.state.lives;
+    return { lives, label: input.level.hudLabel, score: input.state.score };
   }
 
   private drawHud(ctx: CanvasRenderingContext2D, input: RenderInput): void {
@@ -293,7 +297,8 @@ export class Renderer {
     const ink = this.screen.colors.ink;
     const tick = input.state.worldTick;
 
-    for (let i = 0; i < Math.min(values.lives, 9); i++) {
+    const shown = input.effects?.livesHidden ? 0 : lifeIconCount(hud.lives, values.lives);
+    for (let i = 0; i < shown; i++) {
       this.assets.draw(ctx, hud.lives.asset, tick, hud.lives.x + i * hud.lives.pitch, hud.lives.y, hud.lives.width, hud.lives.height, ink);
     }
 

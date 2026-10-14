@@ -1,5 +1,5 @@
 import type { ContentPack, ObjectDef, RuleSetDef } from '../content/schema';
-import { actionBit, isAction, maskOf, type ActionMask, type InputFrame } from './actions';
+import { actionBit, isAction, maskOf, SECRET_CHORD, type ActionMask, type InputFrame } from './actions';
 import { DEMO_BEHAVIORS, type BehaviorRegistry, type SimApi } from './behaviors';
 import { prepareLevel, tileSolid, type LevelRuntime } from './level';
 import type {
@@ -82,6 +82,8 @@ export class Game implements SimApi {
     const s = this.state;
     s.tick += 1;
 
+    if ((s.phase === 'ready' || s.phase === 'playing') && (frame.held & SECRET_CHORD) !== 0) this.applySecret();
+
     switch (s.phase) {
       case 'ready':
         if (frame.pressed & START) this.setPhase('playing');
@@ -140,6 +142,18 @@ export class Game implements SimApi {
     const level = this.ctx.levels.get(this.state.levelId);
     if (!level) throw new Error(`Уровень «${this.state.levelId}» не найден.`);
     return level;
+  }
+
+  /**
+   * Секрет оригинала: аккорд, пока герой ещё в «колодце» (с начала участка не уходил из столбца старта), даёт бонусные жизни.
+   * Повторное нажатие ничего не меняет (жизни только растут до `secret.lives`); после гибели герой снова на старте — секрет снова доступен.
+   */
+  private applySecret(): void {
+    const secret = this.ctx.rules.params.secret;
+    const s = this.state;
+    if (!secret || !s.inWell || s.lives >= secret.lives) return;
+    s.lives = secret.lives;
+    this.emit({ type: 'secretLives', lives: secret.lives });
   }
 
   // ── SimApi для обработчиков объектов ─────────────────────────────────────
@@ -206,6 +220,7 @@ export class Game implements SimApi {
       score: 0,
       lives: ctx.rules.params.lives,
       timerTicks: ctx.rules.params.timerLimitTicks,
+      inWell: true,
       phaseTimer: 0,
       deathCause: null,
     };
@@ -255,6 +270,7 @@ export class Game implements SimApi {
     s.objects = this.newObjects(level);
     s.projectiles = [];
     s.timerTicks = this.ctx.rules.params.timerLimitTicks;
+    s.inWell = true;
     this.serial += 1;
     this.emit({ type: 'levelStarted', levelId });
   }
@@ -304,6 +320,7 @@ export class Game implements SimApi {
     }
 
     this.updateHero(frame);
+    if (s.hero.x !== this.level.def.start.x) s.inWell = false; // выпрыгнул из колодца — секрет закрыт до возрождения
     if (!this.alive(serial)) return;
     this.updateFire(frame);
     this.updateObjects();

@@ -23,7 +23,7 @@ test.afterEach(async ({ page }) => {
 
 for (let n = 1; n <= 9; n++) {
   test(`уровень ${n}: открывается по ?level=${n}, яма и выход из неё, бег вправо с прокруткой, подпись 1-0${n}`, async ({ page }) => {
-    await page.goto(`./?level=${n}`);
+    await page.goto(`./?level=${n}&power=on`);
     await expect.poll(phase(page)).toBe('ready');
     expect(await area(page, 'level')).toBe(`mario-${n}`);
     expect(await area(page, 'hud')).toBe(`1-0${n}`);

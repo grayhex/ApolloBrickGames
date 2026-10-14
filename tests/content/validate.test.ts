@@ -178,6 +178,13 @@ describe('валидация профиля экрана, ресурсов и п
     expect(parsed.hud.kind).toBe('lcd');
     const broken = { ...(room as Record<string, unknown>), hud: { kind: 'lcd', lives: {}, label: {}, score: {}, font: {} } };
     expect(issuesOf(() => validateScreenProfile(broken))).toMatch(/hud\.lives/);
+    // Необязательные поля значков жизни: «spare» — булево, «max» — целое 1…9.
+    const withLives = (extra: Record<string, unknown>) => ({
+      ...(room as Record<string, unknown>),
+      hud: { ...(room as { hud: Record<string, unknown> }).hud, lives: { ...(room as { hud: { lives: object } }).hud.lives, ...extra } },
+    });
+    expect(issuesOf(() => validateScreenProfile(withLives({ spare: 'yes' })))).toMatch(/hud\.lives\.spare/);
+    expect(issuesOf(() => validateScreenProfile(withLives({ max: 10 })))).toMatch(/hud\.lives\.max/);
     expect(issuesOf(() => validateScreenProfile({ ...(room as object), colors: { background: 'green', ink: '#000000' } }))).toMatch(/colors\.background/);
   });
 
@@ -218,6 +225,16 @@ describe('валидация профиля экрана, ресурсов и п
       /jump\.table/,
     );
     expect(issuesOf(() => validateRuleSet(patch({ lives: 0 }), env))).toMatch(/lives/);
+  });
+
+  it('правила: секрет с бонусными жизнями — необязателен, жизни 1…999', () => {
+    const patch = (params: Record<string, unknown>) => ({ ...rules, params: { ...rules.params, ...params } });
+    expect(validateRuleSet(rules, env).params.secret).toBeUndefined();
+    expect(validateRuleSet(patch({ secret: { lives: 200 } }), env).params.secret).toEqual({ lives: 200 });
+    expect(issuesOf(() => validateRuleSet(patch({ secret: { lives: 0 } }), env))).toMatch(/secret\.lives/);
+    expect(issuesOf(() => validateRuleSet(patch({ secret: { lives: 1000 } }), env))).toMatch(/secret\.lives/);
+    expect(issuesOf(() => validateRuleSet(patch({ secret: {} }), env))).toMatch(/secret\.lives/);
+    expect(issuesOf(() => validateRuleSet(patch({ secret: 5 }), env))).toMatch(/secret/);
   });
 });
 

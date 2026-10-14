@@ -14,7 +14,7 @@ const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 const level = (page: Page) => (): Promise<string> => area(page, 'level');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./');
+  await page.goto('./?power=on');
   await expect.poll(phase(page)).toBe('ready');
 }
 
@@ -199,11 +199,11 @@ test('уровни: девять оригинальных открыты (гей
 });
 
 test('?level=N открывает уровень N сразу; неверное значение — уровень 1', async ({ page }) => {
-  await page.goto('./?level=7');
+  await page.goto('./?level=7&power=on');
   await expect.poll(phase(page)).toBe('ready');
   expect(await level(page)()).toBe('mario-7');
   await expect(page.locator('#original-levels .lv').nth(6)).toHaveAttribute('aria-current', 'true');
-  await page.goto('./?level=42');
+  await page.goto('./?level=42&power=on');
   await expect.poll(phase(page)).toBe('ready');
   expect(await level(page)()).toBe('mario-1');
 });
@@ -221,7 +221,7 @@ test('карты из редактора: появляются в «Пользо
     meta: { projectId: 'broken-1', name: 'Сломанная карта', levelId: 'broken', width: 3, height: 3, savedAt: 1 },
     doc: { мусор: true },
   });
-  await page.goto('./#/');
+  await page.goto('./?power=on#/');
   await expect.poll(phase(page)).toBe('ready');
 
   const list = page.locator('#user-levels');

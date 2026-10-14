@@ -64,6 +64,11 @@ export interface GameState {
   score: number;
   lives: number;
   timerTicks: number;
+  /**
+   * «Колодец»: герой с начала участка (и после каждого возрождения) ещё не уходил из столбца старта. Пока `true`, секретный аккорд
+   * (`SECRET_CHORD`) даёт бонусные жизни; как только герой «выпрыгнул из колодца», аккорд теряет силу.
+   */
+  inWell: boolean;
   /** Обратный отсчёт фазы `dead`. */
   phaseTimer: number;
   deathCause: DeathCause | null;
@@ -83,6 +88,8 @@ export type GameEventBody =
   | { type: 'death'; cause: DeathCause; x: number; y: number }
   | { type: 'levelCompleted'; levelId: string; next: string | null }
   | { type: 'gameOver' }
-  | { type: 'gameCompleted' };
+  | { type: 'gameCompleted' }
+  /** Секрет сработал: жизни выросли до `lives` (аккорд LEFT + DOWN до выхода героя из столбца старта). */
+  | { type: 'secretLives'; lives: number };
 
 export type GameEvent = GameEventBody & { tick: number };

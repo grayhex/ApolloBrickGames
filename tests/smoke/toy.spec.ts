@@ -16,7 +16,7 @@ const pressed = (page: Page, id: string) => expect(key(page, id)).toHaveAttribut
 const released = (page: Page, id: string) => expect(key(page, id)).not.toHaveAttribute('data-pressed', '');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./');
+  await page.goto('./?power=on');
   await expect.poll(phase(page)).toBe('ready');
 }
 

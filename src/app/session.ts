@@ -2,7 +2,9 @@ import {
   actionBit,
   CORE_ACTIONS,
   makeFrame,
+  maskOf,
   NEUTRAL_FRAME,
+  SECRET_CHORD,
   type Game,
   type GameEvent,
   type InputFrame,
@@ -32,6 +34,8 @@ export interface SessionDeps {
 const START = actionBit('start');
 const PAUSE = actionBit('pause');
 const CONFIRM = actionBit('confirm');
+/** Секретный аккорд оригинала: LEFT и DOWN вместе (у упаковки: «до того, как Марио выпрыгнет из колодца»). */
+const CHORD_KEYS = maskOf('left', 'down');
 
 /**
  * Связка «время → такты → ввод → ядро» без DOM.
@@ -74,6 +78,8 @@ export class GameSession {
     if (entry && game.state.phase === 'playing' && (frame.pressed & PAUSE) === 0) {
       frame = entry.next(game.state.levelId, game.state.phase) ?? frame;
     }
+    // Аккорд берётся из настоящего ввода, а не из кадра сценария входа: пока герой сам выпрыгивает из ямы, его кадры подменяют ввод игрока.
+    if ((raw.held & CHORD_KEYS) === CHORD_KEYS) frame = { ...frame, held: frame.held | SECRET_CHORD };
     this.lastFrame = frame;
     this.deps.onEvents(game.step(frame));
   }

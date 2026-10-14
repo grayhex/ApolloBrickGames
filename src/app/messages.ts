@@ -87,7 +87,7 @@ const RU = {
   'info.orig.cheat':
     '**Секрет:** если нажать LEFT и DOWN вместе до того, как Марио выпрыгнет из колодца (в SHOOTING — до старта), будет 200 жизней вместо 4.',
   'info.note':
-    'Данные — с упаковки оригинала. Правила в этой версии приблизительные и уточняются; TETRIS и SHOOTING, демонстрация при включении, автоотключение и секрет с 200 жизнями в проект пока не входят.',
+    'Данные — с упаковки оригинала. Правила в этой версии приблизительные и уточняются; TETRIS и SHOOTING, демонстрация при включении, автоотключение и таймер 400 секунд в проект пока не входят; 4 жизни и секрет с 200 жизнями — входят.',
 
   // ── Правая панель: пульт ────────────────────────────────────────────────
   'ctl.title': 'Пульт',
@@ -277,7 +277,7 @@ const EN: Record<MsgKey, string> = {
   'info.orig.cheat':
     '**Secret:** press LEFT and DOWN together before Mario jumps out of the well (in SHOOTING — before the start) to get 200 lives instead of 4.',
   'info.note':
-    'The data come from the original packaging. The rules in this version are approximate and still being refined; TETRIS and SHOOTING, the power-on demo, auto power-off and the 200-lives secret are not included yet.',
+    'The data come from the original packaging. The rules in this version are approximate and still being refined; TETRIS and SHOOTING, the power-on demo, auto power-off and the 400-second timer are not included yet; the 4 lives and the 200-lives secret are.',
 
   'ctl.title': 'Control panel',
   'dev.aria': 'Input device',

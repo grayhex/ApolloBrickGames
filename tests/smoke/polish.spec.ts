@@ -12,7 +12,7 @@ const area = (page: Page, key: string): Promise<string> =>
 const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./');
+  await page.goto('./?power=on');
   await expect.poll(phase(page)).toBe('ready');
 }
 

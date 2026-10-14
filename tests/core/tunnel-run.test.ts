@@ -182,6 +182,6 @@ describe('уровень проходим: бот бежит вправо, пр�
     expect(completed).toBe(true);
     expect(game.state.phase).toBe('completed');
     expect(game.state.score).toBe(40); // четыре мишени по 10
-    expect(game.state.lives).toBe(3);
+    expect(game.state.lives).toBe(4);
   });
 });

@@ -245,6 +245,8 @@ function validateHud(
         width: c.int(lives, 'width', '$.hud.lives', 1, 1024),
         height: c.int(lives, 'height', '$.hud.lives', 1, 1024),
         pitch: c.int(lives, 'pitch', '$.hud.lives', 1, 1024),
+        ...(lives['spare'] === undefined ? {} : { spare: c.bool(lives, 'spare', '$.hud.lives') }),
+        ...(lives['max'] === undefined ? {} : { max: c.int(lives, 'max', '$.hud.lives', 1, 9) }),
       },
       label: digits('label'),
       score: digits('score'),
@@ -416,6 +418,10 @@ export function validateRuleSet(raw: unknown, env: ValidationEnv, source = 'rule
     timerLimitTicks: c.int(p, 'timerLimitTicks', '$.params', 0, 1_000_000),
     deathDelayTicks: c.int(p, 'deathDelayTicks', '$.params', 0, 10_000),
   };
+  if (p['secret'] !== undefined) {
+    const secret = c.record(p['secret'], '$.params.secret') ?? {};
+    params.secret = { lives: c.int(secret, 'lives', '$.params.secret', 1, 999) };
+  }
   const bottomEdge = p['bottomEdge'];
   if (bottomEdge === 'pit' || bottomEdge === 'floor') params.bottomEdge = bottomEdge;
   else if (bottomEdge !== undefined) {

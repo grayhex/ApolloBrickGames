@@ -538,7 +538,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // ── Питание и кнопки корпуса ─────────────────────────────────────────────
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
-  let powered = true;
+  // Игрушка при открытии страницы выключена: включает кнопка ON/OFF (клавиша O); `?power=on` включает сразу (для ссылок и тестов).
+  // Технические страницы кнопок корпуса не показывают — они всегда включены.
+  let powered = !route.lid || params.get('power') === 'on';
+  refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
@@ -609,8 +612,11 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (event.detail !== 0) refocusGame(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на кнопке
   });
   // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
+  // Выключенная игрушка в этом виде включается касанием экрана: кнопки ON/OFF на экране нет.
   refs.gameArea.addEventListener('pointerdown', () => {
-    if (hub.settings.display.compact && game.state.phase !== 'playing' && powered) session.requestStart();
+    if (!hub.settings.display.compact) return;
+    if (!powered) setPower(true);
+    else if (game.state.phase !== 'playing') session.requestStart();
   });
 
   // Светодиоды: наблюдение по видео — в игре горят все три; остальное условно, см. app/leds.ts. состояния (оригинальная логика не установлена), см. app/leds.ts.

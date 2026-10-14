@@ -178,6 +178,11 @@ export const CUES: Readonly<Record<AudioCue, CueDef>> = {
     priority: 4,
     notes: [523, 659, 784].map((hz) => ({ ms: 80, hz: [hz] })).concat([{ ms: 180, hz: [1047] }]),
   },
+  /** Секрет с 200 жизнями сработал — условный (в записи нет): восходящее арпеджио «до ми соль до» и повтор верхних нот. */
+  secret: {
+    priority: 3,
+    notes: [0, 4, 7, 12, 7, 12].map((semitones, index) => tone(index < 4 ? 70 : 90, semitones)),
+  },
   /** Игра окончена — условный (в записи нет). */
   gameOver: {
     priority: 4,

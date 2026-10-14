@@ -120,6 +120,7 @@ describe('события ядра → эффекты', () => {
     expect(cueForEvent({ type: 'shot', dir: 1, ...at })).toBe('shot');
     expect(cueForEvent({ type: 'death', cause: 'fall', ...at } as never)).toBe('death');
     expect(cueForEvent({ type: 'gameOver', tick: 1 })).toBe('gameOver');
+    expect(cueForEvent({ type: 'secretLives', lives: 200, tick: 1 })).toBe('secret'); // секрет с 200 жизнями — условный сигнал
     expect(cueForEvent({ type: 'levelCompleted', levelId: 'a', next: 'b', tick: 1 })).toBeNull(); // переход на следующий участок беззвучен
     expect(cueForEvent({ type: 'levelCompleted', levelId: 'a', next: null, tick: 1 })).toBe('levelCompleted');
     expect(cueForEvent({ type: 'phaseChanged', from: 'ready', to: 'playing', tick: 1 })).toBeNull();

@@ -14,7 +14,7 @@ const dir = 'docs/screenshots';
 test('игрушка: интро, выход из туннеля, стрельба, нажатые кнопки, режим «только экран»', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.goto('./');
+  await page.goto('./?power=on');
   await page.waitForSelector('#game-area[data-phase="ready"]');
   const stage = (name: string): Promise<Buffer> => page.locator('#stage').screenshot({ path: `${dir}/${name}.png` });
   await page.waitForTimeout(750);
@@ -54,7 +54,7 @@ test('игрушка: интро, выход из туннеля, стрельб
 test('страница целиком: панели по бокам игрушки, светлый фон', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('./');
+  await page.goto('./?power=on');
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   await page.screenshot({ path: `${dir}/toy-panels.png` });
@@ -67,7 +67,7 @@ test('страница целиком: панели по бокам игрушк
 test('английский интерфейс и «сбой шлейфа»: экран рассыпается, пока держат шлейф', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto('./');
+  await page.goto('./?power=on');
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   await page.locator('#corner-lang').click();
@@ -94,7 +94,7 @@ test('английский интерфейс и «сбой шлейфа»: эк
 test('игрушка: четыре цвета корпуса', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.goto('./');
+  await page.goto('./?power=on');
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   for (const shell of ['blue', 'red', 'yellow', 'white']) {
