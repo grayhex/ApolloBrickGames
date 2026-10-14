@@ -20,6 +20,11 @@ export const MELODY_GAIN = 0.6;
  * на 8,1 дБ громче; множитель 0,38 (−8,4 дБ) даёт −22,5 LUFS — запись не громче оригинала при любом положении ползунка.
  */
 export const TRACK_GAIN = 0.38;
+/**
+ * Эффекты, пока выбран «Ремастер», тише, чем под пищалку (допущение на слух): ровная запись маскирует их хуже, чем такая же по
+ * громкости мелодия-пищалка, и резкая прямоугольная волна эффектов выпирала. −6 дБ; ползунок «Звук» даёт ещё запас.
+ */
+export const SFX_REMASTER_GAIN = 0.5;
 /** На сколько вперёд ставить мелодию в расписание, мс. */
 export const LOOKAHEAD_MS = 300;
 /**
@@ -64,8 +69,10 @@ export interface AudioContextLike extends TrackContextLike {
 
 export interface WebAudioOptions {
   muted?: boolean;
-  /** Громкость 0…1 (ползунок страницы). */
+  /** Громкость 0…1 (ползунок страницы): эффекты и мелодия-пищалка. */
   volume?: number;
+  /** Громкость записи «ремастера» 0…1 (отдельный ползунок; пищалку не затрагивает). */
+  musicVolume?: number;
   factory?: () => AudioContextLike | null;
   /** Загрузчик записи «ремастера» (байты m4a); без него «Ремастер» недоступен и звучит оригинал. */
   remaster?: TrackFetcher;
@@ -89,6 +96,7 @@ interface Voice {
 export class WebAudioPort implements AudioPort {
   muted: boolean;
   volume: number;
+  musicVolume: number;
   private context: AudioContextLike | null = null;
   private master: GainLike | null = null;
   private melodyBus: GainLike | null = null;
@@ -113,6 +121,7 @@ export class WebAudioPort implements AudioPort {
   constructor(options: WebAudioOptions = {}) {
     this.muted = options.muted ?? false;
     this.volume = clampVolume(options.volume ?? FALLBACK_VOLUME);
+    this.musicVolume = clampVolume(options.musicVolume ?? this.volume);
     this.factory = options.factory ?? defaultFactory;
     this.clock = options.clock ?? defaultClock;
     this.track = options.remaster ? new RemasterTrack(options.remaster) : null;
@@ -123,21 +132,16 @@ export class WebAudioPort implements AudioPort {
     return this.trackMode && this.track?.playing ? 'remaster' : 'original';
   }
 
+  /**
+   * Выбор музыки. Идемпотентен: повторный вызов с тем же значением ничего не перезапускает (приложение зовёт его на каждое
+   * изменение вида — включение сегментов, возврат на вкладку). Если мелодия уже звучит, переключение действует сразу и «на лету»,
+   * см. `syncMusicSource`.
+   */
   setMusic(music: MusicKind): void {
     this.music = music;
     this.prepareTrack();
-    const kind = this.melody.active(this.clock()) ? this.melody.kind : null;
-    if (kind === null || kind === 'ready') return;
-    // Мелодия уже звучит: переключение действует сразу — запись начинается с начала, пищалка продолжает с места, где шли её часы.
-    if (music === 'remaster' && this.track?.status === 'ready') {
-      this.cut(this.melodyVoices);
-      this.track.stop();
-      this.trackMode = true;
-      this.trackPaused = false;
-    } else if (music === 'original' && this.trackMode) {
-      this.track?.stop();
-      this.trackMode = false;
-    }
+    this.applySfxGain();
+    this.syncMusicSource();
   }
 
   get melodyKind(): MelodyKind | null {
@@ -159,6 +163,10 @@ export class WebAudioPort implements AudioPort {
   setVolume(volume: number): void {
     this.volume = clampVolume(volume);
     if (this.master) this.master.gain.value = this.volume * MASTER_GAIN;
+  }
+
+  setMusicVolume(volume: number): void {
+    this.musicVolume = clampVolume(volume);
     this.applyTrackGain();
   }
 
@@ -207,6 +215,30 @@ export class WebAudioPort implements AudioPort {
     if (kind !== 'ready') this.prepareTrack();
   }
 
+  /**
+   * Приводит источник мелодии в соответствие с выбранной музыкой, не трогая уже совпадающее состояние:
+   * «Ремастер» вступает с места, где сейчас часы мелодии (запись ставится на то же время от старта, что и пищалка),
+   * «Оригинал» продолжает с того же места по тем же часам. Вызывается из `setMusic` и раз в кадр: так запись, которая догрузилась
+   * позже выбора, тоже подхватывает звучащую мелодию.
+   */
+  private syncMusicSource(): void {
+    const now = this.clock();
+    const kind = this.melody.active(now) ? this.melody.kind : null;
+    if (kind === null || kind === 'ready') return; // тон готовности всегда пищалка
+    const wantTrack = this.music === 'remaster' && this.track?.status === 'ready';
+    if (wantTrack && !this.trackMode) {
+      this.cut(this.melodyVoices);
+      this.track?.seek(this.melody.elapsed(now) / 1000);
+      this.trackMode = true;
+      this.trackPaused = this.melody.paused;
+    } else if (!wantTrack && this.trackMode) {
+      this.track?.stop();
+      this.trackMode = false;
+      this.trackPaused = false;
+      this.melody.rewind(now); // ноты, выданные «окном вперёд» до переключения, не прозвучали: пищалка берёт звучащую сейчас
+    }
+  }
+
   pauseMelody(): void {
     this.melody.pause(this.clock());
     this.cut(this.melodyVoices);
@@ -240,8 +272,13 @@ export class WebAudioPort implements AudioPort {
     const context = this.context;
     if (!context) return;
     this.prune(context.currentTime);
+    this.applySfxGain(); // состояние записи могло смениться (догрузилась или не декодировалась)
+    this.syncMusicSource();
     if (this.trackMode && !this.trackPaused && context.state === 'running' && this.trackGain && this.track) {
-      this.track.play(context, this.trackGain); // запись идёт и при заглушённом звуке (усиление 0): позиция не теряется
+      // Запись идёт и при заглушённом звуке (усиление 0): позиция не теряется. Запуск — с места, где часы мелодии
+      // (после паузы, переключения «на лету» или пока контекст «спал»), а не с начала.
+      if (!this.track.playing) this.track.seek(this.melody.elapsed(this.clock()) / 1000);
+      this.track.play(context, this.trackGain);
     }
     if (this.muted || !this.melodyBus) return;
     if (context.state !== 'running') {
@@ -282,8 +319,8 @@ export class WebAudioPort implements AudioPort {
       this.melodyBus.gain.value = MELODY_GAIN;
       this.melodyBus.connect(this.master);
       this.sfxBus = context.createGain();
-      this.sfxBus.gain.value = 1;
       this.sfxBus.connect(this.master);
+      this.applySfxGain();
       this.trackGain = context.createGain();
       this.trackGain.connect(context.destination);
       this.applyTrackGain();
@@ -292,7 +329,15 @@ export class WebAudioPort implements AudioPort {
   }
 
   private applyTrackGain(): void {
-    if (this.trackGain) this.trackGain.gain.value = this.muted ? 0 : this.volume * TRACK_GAIN;
+    if (this.trackGain) this.trackGain.gain.value = this.muted ? 0 : this.musicVolume * TRACK_GAIN;
+  }
+
+  /** Эффекты тише, пока выбран «Ремастер» (и запись не отвергнута: нет файла — под пищалку они прежние). */
+  private applySfxGain(): void {
+    if (!this.sfxBus) return;
+    const remaster = this.music === 'remaster' && this.track !== null && this.track.status !== 'failed';
+    const gain = remaster ? SFX_REMASTER_GAIN : 1;
+    if (this.sfxBus.gain.value !== gain) this.sfxBus.gain.value = gain;
   }
 
   /** Запускает загрузку записи (один раз), когда выбран «Ремастер» и есть контекст; сбой — просто остаётся оригинал. */

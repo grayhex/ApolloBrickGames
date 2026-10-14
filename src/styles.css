@@ -886,8 +886,9 @@ body[data-motion='off'] {
   grid-template-rows: 1fr;
   /* Запас под нижний торец корпуса: у обёртки overflow: hidden, иначе тень кромки обрезалась бы. */
   margin-bottom: -1.4cqw;
-  /* Разворачивается после того, как игрушка начала уменьшаться. */
-  transition: grid-template-rows calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25), visibility 0s;
+  /* Разворачивается, когда игрушка уже заметно уменьшилась: «только экран» → «полная» иначе на миг давало широкую и при этом высокую
+     игрушку (ширина ещё крупная, нижняя половина уже раскрыта) — выше окна, с вертикальной прокруткой страницы и прыжком панелей. */
+  transition: grid-template-rows calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65), visibility 0s;
 }
 
 .toy__lower-in {
@@ -904,10 +905,10 @@ body[data-motion='off'] {
 }
 
 .toy__hinge {
-  transition: height calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25),
-    margin-top calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25),
-    margin-bottom calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25),
-    opacity calc(var(--morph, 0s) * 0.4) ease calc(var(--morph, 0s) * 0.4), visibility 0s;
+  transition: height calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
+    margin-top calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
+    margin-bottom calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
+    opacity calc(var(--morph, 0s) * 0.4) ease calc(var(--morph, 0s) * 0.7), visibility 0s;
 }
 
 .toy[data-compact] .toy__hinge {
@@ -964,16 +965,19 @@ body[data-chrome='toy'] .arena[data-compact] {
 body[data-chrome='toy'] {
   --flip: calc(var(--morph, 0s) * 1.7);
   --flip-ease: cubic-bezier(0.45, 0.05, 0.2, 1);
+  /* Доля времени перехода, к которой крышка встаёт ребром (угол 90°): прогресс кривой `--flip-ease` там равен 0,5 — это ≈ 0,36 времени. */
+  --flip-edge: 0.36;
 }
 
 .toy__lidslot {
   position: relative;
   /* Открытая крышка лежит под шарниром (шлейф и втулки перекрывают её нижний край и принимают нажатия); закрытая — над ним.
-     При раскрытии слой меняется на полпути, когда крышка уже поднялась. */
+     Слой меняется ровно тогда, когда крышка проходит ребром к зрителю (поворот на 90°) — это `--flip-edge` доли времени перехода:
+   дальше она уже над шарниром, и втулки с шлейфом оказываются перед ней без скачка. */
   z-index: 1;
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows var(--flip, 0s) var(--flip-ease, ease), z-index 0s linear calc(var(--flip, 0s) * 0.5);
+  transition: grid-template-rows var(--flip, 0s) var(--flip-ease, ease), z-index 0s linear calc(var(--flip, 0s) * var(--flip-edge, 0.36));
 }
 
 .toy__lidslot {
@@ -1061,7 +1065,7 @@ body[data-chrome='toy'] {
 .toy[data-closed] .toy__lidslot {
   z-index: 3;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--flip, 0s) var(--flip-ease, ease), z-index 0s;
+  transition: grid-template-rows var(--flip, 0s) var(--flip-ease, ease), z-index 0s linear calc(var(--flip, 0s) * var(--flip-edge, 0.36));
 }
 
 .toy[data-closed] .toy__lidslot > .lid {
@@ -1070,45 +1074,20 @@ body[data-chrome='toy'] {
 
 /* Закрытая (по фото): шарниры — две аккуратные разделённые втулки слева и справа, выглядывают из-за верхней кромки крышки;
    посередине ничего нет (шлейф уложен внутрь), кромка крышки ровная. */
+.toy__knuckle {
+  /* Втулки на месте всегда, как и в настоящей игрушке: поднимаются и опускаются вместе с крышкой (тот же ход времени), а не
+     появляются в конце. Пока крышка лежит на корпусе, она перекрывает их нижнюю часть, потом они выходят из-за неё. */
+  transition: margin-top var(--flip, 0s) var(--flip-ease, ease);
+}
+
 .toy[data-closed] .toy__knuckle {
   margin-top: -1.2cqw;
 }
 
-/* Пока крышка поворачивается, шарниров не видно — они за крышкой (иначе втулки мелькали бы поверх неё): при смене закрыто ↔ открыто
-   втулки гаснут сразу и проявляются, когда поворот закончен. Две одинаковые анимации с разными именами — чтобы запускалась каждая смена. */
-@keyframes hinge-show-open {
-  0%,
-  80% {
-    opacity: 0;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes hinge-show-closed {
-  0%,
-  80% {
-    opacity: 0;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}
-
-.toy:not([data-closed]) .toy__knuckle {
-  animation: hinge-show-open calc(var(--flip, 0s) * 1.25) linear both;
-}
-
-.toy[data-closed] .toy__knuckle {
-  animation: hinge-show-closed calc(var(--flip, 0s) * 1.25) linear both;
-}
-
+/* Шлейф лежит внутри, пока крышка закрыта. При раскрытии он проявляется, как только крышка прошла зону шарнира (ребром, `--flip-edge`),
+   а не после полной остановки; при закрытии гаснет раньше, чем крышка до него дойдёт. */
 .toy__band {
-  /* Шлейф показывается только после полного раскрытия: появляется, когда крышка уже встала. */
-  transition: opacity calc(var(--flip, 0s) * 0.25) ease var(--flip, 0s);
+  transition: opacity calc(var(--flip, 0s) * 0.14) ease calc(var(--flip, 0s) * var(--flip-edge, 0.36));
 }
 
 .toy[data-closed] .toy__band {
@@ -1294,6 +1273,26 @@ body:not([data-chrome='toy']) .side {
   opacity: 1;
 }
 
+/* Индикатор паузы рядом с клавиатурой: тусклый, пока игра идёт; на паузе горит и мягко мигает (при «уменьшении движения» — просто горит). */
+.dev--pause[data-state='on'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  animation: pause-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes pause-blink {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dev--pause[data-state='on'] {
+    animation: none;
+  }
+}
+
 /* Кнопка-переключатель в пульте: значок и подпись в строку. */
 .tgl {
   display: flex;
@@ -1317,6 +1316,20 @@ body:not([data-chrome='toy']) .side {
 .tgl .icon {
   width: 18px;
   height: 18px;
+}
+
+/* Малая кнопка-переключатель («Сегменты»): по размеру содержимого, а не на всю ширину блока. */
+.tgl--sm {
+  justify-self: start;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 0.7rem;
+  border-radius: 9px;
+}
+
+.tgl--sm .icon {
+  width: 14px;
+  height: 14px;
 }
 
 .tgl:hover {
@@ -1381,16 +1394,30 @@ body:not([data-chrome='toy']) .side {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 50%, transparent);
 }
 
-/* Выпадающий список пользовательских уровней. */
+/* Выпадающий список пользовательских уровней: рамка, фон и шрифт — как у соседних элементов пульта (`.seg`, `.tgl`), стрелка своя,
+   а открытый список (его рисует браузер) — в цветах панели, а не системного белого. */
 .pick {
   width: 100%;
-  padding: 8px 10px;
-  font: 700 0.78rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  padding: 7px 28px 7px 10px;
+  font: 700 0.74rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
-  background: var(--chip);
+  background-color: var(--chip);
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
   border: 1px solid var(--line);
   border-radius: 10px;
   cursor: pointer;
+  color-scheme: inherit;
+  text-overflow: ellipsis;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color 120ms, border-color 120ms;
+}
+
+.pick:hover {
+  border-color: color-mix(in srgb, var(--tone) 40%, var(--line));
 }
 
 .pick:focus-visible {
@@ -1398,16 +1425,33 @@ body:not([data-chrome='toy']) .side {
   outline-offset: 2px;
 }
 
+.pick option,
+.pick optgroup {
+  color: var(--text);
+  background-color: var(--panel);
+  font: 600 0.78rem/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.pick optgroup {
+  color: var(--muted);
+  font-weight: 800;
+  font-style: normal;
+}
+
+.pick option:disabled {
+  color: var(--muted);
+}
+
 /* Громкость: ползунок под быстрыми кнопками. При выключенном звуке ряд приглушён (кнопка «Звук» заглушает независимо от уровня). */
 .vol {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 6px 12px;
   color: var(--muted);
   background: var(--chip);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   transition: opacity 120ms;
 }
 
@@ -2011,6 +2055,29 @@ body:not([data-chrome='toy']) .side {
   }
 }
 
+/* Невысокое окно: пульт справа уплотняется, чтобы помещаться без собственной прокрутки (плитки уровней ниже, миниатюры консолей мельче). */
+@media (max-height: 800px) {
+  .lv {
+    min-height: 36px;
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-height: 760px) {
+  .lv {
+    min-height: 30px;
+    font-size: 1rem;
+  }
+
+  .shellpick__btn {
+    padding: 6px 2px 5px;
+  }
+
+  .mini {
+    max-width: 30px;
+  }
+}
+
 @media (max-height: 800px) {
   .about__sticker,
   .side__sec--facts {
@@ -2023,6 +2090,18 @@ body:not([data-chrome='toy']) .side {
 
   .fig__box {
     height: 28px;
+  }
+}
+
+/* Широкий экран: арена ровно по высоте окна, поэтому её высота не зависит от высоты игрушки. Пока игрушка плавно меняет вид, она
+   на миг может быть выше окна; без этого арена росла бы вместе с ней — на странице появлялась бы вертикальная прокрутка (а с ней
+   сдвиг всего макета на ширину полосы), а панели, выровненные по центру арены, ездили бы вверх и вниз. Лишнее срезается по вертикали. */
+@media (min-width: 900px) {
+  body[data-chrome='toy'] .arena {
+    height: calc(100dvh - 24px);
+    grid-template-rows: minmax(0, 1fr); /* строка не растёт вместе с игрушкой: панели стоят на месте */
+    overflow-y: clip;
+    overflow-clip-margin: 28px; /* тень игрушки у края окна не обрезается */
   }
 }
 

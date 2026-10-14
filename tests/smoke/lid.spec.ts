@@ -136,23 +136,57 @@ test('с клавиатуры: Tab доходит до крышки, Enter на 
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
 });
 
-test('«Свёрнута» из пульта закрывает крышку; идущая игра встаёт на паузу; из закрытого можно сразу в «только экран»', async ({ page }) => {
-  await load(page, '?power=on');
-  await expect.poll(() => area(page, 'phase')).toBe('ready');
-  await page.keyboard.press('Enter');
-  await expect.poll(() => area(page, 'phase')).toBe('playing');
+test('«Свёрнута» из пульта закрывает крышку выключенной игрушки; из закрытого можно сразу в «только экран»', async ({ page }) => {
+  await load(page);
+  await page.locator('#lid-cover').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
+  await expect(page.locator('#view-closed')).not.toHaveAttribute('aria-disabled', 'true'); // игрушка выключена — закрыть можно
   await page.locator('#view-closed').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-closed', '');
-  await expect.poll(() => area(page, 'phase')).toBe('paused');
   await page.locator('#view-screen').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-compact', '');
   await expect(page.locator('#toy')).not.toHaveAttribute('data-closed', '');
   await expect(page.locator('#base')).toBeHidden();
 });
 
-test('?view=closed и ?view=screen задают вид явно; ?power=on без ?view раскрывает игрушку', async ({ page }) => {
-  await load(page, '?power=on&view=closed');
+test('включённую игрушку закрыть нельзя: «Свёрнута» недоступна, пока игра не выключена кнопкой ON/OFF', async ({ page }) => {
+  await load(page, '?power=on');
+  await expect.poll(() => area(page, 'phase')).toBe('ready');
+  const closed = page.locator('#view-closed');
+  // Игра включена (даже на экране «Старт») — крышку закрыть нельзя, кнопка объясняет почему.
+  await expect(closed).toHaveAttribute('aria-disabled', 'true');
+  await expect(closed).toHaveAttribute('title', /сначала выключите/i);
+  await closed.click({ force: true }); // aria-disabled: Playwright иначе ждёт «доступности» кнопки, а нам нужен сам щелчок
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => area(page, 'phase')).toBe('playing');
+  await closed.click({ force: true });
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
+  await expect.poll(() => area(page, 'phase')).toBe('playing'); // игра не прервана
+  // Другие виды доступны и при включённой игре.
+  await page.locator('#view-screen').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
+  await expect(closed).toHaveAttribute('aria-disabled', 'true');
+  await page.locator('#view-full').click();
+
+  // Явно выключили — крышку закрыть можно.
+  await page.locator('[data-key="onoff"]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
+  await expect(closed).not.toHaveAttribute('aria-disabled', 'true');
+  await closed.click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-closed', '');
+  // Включение при закрытой крышке невозможно (кнопки под ней недоступны), а выбор уровня на пульте раскрывает игрушку.
+  await page.locator('#original-levels [data-level="2"]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
+  await expect(closed).toHaveAttribute('aria-disabled', 'true');
+});
+
+test('?view=closed и ?view=screen задают вид явно; включённая игрушка (?power=on) не бывает закрытой', async ({ page }) => {
+  await load(page, '?view=closed');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
+  await load(page, '?power=on&view=closed');
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
   await load(page, '?view=screen');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
   await load(page, '?power=on');
@@ -222,29 +256,30 @@ test.describe('раскрытие с анимацией', () => {
     expect(pivots.some((p) => p.slot > 30 && p.slot < p.height - 30)).toBe(true); // проверены и промежуточные кадры
     await expect.poll(async () => (await pivot()).slot, { timeout: 3000 }).toBeGreaterThan(200);
 
-    // Пока крышка поворачивается, шарниров и шлейфа не видно (они за крышкой); после раскрытия проявляются.
+    // Втулки шарнира на месте всегда; шлейф проявляется, как только крышка прошла зону шарнира (встала ребром), а не после полной
+    // остановки: раньше шарнир и шлейф «выскакивали» в самом конце, когда крышка давно стояла.
     await page.locator('#view-closed').click();
     await expect.poll(async () => (await frame()).slot, { timeout: 3000 }).toBeLessThan(4);
-    await page.waitForTimeout(600); // поворот закончился, втулки проявились
+    await page.waitForTimeout(600); // поворот закончился
     await page.locator('#lid-cover').click();
-    const hingeOpacity = (): Promise<{ knuckle: number; band: number; slot: number }> =>
+    const hingeOpacity = (): Promise<{ knuckle: number; band: number; slot: number; z: string }> =>
       page.evaluate(() => ({
         knuckle: Number(getComputedStyle(document.querySelector('.toy__knuckle') as HTMLElement).opacity),
         band: Number(getComputedStyle(document.querySelector('.toy__band') as HTMLElement).opacity),
         slot: (document.getElementById('lid-slot') as HTMLElement).getBoundingClientRect().height,
+        z: getComputedStyle(document.getElementById('lid-slot') as HTMLElement).zIndex,
       }));
-    const opening: { knuckle: number; band: number; slot: number }[] = [];
-    for (let i = 0; i < 12; i++) {
+    const opening: { knuckle: number; band: number; slot: number; z: string }[] = [];
+    for (let i = 0; i < 16; i++) {
       opening.push(await hingeOpacity());
-      await page.waitForTimeout(60);
+      await page.waitForTimeout(45);
     }
-    const midFlip = opening.filter((o) => o.slot > 20 && o.slot < open.slot * 0.95);
-    expect(midFlip.length).toBeGreaterThan(0);
-    for (const o of midFlip) {
-      expect(o.knuckle).toBe(0);
-      expect(o.band).toBe(0);
-    }
-    await expect.poll(async () => (await hingeOpacity()).knuckle, { timeout: 3000 }).toBe(1);
+    for (const o of opening) expect(o.knuckle).toBe(1); // втулки не мигают и не прячутся
+    // Пока крышка ещё лежит на корпусе (место крышки меньше трети), шлейфа нет; когда она уже поднялась больше чем наполовину, он виден.
+    expect(opening.some((o) => o.slot < open.slot * 0.3 && o.band === 0)).toBe(true);
+    expect(opening.some((o) => o.slot > open.slot * 0.6 && o.slot < open.slot * 0.97 && o.band >= 0.9)).toBe(true);
+    // Слой «крышка / шарнир» меняется после прохода ребром, а не в самом конце.
+    expect(opening.some((o) => o.slot > open.slot * 0.6 && o.slot < open.slot * 0.97 && o.z === '1')).toBe(true);
     await expect.poll(async () => (await hingeOpacity()).band, { timeout: 3000 }).toBe(1);
 
     // Обратно: тоже плавно.
@@ -256,5 +291,50 @@ test.describe('раскрытие с анимацией', () => {
     }
     expect(back.some((v) => v > 20 && v < open.slot * 0.9)).toBe(true);
     await expect.poll(async () => (await frame()).slot, { timeout: 3000 }).toBeLessThan(4);
+  });
+
+  test('при смене вида боковые панели стоят на месте, страница не прокручивается и не меняет ширину', async ({ page }) => {
+    await load(page);
+    interface Row {
+      ctl: number;
+      info: number;
+      scrollable: boolean;
+      width: number;
+    }
+    const sample = (selector: string): Promise<Row[]> =>
+      page.evaluate(
+        (click) =>
+          new Promise<Row[]>((resolve) => {
+            const ctl = document.getElementById('side-ctl') as HTMLElement;
+            const info = document.getElementById('side-info') as HTMLElement;
+            const rows: Row[] = [];
+            const start = performance.now();
+            (document.querySelector(click) as HTMLElement).click();
+            const tick = (): void => {
+              const root = document.documentElement;
+              rows.push({
+                ctl: ctl.getBoundingClientRect().top,
+                info: info.getBoundingClientRect().top,
+                scrollable: root.scrollHeight > root.clientHeight + 1,
+                width: root.clientWidth,
+              });
+              if (performance.now() - start < 2100) requestAnimationFrame(tick);
+              else resolve(rows);
+            };
+            requestAnimationFrame(tick);
+          }),
+        selector,
+      );
+    for (const selector of ['#lid-cover', '#view-screen', '#view-full', '#view-closed', '#view-screen', '#view-closed']) {
+      const rows = await sample(selector);
+      const first = rows[0];
+      expect(first).toBeDefined();
+      for (const row of rows) {
+        expect(row.ctl, `${selector}: пульт не ездит по вертикали`).toBeCloseTo(first?.ctl ?? 0, 1);
+        expect(row.info, `${selector}: справка не ездит по вертикали`).toBeCloseTo(first?.info ?? 0, 1);
+        expect(row.scrollable, `${selector}: страница не прокручивается`).toBe(false);
+        expect(row.width).toBe(first?.width);
+      }
+    }
   });
 });

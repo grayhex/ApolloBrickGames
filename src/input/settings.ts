@@ -47,8 +47,10 @@ export interface Settings {
     shell: Shell;
     /** Звук включён. */
     sound: boolean;
-    /** Громкость 0…1 (ползунок на странице); кнопка «Звук» заглушает независимо от неё. */
+    /** Громкость 0…1 (ползунок «Звук» на странице): эффекты, а под «Оригинал» ещё и музыка; кнопка «Звук» заглушает независимо от неё. */
     volume: number;
+    /** Громкость записи «Ремастер» 0…1 (ползунок «Музыка»); под «Оригинал» ползунки связаны и она равна `volume`. */
+    musicVolume: number;
     /** Какая музыка звучит в игре. */
     music: Music;
     /** Фон страницы. */
@@ -68,8 +70,13 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: DEFAULT_LANG },
+    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, musicVolume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: DEFAULT_LANG },
   };
+}
+
+/** Громкость музыки с учётом связи ползунков: под «Оригинал» музыка и звук — одна пищалка и один уровень, под «Ремастер» — раздельно. */
+export function musicVolumeOf(display: Pick<Settings['display'], 'music' | 'volume' | 'musicVolume'>): number {
+  return display.music === 'original' ? display.volume : display.musicVolume;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -99,6 +106,9 @@ export function sanitizeSettings(raw: unknown): Settings {
   const preferred = gamepad['preferredId'];
   const display =
     typeof record['display'] === 'object' && record['display'] !== null ? (record['display'] as Record<string, unknown>) : {};
+  const level = (value: unknown, fallback: number): number =>
+    typeof value === 'number' && Number.isFinite(value) ? clamp(value, 0, 1) : fallback;
+  const volume = level(display['volume'], DEFAULT_VOLUME);
 
   return {
     version: SETTINGS_VERSION,
@@ -115,10 +125,8 @@ export function sanitizeSettings(raw: unknown): Settings {
       ghost: typeof display['ghost'] === 'boolean' ? display['ghost'] : null,
       shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
       sound: typeof display['sound'] === 'boolean' ? display['sound'] : true,
-      volume:
-        typeof display['volume'] === 'number' && Number.isFinite(display['volume'])
-          ? clamp(display['volume'], 0, 1)
-          : DEFAULT_VOLUME,
+      volume,
+      musicVolume: level(display['musicVolume'], volume), // старые сохранения без музыки: связана со «Звуком»
       music: MUSICS.find((music) => music === display['music']) ?? 'original',
       theme: THEMES.find((theme) => theme === display['theme']) ?? 'dark',
       lang: isLang(display['lang']) ? display['lang'] : DEFAULT_LANG,

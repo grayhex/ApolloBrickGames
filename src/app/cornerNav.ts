@@ -17,19 +17,20 @@ export interface CornerNavActions {
 }
 
 /**
- * Системное меню в углу страницы: индикатор устройства управления (клавиатура и геймпад) и кнопка смены фона. Они стоят рядом
+ * Системное меню в углу страницы: индикатор устройства управления (клавиатура и геймпад), индикатор паузы и кнопка смены фона. Они стоят рядом
  * с языком, настройками и справкой — разметка лежит в index.html, значки и подписи ставятся здесь и обновляются при смене языка.
  */
 export class CornerNav {
   private readonly elements: CornerNavElements;
-  private readonly devices = new Map<'keyboard' | 'gamepad', HTMLElement>();
+  private readonly devices = new Map<'keyboard' | 'gamepad' | 'pause', HTMLElement>();
+  private paused = false;
   private lastDevice = '';
   private lastDeviceView: DeviceView | null = null;
   private theme: Theme = 'dark';
 
   constructor(elements: CornerNavElements, actions: CornerNavActions) {
     this.elements = elements;
-    for (const id of ['keyboard', 'gamepad'] as const) {
+    for (const id of ['keyboard', 'gamepad', 'pause'] as const) {
       const element = elements.devices.querySelector<HTMLElement>(`[data-device="${id}"]`);
       if (!element) continue;
       element.replaceChildren(icon(id satisfies IconName));
@@ -48,6 +49,7 @@ export class CornerNav {
     const keyboard = this.devices.get('keyboard');
     if (keyboard) keyboard.title = t('dev.keyboard');
     this.setTheme(this.theme);
+    this.setPaused(this.paused);
     if (this.lastDeviceView) {
       this.lastDevice = '';
       this.setDevices(this.lastDeviceView);
@@ -70,6 +72,17 @@ export class CornerNav {
       button.dataset['icon'] = name;
       button.replaceChildren(icon(name));
     }
+  }
+
+  /** Индикатор паузы рядом с клавиатурой: горит, пока игра на паузе (клавишей, кнопкой, при потере фокуса или под закрытой крышкой). */
+  setPaused(paused: boolean): void {
+    this.paused = paused;
+    const element = this.devices.get('pause');
+    if (!element) return;
+    const label = t(paused ? 'dev.paused' : 'dev.running');
+    element.dataset['state'] = paused ? 'on' : 'off';
+    element.title = label;
+    element.setAttribute('aria-label', label);
   }
 
   /** Значки «клавиатура / геймпад»: геймпад появляется при подключении; подсвечено то, чем играют сейчас. */

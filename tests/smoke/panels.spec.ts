@@ -172,6 +172,11 @@ test('пульт: звук следует за SOUND, музыка, сегмен
   await expect(page.locator('#arena')).toHaveAttribute('data-compact', '');
   await expect(state('screen')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#side-ctl')).toBeVisible(); // пульт остаётся, чтобы вернуть игрушку целиком
+  await state('full').click();
+  // Включённую игрушку не закрыть — «Свёрнута» доступна, только когда игра выключена кнопкой ON/OFF.
+  await expect(state('closed')).toHaveAttribute('aria-disabled', 'true');
+  await page.locator('[data-key="onoff"]').click();
+  await expect(state('closed')).not.toHaveAttribute('aria-disabled', 'true');
   await state('closed').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-closed', '');
   await expect(page.locator('#toy')).not.toHaveAttribute('data-compact', '');
@@ -446,3 +451,75 @@ test('узкий экран: игрушка целиком сверху, пан�
   await page.locator('#shell-picker [data-shell="yellow"]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
 });
+
+test('кнопка «Сегменты» маленькая, как обычная кнопка, а не на всю ширину пульта', async ({ page }) => {
+  await ready(page);
+  const box = async (selector: string) => (await page.locator(selector).boundingBox()) ?? { width: 0, height: 0 };
+  const ghost = await box('#tgl-ghost');
+  const panel = await box('#side-ctl');
+  expect(ghost.height).toBeLessThanOrEqual(32);
+  expect(ghost.width).toBeLessThan(panel.width * 0.6);
+  await expect(page.locator('#tgl-ghost')).toContainText('Сегменты');
+});
+
+test('список пользовательских уровней оформлен как остальные элементы пульта, в обеих темах', async ({ page }) => {
+  await ready(page);
+  const style = (): Promise<{ appearance: string; radius: string; option: string; group: string; panel: string; font: string; border: string }> =>
+    page.evaluate(() => {
+      const select = document.getElementById('user-level') as HTMLSelectElement;
+      const option = select.querySelector('option') as HTMLElement;
+      const group = select.querySelector('optgroup') as HTMLElement;
+      const seg = getComputedStyle(document.querySelector('.seg') as HTMLElement);
+      const own = getComputedStyle(select);
+      return {
+        appearance: own.appearance,
+        radius: own.borderRadius,
+        option: getComputedStyle(option).backgroundColor,
+        group: getComputedStyle(group).color,
+        panel: getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+        font: own.fontFamily,
+        border: `${own.borderTopColor}|${seg.borderTopColor}`,
+      };
+    });
+  const dark = await style();
+  expect(dark.appearance).toBe('none'); // своя стрелка и рамка, а не системный список
+  expect(dark.option).toBe('rgb(29, 34, 38)'); // фон строк списка — цвет панели (#1d2226), не системный белый
+  const [own, seg] = dark.border.split('|');
+  expect(own).toBe(seg); // рамка — как у соседних сегментных переключателей
+  await page.locator('#corner-theme').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  const light = await style();
+  expect(light.option).toBe('rgb(255, 255, 255)'); // светлая тема: белая панель
+  expect(light.group).not.toBe(dark.group);
+});
+
+test('индикатор паузы в угловом меню рядом с клавиатурой: горит, пока игра на паузе', async ({ page }) => {
+  await ready(page);
+  const pause = page.locator('#devices [data-device="pause"]');
+  const keyboard = page.locator('#devices [data-device="keyboard"]');
+  await expect(pause).toBeVisible();
+  const [p, k] = await Promise.all([pause.boundingBox(), keyboard.boundingBox()]);
+  expect(Math.abs((p?.y ?? 0) - (k?.y ?? 99))).toBeLessThan(2); // в одном ряду с клавиатурой
+  expect(Math.abs((p?.x ?? 0) - ((k?.x ?? 0) + (k?.width ?? 0)))).toBeLessThan(12); // и вплотную к ней
+  await expect(pause).toHaveAttribute('data-state', 'off');
+  await expect(pause).toHaveAttribute('title', 'Игра не на паузе');
+  await page.keyboard.press('Enter');
+  await expect.poll(phase(page)).toBe('playing');
+  await expect(pause).toHaveAttribute('data-state', 'off');
+  await page.keyboard.press('Escape');
+  await expect.poll(phase(page)).toBe('paused');
+  await expect(pause).toHaveAttribute('data-state', 'on');
+  await expect(pause).toHaveAttribute('title', 'Игра на паузе');
+  await expect(pause).toHaveCSS('background-color', 'rgb(185, 211, 122)'); // горит акцентным цветом, заметно на фоне остальных значков
+  await page.keyboard.press('Escape');
+  await expect.poll(phase(page)).toBe('playing');
+  await expect(pause).toHaveAttribute('data-state', 'off');
+  // Выключенная игра не «на паузе»: индикатор гаснет.
+  await page.keyboard.press('Escape');
+  await expect(pause).toHaveAttribute('data-state', 'on');
+  await page.locator('[data-key="onoff"]').click();
+  await expect(pause).toHaveAttribute('data-state', 'off');
+  await page.locator('#corner-lang').click();
+  await expect(pause).toHaveAttribute('title', 'Game is not paused');
+});
+

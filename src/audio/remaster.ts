@@ -162,6 +162,13 @@ export class RemasterTrack {
     this.offset = 0;
   }
 
+  /** Перемотка: звук обрывается, следующий запуск — с позиции `seconds` (по кругу записи). Запись не готова — с начала. */
+  seek(seconds: number): void {
+    this.halt();
+    const length = this.loopLength;
+    this.offset = length > 0 && Number.isFinite(seconds) ? ((seconds % length) + length) % length : 0;
+  }
+
   private halt(): void {
     const source = this.source;
     this.source = null;

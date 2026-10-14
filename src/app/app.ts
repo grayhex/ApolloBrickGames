@@ -24,7 +24,7 @@ import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { openIndexedDbStore, type DraftStore } from '../editor/drafts';
 import { loadUserLevels, type LibraryTarget, type UserLevel } from '../editor/library';
-import { browserStorage, needsGamepadSetup, THEMES, type Music, type Shell } from '../input/settings';
+import { browserStorage, musicVolumeOf, needsGamepadSetup, THEMES, type Music, type Shell } from '../input/settings';
 import { LANGS } from '../input/lang';
 import { boundSources, keySource } from '../input/bindings';
 import { CableGlitch } from './cableGlitch';
@@ -163,6 +163,9 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   // Вид игрушки: всегда начинается закрытой (не сохраняется); `?view=full|screen` и `?power=on` открывают сразу — для ссылок и тестов.
   let view: View = route.lid ? parseView(params.get('view'), params.get('power') === 'on') : 'full';
+  // Питание (ON/OFF): игрушка при открытии страницы выключена; `?power=on` включает сразу. Технические страницы всегда включены.
+  let powered = !route.lid || params.get('power') === 'on';
+  if (powered && view === 'closed') view = 'full'; // включённая игрушка не бывает закрытой, даже по адресу `?view=closed&power=on`
   const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
   let ctx = createContext(start.pack);
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
@@ -224,6 +227,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const audio: AudioPort & { unlock(): void } = new WebAudioPort({
     muted: !hub.settings.display.sound,
     volume: hub.settings.display.volume,
+    musicVolume: musicVolumeOf(hub.settings.display),
     remaster: fetchTrack(`${import.meta.env.BASE_URL}audio/remaster.m4a`),
   });
   const unlockAudio = (): void => audio.unlock();
@@ -356,6 +360,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     refs.chkSound.checked = display.sound;
     audio.setMuted(!display.sound);
     audio.setVolume(display.volume);
+    audio.setMusicVolume(musicVolumeOf(display));
     audio.setMusic(display.music);
     if (route.lid) applyTheme(display.theme);
     corner?.setTheme(display.theme);
@@ -364,9 +369,11 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       shell: currentShell,
       sound: display.sound,
       volume: display.volume,
+      musicVolume: musicVolumeOf(display),
       music: display.music,
       ghost: renderer.hasGhostLayer ? ghostOn() : null,
       view,
+      powered,
       level: currentLevel,
     });
   };
@@ -390,11 +397,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   };
   const setView = (next: View): void => {
     if (!route.lid || next === view) return;
+    if (next === 'closed' && powered) return; // включённую игрушку не закрыть: сначала явно выключить (ON/OFF), кнопка «Свёрнута» недоступна
     view = next;
-    if (view === 'closed' && game.state.phase === 'playing') {
-      suspendReason = 'settings';
-      session.suspend(); // под закрытой крышкой игра на паузе
-    }
     applyView();
     applyDisplay();
     if (view !== 'closed') refocusGame();
@@ -458,6 +462,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     suspendReason = null;
     snapCamera = true;
     powered = true;
+    if (view === 'closed') {
+      view = 'full'; // уровень выбран на пульте при закрытой крышке: игрушка раскрывается, включённой она закрытой не бывает
+      applyView();
+    }
     refs.toy.dataset['power'] = 'on';
     hub.resetDevices();
     hub.tracker.reset();
@@ -479,15 +487,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     toggleSound: () => setSound(!hub.settings.display.sound),
     setVolume: (volume, commit) => {
       audio.setVolume(volume);
-      if (!commit) return;
-      hub.updateSettings((s) => {
-        s.display.volume = volume;
-      });
-      applyDisplay();
-      audio.unlock();
-      audio.play('confirm'); // услышать выбранный уровень (при выключенном звуке молчит)
+      if (hub.settings.display.music === 'original') audio.setMusicVolume(volume); // под «Оригинал» звук и музыка — один уровень
+      if (commit) commitVolume('volume', volume);
     },
-    // Ремастера пока нет — переключатель сохраняется, а звучит та же мелодия (см. подсказку у кнопки).
+    setMusicVolume: (volume, commit) => {
+      audio.setMusicVolume(volume);
+      if (hub.settings.display.music === 'original') audio.setVolume(volume);
+      if (commit) commitVolume('musicVolume', volume);
+    },
+    // Нет записи — переключатель сохраняется, а звучит та же мелодия (см. подсказку у кнопки).
     setMusic: (music: Music) => {
       hub.updateSettings((s) => {
         s.display.music = music;
@@ -504,6 +512,20 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     pickOriginal: (number) => void launch({ kind: 'original', number }),
     pickBundled: (levelId) => void launch({ kind: 'bundled', levelId }),
     pickUser: (projectId) => void launch({ kind: 'user', projectId }),
+  };
+  /** Громкость отпущенного ползунка — в настройки (под «Оригинал» обе громкости вместе) и услышать выбранный уровень. */
+  const commitVolume = (which: 'volume' | 'musicVolume', volume: number): void => {
+    hub.updateSettings((s) => {
+      if (s.display.music === 'original') {
+        s.display.volume = volume;
+        s.display.musicVolume = volume;
+      } else {
+        s.display[which] = volume;
+      }
+    });
+    applyDisplay();
+    audio.unlock();
+    audio.play('confirm'); // услышать выбранный уровень (при выключенном звуке молчит)
   };
   const toggleTheme = (): void => {
     hub.updateSettings((s) => {
@@ -613,12 +635,16 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
   // Игрушка при открытии страницы выключена: включает кнопка ON/OFF (клавиша O); `?power=on` включает сразу (для ссылок и тестов).
   // Технические страницы кнопок корпуса не показывают — они всегда включены.
-  let powered = !route.lid || params.get('power') === 'on';
   refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
+    if (on && view === 'closed') {
+      view = 'full';
+      applyView();
+    }
     refs.toy.dataset['power'] = on ? 'on' : 'off';
+    applyDisplay(); // «Свёрнута» на пульте доступна, только пока игрушка выключена
     suspendReason = null;
     director.reset();
     if (on) {
@@ -790,6 +816,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     const setup = gamepadStatus.kind === 'active' && needsGamepadSetup(hub.settings, gamepadStatus.pad);
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
     corner?.setDevices(deviceView(gamepadStatus, hub.lastDevice));
+    corner?.setPaused(powered && s.phase === 'paused');
     setText.hint(controlsHint(hub.settings.keyboard, route.fireHint));
     setText.timer(timerText(s, timerUnitTicks(ctx.rules), ctx.rules.params.timerLimitTicks, ctx.rules.params.timerUnitTicks ? 'ед.' : 'с'));
 

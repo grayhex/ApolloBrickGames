@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TRACK_GAIN, WebAudioPort, type AudioContextLike, type GainLike, type OscillatorLike } from '../../src/audio/beeper';
+import { SFX_REMASTER_GAIN, TRACK_GAIN, WebAudioPort, type AudioContextLike, type GainLike, type OscillatorLike } from '../../src/audio/beeper';
 import { loopEndOf, RemasterTrack, TAIL_MARGIN, type BufferLike, type BufferSourceLike } from '../../src/audio/remaster';
 
 class FakeSource implements BufferSourceLike {
@@ -218,6 +218,28 @@ describe('зацикливание: тишина в конце записи об
   });
 });
 
+describe('RemasterTrack: перемотка', () => {
+  it('seek обрывает звук, следующий запуск — с заданной позиции по кругу; до загрузки и с мусором — с начала', async () => {
+    const context = new FakeContext();
+    const track = new RemasterTrack(async () => BYTES);
+    track.seek(3); // записи ещё нет
+    await track.load(context);
+    track.play(context, {});
+    expect(context.sources[0]?.started).toEqual([[0, 0]]);
+    track.seek(19); // круг 8 с → 3
+    expect(context.sources[0]?.stopped).toBe(1);
+    expect(track.playing).toBe(false);
+    track.play(context, {});
+    expect(context.sources[1]?.started).toEqual([[0, 3]]);
+    track.seek(-1); // назад от начала — тоже по кругу
+    track.play(context, {});
+    expect(context.sources[2]?.started).toEqual([[0, 7]]);
+    track.seek(Number.NaN);
+    track.play(context, {});
+    expect(context.sources[3]?.started).toEqual([[0, 0]]);
+  });
+});
+
 describe('громкость записи не выше оригинала', () => {
   it('TRACK_GAIN не превышает допустимый предел из замера tools/audio/loudness.mjs (запись −14,1 LUFS, мелодия −22,2 LUFS → ≤ 0,394)', () => {
     expect(TRACK_GAIN).toBeLessThanOrEqual(0.394);
@@ -323,10 +345,12 @@ describe('WebAudioPort: музыка «Ремастер»', () => {
     expect(context.sources[1]?.started).toEqual([[0, 3]]);
   });
 
-  it('громкость и «Звук»: усиление записи = громкость × TRACK_GAIN, при заглушении 0; запись продолжает идти молча', async () => {
+  it('громкость и «Звук»: усиление записи = громкость музыки × TRACK_GAIN (не громкость звука), при заглушении 0; запись продолжает идти молча', async () => {
     const { context, port, trackGain } = make();
     expect(trackGain().gain.value).toBeCloseTo(0.25 * TRACK_GAIN);
-    port.setVolume(1);
+    port.setVolume(1); // «Звук» (эффекты) записи не касается
+    expect(trackGain().gain.value).toBeCloseTo(0.25 * TRACK_GAIN);
+    port.setMusicVolume(1);
     expect(trackGain().gain.value).toBeCloseTo(TRACK_GAIN);
     port.setMusic('remaster');
     await tick();
@@ -358,6 +382,123 @@ describe('WebAudioPort: музыка «Ремастер»', () => {
     port.setMusic('original');
     expect(context.sources[0]?.stopped).toBe(1);
     expect(port.musicSource).toBe('original');
+  });
+
+  it('повторный setMusic с тем же значением ничего не перезапускает (включение сегментов, возврат на вкладку)', async () => {
+    const { context, port, advance } = make();
+    port.setMusic('remaster');
+    await tick();
+    port.startMelody('start');
+    port.update();
+    advance(5000);
+    for (let i = 0; i < 4; i++) {
+      port.setMusic('remaster'); // приложение зовёт его на каждое изменение вида
+      port.update();
+    }
+    expect(context.sources).toHaveLength(1); // запись не начиналась заново
+    expect(context.sources[0]?.stopped).toBe(0);
+    expect(context.sources[0]?.started).toEqual([[0, 0]]);
+
+    port.setMusic('original');
+    port.update();
+    const voices = context.oscillators.length;
+    for (let i = 0; i < 4; i++) {
+      port.setMusic('original');
+      port.update();
+    }
+    expect(context.sources[0]?.stopped).toBe(1); // остановлена один раз, при настоящем переключении
+    expect(context.sources).toHaveLength(1);
+    expect(context.oscillators.length).toBeGreaterThanOrEqual(voices); // пищалка идёт без обрыва и перезапуска
+  });
+
+  it('«Оригинал» → «Ремастер» на лету: запись вступает с того места по времени, где идёт мелодия', async () => {
+    const { context, port, advance } = make();
+    port.setMusic('remaster');
+    await tick();
+    port.setMusic('original');
+    port.startMelody('start');
+    port.update();
+    advance(7000);
+    port.update();
+    port.setMusic('remaster');
+    port.update();
+    expect(context.sources).toHaveLength(1);
+    expect(context.sources[0]?.started).toEqual([[0, 7]]); // 7 с от запуска мелодии
+    expect(port.musicSource).toBe('remaster');
+  });
+
+  it('«Ремастер» → «Оригинал» на лету: пищалка подхватывает с того же места, а не с начала мелодии', async () => {
+    const { context, port, advance } = make();
+    context.duration = 100; // запись длиннее проигранного (в тестах по умолчанию 8 с, позиция ходила бы по кругу)
+    port.setMusic('remaster');
+    await tick();
+    port.startMelody('start');
+    port.update();
+    advance(20000); // дольше одного круга пищалки (≈ 10,85 с)
+    port.update();
+    const before = context.oscillators.length;
+    port.setMusic('original');
+    expect(context.sources[0]?.stopped).toBe(1);
+    port.update();
+    expect(port.musicSource).toBe('original');
+    expect(context.oscillators.length).toBeGreaterThan(before); // пищалка зазвучала
+    advance(5000);
+    port.setMusic('remaster'); // и обратно: запись — с 25-й секунды, а не с нуля
+    port.update();
+    expect(context.sources[1]?.started).toEqual([[0, 25]]);
+  });
+
+  it('запись догрузилась позже выбора: звучащая мелодия на лету переходит на неё; на паузе — после продолжения', async () => {
+    const { context, port, advance } = make();
+    port.setMusic('remaster'); // загрузка пошла, но ещё не закончилась
+    port.startMelody('start');
+    port.update();
+    advance(4000);
+    port.update();
+    expect(context.sources).toHaveLength(0);
+    await tick();
+    port.update();
+    expect(context.sources[0]?.started).toEqual([[0, 4]]);
+
+    const paused = make();
+    paused.port.startMelody('start');
+    paused.advance(2000);
+    paused.port.update();
+    paused.port.pauseMelody();
+    paused.port.setMusic('remaster');
+    await tick();
+    paused.port.update();
+    expect(paused.context.sources).toHaveLength(0); // на паузе запись молчит
+    paused.advance(9000);
+    paused.port.resumeMelody();
+    paused.port.update();
+    expect(paused.context.sources[0]?.started).toEqual([[0, 2]]); // паузы в счёт не идут
+  });
+
+  it('эффекты тише, пока выбран «Ремастер»; «Оригинал» и недоступная запись возвращают прежний уровень', async () => {
+    const { port, context } = make();
+    const sfx = (): number => (context.gains[2] as GainLike).gain.value;
+    expect(sfx()).toBe(1);
+    port.setMusic('remaster');
+    expect(sfx()).toBe(SFX_REMASTER_GAIN);
+    expect(SFX_REMASTER_GAIN).toBeLessThan(1);
+    port.setMusic('original');
+    expect(sfx()).toBe(1);
+
+    const broken = make({ decodeFails: true });
+    broken.port.setMusic('remaster');
+    await tick();
+    broken.port.update();
+    expect((broken.context.gains[2] as GainLike).gain.value).toBe(1); // записи нет — звучит пищалка, эффекты прежние
+  });
+
+  it('громкость музыки не трогает эффекты и пищалку, а громкость звука — запись', async () => {
+    const { port, context, trackGain } = make();
+    port.setMusic('remaster');
+    port.setMusicVolume(0.5);
+    port.setVolume(0.1);
+    expect(trackGain().gain.value).toBeCloseTo(0.5 * TRACK_GAIN);
+    expect((context.gains[0] as GainLike).gain.value).toBeCloseTo(0.1 * 0.14); // общий усилитель пищалки и эффектов
   });
 
   it('без жеста контекст не создаётся и запись не грузится', async () => {
