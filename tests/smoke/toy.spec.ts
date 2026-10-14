@@ -247,7 +247,7 @@ test('ON/OFF: экран гаснет, светодиоды гаснут, кно
   await key(page, 'onoff').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
   await expect.poll(phase(page)).toBe('ready');
-  await expect.poll(ledRed).toBe('on');
+  await expect.poll(ledRed).toBe('off'); // со звуком светодиоды оживают вместе с мелодией (leds-sound.spec.ts); в тишине погашены
   expect(await heroX(page)()).toBe(1);
 });
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "room-rules",
   "status": "demo",
-  "version": 3,
+  "version": 4,
   "params": {
     "tickRateHz": 20,
     "move": { "repeatDelayTicks": 3, "repeatIntervalTicks": 3 },
@@ -16,7 +16,7 @@
     },
     "lives": 3,
     "timerLimitTicks": 0,
-    "deathDelayTicks": 20,
+    "deathDelayTicks": 52,
     "bottomEdge": "floor"
   }
 }

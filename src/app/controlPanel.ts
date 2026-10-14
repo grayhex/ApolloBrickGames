@@ -9,6 +9,8 @@ import type { DeviceView } from './viewModel';
 export interface ControlPanelActions {
   pickShell(shell: Shell): void;
   toggleSound(): void;
+  /** Громкость 0…1 от ползунка. `commit = false` — ползунок ещё тянут (звук меняется, сохранять рано); `true` — отпустили. */
+  setVolume(volume: number, commit: boolean): void;
   toggleGhost(): void;
   toggleCompact(): void;
   toggleTheme(): void;
@@ -20,6 +22,8 @@ export interface ControlPanelActions {
 export interface ControlPanelView {
   shell: Shell;
   sound: boolean;
+  /** Громкость 0…1. */
+  volume: number;
   ghost: boolean | null;
   compact: boolean;
   theme: Theme;
@@ -52,6 +56,19 @@ export class ControlPanel {
   private readonly tiles = new Map<number, HTMLButtonElement>();
   private readonly userList = h('ul', { class: 'uv', id: 'user-levels', 'aria-label': 'Карты из редактора' });
   private readonly devices = new Map<'keyboard' | 'gamepad', HTMLElement>();
+  private readonly volume = h('input', {
+    type: 'range',
+    class: 'vol__range',
+    id: 'volume',
+    min: '0',
+    max: '100',
+    step: '5',
+    value: '50',
+    'aria-label': 'Громкость',
+  });
+  private readonly volumeRow = h('div', { class: 'vol', id: 'volume-row', 'data-muted': 'false' });
+  private readonly volumeValue = h('output', { class: 'vol__value', for: 'volume' }, '50%');
+  private readonly volumeIcon = h('span', { class: 'vol__icon' }, icon('sound'));
   private users: readonly UserLevel[] = [];
   private level: LevelRef | null = null;
   private lastDevice = '';
@@ -80,6 +97,16 @@ export class ControlPanel {
       this.toggle('compact', 'screen', 'Экран', actions.toggleCompact),
       this.toggle('theme', 'sun', 'Фон', actions.toggleTheme),
     );
+
+    // ── Громкость ────────────────────────────────────────────────────────
+    this.volume.addEventListener('input', () => {
+      this.showVolume(Number(this.volume.value) / 100);
+      actions.setVolume(Number(this.volume.value) / 100, false);
+    });
+    this.volume.addEventListener('change', () => actions.setVolume(Number(this.volume.value) / 100, true));
+    // Мышь и касание возвращают клавиатуру игре; со стрелок фокус остаётся на ползунке.
+    this.volume.addEventListener('pointerup', () => options.onPointerUse());
+    this.volumeRow.append(this.volumeIcon, this.volume, this.volumeValue);
 
     // ── Цвет текущей игры ────────────────────────────────────────────────
     this.picker = new ShellPicker({
@@ -127,7 +154,7 @@ export class ControlPanel {
       this.picker.root,
     );
 
-    this.root.replaceChildren(top, quick, colour, levels);
+    this.root.replaceChildren(top, quick, this.volumeRow, colour, levels);
     this.setUserLevels([], null);
   }
 
@@ -160,11 +187,30 @@ export class ControlPanel {
     }
   }
 
+  /** Подпись и заливка ползунка (без побочных действий). */
+  private showVolume(volume: number): void {
+    const percent = Math.round(volume * 100);
+    this.volumeValue.textContent = `${percent}%`;
+    this.volume.style.setProperty('--pct', `${percent}%`);
+    this.volume.setAttribute('aria-valuetext', `${percent}%`);
+  }
+
   /** Состояние страницы изменилось: обновить кнопки, цвет и подсветку выбранного уровня. */
   update(view: ControlPanelView): void {
     this.root.dataset['shell'] = view.shell;
     this.picker.set(view.shell);
     this.setToggle('sound', view.sound, view.sound ? 'sound' : 'soundOff', view.sound ? 'Звук включён — выключить' : 'Звук выключен — включить');
+    // Пока ползунок тянут, значение не трогаем: его двигает сам пользователь.
+    if (document.activeElement !== this.volume || this.volume.value !== String(Math.round(view.volume * 100))) {
+      this.volume.value = String(Math.round(view.volume * 100));
+    }
+    this.showVolume(view.volume);
+    this.volumeRow.dataset['muted'] = String(!view.sound);
+    const volumeIcon = view.sound ? 'sound' : 'soundOff';
+    if (this.volumeIcon.dataset['icon'] !== volumeIcon) {
+      this.volumeIcon.dataset['icon'] = volumeIcon;
+      this.volumeIcon.replaceChildren(icon(volumeIcon));
+    }
     const ghost = this.toggles.get('ghost');
     if (ghost) {
       ghost.button.hidden = view.ghost === null;

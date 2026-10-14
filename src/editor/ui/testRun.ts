@@ -1,4 +1,5 @@
-import { cueForEvent, type AudioPort } from '../../audio/audio';
+import type { AudioPort } from '../../audio/audio';
+import { SoundDirector } from '../../audio/director';
 import { GameSession } from '../../app/session';
 import { SettingsDialog } from '../../app/settingsUi';
 import { FixedStepper } from '../../app/stepper';
@@ -43,6 +44,7 @@ export class TestRunner {
   private readonly pauseButton: HTMLButtonElement;
   private readonly hub: InputHub;
   private readonly audio: AudioPort & { unlock(): void };
+  private director: SoundDirector | null = null;
   private running = false;
   private raf = 0;
   private game: Game | null = null;
@@ -98,7 +100,7 @@ export class TestRunner {
       });
       this.audio.setMuted(!sound.checked);
       this.audio.unlock();
-      this.audio.play('start');
+      this.audio.play('confirm');
       this.refocus();
     });
     this.root = el(
@@ -171,6 +173,14 @@ export class TestRunner {
     this.renderer.setGhost(ghostOn);
     (this.root.querySelector('#test-ghost') as HTMLInputElement).checked = ghostOn;
     const stepper = new FixedStepper(1000 / ctx.rules.params.tickRateHz);
+    // Звук: тот же режиссёр, что на главной; сценария входа в тесте нет — мелодия стартует вместе с игрой.
+    const game = this.game;
+    const director = new SoundDirector({
+      audio: this.audio,
+      typeOf: (id) => ctx.levels.get(game.state.levelId)?.def.objects.find((object) => object.id === id)?.type ?? null,
+    });
+    director.reset();
+    this.director = director;
     this.session = new GameSession({
       game: this.game,
       tracker: this.hub.tracker,
@@ -180,8 +190,7 @@ export class TestRunner {
           if (event.type === 'levelStarted') this.snapCamera = true;
           const world = this.game ? effectsWorld(ctx, this.game.state) : null;
           if (world) effects.onEvent(event, world);
-          const cue = cueForEvent(event);
-          if (cue) this.audio.play(cue);
+          director.onEvent(event);
         }
       },
       resetDevices: () => this.hub.resetDevices(),
@@ -210,6 +219,8 @@ export class TestRunner {
       this.hub.tracker.reset();
     }
     this.running = false;
+    this.director?.reset();
+    this.director = null;
     this.game = null;
     this.session = null;
     this.renderer = null;
@@ -253,6 +264,7 @@ export class TestRunner {
     if (!game || !session || !renderer || !start) return;
     this.hub.poll();
     session.frame(now);
+    this.director?.frame();
 
     const level = start.level;
     const area: CameraArea = {

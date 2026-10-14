@@ -23,6 +23,7 @@ export type Theme = (typeof THEMES)[number];
 export const MIN_STICK_THRESHOLD = 0.1;
 export const MAX_STICK_THRESHOLD = 0.9;
 export const DEFAULT_STICK_THRESHOLD = 0.5;
+export const DEFAULT_VOLUME = 0.5;
 
 export interface Settings {
   version: typeof SETTINGS_VERSION;
@@ -41,6 +42,8 @@ export interface Settings {
     shell: Shell;
     /** Звук включён. */
     sound: boolean;
+    /** Громкость 0…1 (ползунок на странице); кнопка «Звук» заглушает независимо от неё. */
+    volume: number;
     /** Вид «только экран»: нижняя половина игрушки скрыта, крышка с экраном показана крупно. */
     compact: boolean;
     /** Фон страницы. */
@@ -58,7 +61,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true, compact: false, theme: 'dark' },
+    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, compact: false, theme: 'dark' },
   };
 }
 
@@ -105,6 +108,10 @@ export function sanitizeSettings(raw: unknown): Settings {
       ghost: typeof display['ghost'] === 'boolean' ? display['ghost'] : null,
       shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
       sound: typeof display['sound'] === 'boolean' ? display['sound'] : true,
+      volume:
+        typeof display['volume'] === 'number' && Number.isFinite(display['volume'])
+          ? clamp(display['volume'], 0, 1)
+          : DEFAULT_VOLUME,
       compact: typeof display['compact'] === 'boolean' ? display['compact'] : false,
       theme: THEMES.find((theme) => theme === display['theme']) ?? 'dark',
     },
