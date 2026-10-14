@@ -7,7 +7,10 @@ export type View = (typeof VIEWS)[number];
 
 export const DEFAULT_VIEW: View = 'closed';
 
-/** Начальный вид: игрушка закрыта; `?view=full|screen|closed` в адресе задаёт другой (для ссылок и тестов). */
-export function parseView(value: string | null): View {
-  return VIEWS.find((view) => view === value) ?? DEFAULT_VIEW;
+/**
+ * Начальный вид: игрушка закрыта. Адрес может задать другой — `?view=full|screen|closed`, а ссылка `?power=on` (включить сразу —
+ * для ссылок и тестов) заодно раскрывает игрушку: включённую игрушку с закрытой крышкой не увидеть.
+ */
+export function parseView(value: string | null, powerOn = false): View {
+  return VIEWS.find((view) => view === value) ?? (powerOn ? 'full' : DEFAULT_VIEW);
 }

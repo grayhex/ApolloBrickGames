@@ -776,7 +776,9 @@ export async function startEditor(): Promise<void> {
 
   // ── Запуск ───────────────────────────────────────────────────────────────
   try {
-    await session.openDoc(startDoc, initialImages, { alreadySaved: initial !== null });
+    // Чистый шаблон «Новая комната» в черновики не пишется, пока в нём ничего не нарисовано: иначе пустая заготовка попадала бы
+    // в список пользовательских уровней игры сама собой. Сохранение начинается с первой правки.
+    await session.openDoc(startDoc, initialImages, { alreadySaved: true });
   } catch (error) {
     // Первое сохранение не удалось (например, нет места): работаем в памяти, предупреждение уже показано.
     say(error instanceof Error ? error.message : String(error), 'error');

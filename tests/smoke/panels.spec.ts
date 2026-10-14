@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Панели вокруг игрушки: слева справка по упаковке и схема управления, справа «пульт» — кнопки звука, сегментов,
- * вида экрана и фона, цвет текущей игры, выбор уровней (оригинальные 1–9 и карты из редактора), значок устройства.
+ * Панели вокруг игрушки: слева справка по упаковке и схема управления (вся помещается в окне без прокрутки), справа «пульт» —
+ * мини-блок «Звук» с музыкой, блок «Вид» (цвет текущей игры, свёрнута / полная / только экран, сегменты), выбор уровней
+ * (оригинальные 1–9 плитками, пользовательские — выпадающим списком) и спидран-HUD; в уголке — фон и значок устройства.
  */
 
 // Смена маршрута перезагружает страницу: пока идёт перезагрузка, значение читать нельзя — это просто «ещё нет».
@@ -83,23 +84,46 @@ test('слева справка, справа пульт; панели отод�
   await expect(info.getByRole('heading', { name: 'Управление' })).toBeVisible();
   await expect(info.getByRole('heading', { name: 'Очки' })).toBeVisible();
   await expect(info.getByRole('heading', { name: 'Фигуры и враги' })).toBeVisible();
-  for (const text of ['MARIO', 'TETRIS', 'SHOOTING', 'Сердце', 'Малый чёрт', 'Большой чёрт', '+100', '+200', '+400']) {
+  for (const text of ['Heart', 'Small devil', 'Big devil', '+100', '+200', '+400']) {
     await expect(info.getByText(text, { exact: false }).first()).toBeVisible();
   }
   await expect(info.locator('.facts li')).toHaveCount(3);
   await expect(info.locator('.hazard')).toHaveCount(5); // река, чёрт, огненный дракон, ракета, железные ворота
   // «Figure introduction» с упаковки: 12 фигур, нарисованных теми же LCD-ячейками, что и игра.
   await expect(info.locator('#figures .fig')).toHaveCount(12);
+  // Названия фигур — по-английски, как на упаковке, и при русском интерфейсе.
   await expect(info.locator('#figures .fig__name')).toHaveText([
-    'Марио', 'Сердце', 'Малый чёрт', 'Большой чёрт', 'Ракета', 'Огненный дракон', 'Пуля', 'Железные ворота', 'Выдвижной мост', 'Колодец', 'Вулкан', 'Тетрис',
+    'Mario', 'Heart', 'Small devil', 'Big devil', 'Missile', 'Fiery dragon', 'Bullet', 'Iron gate', 'Extension bridge', 'Sewer', 'Volcano', 'Tetris',
   ]);
   await expect(info.locator('#figures .spr').first()).toBeVisible();
-  await expect(info.locator('.score__fig .spr').first()).toBeVisible();
+  await expect(info.locator('.score__row')).toHaveText([/Heart.*100/, /Small devil.*200.*20/, /Big devil.*400/]);
+  // «Оригинальное устройство» и примечание про приблизительные правила в левой панели больше нет (сведения — в справке).
+  await expect(info.locator('#original-device, .orig, .side__note, .side__pad')).toHaveCount(0);
+  await expect(info).not.toContainText('приблизительные');
   // Справка — фон: приглушена и без картинок кнопок корпуса.
   expect(Number(await info.evaluate((e) => getComputedStyle(e).opacity))).toBeLessThan(0.8);
   await expect(info.locator('.kk, .kmap')).toHaveCount(0);
-  await expect(page.locator('#side-ctl').getByRole('heading', { name: 'Цвет игрушки' })).toBeVisible();
-  await expect(page.locator('#side-ctl').getByRole('heading', { name: 'Уровни' })).toBeVisible();
+  const ctl = page.locator('#side-ctl');
+  for (const name of ['Звук', 'Вид', 'Уровни']) await expect(ctl.getByRole('heading', { name, exact: true })).toBeVisible();
+  // Спидран — последний блок; индикатор устройства и фон переехали в угловое меню.
+  expect(await ctl.evaluate((e) => (e.lastElementChild as HTMLElement).id)).toBe('run');
+  await expect(ctl.locator('#devices, #tgl-theme, #open-editor')).toHaveCount(0);
+  await expect(page.locator('#corner #devices')).toBeVisible();
+  await expect(page.locator('#corner #corner-theme')).toBeVisible();
+});
+
+test('левая справка помещается в окне без прокрутки — и в невысоких окнах', async ({ page }) => {
+  for (const [width, height] of [
+    [1920, 1080],
+    [1440, 900],
+    [1366, 768],
+    [1280, 720],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await ready(page);
+    const fit = await page.locator('#side-info').evaluate((e) => ({ scroll: e.scrollHeight, client: e.clientHeight }));
+    expect(fit.scroll, `${width}×${height}: справка без прокрутки`).toBeLessThanOrEqual(fit.client + 1);
+  }
 });
 
 test('схема управления слева следует за переназначением клавиш', async ({ page }) => {
@@ -117,7 +141,7 @@ test('схема управления слева следует за перен�
   await expect(fire).not.toContainText('X');
 });
 
-test('кнопки пульта: звук следует за SOUND, сегменты, вид экрана, светлый и тёмный фон — всё запоминается', async ({ page }) => {
+test('пульт: звук следует за SOUND, музыка, сегменты, состояние вида, фон в уголке — выбор запоминается', async ({ page }) => {
   await ready(page);
   const toggle = (id: string) => page.locator(`#tgl-${id}`);
   await expect(toggle('sound')).toHaveAttribute('aria-pressed', 'true');
@@ -127,34 +151,61 @@ test('кнопки пульта: звук следует за SOUND, сегме�
   await expect(toggle('sound')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#game-area')).toBeFocused(); // после клика мышью клавиатура вернулась игре
 
+  // Музыка: «Оригинал» по умолчанию, «Ремастер» запоминается (звучит пока та же мелодия — об этом подсказка).
+  const music = (id: string) => page.locator(`#music [data-music="${id}"]`);
+  await expect(music('original')).toHaveAttribute('aria-pressed', 'true');
+  await expect(music('remaster')).toHaveAttribute('aria-pressed', 'false');
+  await expect(music('remaster')).toHaveAttribute('title', /пока звучит та же мелодия/);
+  await music('remaster').click();
+  await expect(music('remaster')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-music', 'remaster');
+
   await expect(toggle('ghost')).toHaveAttribute('aria-pressed', 'true');
   await toggle('ghost').click();
   await expect(toggle('ghost')).toHaveAttribute('aria-pressed', 'false');
 
-  await toggle('compact').click();
+  // Состояние игрушки: «Только экран» и «Свёрнута».
+  const state = (id: string) => page.locator(`#view-${id}`);
+  await expect(state('full')).toHaveAttribute('aria-pressed', 'true');
+  await state('screen').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-compact', '');
   await expect(page.locator('#arena')).toHaveAttribute('data-compact', '');
+  await expect(state('screen')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#side-ctl')).toBeVisible(); // пульт остаётся, чтобы вернуть игрушку целиком
+  await state('closed').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-closed', '');
+  await expect(page.locator('#toy')).not.toHaveAttribute('data-compact', '');
+  await state('full').click();
+  await expect(page.locator('#toy')).not.toHaveAttribute('data-closed', '');
 
+  // Фон — в угловом меню рядом с языком.
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'light');
   const dark = await page.evaluate(() => getComputedStyle(document.body).backgroundImage);
-  await toggle('theme').click();
+  await page.locator('#corner-theme').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundImage)).not.toBe(dark);
 
   await page.reload();
   await expect.poll(phase(page)).toBe('ready');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light'); // фон, вид экрана, сегменты и звук запомнены
-  await expect(page.locator('#toy')).toHaveAttribute('data-compact', '');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light'); // фон, музыка, сегменты и звук запомнены
+  await expect(music('remaster')).toHaveAttribute('aria-pressed', 'true');
   await expect(toggle('ghost')).toHaveAttribute('aria-pressed', 'false');
   await expect(toggle('sound')).toHaveAttribute('aria-pressed', 'true');
-  await toggle('theme').click();
+  await page.locator('#corner-theme').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});
+
+test('вид игрушки не запоминается: после перезагрузки она закрыта', async ({ page }) => {
+  await page.goto('./?view=screen');
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
+  await page.goto('./');
+  await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
+  await expect(page.locator('#view-closed')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('технические страницы остаются тёмными, даже если на игрушке выбран светлый фон', async ({ page }) => {
   await ready(page);
-  await page.locator('#tgl-theme').click();
+  await page.locator('#corner-theme').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.goto('./#/tech');
   await expect(page.locator('#badge')).toHaveText('ENGINE DEMO');
@@ -193,9 +244,31 @@ test('уровни: девять оригинальных открыты (гей
   expect(await area(page, 'hud')).toBe('1-09');
   await expect(page.locator('#game-area')).toBeFocused();
 
-  // Пустой список карт редактора — подсказка и ссылка на редактор.
-  await expect(page.locator('#user-levels')).toContainText('Нарисуйте уровень в редакторе');
-  await expect(page.locator('#open-editor')).toHaveAttribute('href', '#/editor');
+  // Пользовательские уровни — выпадающий список: готовый «Генерация 1» и (пока пустая) группа карт из редактора; ссылки на редактор в пульте нет.
+  const select = page.locator('#user-level');
+  await expect(select.locator('option')).toHaveText(['Выберите уровень…', 'Генерация 1', 'Карт из редактора пока нет']);
+  await expect(select.locator('optgroup')).toHaveCount(2);
+  await expect(page.locator('#side-ctl a[href^="#/editor"]')).toHaveCount(0);
+
+  await select.selectOption('bundled:custom-1');
+  await expect.poll(level(page)).toBe('custom-1');
+  await expect.poll(phase(page)).toBe('ready');
+  expect(await area(page, 'hud')).toBe('U-01');
+  await expect(page.locator('#original-levels .lv[aria-current="true"]')).toHaveCount(0);
+  await expect(page.locator('#game-area')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(() => area(page, 'entry'), { timeout: 6000 }).toBe('off'); // тот же старт из ямы, что у оригинальных
+  await tiles.nth(0).click(); // назад к оригинальному уровню 1: список возвращается к подсказке
+  await expect.poll(level(page)).toBe('mario-1');
+  await expect(select).toHaveValue('');
+});
+
+test('?level=custom-1 открывает готовый пользовательский уровень сразу', async ({ page }) => {
+  await page.goto('./?level=custom-1&power=on');
+  await expect.poll(phase(page)).toBe('ready');
+  expect(await level(page)()).toBe('custom-1');
+  await expect(page.locator('#user-level')).toHaveValue('bundled:custom-1');
 });
 
 test('?level=N открывает уровень N сразу; неверное значение — уровень 1', async ({ page }) => {
@@ -208,14 +281,15 @@ test('?level=N открывает уровень N сразу; неверное 
   expect(await level(page)()).toBe('mario-1');
 });
 
-test('карты из редактора: появляются в «Пользовательских», запускаются, открываются в редакторе; сломанные названы', async ({ page }) => {
-  // 1. Создаём карту в самом редакторе (копия demo-room) и возвращаемся к игре.
+test('карты из редактора: попадают в выпадающий список «Пользовательские», запускаются; сломанные названы и недоступны', async ({ page }) => {
+  // 1. Создаём карту в самом редакторе (пустая комната) и возвращаемся к игре.
   await page.goto('./#/editor');
   await page.waitForSelector('#editor-root[data-ready="true"]');
   await page.click('#editor-projects');
   await page.getByRole('button', { name: 'Новая карта…' }).click();
-  await page.getByRole('button', { name: /Копия demo-room/ }).click();
-  await expect(page.locator('#editor-project')).toContainText('demo-room');
+  await page.locator('#new-name').fill('Моя карта');
+  await page.getByRole('button', { name: 'Создать пустую комнату' }).click();
+  await expect(page.locator('#editor-project')).toContainText('Моя карта');
   await expect(page.locator('#editor-save')).toContainText('Сохранено');
   await putDraft(page, {
     meta: { projectId: 'broken-1', name: 'Сломанная карта', levelId: 'broken', width: 3, height: 3, savedAt: 1 },
@@ -224,22 +298,23 @@ test('карты из редактора: появляются в «Пользо
   await page.goto('./?power=on#/');
   await expect.poll(phase(page)).toBe('ready');
 
-  const list = page.locator('#user-levels');
-  const copy = list.locator('.uv__item', { hasText: 'demo-room' });
-  await expect(copy).toBeVisible();
-  await expect(copy.locator('.uv__size')).toHaveText('13×6');
-  const broken = list.locator('.uv__item', { hasText: 'Сломанная карта' });
-  await expect(broken.locator('.uv__go')).toHaveAttribute('aria-disabled', 'true');
-  await expect(broken.locator('.uv__why')).not.toBeEmpty(); // причина названа
+  const select = page.locator('#user-level');
+  const mine = select.locator('option', { hasText: 'Моя карта' });
+  await expect(mine).toHaveText('Моя карта (13×6)');
+  const broken = select.locator('option', { hasText: 'Сломанная карта' });
+  await expect(broken).toBeDisabled();
+  expect(await broken.getAttribute('title')).toMatch(/Не запускается/); // причина названа
+  expect(await select.locator('option').allTextContents()).toEqual(['Выберите уровень…', 'Генерация 1', 'Моя карта (13×6)', '⚠ Сломанная карта']);
 
   // 2. Запуск: уровень меняется, игра готова к старту и проходится как обычно.
-  await broken.locator('.uv__go').click({ force: true });
-  expect(await level(page)()).toBe('mario-1'); // сломанная карта не запускается
-  await copy.locator('.uv__go').click();
-  await expect.poll(level(page)).toBe('demo-room');
+  const value = await mine.getAttribute('value');
+  expect(value).toMatch(/^user:/);
+  await select.selectOption(value ?? '');
+  await expect.poll(level(page)).toBe('room');
   await expect.poll(phase(page)).toBe('ready');
-  await expect(copy.locator('.uv__go')).toHaveAttribute('aria-current', 'true');
+  await expect(select).toHaveValue(value ?? '');
   await expect(page.locator('#original-levels .lv[aria-current="true"]')).toHaveCount(0);
+  await expect(page.locator('#game-area')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
   expect(await area(page, 'heroX')).toBe('1'); // старт карты из редактора
@@ -252,10 +327,60 @@ test('карты из редактора: появляются в «Пользо
   await expect.poll(level(page)).toBe('mario-1');
   await expect(page.locator('#original-levels .lv').nth(0)).toHaveAttribute('aria-current', 'true');
 
-  // 4. «Карандаш» открывает именно эту карту в редакторе.
-  await copy.locator('.uv__edit').click();
+  // 4. Редактор открывается кнопкой в уголке (в пульте дубля нет) — на последней сохранённой карте.
+  await page.locator('#corner-editor').click();
   await page.waitForSelector('#editor-root[data-ready="true"]');
-  await expect(page.locator('#editor-project')).toContainText('demo-room');
+  await expect(page.locator('#editor-project')).toContainText('Моя карта');
+});
+
+test('спидран-HUD: скрыт под переключателем и выезжает по щелчку; время идущего уровня растёт, рестарт обнуляет', async ({ page }) => {
+  await ready(page);
+  const toggle = page.locator('#run-toggle');
+  const panel = page.locator('#run-panel');
+  const total = page.locator('#run-total');
+  const timeOf = async (): Promise<number> => {
+    const [m, rest = ''] = ((await total.textContent()) ?? '0:00.0').split(':');
+    return Number(m) * 60 + Number(rest);
+  };
+  // По умолчанию скрыт: переключатель есть, самого блока на экране нет.
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toBeVisible();
+  await expect(page.locator('#run-rows .run__row')).toHaveCount(9);
+  await expect(page.locator('#run-rows .run__row[data-state="current"]')).toHaveCount(1);
+  await expect(page.locator('#run-rows .run__row[data-level="mario-1"]')).toHaveAttribute('data-state', 'current');
+  await expect(page.locator('#run-progress')).toHaveText('0 / 9');
+
+  // До старта время стоит, после старта идёт.
+  expect(await timeOf()).toBe(0);
+  await page.keyboard.press('Enter');
+  await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(timeOf, { timeout: 8000 }).toBeGreaterThan(1.5);
+  await expect(page.locator('#run-rows .run__row[data-level="mario-1"] .run__time')).not.toHaveText('—');
+  await expect(page.locator('#run-rows .run__row[data-level="mario-2"] .run__time')).toHaveText('—');
+
+  // Пауза останавливает счёт.
+  await page.keyboard.press('Escape');
+  await expect.poll(phase(page)).toBe('paused');
+  const frozen = await timeOf();
+  await page.waitForTimeout(700);
+  expect(await timeOf()).toBe(frozen);
+
+  // Рестарт (выключить и включить) обнуляет забег.
+  await page.locator('[data-key="onoff"]').click();
+  await page.locator('[data-key="onoff"]').click();
+  await expect.poll(timeOf, { timeout: 3000 }).toBeLessThan(frozen);
+  await expect(total).toHaveText('0:00.0');
+
+  // Выбор другого уровня начинает забег с него.
+  await page.locator('#original-levels .lv').nth(2).click();
+  await expect(page.locator('#run-rows .run__row[data-level="mario-3"]')).toHaveAttribute('data-state', 'current');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toBeHidden();
 });
 
 test('значок устройства: клавиатура всегда, геймпад появляется при подключении и подсвечивается, когда им играют', async ({ page }) => {
@@ -286,7 +411,7 @@ test('значок устройства: клавиатура всегда, ге
   await setPad([0]); // активация нажатием кнопки
   await expect(gamepad).toHaveAttribute('data-state', 'on');
   await expect(keyboard).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('#side-ctl')).toHaveAttribute('data-input', 'gamepad');
+  await expect(page.locator('#devices')).toHaveAttribute('data-input', 'gamepad');
   await expect(gamepad).toHaveAttribute('title', /Panel Pad/);
   await setPad([]);
 

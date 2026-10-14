@@ -41,22 +41,22 @@ const ARTIFICIAL_PNG = readFileSync('docs/editor-demo/artificial-reference.png')
 
 test.use({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
 
-test('редактор: демо → платформа → тест → возврат → экспорт и импорт в чистом браузере', async ({ page, browser }, testInfo) => {
+test('редактор: пустая комната → платформа → тест → возврат → экспорт и импорт в чистом браузере', async ({ page, browser }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
   await page.goto('./#/editor');
   await page.waitForSelector('#editor-root[data-ready="true"]');
 
-  // 1. Открыть demo-room как редактируемую копию.
+  // 1. Создать пустую комнату профиля room: ряд земли внизу и старт над ним.
   await page.click('#editor-projects');
   await page.getByRole('button', { name: 'Новая карта…' }).click();
-  await page.getByRole('button', { name: /Копия demo-room/ }).click();
-  await expect(page.locator('#editor-project')).toContainText('demo-room');
+  await page.getByRole('button', { name: 'Создать пустую комнату' }).click();
+  await expect(page.locator('#editor-project')).toContainText('Комната');
   const initial = await rows(page);
   expect(initial).toHaveLength(6);
   expect(initial[5]).toBe('#############');
-  expect(initial[3]).toBe('...###.......');
+  expect(initial[3]).toBe('.............');
 
   // 2. Изменить платформу кистью: один мазок — одна операция отмены.
   await page.keyboard.press('b');
@@ -129,7 +129,7 @@ test('редактор: демо → платформа → тест → воз�
   const gameFile = await (await gameDownload).path();
   const levelJson = JSON.parse(readFileSync(gameFile, 'utf-8')) as { rows: string[]; id: string };
   expect(levelJson.rows).toEqual(edited);
-  expect(levelJson.id).toBe('demo-room');
+  expect(levelJson.id).toMatch(/^[a-z0-9._-]+$/);
 
   const projectDownload = page.waitForEvent('download');
   await page.click('#editor-export-project');

@@ -160,8 +160,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // Контекст, игра, эффекты, сценарий входа и сессия пересоздаются при выборе другого уровня (см. launch).
   const params = new URLSearchParams(window.location.search);
-  // Вид игрушки: всегда начинается закрытой (не сохраняется); `?view=full|screen` открывает сразу — для ссылок и тестов.
-  let view: View = route.lid ? parseView(params.get('view')) : 'full';
+  // Вид игрушки: всегда начинается закрытой (не сохраняется); `?view=full|screen` и `?power=on` открывают сразу — для ссылок и тестов.
+  let view: View = route.lid ? parseView(params.get('view'), params.get('power') === 'on') : 'full';
   const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
   let ctx = createContext(start.pack);
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;

@@ -39,7 +39,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('по умолчанию игрушка выключена: экран пуст, светодиоды погашены, время игры стоит; ON/OFF включает, Enter до этого ничего не запускает', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./?view=full');
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
   expect(await area(page, 'phase')).toBe('ready');
@@ -72,7 +72,7 @@ test('по умолчанию игрушка выключена: экран пу
 });
 
 test('клавиша O включает и выключает питание так же, как кнопка ON/OFF', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./?view=full');
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await page.keyboard.press('KeyO');
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
@@ -81,7 +81,7 @@ test('клавиша O включает и выключает питание т�
 });
 
 test('выбор уровня на пульте включает игрушку и запускает этот уровень', async ({ page }) => {
-  await page.goto('./');
+  await page.goto('./?view=full');
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await page.locator('#original-levels .lv').nth(2).click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
@@ -90,8 +90,8 @@ test('выбор уровня на пульте включает игрушку 
 });
 
 test('в режиме «только экран» кнопок нет: выключенную игрушку включает касание экрана', async ({ page }) => {
-  await page.goto('./');
-  await page.locator('#tgl-compact').click();
+  await page.goto('./?view=full');
+  await page.locator('#view-screen').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await page.locator('#game-area').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
