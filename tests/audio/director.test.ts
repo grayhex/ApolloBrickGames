@@ -173,6 +173,21 @@ describe('режиссёр звука', () => {
     expect(calls()).toEqual(['play:introStep', 'play:introStep', 'play:introStep']);
   });
 
+  it('явный рестарт (reset) после гибели: гибель обрывается, следующий запуск — снова с фанфары, а не как возрождение', () => {
+    const { audio, director, send, phase, calls } = make();
+    send({ type: 'levelStarted', levelId: 'a' });
+    phase('ready', 'playing');
+    director.frame();
+    phase('playing', 'dead');
+    send({ type: 'death', cause: 'pit', x: 1, y: 1 });
+    director.reset(); // игрок нажал «Рестарт», пока звучала гибель
+    expect(audio.log).toContain('silence');
+    send({ type: 'levelStarted', levelId: 'a' });
+    phase('ready', 'playing');
+    director.frame();
+    expect(calls().filter((c) => c.startsWith('start:'))).toEqual(['start:start', 'start:start']);
+  });
+
   it('reset глушит всё и сбрасывает ожидание', () => {
     const { director, send, phase, calls, state } = make(true);
     send({ type: 'levelStarted', levelId: 'a' });

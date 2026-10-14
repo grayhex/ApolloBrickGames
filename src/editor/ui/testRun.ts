@@ -236,6 +236,7 @@ export class TestRunner {
 
   private restart(): void {
     this.suspendReason = null;
+    this.director?.reset(); // явный рестарт — не возрождение после гибели
     this.session?.restart();
     this.refocus();
   }
