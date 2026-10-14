@@ -27,7 +27,7 @@ export function helpRows(bindings: Bindings): HelpRow[] {
     { button: 'ON/OFF', what: 'включить или выключить игрушку', keys: POWER_KEY },
     { button: 'S./P.', what: 'старт, пауза и продолжение', keys: keysOf(bindings, 'start', 'pause') },
     { button: 'SOUND', what: 'звук вкл./выкл.', keys: SOUND_KEY },
-    { button: 'FIRE', what: 'огонь (в этих комнатах не используется)', keys: keysOf(bindings, 'fire') },
+    { button: 'FIRE', what: 'огонь: вылетает «сердечко» — до двух одновременно', keys: keysOf(bindings, 'fire') },
     { button: '◀ LEFT', what: 'шаг влево', keys: keysOf(bindings, 'left') },
     { button: 'RIGHT ▶', what: 'шаг вправо', keys: keysOf(bindings, 'right') },
     { button: 'UP', what: 'вверх (в этих комнатах не используется)', keys: keysOf(bindings, 'up') },

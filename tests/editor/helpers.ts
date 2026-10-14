@@ -1,4 +1,4 @@
-import { loadRoomPack } from '../helpers/content';
+import { levelOf, loadRoomPack } from '../helpers/content';
 import { validationEnv, DEMO_BEHAVIORS } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
 import type { DiagnoseEnv } from '../../src/editor/diagnose';
@@ -14,9 +14,7 @@ export function freshDoc(): EditorDoc {
 }
 
 export function demoRoomDoc(): EditorDoc {
-  const level = pack.levels[0];
-  if (!level) throw new Error('нет demo-room');
-  return docFromLevel(level, { projectId: 'p2', name: 'demo-room', pack: 'room' });
+  return docFromLevel(levelOf(pack, 'demo-room'), { projectId: 'p2', name: 'demo-room', pack: 'room' });
 }
 
 /** Минимальные заголовки изображений для проверки sniffImage и архива. */

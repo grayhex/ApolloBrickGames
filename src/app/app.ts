@@ -25,6 +25,7 @@ import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
+import { EntryScript } from './entry';
 import { GameSession } from './session';
 import { SettingsDialog } from './settingsUi';
 import { ToyPanel } from './toy';
@@ -64,7 +65,7 @@ function namesOf(mask: number): string {
   return names.length === 0 ? '—' : names.join(' ');
 }
 
-export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<void> {
+export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const route = GAME_ROUTES[routeName];
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
@@ -74,6 +75,7 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     base: byId<HTMLElement>('base'),
     cornerSettings: byId<HTMLButtonElement>('corner-settings'),
     cornerHelp: byId<HTMLButtonElement>('corner-help'),
+    cornerCompact: byId<HTMLButtonElement>('corner-compact'),
     help: byId<HTMLDialogElement>('help'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
@@ -187,15 +189,20 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
       if (event.type === 'levelStarted') snapCamera = true;
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);
+      entry.onEvent(event);
       const cue = cueForEvent(event);
       if (cue) audio.play(cue);
     }
   };
 
+  const entry = new EntryScript(pack.animations?.entry);
+  entry.arm(game.state.levelId);
+
   const session = new GameSession({
     game,
     tracker: hub.tracker,
     stepper,
+    entry,
     onEvents,
     onMenuInput: handleMenuInput,
     resetDevices: () => hub.resetDevices(),
@@ -279,6 +286,11 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     renderer.setGhost(ghostOn());
     refs.chkSound.checked = display.sound;
     audio.setMuted(!display.sound);
+    refs.toy.toggleAttribute('data-compact', display.compact);
+    refs.cornerCompact.setAttribute('aria-pressed', String(display.compact));
+    const compactLabel = display.compact ? 'Показать всю игрушку' : 'Только экран';
+    refs.cornerCompact.title = compactLabel;
+    refs.cornerCompact.setAttribute('aria-label', compactLabel);
   };
   refs.selShell.addEventListener('change', () => {
     hub.updateSettings((s) => {
@@ -383,6 +395,17 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
   });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
   refs.cornerHelp.addEventListener('click', () => helpDialog.open());
+  refs.cornerCompact.addEventListener('click', () => {
+    hub.updateSettings((s) => {
+      s.display.compact = !s.display.compact;
+    });
+    applyDisplay();
+    refocusGame();
+  });
+  // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
+  refs.gameArea.addEventListener('pointerdown', () => {
+    if (hub.settings.display.compact && game.state.phase !== 'playing' && powered) session.requestStart();
+  });
 
   // Светодиоды: наблюдение по видео — в игре горят все три; остальное условно, см. app/leds.ts. состояния (оригинальная логика не установлена), см. app/leds.ts.
   const leds = {
@@ -440,6 +463,9 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     setData('gamepad', gamepadStatus.kind);
     setData('context', session.context);
     setData('power', powered ? 'on' : 'off');
+    setData('entry', entry.pending(s.phase) ? 'on' : 'off');
+    setData('cameraX', camera.x);
+    setData('intro', fx.intro ? 'on' : 'off');
     showLeds(powered ? ledState(s.phase, s.tick) : { red: false, yellow: false, green: false });
     setText.status(powered ? statusLine(s.phase) : 'Выключено');
 
@@ -513,7 +539,9 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
       levelHeight: level.height,
     };
     const target = { x: game.state.hero.x, y: Math.min(game.state.hero.y, level.height - 1) };
-    camera = snapCamera ? centerCamera(target, area) : followCamera(camera, target, area);
+    // Игрушка: герой остаётся в середине поля (13 столбцов — столбец 6), мир прокручивается клетками, как на видео.
+    // Техническая страница — прежняя «мёртвая рамка».
+    camera = snapCamera || route.lid ? centerCamera(target, area) : followCamera(camera, target, area);
     snapCamera = false;
 
     fx = effects.frame(game.state, level);

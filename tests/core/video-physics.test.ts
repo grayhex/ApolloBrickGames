@@ -3,7 +3,7 @@ import { assemblePack } from '../../src/content/validate';
 import type { LevelDef } from '../../src/content/schema';
 import { createContext, Game, makeFrame, validationEnv, type GameEvent } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
-import { clipContext, loadClipPack, loadRawPack, loadRoomPack, roomContext } from '../helpers/content';
+import { demoRoomContext, loadRawPack, loadRoomPack, roomContext } from '../helpers/content';
 import { idle, run, type Segment } from '../helpers/script';
 
 /**
@@ -12,7 +12,8 @@ import { idle, run, type Segment } from '../helpers/script';
  */
 const FRAMES_PER_TICK = 1.5;
 
-function started(ctx = roomContext()): Game {
+/** По умолчанию — песочница demo-room (герой на полу, свободный воздух); roomContext() — тестовый уровень по видео. */
+function started(ctx = demoRoomContext()): Game {
   const game = new Game(ctx);
   game.step(makeFrame({ pressed: ['start'] }));
   return game;
@@ -47,10 +48,13 @@ describe('физика по видео: параметры правил', () => 
     expect(rules.bottomEdge).toBe('floor');
   });
 
-  it('основной пакет и пакет по видео делят одну физику (различаются только id, версия и жизни)', () => {
-    const clip = loadClipPack().rules.params;
-    expect({ ...clip, lives: rules.lives }).toEqual(rules);
-    expect(clip.lives).toBe(3);
+  it('стрельба: сердечко летит по клетке за 2 такта, не более двух снарядов', () => {
+    expect(rules.fire).toEqual({
+      intervalTicks: 6,
+      holdRepeat: false,
+      maxProjectiles: 2,
+      projectile: { cellsPerStep: 1, stepTicks: 2, maxRangeCells: 13 },
+    });
   });
 });
 
@@ -85,7 +89,7 @@ describe('физика по видео: движение', () => {
   });
 
   it('нижний край карты — земля: герой стоит в нижнем ряду и не погибает (bottomEdge: floor)', () => {
-    const game = started(clipContext());
+    const game = started(roomContext());
     expect(game.level.height - 1).toBe(game.state.hero.y);
     const events = run(game, idle(40));
     expect(events.some((e) => e.type === 'death')).toBe(false);
@@ -94,7 +98,7 @@ describe('физика по видео: движение', () => {
   });
 
   it('при bottomEdge: pit тот же нижний ряд — провал (поведение по умолчанию сохранено)', () => {
-    const raw = loadRawPack('clip');
+    const raw = loadRawPack('room');
     (raw.rules as { params: { bottomEdge?: string } }).params.bottomEdge = 'pit';
     const game = started(createContext(assemblePack(raw, validationEnv(undefined, GLYPH_NAMES))));
     run(game, idle(8));
@@ -115,14 +119,15 @@ describe('удар головой: событие bump и пробиваемый
 
     const raw = loadRawPack('room');
     (raw.rules as { params: { jump: { table: number[] } } }).params.jump.table = [-1, -1, -1, -1, -1];
-    const tall = started(createContext(assemblePack(raw, validationEnv(undefined, GLYPH_NAMES))));
+    const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));
+    const tall = started(createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: 'demo-room' } }));
     const top = run(tall, { press: ['jump'], ticks: 50 });
     expect(tall.state.hero.y).toBe(4);
     expect(bumps(top)).toHaveLength(0); // выше карты блока нет — эффекта нет
   });
 
   it('крышка арки (brick, 3 удара): два удара блок держит, на третьем исчезает без очков', () => {
-    const game = started(clipContext());
+    const game = started(roomContext());
     const lid = (): { active: boolean; hp: number } => game.state.objects[0] as { active: boolean; hp: number };
     const hits: boolean[] = [];
     for (let i = 0; i < 3; i++) {
@@ -139,7 +144,7 @@ describe('удар головой: событие bump и пробиваемый
   });
 
   it('побег из ямы: после разрушения крышки прыжок на 3 клетки и шаг вправо — герой на верхушке правой стойки', () => {
-    const game = started(clipContext());
+    const game = started(roomContext());
     for (let i = 0; i < 3; i++) run(game, { press: ['jump'], ticks: 14 });
     run(game, { press: ['jump'], ticks: 7 }); // подъём: y = 4, 3, 2 на 0-м, 3-м и 6-м тактах
     expect(game.state.hero).toMatchObject({ x: 1, y: 2 });
@@ -152,15 +157,17 @@ describe('удар головой: событие bump и пробиваемый
     expect(game.state.hero.y).toBe(4); // сошёл вниз на пол
   });
 
-  it('уровень по видео: яма под крышкой, старт в яме, пометки наблюдений на месте', () => {
-    const level = loadClipPack().levels[0] as LevelDef;
-    expect(level.id).toBe('clip-room');
+  it('уровень по видео: арка с ямой и крышкой слева, старт в яме, дальше бег вправо; пометки наблюдений на месте', () => {
+    const level = loadRoomPack().levels[0] as LevelDef;
+    expect(level.id).toBe('tunnel-run');
     expect(level.start).toEqual({ x: 1, y: 5 });
     expect(level.hudLabel).toBe('1-09');
-    expect(level.rows).toEqual(['.............', '.............', '.............', '#.#..........', '#.#..........', '#.###########']);
-    expect(level.objects).toHaveLength(1);
-    expect(level.objects[0]).toMatchObject({ type: 'brick', x: 1, y: 3, params: { hp: 3 } });
+    expect(level.width).toBeGreaterThan(40); // шире экрана: камера прокручивает
+    expect(level.rows.slice(3).map((r) => r.slice(0, 3))).toEqual(['#.#', '#.#', '#.#']);
+    expect(level.objects.find((o) => o.id === 'lid')).toMatchObject({ type: 'brick', x: 1, y: 3, params: { hp: 3 } });
+    expect(level.objects.filter((o) => o.type === 'target').length).toBeGreaterThanOrEqual(3);
+    expect(level.objects.some((o) => o.type === 'finish')).toBe(true);
     expect(level.note).toMatch(/не правила оригинала/);
-    expect(level.marks.map((m) => m.status).sort()).toEqual(['assumed', 'unknown']);
+    expect(level.marks.map((m) => m.status)).toEqual(['assumed', 'assumed']);
   });
 });

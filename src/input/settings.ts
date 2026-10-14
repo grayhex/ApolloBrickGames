@@ -37,6 +37,8 @@ export interface Settings {
     shell: Shell;
     /** Звук включён. */
     sound: boolean;
+    /** Вид «только экран»: нижняя половина игрушки скрыта, крышка с экраном показана крупно. */
+    compact: boolean;
   };
 }
 
@@ -50,7 +52,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true },
+    display: { ghost: null, shell: 'blue', sound: true, compact: false },
   };
 }
 
@@ -97,6 +99,7 @@ export function sanitizeSettings(raw: unknown): Settings {
       ghost: typeof display['ghost'] === 'boolean' ? display['ghost'] : null,
       shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
       sound: typeof display['sound'] === 'boolean' ? display['sound'] : true,
+      compact: typeof display['compact'] === 'boolean' ? display['compact'] : false,
     },
   };
 }

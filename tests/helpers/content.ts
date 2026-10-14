@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assemblePack, type RawPack } from '../../src/content/validate';
-import type { ContentPack } from '../../src/content/schema';
+import type { ContentPack, LevelDef } from '../../src/content/schema';
 import { createContext, validationEnv, type GameContext } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
 
@@ -43,17 +43,21 @@ export function loadRoomPack(): ContentPack {
   return assemblePack(loadRawPack('room'), validationEnv(undefined, GLYPH_NAMES));
 }
 
-/** Тестовый уровень по видео (маршрут #/clip). */
-export function loadClipPack(): ContentPack {
-  return assemblePack(loadRawPack('clip'), validationEnv(undefined, GLYPH_NAMES));
-}
-
-export function clipContext(): GameContext {
-  return createContext(loadClipPack());
-}
-
+/** Основной пакет: игра начинается с тестового уровня по видео (`tunnel-run`). */
 export function roomContext(): GameContext {
   return createContext(loadRoomPack());
+}
+
+/** Тот же пакет, но игра начинается с тестовой комнаты `demo-room` (песочница для тестов механики и редактора). */
+export function demoRoomContext(): GameContext {
+  const pack = loadRoomPack();
+  return createContext({ ...pack, manifest: { ...pack.manifest, firstLevel: 'demo-room' } });
+}
+
+export function levelOf(pack: ContentPack, id: string): LevelDef {
+  const level = pack.levels.find((l) => l.id === id);
+  if (!level) throw new Error(`В пакете нет уровня «${id}»`);
+  return level;
 }
 
 export function loadDemoPack(): ContentPack {

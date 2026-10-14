@@ -111,15 +111,13 @@ describe('маршруты', () => {
     expect(parseRoute('#/tech')).toBe('tech');
     expect(parseRoute('#/sheet')).toBe('sheet');
     expect(parseRoute('#/tech?debug=1')).toBe('tech');
-    expect(parseRoute('#/clip')).toBe('clip');
+    expect(parseRoute('#/clip')).toBe('room'); // отдельной страницы клипа больше нет: тестовый уровень — основная игра
   });
 
   it('основной маршрут не ведёт на технические участки #1', () => {
     expect(GAME_ROUTES.room.manifest).toBe('content/room/pack.json');
     expect(GAME_ROUTES.tech.manifest).toBe('content/demo/pack.json');
-    expect(GAME_ROUTES.clip.manifest).toBe('content/clip/pack.json');
-    expect(GAME_ROUTES.clip.lid).toBe(true);
-    expect(GAME_ROUTES.room.fireHint).toBe(false);
+    expect(GAME_ROUTES.room.fireHint).toBe(true);
   });
 });
 

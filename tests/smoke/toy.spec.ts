@@ -10,6 +10,7 @@ const area = (page: Page, key: string): Promise<string> =>
 const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 const heroX = (page: Page) => async (): Promise<number> => Number(await area(page, 'heroX'));
 const heroY = (page: Page) => async (): Promise<number> => Number(await area(page, 'heroY'));
+const entry = (page: Page) => (): Promise<string> => area(page, 'entry');
 const key = (page: Page, id: string) => page.locator(`[data-key="${id}"]`);
 const pressed = (page: Page, id: string) => expect(key(page, id)).toHaveAttribute('data-pressed', '');
 const released = (page: Page, id: string) => expect(key(page, id)).not.toHaveAttribute('data-pressed', '');
@@ -173,8 +174,9 @@ test('кнопки нажимаются мышью: ходьба и прыжок
   await expect.poll(phase(page)).toBe('paused');
   await key(page, 'sp').click();
   await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('off'); // сценарий входа идёт и после паузы; потом управляет игрок
 
-  // Прыжок на старте (над героем свободно): кнопка JUMP подсвечивается, пока удерживается.
+  // Прыжок со стойки (над героем свободно): кнопка JUMP подсвечивается, пока удерживается.
   const floor = await heroY(page)();
   const jump = await center(page, 'jump');
   await page.mouse.move(jump.x, jump.y);
@@ -300,11 +302,76 @@ test('редактор — в уголке; технические страни�
   await expect(page.locator('#editor-root')).toBeVisible();
   await page.locator('#editor-pages summary').click();
   await expect(page.locator('#editor-link-tech')).toHaveAttribute('href', '#/tech');
-  await expect(page.locator('#editor-link-clip')).toHaveAttribute('href', '#/clip');
   await expect(page.locator('#editor-link-sheet')).toHaveAttribute('href', '#/sheet');
   await page.locator('#editor-link-tech').click();
   await expect(page.locator('#badge')).toHaveText('ENGINE DEMO');
   await expect(page.locator('#corner')).toBeHidden(); // на технической странице игрушки нет
+});
+
+test('«только экран»: нижняя половина скрывается, крышка с экраном показана крупно; выбор запоминается', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await ready(page);
+  const toy = page.locator('#toy');
+  const size = async (): Promise<{ lidW: number; lidH: number; screenW: number }> =>
+    page.evaluate(() => {
+      const lid = (document.getElementById('lid') as HTMLElement).getBoundingClientRect();
+      const screen = (document.getElementById('screen') as HTMLElement).getBoundingClientRect();
+      return { lidW: lid.width, lidH: lid.height, screenW: screen.width };
+    });
+  const whole = await size();
+  await expect(page.locator('#base')).toBeVisible();
+  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-pressed', 'false');
+
+  await page.locator('#corner-compact').click();
+  await expect(toy).toHaveAttribute('data-compact', '');
+  await expect(page.locator('#base')).toBeHidden();
+  await expect(page.locator('.toy__hinge')).toBeHidden();
+  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-label', 'Показать всю игрушку');
+  await expect(page.locator('#game-area')).toBeFocused(); // клавиатура осталась у игры
+  // Холст подгоняется под окно LCD на следующем кадре (ResizeObserver), поэтому ждём, а не меряем сразу.
+  await expect.poll(async () => (await size()).screenW).toBeGreaterThan(whole.screenW * 1.6); // экран заметно крупнее
+  const fit = await page.evaluate(() => {
+    const rect = (document.getElementById('toy') as HTMLElement).getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, innerH: window.innerHeight, scrollH: document.documentElement.scrollHeight };
+  });
+  expect(fit.top).toBeGreaterThanOrEqual(0);
+  expect(fit.bottom).toBeLessThanOrEqual(fit.innerH);
+  expect(fit.scrollH).toBeLessThanOrEqual(fit.innerH + 1); // без прокрутки
+
+  // Игра идёт и без кнопок корпуса: клавиатура работает.
+  await page.keyboard.press('Enter');
+  await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('off');
+  const x0 = await heroX(page)();
+  await page.keyboard.down('ArrowRight');
+  await expect.poll(heroX(page)).toBeGreaterThan(x0 + 1);
+  await page.keyboard.up('ArrowRight');
+
+  // Выбор запоминается после перезагрузки; повторное нажатие возвращает игрушку целиком.
+  await page.reload();
+  await expect(toy).toHaveAttribute('data-compact', '');
+  await expect(page.locator('#base')).toBeHidden();
+  await page.locator('#corner-compact').click();
+  await expect(toy).not.toHaveAttribute('data-compact', '');
+  await expect(page.locator('#base')).toBeVisible();
+  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-label', 'Только экран');
+  const back = await size();
+  expect(Math.abs(back.lidW - whole.lidW)).toBeLessThan(2);
+});
+
+test('«только экран»: касание экрана заменяет S./P. — старт и продолжение', async ({ page }) => {
+  await ready(page);
+  await page.locator('#corner-compact').click();
+  await page.locator('#game-area').click();
+  await expect.poll(phase(page)).toBe('playing');
+  await page.keyboard.press('Escape');
+  await expect.poll(phase(page)).toBe('paused');
+  await page.locator('#game-area').click();
+  await expect.poll(phase(page)).toBe('playing');
+  await page.locator('#game-area').click(); // во время игры касание ничего не делает (случайно не поставить на паузу)
+  await page.waitForTimeout(200);
+  expect(await phase(page)()).toBe('playing');
 });
 
 test.describe('касание', () => {
@@ -318,6 +385,7 @@ test.describe('касание', () => {
     };
     await tap('sp');
     await expect.poll(phase(page)).toBe('playing');
+    await expect.poll(entry(page), { timeout: 6000 }).toBe('off');
     const floor = await heroY(page)();
     await tap('jump');
     await expect.poll(heroY(page)).toBeLessThan(floor);

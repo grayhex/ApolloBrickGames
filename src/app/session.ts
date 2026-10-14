@@ -8,6 +8,7 @@ import {
   type InputFrame,
 } from '../core';
 import type { ActionTracker } from '../input/tracker';
+import type { EntryScript } from './entry';
 import { restrictFrame } from '../input/tracker';
 import type { FixedStepper } from './stepper';
 
@@ -24,6 +25,8 @@ export interface SessionDeps {
   onMenuInput?(frame: InputFrame): void;
   /** Сбросить состояние устройств: клавиши, нейтральная синхронизация геймпада. */
   resetDevices(): void;
+  /** Сценарий входа: первые такты участка вместо игрока (необязателен). */
+  entry?: EntryScript;
 }
 
 const START = actionBit('start');
@@ -65,6 +68,11 @@ export class GameSession {
     let frame = restrictFrame(raw, CORE_ACTIONS);
     if (game.state.phase !== 'playing' && (raw.pressed & CONFIRM) !== 0) {
       frame = { pressed: frame.pressed | START, held: frame.held | START, released: frame.released };
+    }
+    // Сценарий входа подменяет ввод игрока (кроме паузы: она всегда доступна, сценарий при этом ждёт).
+    const { entry } = this.deps;
+    if (entry && game.state.phase === 'playing' && (frame.pressed & PAUSE) === 0) {
+      frame = entry.next(game.state.levelId, game.state.phase) ?? frame;
     }
     this.lastFrame = frame;
     this.deps.onEvents(game.step(frame));

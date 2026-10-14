@@ -105,7 +105,7 @@ export function screenSize(screen: ScreenProfile): { width: number; height: numb
 export interface AssetProvenance {
   /** draft — набросок по неполным референсам; confirmed — сверен и принят владельцем; blocked — не хватает референсов. */
   status: 'draft' | 'confirmed' | 'blocked';
-  /** Ссылки на референсы (файлы docs/references или описание источника). */
+  /** Ссылки на референсы (путь к файлу или описание источника). */
   sources: string[];
   /** Что неизвестно или нуждается в уточнении. */
   note: string;
@@ -204,6 +204,13 @@ export interface IntroAnimation {
   routes: Record<string, CellPos[]>;
 }
 
+/** Шаг сценария входа: удерживаемые и нажатые на первом такте действия, длительность в тактах. */
+export interface EntryStep {
+  ticks: number;
+  held: string[];
+  press: string[];
+}
+
 export interface AnimationsDef {
   schemaVersion: number;
   id: string;
@@ -212,6 +219,11 @@ export interface AnimationsDef {
   bump: { ticks: number } | null;
   /** Интро участка; null — без интро. */
   intro: IntroAnimation | null;
+  /**
+   * Сценарий входа: после старта участка первые такты вместо игрока вводит заготовленный ввод
+   * (герой «выходит из туннеля»). Это обычный ввод на вход ядра, поэтому он идёт через те же правила и записывается в replay.
+   */
+  entry: { scripts: Record<string, EntryStep[]> } | null;
 }
 
 // ── Уровень ────────────────────────────────────────────────────────────────

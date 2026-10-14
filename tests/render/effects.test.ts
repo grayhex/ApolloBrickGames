@@ -10,20 +10,20 @@ import {
   shuffledOrder,
   type EffectsWorld,
 } from '../../src/render/effects';
-import { clipContext, loadClipPack } from '../helpers/content';
+import { loadRoomPack, roomContext } from '../helpers/content';
 
-const pack = loadClipPack();
+const pack = loadRoomPack();
 const animations = pack.animations as AnimationsDef;
 const level = pack.levels[0] as LevelDef;
 const viewport = pack.screen.viewport;
 const intro = animations.intro as NonNullable<AnimationsDef['intro']>;
-const route = intro.routes['clip-room'] ?? [];
+const route = intro.routes['tunnel-run'] ?? [];
 
-const world = (game: Game): EffectsWorld => effectsWorld(clipContext(), game.state) as EffectsWorld;
+const world = (game: Game): EffectsWorld => effectsWorld(roomContext(), game.state) as EffectsWorld;
 const ev = (event: GameEventBody, tick: number): GameEvent => ({ ...event, tick });
 
 function gameAt(tick: number, phase: Game['state']['phase'] = 'ready'): Game {
-  const game = new Game(clipContext());
+  const game = new Game(roomContext());
   game.state.tick = tick;
   game.state.phase = phase;
   return game;
@@ -31,7 +31,7 @@ function gameAt(tick: number, phase: Game['state']['phase'] = 'ready'): Game {
 
 describe('отскок перекладины: клетки эффекта', () => {
   it('блок и его соседи по ряду без разрывов копируются на ряд выше (крышка арки — три клетки)', () => {
-    const game = new Game(clipContext());
+    const game = new Game(roomContext());
     expect(blockAssetAt(world(game), 0, 3)).toBe('cell.obstacle'); // тайл
     expect(blockAssetAt(world(game), 1, 3)).toBe('cell.obstacle'); // объект brick
     expect(blockAssetAt(world(game), 1, 4)).toBeNull();
@@ -43,20 +43,20 @@ describe('отскок перекладины: клетки эффекта', () 
   });
 
   it('вспышка есть и при разрушении блока: клетка удара берётся, даже если блок уже исчез', () => {
-    const game = new Game(clipContext());
+    const game = new Game(roomContext());
     (game.state.objects[0] as { active: boolean }).active = false;
     expect(bumpTiles(world(game), 1, 3).map((t) => t.x)).toEqual([0, 1, 2]);
   });
 
   it('у верхнего края карты и над занятыми клетками копий нет', () => {
-    const game = new Game(clipContext());
+    const game = new Game(roomContext());
     expect(bumpTiles(world(game), 0, 0)).toEqual([]);
     // Над полом первого ряда стойки (x = 0, y = 5) уже стоит тайл y = 4: копия клетки не дублируется.
     expect(bumpTiles(world(game), 0, 5).filter((t) => t.x === 0)).toEqual([]);
   });
 
   it('копия живёт заданное число тактов и только на своём участке', () => {
-    const game = new Game(clipContext());
+    const game = new Game(roomContext());
     const fx = new LevelEffects(animations, { viewport, intro: false });
     fx.onEvent(ev({ type: 'bump', x: 1, y: 3 }, 100), world(game));
     const at = (tick: number): number => {
@@ -72,7 +72,7 @@ describe('отскок перекладины: клетки эффекта', () 
   });
 
   it('без раздела bump эффекта нет', () => {
-    const game = new Game(clipContext());
+    const game = new Game(roomContext());
     const fx = new LevelEffects({ ...animations, bump: null }, { viewport, intro: false });
     fx.onEvent(ev({ type: 'bump', x: 1, y: 3 }, 1), world(game));
     expect(fx.frame(game.state, level)).toBe(NO_EFFECTS);
@@ -93,7 +93,7 @@ describe('интро участка (наблюдение по видео)', () 
     expect(route[0]).toEqual({ x: 12, y: 5 });
     expect(route[route.length - 1]).toEqual(level.start);
     expect(intro.stepTicks).toBe(3);
-    expect(effects().introTicks('clip-room')).toBe(total);
+    expect(effects().introTicks('tunnel-run')).toBe(total);
   });
 
   it('пустой экран → заливка растёт → пауза → растворение → пустой экран', () => {
@@ -160,7 +160,7 @@ describe('интро участка (наблюдение по видео)', () 
     const fx = effects();
     const game = gameAt(500);
     expect(fx.frame(game.state, level)).toBe(NO_EFFECTS); // 500 тактов после старта страницы
-    fx.onEvent(ev({ type: 'levelStarted', levelId: 'clip-room' }, 500), world(game));
+    fx.onEvent(ev({ type: 'levelStarted', levelId: 'tunnel-run' }, 500), world(game));
     expect(fx.frame(game.state, level).intro).toBe(true);
     game.state.tick = 500 + total;
     expect(fx.frame(game.state, level)).toBe(NO_EFFECTS);
@@ -168,7 +168,7 @@ describe('интро участка (наблюдение по видео)', () 
 
   it('в тестовом запуске редактора интро выключено; у участка без маршрута — только заливка', () => {
     const off = new LevelEffects(animations, { viewport, intro: false });
-    expect(off.introTicks('clip-room')).toBe(0);
+    expect(off.introTicks('tunnel-run')).toBe(0);
     expect(off.frame(gameAt(0).state, level)).toBe(NO_EFFECTS);
     const fx = effects();
     expect(fx.introTicks('нет-такого-участка')).toBe(total - route.length * intro.stepTicks);
@@ -184,7 +184,7 @@ describe('интро участка (наблюдение по видео)', () 
   });
 
   it('симуляцию эффекты не трогают: ход игры в ready не меняется', () => {
-    const game = new Game(clipContext());
+    const game = new Game(roomContext());
     const before = game.serialize();
     const fx = effects();
     fx.frame(game.state, level);

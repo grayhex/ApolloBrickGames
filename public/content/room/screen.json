@@ -27,11 +27,7 @@
   },
   "hud": {
     "kind": "lcd",
-    "fixed": {
-      "lives": 3,
-      "label": "0-00",
-      "score": 0
-    },
+    "fixed": null,
     "lives": {
       "asset": "hud.life",
       "x": 34,

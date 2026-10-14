@@ -516,6 +516,23 @@ body {
   filter: brightness(0.94) saturate(0.85);
 }
 
+/* Вид «только экран»: нижняя половина скрыта, крышка с экраном занимает окно целиком. */
+.stage:has(.toy[data-compact]) {
+  max-width: clamp(300px, calc((100dvh - 24px) / 0.98), 1100px);
+}
+
+.toy[data-compact] :is(.toy__hinge, .base) {
+  display: none;
+}
+
+.toy[data-compact] .lid {
+  border-radius: 7cqw;
+}
+
+.toy[data-compact] .lid__window {
+  cursor: pointer;
+}
+
 /* ── Уголок: настройки, справка, редактор ──────────────────────────────── */
 .corner {
   position: fixed;
@@ -587,6 +604,10 @@ body:not([data-chrome='toy']) .corner {
 
   .stage {
     max-width: clamp(300px, calc((100dvh - 76px) / 2.4), 640px);
+  }
+
+  .stage:has(.toy[data-compact]) {
+    max-width: clamp(300px, calc((100dvh - 76px) / 0.98), 1100px);
   }
 }
 
