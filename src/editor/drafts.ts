@@ -27,6 +27,8 @@ export interface SaveRequest {
 export interface DraftStore {
   list(): Promise<DraftMeta[]>;
   load(projectId: string): Promise<{ record: DraftRecord; images: Map<string, StoredImage> } | null>;
+  /** Только документ, без байтов фотографий: для списков и запуска карт в игре. */
+  loadRecord(projectId: string): Promise<DraftRecord | null>;
   save(request: SaveRequest): Promise<void>;
   /** Идентификаторы референсов проекта, чьи изображения уже сохранены. */
   storedImages(projectId: string): Promise<Set<string>>;
@@ -48,6 +50,11 @@ export class MemoryDraftStore implements DraftStore {
     const record = this.records.get(projectId);
     if (!record) return null;
     return { record: structuredClone(record), images: new Map(this.images.get(projectId) ?? []) };
+  }
+
+  async loadRecord(projectId: string): Promise<DraftRecord | null> {
+    const record = this.records.get(projectId);
+    return record ? structuredClone(record) : null;
   }
 
   async save({ record, images, keep }: SaveRequest): Promise<void> {
@@ -128,6 +135,10 @@ export async function openIndexedDbStore(factory: IDBFactory = indexedDB): Promi
       const images = new Map<string, StoredImage>();
       for (const row of await imageRows(projectId)) images.set(row.refId, { mime: row.mime, bytes: new Uint8Array(row.bytes) });
       return { record, images };
+    },
+    async loadRecord(projectId) {
+      const tx = db.transaction('projects', 'readonly');
+      return ((await request(tx.objectStore('projects').get(projectId))) as DraftRecord | undefined) ?? null;
     },
     async save({ record, images, keep }) {
       const tx = db.transaction(['projects', 'images'], 'readwrite');

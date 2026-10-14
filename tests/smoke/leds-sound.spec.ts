@@ -94,10 +94,8 @@ test('звук: 1-битные сигналы на старт и прыжок, �
   // Выбор сохраняется между перезагрузками.
   await page.reload();
   await page.waitForSelector('#game-area[data-phase="ready"]');
-  await page.locator('#corner-settings').click();
-  await expect(page.locator('#settings-sound')).not.toBeChecked(); // выбор запомнен
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#game-area')).toBeFocused(); // диалог закрыт, управление вернулось игре
+  await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false'); // выбор запомнен
+  await page.locator('#game-area').focus();
   await page.keyboard.press('Enter');
   await page.waitForSelector('#game-area[data-phase="playing"]');
   await page.waitForTimeout(300);

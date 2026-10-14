@@ -139,19 +139,21 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, compact: false });
+    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, compact: false, theme: 'dark' });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, compact: false });
+    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, compact: false, theme: 'dark' });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, compact: false });
+    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, compact: false, theme: 'dark' });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
     expect(sanitizeSettings({ version: 1, display: { compact: true } }).display.compact).toBe(true);
     expect(sanitizeSettings({ version: 1, display: { compact: 'да' } }).display.compact).toBe(false);
+    expect(sanitizeSettings({ version: 1, display: { theme: 'light' } }).display.theme).toBe('light');
+    expect(sanitizeSettings({ version: 1, display: { theme: 'sepia' } }).display.theme).toBe('dark');
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white', sound: false, compact: true };
+    settings.display = { ghost: true, shell: 'white', sound: false, compact: true, theme: 'light' };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, compact: true });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, compact: true, theme: 'light' });
   });
 });

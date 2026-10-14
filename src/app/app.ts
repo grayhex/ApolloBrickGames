@@ -1,4 +1,4 @@
-import { screenSize } from '../content/schema';
+import { screenSize, type ContentPack } from '../content/schema';
 import { cueForEvent, type AudioPort } from '../audio/audio';
 import { WebAudioPort } from '../audio/beeper';
 import {
@@ -18,20 +18,27 @@ import { GLYPH_NAMES } from '../render/glyphs';
 import { effectsWorld, LevelEffects, NO_EFFECTS, type EffectsFrame } from '../render/effects';
 import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
-import { browserStorage, needsGamepadSetup, SHELLS } from '../input/settings';
+import { openIndexedDbStore, type DraftStore } from '../editor/drafts';
+import { loadUserLevels, type LibraryTarget, type UserLevel } from '../editor/library';
+import { browserStorage, needsGamepadSetup, THEMES, type Shell } from '../input/settings';
 import { boundSources, keySource } from '../input/bindings';
+import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { HelpDialog } from './help';
+import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
+import { defaultLevelRef, originalPack, originalSlots, userPack, type LevelRef } from './levels';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { EntryScript } from './entry';
 import { GameSession } from './session';
 import { SettingsDialog } from './settingsUi';
+import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
 import {
   controlsHint,
+  deviceView,
   gamepadStatusText,
   keyboardStatusText,
   overlayView,
@@ -70,17 +77,17 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
+    arena: byId<HTMLElement>('arena'),
+    sideInfo: byId<HTMLElement>('side-info'),
+    sideCtl: byId<HTMLElement>('side-ctl'),
     lid: byId<HTMLElement>('lid'),
     toy: byId<HTMLElement>('toy'),
     base: byId<HTMLElement>('base'),
     cornerSettings: byId<HTMLButtonElement>('corner-settings'),
     cornerHelp: byId<HTMLButtonElement>('corner-help'),
-    cornerCompact: byId<HTMLButtonElement>('corner-compact'),
     help: byId<HTMLDialogElement>('help'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
-    shellToggle: byId<HTMLElement>('shell-toggle'),
-    selShell: byId<HTMLSelectElement>('sel-shell'),
     canvas: byId<HTMLCanvasElement>('screen'),
     overlay: byId<HTMLElement>('overlay'),
     overlayTitle: byId<HTMLElement>('overlay-title'),
@@ -136,17 +143,20 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const assetWarnings = await assets.load();
   for (const warning of assetWarnings) console.warn(warning);
 
-  const ctx = createContext(pack);
+  // Контекст, игра, эффекты, сценарий входа и сессия пересоздаются при выборе другого уровня (см. launch).
+  let ctx = createContext(pack);
   const params = new URLSearchParams(window.location.search);
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
-  const game = new Game(ctx, seed);
+  let game = new Game(ctx, seed);
   const renderer = new Renderer(refs.canvas, pack.screen, assets);
   // Презентационные эффекты (отскок перекладины, интро участка) — только отрисовка, симуляцию не меняют.
-  const effects = new LevelEffects(pack.animations ?? null, { viewport: pack.screen.viewport, intro: true });
+  let effects = new LevelEffects(pack.animations ?? null, { viewport: pack.screen.viewport, intro: true });
   let fx: EffectsFrame = NO_EFFECTS;
   const { sprites } = pack.manifest;
   refs.rowTimer.hidden = ctx.rules.params.timerLimitTicks <= 0;
-  refs.statusContent.textContent = `Контент: ${pack.manifest.title} (id ${pack.manifest.id}, v${pack.manifest.version}); правила ${pack.rules.id} v${pack.rules.version}; ${ctx.rules.params.tickRateHz} тактов/с — значения демо, не установленные параметры оригинала.`;
+  const contentLine = (source: ContentPack): string =>
+    `Контент: ${source.manifest.title} (id ${source.manifest.id}, v${source.manifest.version}); правила ${source.rules.id} v${source.rules.version}; ${ctx.rules.params.tickRateHz} тактов/с — значения демо, не установленные параметры оригинала.`;
+  refs.statusContent.textContent = contentLine(pack);
 
   // ── Состояние оболочки ───────────────────────────────────────────────────
   let suspendReason: SuspendReason = null;
@@ -195,18 +205,20 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     }
   };
 
-  const entry = new EntryScript(pack.animations?.entry);
+  let entry = new EntryScript(pack.animations?.entry);
   entry.arm(game.state.levelId);
 
-  const session = new GameSession({
-    game,
-    tracker: hub.tracker,
-    stepper,
-    entry,
-    onEvents,
-    onMenuInput: handleMenuInput,
-    resetDevices: () => hub.resetDevices(),
-  });
+  const makeSession = (): GameSession =>
+    new GameSession({
+      game,
+      tracker: hub.tracker,
+      stepper,
+      entry,
+      onEvents,
+      onMenuInput: handleMenuInput,
+      resetDevices: () => hub.resetDevices(),
+    });
+  let session = makeSession();
 
   const openMenu = (): void => {
     if (game.state.phase === 'playing') suspendReason = 'settings';
@@ -215,19 +227,21 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   };
   const closeMenu = (): void => {
     session.setContext('game');
+    infoPanel?.render(); // клавиши могли быть переназначены
     refocusGame();
   };
 
   const settingsDialog = new SettingsDialog(refs.settings, hub, {
     onOpen: openMenu,
     onClose: closeMenu,
-    // Цвет корпуса, неактивные сегменты и звук — в настройках игрушки (у технических страниц свои флажки).
+    // В настройках игрушки — цвет по умолчанию: он же становится цветом текущей игры (у технических страниц своих настроек вида нет).
     ...(route.lid
       ? {
           display: {
-            hasGhost: pack.screen.ghost !== null,
-            ghostDefault: pack.screen.ghost?.enabled ?? false,
-            onChange: () => applyDisplay(),
+            onChange: () => {
+              currentShell = hub.settings.display.shell;
+              applyDisplay();
+            },
           },
         }
       : {}),
@@ -264,6 +278,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // ── События окна и интерфейса ────────────────────────────────────────────
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) suspend('hidden');
+    else void refreshUserLevels(); // карты могли измениться в редакторе в другой вкладке
   });
   window.addEventListener('blur', () => suspend('blur'));
   window.addEventListener('gamepadconnected', () => hub.poll());
@@ -275,30 +290,124 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   refs.lid.style.setProperty('--lcd-aspect', `${logical.width} / ${logical.height}`);
   refs.lid.style.setProperty('--lcd-bg', pack.screen.colors.background);
   refs.stage.classList.toggle('stage--plain', !route.lid);
-  refs.shellToggle.hidden = !route.lid;
-  // Внешний вид из настроек: цвет корпуса, слой неактивных сегментов, звук. Источник правды — hub.settings.display.
+  // Внешний вид: цвет корпуса текущей игры, слой неактивных сегментов, звук, вид экрана, фон страницы.
+  // Источник правды — hub.settings.display; исключение — цвет: в настройках лежит цвет по умолчанию,
+  // а выбор на странице действует только на текущую игру (до перезагрузки).
+  let currentShell: Shell = hub.settings.display.shell;
   const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
   const applyDisplay = (): void => {
     const { display } = hub.settings;
-    refs.toy.dataset['shell'] = display.shell;
-    refs.selShell.value = display.shell;
+    refs.toy.dataset['shell'] = currentShell;
+    refs.arena.dataset['shell'] = currentShell;
     refs.chkGhost.checked = ghostOn();
     renderer.setGhost(ghostOn());
     refs.chkSound.checked = display.sound;
     audio.setMuted(!display.sound);
     refs.toy.toggleAttribute('data-compact', display.compact);
-    refs.cornerCompact.setAttribute('aria-pressed', String(display.compact));
-    const compactLabel = display.compact ? 'Показать всю игрушку' : 'Только экран';
-    refs.cornerCompact.title = compactLabel;
-    refs.cornerCompact.setAttribute('aria-label', compactLabel);
-  };
-  refs.selShell.addEventListener('change', () => {
-    hub.updateSettings((s) => {
-      s.display.shell = SHELLS.find((shell) => shell === refs.selShell.value) ?? 'blue';
+    refs.arena.toggleAttribute('data-compact', display.compact);
+    if (route.lid) applyTheme(display.theme);
+    controls?.update({
+      shell: currentShell,
+      sound: display.sound,
+      ghost: renderer.hasGhostLayer ? ghostOn() : null,
+      compact: display.compact,
+      theme: display.theme,
+      level: currentLevel,
     });
+  };
+
+  // ── Выбор уровня: оригинальные 1–9 и карты из редактора ──────────────────
+  const slots = originalSlots(pack);
+  let currentLevel: LevelRef = defaultLevelRef(pack);
+  let userLevels: readonly UserLevel[] = [];
+  const libraryTarget: LibraryTarget = {
+    packName: route.packName,
+    pack,
+    env: { assets: pack.assets, validation: validationEnv(DEMO_BEHAVIORS, GLYPH_NAMES) },
+  };
+  let drafts: DraftStore | null = null;
+
+  /** Список карт из редактора (IndexedDB). Недоступное хранилище не мешает игре — панель просто сообщает об этом. */
+  async function refreshUserLevels(): Promise<void> {
+    if (!controls) return;
+    try {
+      drafts ??= await openIndexedDbStore();
+      userLevels = await loadUserLevels(drafts, libraryTarget);
+      controls.setUserLevels(userLevels, null);
+    } catch {
+      userLevels = [];
+      controls.setUserLevels([], 'Хранилище браузера недоступно — карты из редактора здесь не видны.');
+    }
     applyDisplay();
-    refocusGame();
-  });
+  }
+
+  /**
+   * Новая игра на выбранном уровне: пересоздаются контекст, ядро, эффекты, сценарий входа и сессия; ввод, время и
+   * камера очищаются, питание включается. Интро и сценарий выхода из туннеля — только у оригинальных уровней
+   * (они описаны наблюдениями по видео); карта из редактора запускается сразу, как в тестовом запуске редактора.
+   */
+  function launch(ref: LevelRef): boolean {
+    let source: ContentPack | null = null;
+    if (ref.kind === 'original') {
+      const levelId = slots.find((slot) => slot.number === ref.number)?.levelId;
+      if (levelId) source = originalPack(pack, levelId);
+    } else {
+      const level = userLevels.find((user) => user.projectId === ref.projectId)?.level;
+      if (level) source = userPack(pack, level);
+    }
+    if (!source) return false;
+    const original = ref.kind === 'original';
+    session.suspend();
+    ctx = createContext(source);
+    game = new Game(ctx, seed);
+    effects = new LevelEffects(pack.animations ?? null, { viewport: pack.screen.viewport, intro: original });
+    fx = NO_EFFECTS;
+    entry = new EntryScript(original ? pack.animations?.entry : null);
+    entry.arm(game.state.levelId);
+    session = makeSession();
+    suspendReason = null;
+    snapCamera = true;
+    powered = true;
+    refs.toy.dataset['power'] = 'on';
+    hub.resetDevices();
+    hub.tracker.reset();
+    stepper.reset();
+    refs.statusContent.textContent = contentLine(source);
+    currentLevel = ref;
+    applyDisplay();
+    return true;
+  }
+
+  // ── Панели вокруг игрушки ────────────────────────────────────────────────
+  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub) : null;
+  const panelActions: ControlPanelActions = {
+    pickShell: (shell) => {
+      currentShell = shell;
+      applyDisplay();
+    },
+    toggleSound: () => setSound(!hub.settings.display.sound),
+    toggleGhost: () => {
+      hub.updateSettings((s) => {
+        s.display.ghost = !ghostOn();
+      });
+      applyDisplay();
+    },
+    toggleCompact: () => {
+      hub.updateSettings((s) => {
+        s.display.compact = !s.display.compact;
+      });
+      applyDisplay();
+    },
+    toggleTheme: () => {
+      hub.updateSettings((s) => {
+        s.display.theme = THEMES.find((theme) => theme !== s.display.theme) ?? 'dark';
+      });
+      applyDisplay();
+    },
+    pickOriginal: (number) => void launch({ kind: 'original', number }),
+    pickUser: (projectId) => void launch({ kind: 'user', projectId }),
+  };
+  const controls = route.lid ? new ControlPanel(refs.sideCtl, { slots, actions: panelActions, onPointerUse: refocusGame }) : null;
 
   const resize = (): void => {
     renderer.resize(refs.lcdWindow.clientWidth, refs.lcdWindow.clientHeight, window.devicePixelRatio);
@@ -354,6 +463,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     refocusGame();
   });
   applyDisplay();
+  void refreshUserLevels();
 
   // ── Питание и кнопки корпуса ─────────────────────────────────────────────
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
@@ -395,13 +505,6 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
   refs.cornerHelp.addEventListener('click', () => helpDialog.open());
-  refs.cornerCompact.addEventListener('click', () => {
-    hub.updateSettings((s) => {
-      s.display.compact = !s.display.compact;
-    });
-    applyDisplay();
-    refocusGame();
-  });
   // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
   refs.gameArea.addEventListener('pointerdown', () => {
     if (hub.settings.display.compact && game.state.phase !== 'playing' && powered) session.requestStart();
@@ -489,6 +592,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setText.keyboard(keyboardStatusText(keyboardActive));
     const setup = gamepadStatus.kind === 'active' && needsGamepadSetup(hub.settings, gamepadStatus.pad);
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
+    controls?.setDevices(deviceView(gamepadStatus, hub.lastDevice));
     setText.hint(controlsHint(hub.settings.keyboard, route.fireHint));
     setText.timer(timerText(s, ctx.rules.params.tickRateHz, ctx.rules.params.timerLimitTicks));
 

@@ -16,9 +16,14 @@ export interface HelpRow {
 export const POWER_KEY = 'O';
 export const SOUND_KEY = 'M';
 
+/** Названия клавиш, на которых висят эти действия по текущим привязкам (без повторов). */
+export function keyCaps(bindings: Bindings, ...actions: Action[]): string[] {
+  return [...new Set(actions.flatMap((action) => bindings[action]))].map(describeSource);
+}
+
 function keysOf(bindings: Bindings, ...actions: Action[]): string {
-  const sources = [...new Set(actions.flatMap((action) => bindings[action]))];
-  return sources.length === 0 ? '—' : sources.map(describeSource).join(' · ');
+  const caps = keyCaps(bindings, ...actions);
+  return caps.length === 0 ? '—' : caps.join(' · ');
 }
 
 /** Таблица «кнопка → что делает → клавиши» по текущим привязкам клавиатуры. */

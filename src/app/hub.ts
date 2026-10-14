@@ -39,6 +39,8 @@ export class InputHub {
   /** Экранные кнопки игрушки (мышь, касание). */
   readonly screen = new ScreenInput((mask) => this.tracker.setSource('screen', mask));
   settings: Settings;
+  /** Какое устройство нажимали последним — для значка «клавиатура / геймпад». Геймпад становится последним и при активации. */
+  lastDevice: 'keyboard' | 'gamepad' = 'keyboard';
   private readonly storage: StorageLike | null;
   private readonly provider: GamepadProvider;
   private boundKeys: Set<SourceId>;
@@ -53,7 +55,11 @@ export class InputHub {
     this.keyboard = new KeyboardInput(options.keyboardTarget, {
       isActive: options.isKeyboardActive,
       isBound: (source) => this.boundKeys.has(source),
-      onSources: (down) => this.tracker.setSource('keyboard', maskOfSources(down, compileBindings(this.settings.keyboard))),
+      onSources: (down) => {
+        const mask = maskOfSources(down, compileBindings(this.settings.keyboard));
+        if (mask !== 0) this.lastDevice = 'keyboard';
+        this.tracker.setSource('keyboard', mask);
+      },
     });
 
     this.gamepad = new GamepadInput({
@@ -61,8 +67,14 @@ export class InputHub {
       bindingsFor: (pad) => gamepadBindingsFor(this.settings, pad),
       getThreshold: () => this.settings.gamepad.stickThreshold,
       getPreferredId: () => this.settings.gamepad.preferredId,
-      sink: (mask) => this.tracker.setSource('gamepad', mask),
-      ...(options.onGamepadStatus ? { onStatus: options.onGamepadStatus } : {}),
+      sink: (mask) => {
+        if (mask !== 0) this.lastDevice = 'gamepad';
+        this.tracker.setSource('gamepad', mask);
+      },
+      onStatus: (status) => {
+        if (status.kind === 'active') this.lastDevice = 'gamepad';
+        options.onGamepadStatus?.(status);
+      },
       ...(options.onGamepadDisconnect ? { onDisconnect: options.onGamepadDisconnect } : {}),
     });
   }

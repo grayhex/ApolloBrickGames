@@ -61,9 +61,12 @@ for (const size of [
         corner: { left: corner.left, bottom: corner.bottom },
         loaded: logoImg.complete && logoImg.naturalWidth > 0,
         vw: window.innerWidth,
+        scrollW: document.documentElement.scrollWidth,
       };
     });
-    expect(m.scrollH).toBeLessThanOrEqual(m.innerH + 1); // страница не прокручивается
+    // Рядом с игрушкой (окно от 900 px) стоят панели и страница не прокручивается; на узком экране панели уходят под игрушку.
+    if (size.width >= 900) expect(m.scrollH).toBeLessThanOrEqual(m.innerH + 1);
+    expect(m.scrollW).toBeLessThanOrEqual(m.vw + 1); // горизонтальной прокрутки нет нигде
     expect(m.toy.top).toBeGreaterThanOrEqual(-1);
     expect(m.toy.bottom).toBeLessThanOrEqual(m.innerH + 1);
     expect(m.toy.left).toBeGreaterThanOrEqual(0);
@@ -261,11 +264,10 @@ test('горячие клавиши O и M работают как кнопки 
   await page.keyboard.down('KeyM');
   await pressed(page, 'sound');
   await page.keyboard.up('KeyM');
-  await page.locator('#corner-settings').click();
-  await expect(page.locator('#settings-sound')).not.toBeChecked();
+  await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false'); // кнопка звука на странице следует за SOUND
 });
 
-test('настройки: цвет корпуса, неактивные сегменты и звук; справка: кнопки и клавиши; игра на паузе, пока окна открыты', async ({ page }) => {
+test('настройки — управление и цвет по умолчанию; справка: кнопки и клавиши; игра на паузе, пока окна открыты', async ({ page }) => {
   await ready(page);
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
@@ -273,10 +275,12 @@ test('настройки: цвет корпуса, неактивные сегм
   await page.locator('#corner-settings').click();
   await expect(page.locator('dialog#settings')).toBeVisible();
   await expect.poll(phase(page)).toBe('paused');
+  // В настройках — цвет по умолчанию и управление; звук, сегменты и вид экрана вынесены на кнопки страницы.
   await expect(page.locator('#settings-shell')).toBeVisible();
-  await expect(page.locator('#settings-ghost')).toBeVisible();
-  await expect(page.locator('#settings-sound')).toBeVisible();
-  await page.selectOption('#settings-shell', 'yellow');
+  await expect(page.locator('dialog#settings h3', { hasText: 'Клавиатура' })).toBeVisible();
+  await expect(page.locator('dialog#settings h3', { hasText: 'Геймпад' })).toBeVisible();
+  await expect(page.locator('#settings-sound, #settings-ghost')).toHaveCount(0);
+  await page.locator('#settings-shell [data-shell="yellow"]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
   await page.keyboard.press('Escape');
   await expect(page.locator('dialog#settings')).toBeHidden();
@@ -320,14 +324,14 @@ test('«только экран»: нижняя половина скрывае�
     });
   const whole = await size();
   await expect(page.locator('#base')).toBeVisible();
-  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#tgl-compact')).toHaveAttribute('aria-pressed', 'false');
 
-  await page.locator('#corner-compact').click();
+  await page.locator('#tgl-compact').click();
   await expect(toy).toHaveAttribute('data-compact', '');
   await expect(page.locator('#base')).toBeHidden();
   await expect(page.locator('.toy__hinge')).toBeHidden();
-  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-label', 'Показать всю игрушку');
+  await expect(page.locator('#tgl-compact')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#tgl-compact')).toHaveAttribute('title', 'Показать всю игрушку');
   await expect(page.locator('#game-area')).toBeFocused(); // клавиатура осталась у игры
   // Холст подгоняется под окно LCD на следующем кадре (ResizeObserver), поэтому ждём, а не меряем сразу.
   await expect.poll(async () => (await size()).screenW).toBeGreaterThan(whole.screenW * 1.6); // экран заметно крупнее
@@ -352,17 +356,17 @@ test('«только экран»: нижняя половина скрывае�
   await page.reload();
   await expect(toy).toHaveAttribute('data-compact', '');
   await expect(page.locator('#base')).toBeHidden();
-  await page.locator('#corner-compact').click();
+  await page.locator('#tgl-compact').click();
   await expect(toy).not.toHaveAttribute('data-compact', '');
   await expect(page.locator('#base')).toBeVisible();
-  await expect(page.locator('#corner-compact')).toHaveAttribute('aria-label', 'Только экран');
+  await expect(page.locator('#tgl-compact')).toHaveAttribute('title', 'Только экран');
   const back = await size();
   expect(Math.abs(back.lidW - whole.lidW)).toBeLessThan(2);
 });
 
 test('«только экран»: касание экрана заменяет S./P. — старт и продолжение', async ({ page }) => {
   await ready(page);
-  await page.locator('#corner-compact').click();
+  await page.locator('#tgl-compact').click();
   await page.locator('#game-area').click();
   await expect.poll(phase(page)).toBe('playing');
   await page.keyboard.press('Escape');

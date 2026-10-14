@@ -16,6 +16,10 @@ export const SETTINGS_VERSION = 1;
 export const SHELLS = ['blue', 'red', 'yellow', 'white'] as const;
 export type Shell = (typeof SHELLS)[number];
 
+/** Фон страницы: тёмный (по умолчанию) или светлый. */
+export const THEMES = ['dark', 'light'] as const;
+export type Theme = (typeof THEMES)[number];
+
 export const MIN_STICK_THRESHOLD = 0.1;
 export const MAX_STICK_THRESHOLD = 0.9;
 export const DEFAULT_STICK_THRESHOLD = 0.5;
@@ -33,12 +37,14 @@ export interface Settings {
   display: {
     /** Слой неактивных сегментов: true/false — выбор пользователя, null — как задано профилем экрана. */
     ghost: boolean | null;
-    /** Цвет корпуса вокруг экрана. */
+    /** Цвет корпуса по умолчанию: с него начинается каждая игра; выбор на странице (для текущей игры) его не меняет. */
     shell: Shell;
     /** Звук включён. */
     sound: boolean;
     /** Вид «только экран»: нижняя половина игрушки скрыта, крышка с экраном показана крупно. */
     compact: boolean;
+    /** Фон страницы. */
+    theme: Theme;
   };
 }
 
@@ -52,7 +58,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true, compact: false },
+    display: { ghost: null, shell: 'blue', sound: true, compact: false, theme: 'dark' },
   };
 }
 
@@ -100,6 +106,7 @@ export function sanitizeSettings(raw: unknown): Settings {
       shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
       sound: typeof display['sound'] === 'boolean' ? display['sound'] : true,
       compact: typeof display['compact'] === 'boolean' ? display['compact'] : false,
+      theme: THEMES.find((theme) => theme === display['theme']) ?? 'dark',
     },
   };
 }
