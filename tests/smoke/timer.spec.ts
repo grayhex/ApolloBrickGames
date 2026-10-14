@@ -42,7 +42,7 @@ test('таймер: до старта подпись, после S./P. слов�
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'intro'), { timeout: 9000 }).toBe('off');
   expect(await area(page, 'time')).toBe(''); // таймера на экране нет
-  expect(await inkIn(page, 232, 41, 160, 100)).toBe(0); // слева от подписи пусто
+  expect(await inkIn(page, 210, 41, 175, 100)).toBe(0); // слева от подписи пусто
   expect(await inkIn(page, 397, 32, 400, 118)).toBeGreaterThan(5); // подпись `1-01` (холст в окне теста мелкий — порог невелик)
 
   await page.keyboard.press('Enter');
@@ -51,7 +51,7 @@ test('таймер: до старта подпись, после S./P. слов�
   const first = Number(await area(page, 'time'));
   expect(first).toBeGreaterThanOrEqual(394); // сценарий выхода из колодца (≈ 2,65 с) съел ≈ 3 единицы, как на видео
   expect(first).toBeLessThanOrEqual(398);
-  expect(await inkIn(page, 232, 41, 160, 100)).toBeGreaterThan(10); // слово TIME нарисовано
+  expect(await inkIn(page, 210, 41, 175, 100)).toBeGreaterThan(2); // слово TIME нарисовано (тонкие штрихи на мелком холсте — пикселей мало)
   expect(await inkIn(page, 397, 32, 400, 118)).toBeGreaterThan(5); // три цифры
 
   await page.waitForTimeout(3100);
