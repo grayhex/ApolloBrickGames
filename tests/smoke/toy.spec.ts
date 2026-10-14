@@ -82,7 +82,7 @@ for (const size of [
   });
 }
 
-test('форма по фото: нижняя половина ≈ 1,55 ширины, втулки шарнира у краёв и проём ≈ 36 % ширины, у крышки заострённая верхняя кромка', async ({ page }) => {
+test('форма по фото: нижняя половина ≈ 1,55 ширины, втулки шарнира у краёв и проём ≈ 36 % ширины, у крышки гладкая верхняя кромка без выступа', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await ready(page);
   const m = await page.evaluate(() => {
@@ -92,7 +92,7 @@ test('форма по фото: нижняя половина ≈ 1,55 шири�
     const band = rect('.toy__band');
     const base = rect('#base');
     const lid = rect('#lid');
-    // Верхняя кромка корпуса крышки: у центра выше, чем у плеч (путь SVG: вершина около y = 3, плечи около y = 27 из 391).
+    // Верхняя кромка корпуса крышки — плавная дуга без выступа: у центра выше плеч лишь на пару единиц (путь SVG: вершина около y = 6, плечи около y = 10 из 391).
     const top = document.querySelector('.lid__body') as SVGPathElement;
     const length = top.getTotalLength();
     let apex = Infinity;
@@ -123,7 +123,8 @@ test('форма по фото: нижняя половина ≈ 1,55 шири�
   expect(m.knuckleWidth).toBeLessThan(0.2);
   expect(m.bandWidth).toBeGreaterThan(0.34);
   expect(m.bandWidth).toBeLessThan(0.38);
-  expect(m.shoulder - m.apex).toBeGreaterThan(15); // вершина заметно выше плеч: кромка не прямая
+  expect(m.shoulder - m.apex).toBeLessThan(8); // выступа по центру нет: кромка гладкая
+  expect(m.shoulder - m.apex).toBeGreaterThanOrEqual(0);
 });
 
 test('логотип: на синем и красном корпусе — белая печать, на жёлтом и белом — цветная', async ({ page }) => {
