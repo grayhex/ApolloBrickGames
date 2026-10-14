@@ -43,15 +43,15 @@ describe('тестовая комната demo-room: данные', () => {
   const pack = loadRoomPack();
   const room = levelOf(pack, 'demo-room') as LevelDef;
 
-  it('в пакете тестовый уровень по видео (первый) и песочница demo-room без переходов и объектов; явная пометка «не оригинальный уровень»', () => {
-    expect(pack.levels.map((l) => l.id)).toEqual(['tunnel-run', 'demo-room']);
-    expect(pack.manifest.firstLevel).toBe('tunnel-run');
+  it('в пакете девять уровней MARIO (первый — стартовый), тестовый уровень по видео и песочница demo-room без переходов и объектов; явная пометка «не оригинальный уровень»', () => {
+    expect(pack.levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'demo-room']);
+    expect(pack.manifest.firstLevel).toBe('mario-1');
     expect(room.id).toBe('demo-room');
     expect(room.status).toBe('demo');
     expect(room.note).toMatch(/Искусственная тестовая карта; не оригинальный уровень/);
     expect(room.objects).toEqual([]);
     expect(room.transitions).toEqual([]);
-    expect(pack.manifest.title).toMatch(/не оригинальный уровень/);
+    expect(pack.manifest.title).toMatch(/не оригинальные уровни/);
   });
 
   it('вся комната помещается в окно: камера неподвижна', () => {
@@ -189,7 +189,7 @@ describe('однокомнатное демо: механика', () => {
   it('графика не определяет коллизии: замена ресурсов не меняет механику', () => {
     const withArt = demoRoomContext();
     const raw = loadRawPack('room');
-    const level = raw.levels[1] as { id: string; legend: Record<string, { collision: string; asset?: string }> };
+    const level = raw.levels.find((l) => (l as { id: string }).id === 'demo-room') as { id: string; legend: Record<string, { collision: string; asset?: string }> };
     expect(level.id).toBe('demo-room');
     for (const entry of Object.values(level.legend)) delete entry.asset; // уровень вообще без рисунков
     const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));

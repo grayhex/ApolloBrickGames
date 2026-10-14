@@ -43,9 +43,19 @@ export function loadRoomPack(): ContentPack {
   return assemblePack(loadRawPack('room'), validationEnv(undefined, GLYPH_NAMES));
 }
 
-/** Основной пакет: игра начинается с тестового уровня по видео (`tunnel-run`). */
+/**
+ * Пакет комнаты, игра которого начинается с тестового уровня по видео (`tunnel-run`): на нём выверены тесты механики.
+ * Страница по умолчанию начинается с `mario-1` — см. `marioContext`.
+ */
 export function roomContext(): GameContext {
-  return createContext(loadRoomPack());
+  const pack = loadRoomPack();
+  return createContext({ ...pack, manifest: { ...pack.manifest, firstLevel: 'tunnel-run' } });
+}
+
+/** Пакет комнаты с игрой, начинающейся на уровне `mario-N` (геймплейное приближение оригинального уровня N). */
+export function marioContext(n: number): GameContext {
+  const pack = loadRoomPack();
+  return createContext({ ...pack, manifest: { ...pack.manifest, firstLevel: `mario-${n}` } });
 }
 
 /** Тот же пакет, но игра начинается с тестовой комнаты `demo-room` (песочница для тестов механики и редактора). */

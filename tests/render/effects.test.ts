@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AnimationsDef, LevelDef } from '../../src/content/schema';
+import type { AnimationsDef } from '../../src/content/schema';
 import { Game, makeFrame, type GameEvent, type GameEventBody } from '../../src/core';
 import {
   blockAssetAt,
@@ -10,11 +10,11 @@ import {
   shuffledOrder,
   type EffectsWorld,
 } from '../../src/render/effects';
-import { loadRoomPack, roomContext } from '../helpers/content';
+import { levelOf, loadRoomPack, roomContext } from '../helpers/content';
 
 const pack = loadRoomPack();
 const animations = pack.animations as AnimationsDef;
-const level = pack.levels[0] as LevelDef;
+const level = levelOf(pack, 'tunnel-run');
 const viewport = pack.screen.viewport;
 const intro = animations.intro as NonNullable<AnimationsDef['intro']>;
 const route = intro.routes['tunnel-run'] ?? [];

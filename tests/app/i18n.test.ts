@@ -105,10 +105,11 @@ describe('локализованные имена и подписи', () => {
 
   it('подсказки к плиткам уровней на двух языках', () => {
     const slots = originalSlots(loadRoomPack());
-    expect(slotTitle(slots[0]!)).toMatch(/тестовый/);
-    expect(slotTitle(slots[3]!)).toBe('Уровень 4 — ещё не восстановлен');
+    expect(slotTitle(slots[0]!)).toMatch(/геймплейное приближение/);
+    const stripped = originalSlots({ ...loadRoomPack(), levels: [] });
+    expect(slotTitle(stripped[3]!)).toBe('Уровень 4 — ещё не восстановлен');
     setLang('en');
-    expect(slotTitle(slots[0]!)).toMatch(/test level/);
-    expect(slotTitle(slots[3]!)).toBe('Level 4 — not restored yet');
+    expect(slotTitle(slots[0]!)).toMatch(/gameplay approximation/);
+    expect(slotTitle(stripped[3]!)).toBe('Level 4 — not restored yet');
   });
 });

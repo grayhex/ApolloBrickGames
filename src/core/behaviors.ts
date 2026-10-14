@@ -145,6 +145,24 @@ const patroller: ObjectBehavior = {
   projectileHit: damage,
 };
 
+/**
+ * Предмет, который подбирается касанием героя («сердце: съесть» в справке по упаковке — 100 очков; на видео геймплея счёт растёт по 100).
+ * Подобранный предмет исчезает. Снаряды его не задевают, твёрдым он не бывает.
+ */
+const pickupParams: readonly ParamSpec[] = [
+  { key: 'score', label: 'Очки за подбор (demo)', min: 0, max: 1_000_000, default: 100 },
+];
+
+const pickup: ObjectBehavior = {
+  label: 'Предмет (сердце)',
+  params: pickupParams,
+  validateParams: validateBySpec(pickupParams),
+  heroTouch: (sim, state, def) => {
+    state.active = false;
+    sim.addScore(numberParam(def.params, 'score', 100));
+  },
+};
+
 /** Опасная область любого размера (w × h). Снаряды пролетают сквозь неё. */
 const hazard: ObjectBehavior = {
   label: 'Опасная область',
@@ -179,4 +197,4 @@ export function describeObjectTypes(
 }
 
 /** Обработчики демо-профиля. Тип объекта в данных → поведение в коде. */
-export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick };
+export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick, pickup };

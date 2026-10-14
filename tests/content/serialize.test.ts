@@ -56,7 +56,7 @@ describe('подготовка к редактору: адресные ошиб�
 
   it('типы объектов описаны декларативно: подпись, твёрдость и параметры с диапазонами', () => {
     const types = describeObjectTypes(DEMO_BEHAVIORS);
-    expect(types.map((t) => t.type).sort()).toEqual(['brick', 'finish', 'hazard', 'patroller', 'target']);
+    expect(types.map((t) => t.type).sort()).toEqual(['brick', 'finish', 'hazard', 'patroller', 'pickup', 'target']);
     const target = types.find((t) => t.type === 'target');
     expect(target).toMatchObject({ label: 'Мишень', solid: true });
     expect(target?.params.map((p) => p.key)).toEqual(['hp', 'score']);

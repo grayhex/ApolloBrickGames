@@ -6,11 +6,21 @@ import { t } from './i18n';
 export const ORIGINAL_LEVEL_COUNT = 9;
 
 /**
- * Какие из девяти оригинальных уровней уже есть в пакете: номер → id уровня. Оригинальные уровни владелец
- * ещё не передал, поэтому пока занят только № 1 — тестовый уровень по видео; остальные слоты закрыты.
- * Когда появится новый уровень, достаточно добавить его в пакет и сюда.
+ * Девять уровней режима MARIO: номер → id уровня в пакете. Это «геймплейное приближение»: расстановка придумана по видео геймплея
+ * и общей логике игры (tools/levels/generate.mjs), а не восстановлена 1 в 1 — оригинальные уровни владелец передаст позже.
+ * Когда оригинальный уровень будет восстановлен, он заменяет приближение под тем же номером.
  */
-export const ORIGINAL_LEVELS: Readonly<Record<number, string>> = { 1: 'tunnel-run' };
+export const ORIGINAL_LEVELS: Readonly<Record<number, string>> = {
+  1: 'mario-1',
+  2: 'mario-2',
+  3: 'mario-3',
+  4: 'mario-4',
+  5: 'mario-5',
+  6: 'mario-6',
+  7: 'mario-7',
+  8: 'mario-8',
+  9: 'mario-9',
+};
 
 export interface OriginalSlot {
   number: number;
@@ -40,6 +50,20 @@ export const sameLevel = (a: LevelRef, b: LevelRef): boolean =>
 export function defaultLevelRef(pack: ContentPack): LevelRef {
   const slot = originalSlots(pack).find((s) => s.levelId === pack.manifest.firstLevel);
   return { kind: 'original', number: slot?.number ?? 1 };
+}
+
+/**
+ * С какого уровня начинается страница: `?level=N` (слот 1–9) или `?level=id` (любой уровень пакета, например `tunnel-run` —
+ * тестовый уровень по видео, нужен тестам); иначе — первый уровень пакета. Уровень вне девяти слотов получает «слот 0»:
+ * ни одна плитка панели не подсвечена. В игре уровень сменяется кнопками панели.
+ */
+export function startingLevel(pack: ContentPack, query: string | null): { ref: LevelRef; pack: ContentPack } {
+  const slots = originalSlots(pack);
+  const number = /^\d+$/.test(query ?? '') ? Number.parseInt(query ?? '', 10) : Number.NaN;
+  const slot = slots.find((s) => s.levelId !== null && (s.number === number || s.levelId === query));
+  if (slot?.levelId) return { ref: { kind: 'original', number: slot.number }, pack: originalPack(pack, slot.levelId) };
+  if (query !== null && pack.levels.some((level) => level.id === query)) return { ref: { kind: 'original', number: 0 }, pack: originalPack(pack, query) };
+  return { ref: defaultLevelRef(pack), pack };
 }
 
 /** Пакет данных для запуска оригинального уровня: тот же пакет, но игра начинается с нужного уровня. */

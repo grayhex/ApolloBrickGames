@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Основной маршрут: игрушка с тестовым уровнем `tunnel-run`, один герой.
+ * Основной маршрут: игрушка, по умолчанию с уровнем `mario-1`; ходьба и рендер проверяются на тестовом уровне `tunnel-run` (`?level=tunnel-run`), один герой.
  * Состояние читается из data-* игровой области; для проверки рендера считаются пиксели Canvas.
  * Геймпад — подставной navigator.getGamepads().
  */
@@ -35,8 +35,9 @@ const FLOOR_Y = 4;
 const phase = (page: Page) => async () => (await snap(page)).phase;
 const entry = (page: Page) => (): Promise<string> => page.evaluate(() => document.getElementById('game-area')?.dataset['entry'] ?? '');
 
-async function ready(page: Page): Promise<void> {
-  await page.goto('./');
+/** Страница на тестовом уровне по видео (`tunnel-run`): на его геометрии выверены тесты ходьбы и рендера; по умолчанию страница начинается с `mario-1`. */
+async function ready(page: Page, query = '?level=tunnel-run'): Promise<void> {
+  await page.goto(`./${query}`);
   await expect.poll(phase(page)).toBe('ready');
 }
 
@@ -68,9 +69,9 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
 });
 
-test('по умолчанию открывается тестовый уровень в игрушке; технического текста на странице нет', async ({ page }) => {
-  await ready(page);
-  expect((await snap(page)).level).toBe('tunnel-run');
+test('по умолчанию открывается уровень 1 (mario-1) в игрушке; технического текста на странице нет', async ({ page }) => {
+  await ready(page, '');
+  expect((await snap(page)).level).toBe('mario-1');
   // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: игрушка, две панели по бокам и четыре кнопки в уголке.
   for (const id of ['#badge', '#subtitle', '#debug-toggle', '#row-timer', '#controls-hint', '#status-keyboard', '#status-gamepad', '#overlay', '#focus-hint', '.shell__footer']) {
     await expect(page.locator(id)).toBeHidden();

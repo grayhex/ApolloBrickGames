@@ -31,7 +31,7 @@ import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
-import { defaultLevelRef, originalPack, originalSlots, userPack, type LevelRef } from './levels';
+import { originalPack, originalSlots, startingLevel, userPack, type LevelRef } from './levels';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { EntryScript } from './entry';
@@ -149,8 +149,9 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   for (const warning of assetWarnings) console.warn(warning);
 
   // Контекст, игра, эффекты, сценарий входа и сессия пересоздаются при выборе другого уровня (см. launch).
-  let ctx = createContext(pack);
   const params = new URLSearchParams(window.location.search);
+  const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
+  let ctx = createContext(start.pack);
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
   let game = new Game(ctx, seed);
   const renderer = new Renderer(refs.canvas, pack.screen, assets);
@@ -343,7 +344,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // ── Выбор уровня: оригинальные 1–9 и карты из редактора ──────────────────
   const slots = originalSlots(pack);
-  let currentLevel: LevelRef = defaultLevelRef(pack);
+  let currentLevel: LevelRef = start.ref;
   let userLevels: readonly UserLevel[] = [];
   const libraryTarget: LibraryTarget = {
     packName: route.packName,
@@ -658,6 +659,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
     setData('phase', s.phase);
     setData('level', s.levelId);
+    setData('hud', game.level.def.hudLabel); // подпись `G-LL` на экране
     setData('tick', s.tick);
     setData('worldTick', s.worldTick);
     setData('heroX', s.hero.x);
