@@ -18,7 +18,8 @@ export type AudioCue =
   | 'blocked'
   | 'levelCompleted'
   | 'gameOver'
-  | 'secret';
+  | 'secret'
+  | 'stomp';
 
 /**
  * Мелодия — «фоновый» слой, который не прерывается эффектами:
@@ -126,6 +127,8 @@ export function cueForEvent(event: GameEvent, typeOf: (objectId: string) => stri
       return 'gameOver';
     case 'secretLives':
       return 'secret';
+    case 'stomp':
+      return 'stomp';
     default:
       return null;
   }

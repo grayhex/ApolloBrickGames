@@ -32,6 +32,8 @@ export interface RenderInput {
   hideHero?: boolean;
   /** Презентационные эффекты кадра (интро, отскок перекладины); без них — обычная сцена. */
   effects?: EffectsFrame;
+  /** Число на таймере (`TIME 397`) вместо подписи уровня; `null` или отсутствие — подпись (игра ещё не началась или таймера нет). */
+  time?: number | null;
 }
 
 /**
@@ -313,7 +315,15 @@ export class Renderer {
         if (asset) this.assets.draw(ctx, asset, tick, x, digits.y, hud.font.width, hud.font.height, ink);
       });
     };
-    row(values.label, hud.label);
+    const fixed = input.hudOverride ?? this.screen.hud.fixed;
+    if (input.time != null && hud.time && !fixed) {
+      // Игра с таймером: слово TIME и три цифры вместо подписи (на видео геймплея — `TIME 397`).
+      const { time } = hud;
+      this.assets.draw(ctx, time.asset, tick, time.x, time.y, time.width, time.height, ink);
+      row(String(Math.min(input.time, 10 ** time.digits.slots - 1)), time.digits);
+    } else {
+      row(values.label, hud.label);
+    }
     row(String(Math.min(values.score, 10 ** hud.score.slots - 1)).padStart(hud.score.slots, '0'), hud.score);
   }
 

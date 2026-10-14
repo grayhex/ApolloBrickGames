@@ -68,6 +68,8 @@ export class Game implements SimApi {
   private events: GameEvent[] = [];
   /** Меняется при загрузке участка; защищает от «хвоста» такта на старом участке. */
   private serial = 0;
+  /** Идёт шаг героя вниз: касание объекта в этот момент — наступание сверху (см. `ObjectBehavior.stomp`). */
+  private stomping = false;
 
   constructor(ctx: GameContext, seed = 1, state?: GameState) {
     this.ctx = ctx;
@@ -86,7 +88,10 @@ export class Game implements SimApi {
 
     switch (s.phase) {
       case 'ready':
-        if (frame.pressed & START) this.setPhase('playing');
+        if (frame.pressed & START) {
+          s.gameStarted = true;
+          this.setPhase('playing');
+        }
         break;
       case 'playing':
         if (frame.pressed & PAUSE) this.setPhase('paused');
@@ -221,6 +226,7 @@ export class Game implements SimApi {
       lives: ctx.rules.params.lives,
       timerTicks: ctx.rules.params.timerLimitTicks,
       inWell: true,
+      gameStarted: false,
       phaseTimer: 0,
       deathCause: null,
     };
@@ -269,7 +275,7 @@ export class Game implements SimApi {
     s.hero = this.newHero(level);
     s.objects = this.newObjects(level);
     s.projectiles = [];
-    s.timerTicks = this.ctx.rules.params.timerLimitTicks;
+    if (this.ctx.rules.params.timerScope !== 'game') s.timerTicks = this.ctx.rules.params.timerLimitTicks;
     s.inWell = true;
     this.serial += 1;
     this.emit({ type: 'levelStarted', levelId });
@@ -314,6 +320,7 @@ export class Game implements SimApi {
     if (params.timerLimitTicks > 0) {
       s.timerTicks -= 1;
       if (s.timerTicks <= 0) {
+        if (params.timerScope === 'game') s.lives = 1; // время игры вышло — игра окончена, а не потеря одной жизни
         this.die('time');
         return;
       }
@@ -375,7 +382,9 @@ export class Game implements SimApi {
     if (this.blocked(nx, ny)) return false;
     hero.x = nx;
     hero.y = ny;
+    this.stomping = dy > 0; // вошёл в клетку сверху (спуск) — это наступание, а не касание
     this.checkHeroTouch();
+    this.stomping = false;
     return true;
   }
 
@@ -580,7 +589,9 @@ export class Game implements SimApi {
       const state = objects[i];
       const def = defs[i];
       if (!state || !def || !state.active || !overlaps(state, def, s.hero.x, s.hero.y)) continue;
-      this.ctx.behaviors[def.type]?.heroTouch?.(this, state, def);
+      const behavior = this.ctx.behaviors[def.type];
+      if (this.stomping && behavior?.stomp?.(this, state, def)) continue;
+      behavior?.heroTouch?.(this, state, def);
       if (!this.alive(serial)) return;
     }
   }

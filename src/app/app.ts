@@ -8,6 +8,8 @@ import {
   createContext,
   DEMO_BEHAVIORS,
   Game,
+  timerUnits,
+  timerUnitTicks,
   validationEnv,
   type GameEvent,
   type InputFrame,
@@ -666,6 +668,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('phase', s.phase);
     setData('level', s.levelId);
     setData('hud', game.level.def.hudLabel); // подпись `G-LL` на экране
+    setData('time', timerUnits(ctx.rules, s) ?? ''); // число на таймере (`TIME 397`); пусто — на HUD подпись
     setData('tick', s.tick);
     setData('worldTick', s.worldTick);
     setData('heroX', s.hero.x);
@@ -704,7 +707,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
     controls?.setDevices(deviceView(gamepadStatus, hub.lastDevice));
     setText.hint(controlsHint(hub.settings.keyboard, route.fireHint));
-    setText.timer(timerText(s, ctx.rules.params.tickRateHz, ctx.rules.params.timerLimitTicks));
+    setText.timer(timerText(s, timerUnitTicks(ctx.rules), ctx.rules.params.timerLimitTicks, ctx.rules.params.timerUnitTicks ? 'ед.' : 'с'));
 
     const warnings: string[] = [...assetWarnings];
     if (!hub.settingsPersisted) warnings.push('Настройки не сохраняются: хранилище браузера недоступно.');
@@ -769,6 +772,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       sprites,
       debug: { grid: refs.chkGrid.checked, collisions: refs.chkCollisions.checked },
       effects: fx,
+      time: timerUnits(ctx.rules, game.state),
     };
     renderer.render(lastScene);
     applyGlitch(now);

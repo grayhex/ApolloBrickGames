@@ -86,7 +86,7 @@ describe('девять уровней MARIO: проходимость (поис�
       expect(result.ticks).toBeLessThan(400 * 20);
     });
 
-    it(`${id}: проходим и с врагами — их можно обойти прыжками, стрельба не требуется`, () => {
+    it(`${id}: проходим и с врагами — их можно обойти или наступить сверху, стрельба не требуется`, () => {
       const result = solveLevel(pack, id, { enemies: true });
       expect(result.solved).toBe(true);
       expect(replaySolution(pack, id, true, result.frames)).toBe(true);

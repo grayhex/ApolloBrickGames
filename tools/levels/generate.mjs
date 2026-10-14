@@ -151,7 +151,7 @@ class Level {
       w: 1,
       h: 1,
       asset: 'cell.object',
-      params: { hp: 1, score: 20, range, stepTicks: 5 },
+      params: { hp: 1, score: 20, range, stepTicks: 12, stomp: 200 },
     });
   }
 
@@ -164,7 +164,7 @@ class Level {
       w: 2,
       h: 2,
       asset: 'cell.object',
-      params: { hp: 4, score: 400, range, stepTicks: 9 },
+      params: { hp: 4, score: 400, range, stepTicks: 12, chase: 1, minY: 0 },
     });
   }
 }
@@ -354,8 +354,8 @@ const PROFILES = [
   { length: 194, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 2, stairsMax: 3, smallN: 6, bigN: 0, bigRange: 3, bonusN: 3, enemyP: 0.5, bigMax: 0, restMax: 5, hearts: 12, weights: { flat: 3, chain: 4, pit: 2, pillars: 2, stairs: 4 } },
   { length: 204, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 3, stairsMax: 3, smallN: 7, bigN: 2, bigRange: 3, bonusN: 3, enemyP: 0.5, bigMax: 2, restMax: 5, hearts: 12, weights: { flat: 3, bigFlat: 3, chain: 4, pit: 2, pillars: 3, stairs: 2, gate: 2 } },
   { length: 214, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [4, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 8, bigN: 2, bigRange: 4, bonusN: 3, enemyP: 0.5, bigMax: 2, restMax: 5, hearts: 13, weights: { flat: 2, bigFlat: 1, chain: 7, pit: 2, pillars: 2, gate: 2 } },
-  { length: 224, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [2, 4], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 9, bigN: 3, bigRange: 4, bonusN: 3, enemyP: 0.55, bigMax: 2, restMax: 4, hearts: 13, weights: { flat: 2, chain: 3, pit: 3, pillars: 3, pillarHop: 6, gate: 1, stairs: 1 } },
-  { length: 234, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [2, 4], chainSteps: [4, 6], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 10, bigN: 3, bigRange: 4, bonusN: 3, enemyP: 0.3, bigMax: 2, restMax: 4, hearts: 14, weights: { flat: 2, chain: 9, pit: 3, pillarHop: 2, gate: 1 } },
+  { length: 224, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [2, 4], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 9, bigN: 3, bigRange: 4, bonusN: 3, enemyP: 0.55, bigMax: 2, restMax: 4, hearts: 13, weights: { flat: 2, bigFlat: 2, chain: 3, pit: 3, pillars: 3, pillarHop: 6, gate: 1, stairs: 1 } },
+  { length: 234, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [2, 4], chainSteps: [4, 6], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 10, bigN: 3, bigRange: 4, bonusN: 3, enemyP: 0.3, bigMax: 2, restMax: 4, hearts: 14, weights: { flat: 2, bigFlat: 2, chain: 9, pit: 3, pillarHop: 2, gate: 1 } },
   { length: 246, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 11, bigN: 6, bigRange: 4, bonusN: 3, enemyP: 0.6, bigMax: 4, restMax: 4, hearts: 15, weights: { flat: 2, bigFlat: 2, chain: 5, pit: 3, pillars: 2, pillarHop: 3, gate: 2, stairs: 1 } },
   { length: 256, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 12, bigN: 6, bigRange: 4, bonusN: 3, enemyP: 0.6, bigMax: 5, restMax: 4, hearts: 16, weights: { flat: 2, bigFlat: 2, chain: 5, pit: 3, pillars: 3, pillarHop: 3, gate: 2, stairs: 3 } },
 ];
@@ -391,13 +391,16 @@ function standRow(level, x) {
  * Необязательные верхние площадки (ряд 3) над длинными ровными участками пола — на видео над полом висят площадки с сердцами.
  * Высота пола + площадки: герой на полу (строка 4) прыгает на площадку (строка 2): подъём 2 клетки.
  */
+/** Столбец лежит в зоне большого врага (его размах плюс запас): там нет верхних площадок и других врагов. */
+const inZone = (level, x) => (level.zones ?? []).some(([a, b]) => x >= a && x <= b);
+
 function addBonusPlatforms(level, p) {
   const total = level.cols.length;
   const taken = [];
   let x = 16;
   while (x < total - 22 && taken.length < p.bonusN) {
     let end = x;
-    while (end < total && plain(level, end, FLOOR)) end++;
+    while (end < total && plain(level, end, FLOOR) && !inZone(level, end)) end++;
     if (end - x >= 11) {
       const len = Math.min(5, end - x - 6);
       const at = x + 3 + Math.floor(level.rnd() * Math.max(1, end - x - len - 6));
@@ -435,7 +438,7 @@ function placeSmallEnemies(level, p) {
     for (const row of [FLOOR, 4, 3, 2]) {
       for (const range of [2, 1, 0]) {
         let ok = true;
-        for (let k = x - range - 1; k <= x + range + 1 && ok; k++) ok = plain(level, k, row);
+        for (let k = x - range - 1; k <= x + range + 1 && ok; k++) ok = plain(level, k, row) && !inZone(level, k);
         if (ok) {
           candidates.push({ x, row: row - 1, range, penalty: (2 - range) * 3 });
           break;
@@ -446,7 +449,7 @@ function placeSmallEnemies(level, p) {
   for (const c of spread(candidates, p.smallN, 16, total - 18, 9, level.rnd)) level.smallEnemy(c.x, c.row, c.range);
 }
 
-/** Большие парящие враги 2 × 2 в рядах 1–2 (там чисто — ни колонн, ни створок, ни верхних площадок): патруль ±3…4 клетки, прыжок на 3 клетки там попадает в врага. */
+/** Большие парящие враги 2 × 2 (преследуют героя сверху) над ровным полом шириной в размах патруля плюс запас — там нет провалов и колонн: патруль ±3…4 клетки, прыжок на 3 клетки там попадает в врага. */
 function placeBigEnemies(level, p) {
   const total = level.cols.length;
   const range = p.bigRange;
@@ -455,13 +458,16 @@ function placeBigEnemies(level, p) {
     let ok = true;
     for (let k = x - range - 1; k <= x + range + 2 && ok; k++) {
       const set = level.cols[k];
-      ok = !!set && !set.has(0) && !set.has(1) && !set.has(2);
+      ok = plain(level, k, FLOOR) && !!set; // ровный пол без провалов и колонн: пикирующий чёрт не должен настигать героя в прыжке над пропастью
     }
     if (ok) candidates.push({ x });
   }
   const taken = level.objects.filter((o) => o.type === 'patroller').map((o) => o.x);
   const free = candidates.filter((c) => taken.every((t) => Math.abs(t - c.x) > range + 4));
-  for (const c of spread(free, p.bigN, 24, total - 24, 12, level.rnd)) level.bigEnemy(c.x, range);
+  for (const c of spread(free, p.bigN, 24, total - 24, 12, level.rnd)) {
+    level.bigEnemy(c.x, range);
+    (level.zones ??= []).push([c.x - range - 1, c.x + range + 2]);
+  }
 }
 
 /** Сердца: по одному на равные участки уровня; верхние площадки, колонны и платформы цепочек — в первую очередь. */
@@ -536,9 +542,9 @@ function buildLevel(n) {
   level.floor(5);
   level.objects.push({ id: 'goal', type: 'finish', x: finishX, y: FLOOR - 1, w: 1, h: 1, asset: 'cell.all_on', params: { score: 0 } });
 
+  placeBigEnemies(level, p); // первыми: им нужен ровный пол; их зоны остаются свободными от верхних площадок и других врагов
   addBonusPlatforms(level, p);
   placeSmallEnemies(level, p);
-  placeBigEnemies(level, p);
   placeHearts(level, p);
   return { level, measured, p };
 }
@@ -567,7 +573,7 @@ function toJson(n, { level, measured }, next) {
     id: level.id,
     status: 'demo',
     hudLabel: level.label,
-    note: `Геймплейное приближение уровня ${level.label} (MARIO, уровень ${n} из 9): ${THEMES[n]}. Не оригинальный уровень — расстановка придумана по общей логике геймплея на видео; в игре нет таймера «TIME 400» и растаптывания врагов.`,
+    note: `Геймплейное приближение уровня ${level.label} (MARIO, уровень ${n} из 9): ${THEMES[n]}. Не оригинальный уровень — расстановка придумана по общей логике геймплея на видео; враги и таймер — по видео геймплея (docs/video-observations.md §10).`,
     width,
     height: ROWS,
     legend: { '.': { collision: 'empty' }, '#': { collision: 'solid', asset: 'cell.obstacle' } },

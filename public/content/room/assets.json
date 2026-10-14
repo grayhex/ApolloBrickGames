@@ -509,6 +509,28 @@
         "note": "Снаряд — центральный сегмент фигурки (торс-«сердечко») в центре ячейки; на видео такие сердечки летят по верхнему ряду. Скорость и поведение выстрела не измерены.",
         "anchor": "cell-center"
       }
+    },
+    "hud.time": {
+      "kind": "image",
+      "src": "../../graphics/lcd/hud_time.svg",
+      "frameWidth": 160,
+      "frameHeight": 100,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "frames": 1,
+      "fallbackGlyph": "unknown",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "видео геймплея: слово TIME на HUD в режиме игры (docs/video-observations.md §10)",
+          "public/graphics/lcd/hud_time.svg"
+        ],
+        "note": "Нарисовано по размытым кадрам видео (буквы T, I, M, E узкие, тесно, чуть ниже цифр); контуры приблизительные, не извлечённый оригинальный ресурс.",
+        "anchor": "top-left"
+      }
     }
   }
 }

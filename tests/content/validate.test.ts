@@ -227,6 +227,31 @@ describe('валидация профиля экрана, ресурсов и п
     expect(issuesOf(() => validateRuleSet(patch({ lives: 0 }), env))).toMatch(/lives/);
   });
 
+  it('правила: единица и область таймера — необязательны; единица — число ≥ 1 (может быть дробной), область — section или game', () => {
+    const patch = (params: Record<string, unknown>) => ({ ...rules, params: { ...rules.params, ...params } });
+    const base = validateRuleSet(rules, env).params;
+    expect(base.timerUnitTicks).toBeUndefined();
+    expect(base.timerScope).toBeUndefined();
+    const ok = validateRuleSet(patch({ timerUnitTicks: 15.4, timerScope: 'game' }), env).params;
+    expect(ok).toMatchObject({ timerUnitTicks: 15.4, timerScope: 'game' });
+    expect(issuesOf(() => validateRuleSet(patch({ timerUnitTicks: 0.5 }), env))).toMatch(/timerUnitTicks/);
+    expect(issuesOf(() => validateRuleSet(patch({ timerUnitTicks: 'x' }), env))).toMatch(/timerUnitTicks/);
+    expect(issuesOf(() => validateRuleSet(patch({ timerScope: 'world' }), env))).toMatch(/timerScope/);
+  });
+
+  it('профиль экрана: таймер на HUD (слово и цифры) — необязательный блок time', () => {
+    const room = loadRawPack('room').screen as { hud: Record<string, unknown> };
+    const parsed = validateScreenProfile(room);
+    expect(parsed.hud.kind === 'lcd' && parsed.hud.time).toMatchObject({ asset: 'hud.time', digits: { slots: 3, pitch: 133 } });
+    const without = { ...room, hud: { ...room.hud, time: undefined } };
+    const noTime = validateScreenProfile(without);
+    expect(noTime.hud.kind === 'lcd' && noTime.hud.time).toBeUndefined();
+    const broken = { ...room, hud: { ...room.hud, time: { asset: 'hud.time', x: 1, y: 1, width: 0, height: 5, digits: { x: 1, y: 1, pitch: 1 } } } };
+    const text = issuesOf(() => validateScreenProfile(broken));
+    expect(text).toMatch(/hud\.time\.width/);
+    expect(text).toMatch(/hud\.time\.digits\.slots/);
+  });
+
   it('правила: секрет с бонусными жизнями — необязателен, жизни 1…999', () => {
     const patch = (params: Record<string, unknown>) => ({ ...rules, params: { ...rules.params, ...params } });
     expect(validateRuleSet(rules, env).params.secret).toBeUndefined();

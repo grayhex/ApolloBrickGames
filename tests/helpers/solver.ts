@@ -50,6 +50,13 @@ const CHOICES: readonly InputFrame[] = [
   makeFrame({ held: ['left'], pressed: ['jump'] }),
 ];
 
+/**
+ * В ключе состояния — только враги не дальше стольких столбцов от героя: состояние далёких зависит от всей истории пути (преследователи тянутся
+ * к герою с любого расстояния), и поиск не склеивал бы пути, различающиеся лишь тем, что делается вдали от героя. Найденное решение
+ * в любом случае проверяется воспроизведением с чистого старта, так что такое склеивание может лишь пропустить решение, но не выдать ложное.
+ */
+const NEAR_ENEMY = 14;
+
 /** Направление каждого кадра выбора: −1 влево, 0 нет, 1 вправо. */
 const DIRECTIONS: readonly number[] = [0, 1, -1, 0, 1, -1];
 
@@ -77,7 +84,7 @@ function keyOf(s: GameState, fresh: number, enemies: boolean): string {
   for (const o of s.objects) {
     // Хрупкие и сменные объекты (крышка ямы, враги) меняются; сердца и опасные области на ход героя не влияют.
     if (o.id === 'lid') key += o.active ? 'L' : 'l';
-    else if (enemies && /^[eb]\d/.test(o.id)) key += `|${o.x},${o.dir},${o.timer}${o.active ? '' : 'x'}`;
+    else if (enemies && /^[eb]\d/.test(o.id) && Math.abs(o.x - h.x) <= NEAR_ENEMY) key += `|${o.id}:${o.x},${o.y},${o.dir},${o.timer}${o.active ? '' : 'x'}`;
   }
   return key;
 }

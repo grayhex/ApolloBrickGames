@@ -147,6 +147,7 @@ test('после выхода из колодца аккорд ничего не
   await page.goto('./?power=on');
   await expect.poll(phase(page)).toBe('ready');
   await page.keyboard.press('Enter');
+  await expect.poll(phase(page)).toBe('playing'); // иначе «сценарий не идёт» увидится в тот такт, когда игра ещё не началась
   await expect.poll(() => area(page, 'entry'), { timeout: 6000 }).toBe('off');
   await page.keyboard.down('ArrowLeft');
   await page.keyboard.down('ArrowDown');

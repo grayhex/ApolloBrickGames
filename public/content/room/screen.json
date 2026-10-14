@@ -44,6 +44,14 @@
       "pitch": 133,
       "slots": 4
     },
+    "time": {
+      "asset": "hud.time",
+      "x": 232,
+      "y": 41,
+      "width": 160,
+      "height": 100,
+      "digits": { "x": 397, "y": 32, "pitch": 133, "slots": 3 }
+    },
     "score": {
       "x": 1050,
       "y": 32,

@@ -34,6 +34,11 @@ export interface ObjectBehavior extends ObjectTypeSpec {
   projectileHit?(sim: SimApi, state: ObjectState, def: ObjectDef): boolean;
   /** Герой ударился головой снизу о твёрдый объект (прыжок упёрся в него). */
   headHit?(sim: SimApi, state: ObjectState, def: ObjectDef): void;
+  /**
+   * Герой, опускаясь, вошёл в клетку объекта сверху («наступил»). true — объект принял удар, касание-смерть (`heroTouch`) не засчитывается.
+   * Боковое касание и касание снизу — по-прежнему `heroTouch`.
+   */
+  stomp?(sim: SimApi, state: ObjectState, def: ObjectDef): boolean;
 }
 
 export type BehaviorRegistry = Readonly<Record<string, ObjectBehavior>>;
@@ -115,12 +120,48 @@ const brick: ObjectBehavior = {
   },
 };
 
-/** Патруль по горизонтали в пределах ±range клеток от точки появления. */
+/**
+ * Враг («чёрт»): шаг на клетку раз в `stepTicks` тактов (по видео геймплея — 12 тактов ≈ 0,6 с и у малых, и у больших).
+ * Два режима: патруль по горизонтали в пределах ±`range` клеток от точки появления и преследование героя (`chase: 1`, большой чёрт 2 × 2):
+ * поднимается к верхнему ряду `minY`, плывёт по нему к столбцу героя и, оказавшись над ним, пикирует вниз, пока не упрётся.
+ * Гибель героя — от касания; наступить сверху можно, если задано `stomp` (очки; у малого чёрта по упаковке 200).
+ */
 const patrollerParams: readonly ParamSpec[] = [
   ...destructibleParams,
   { key: 'range', label: 'Размах патруля (клеток)', min: 0, max: 255, default: 3 },
   { key: 'stepTicks', label: 'Тактов на шаг', min: 1, max: 1000, default: 4 },
+  { key: 'stomp', label: 'Очки за наступание сверху (0 — наступить нельзя)', min: 0, max: 1_000_000, default: 0 },
+  { key: 'chase', label: 'Преследует героя (1) или патрулирует (0)', min: 0, max: 1, default: 0 },
+  { key: 'minY', label: 'Верхний ряд при преследовании', min: 0, max: 255, default: 0 },
 ];
+
+/** Свободна ли вся область врага (w × h) с левым верхним углом в (x, y): ни тайла, ни твёрдого объекта, ни края карты. */
+function areaFree(sim: SimApi, def: ObjectDef, x: number, y: number): boolean {
+  for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) if (sim.isBlockedForObject(x + dx, y + dy)) return false;
+  return true;
+}
+
+/** Шаг преследователя: над героем — вниз; иначе вверх до `minY`, затем по горизонтали к герою (не дальше `range` от точки появления). */
+function chaseStep(sim: SimApi, state: ObjectState, def: ObjectDef): void {
+  const hero = sim.state.hero;
+  const minY = numberParam(def.params, 'minY', 0);
+  const range = numberParam(def.params, 'range', 3);
+  const over = hero.x >= state.x && hero.x < state.x + def.w;
+  if (over) {
+    if (state.y + def.h - 1 < hero.y) {
+      if (areaFree(sim, def, state.x, state.y + 1)) state.y += 1;
+    } else if (state.y > minY && areaFree(sim, def, state.x, state.y - 1)) {
+      state.y -= 1; // герой выше или вровень: уходит вверх, чтобы снова зайти сверху
+    }
+    return;
+  }
+  if (state.y > minY) {
+    if (areaFree(sim, def, state.x, state.y - 1)) state.y -= 1;
+    return;
+  }
+  const next = state.x + (hero.x < state.x ? -1 : 1);
+  if (Math.abs(next - def.x) <= range && areaFree(sim, def, next, state.y)) state.x = next;
+}
 
 const patroller: ObjectBehavior = {
   label: 'Патруль',
@@ -133,16 +174,26 @@ const patroller: ObjectBehavior = {
     state.timer += 1;
     if (state.timer < numberParam(def.params, 'stepTicks', 4)) return;
     state.timer = 0;
-    const range = numberParam(def.params, 'range', 3);
-    const next = state.x + state.dir;
-    if (next < def.x - range || next > def.x + range || sim.isBlockedForObject(next, state.y)) {
-      state.dir = state.dir === 1 ? -1 : 1;
+    if (numberParam(def.params, 'chase', 0) === 1) {
+      chaseStep(sim, state, def);
       return;
     }
-    state.x = next;
+    // Патруль: у края размаха или у препятствия враг разворачивается и в тот же шаг идёт обратно (на видео у краёв он стоит не дольше, чем в середине).
+    const range = numberParam(def.params, 'range', 3);
+    const canStep = (to: number): boolean => to >= def.x - range && to <= def.x + range && areaFree(sim, def, to, state.y);
+    if (!canStep(state.x + state.dir)) state.dir = state.dir === 1 ? -1 : 1;
+    if (canStep(state.x + state.dir)) state.x += state.dir;
   },
   heroTouch: (sim) => sim.die('enemy'),
   projectileHit: damage,
+  stomp: (sim, state, def) => {
+    const points = numberParam(def.params, 'stomp', 0);
+    if (points <= 0) return false;
+    state.active = false;
+    sim.addScore(points);
+    sim.emit({ type: 'stomp', x: state.x, y: state.y, targetId: state.id });
+    return true;
+  },
 };
 
 /**

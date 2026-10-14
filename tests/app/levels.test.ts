@@ -60,7 +60,9 @@ describe('пакеты для запуска', () => {
     const launched = userPack(pack, { ...level, id: 'my-map' });
     expect(launched.levels.map((l) => l.id)).toEqual(['my-map']);
     expect(launched.screen).toBe(pack.screen);
-    expect(launched.rules).toBe(pack.rules);
+    // Правила — как у игры, кроме таймера: карта из редактора — проба механики, на время она не идёт.
+    expect({ ...launched.rules.params, timerLimitTicks: pack.rules.params.timerLimitTicks }).toEqual(pack.rules.params);
+    expect(launched.rules.params.timerLimitTicks).toBe(0);
     expect(new Game(createContext(launched)).state.levelId).toBe('my-map');
   });
 });

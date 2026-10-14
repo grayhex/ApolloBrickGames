@@ -83,10 +83,10 @@ export function keyboardStatusText(active: boolean): string {
   return active ? 'активна' : 'не активна — кликните по игровой области.';
 }
 
-/** Секунды до конца таймера участка (demo) или «выкл.». */
-export function timerText(state: GameState, tickRateHz: number, limitTicks: number): string {
+/** Сколько осталось до конца таймера (секунды или единицы таймера игры — `unit`) либо «выкл.». `unitTicks` — тактов в единице. */
+export function timerText(state: GameState, unitTicks: number, limitTicks: number, unit = 'с'): string {
   if (limitTicks <= 0) return 'выкл.';
-  return `${Math.max(0, Math.ceil(state.timerTicks / tickRateHz))} с`;
+  return `${Math.max(0, Math.ceil(state.timerTicks / unitTicks))} ${unit}`;
 }
 
 /** Краткая подсказка по клавишам — по текущим привязкам, поэтому после переназначения она меняется. */

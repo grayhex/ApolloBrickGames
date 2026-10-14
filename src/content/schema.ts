@@ -44,6 +44,19 @@ export interface HudDigits {
   slots: number;
 }
 
+/**
+ * Таймер вместо подписи: слово (`TIME`, один ресурс) слева и число цифрами шрифта HUD (позиции `digits`, как у подписи).
+ * Показывается, пока идёт игра с таймером (`rules.timerLimitTicks > 0`): на видео геймплея подпись `1-01` заменялась на `TIME 397`.
+ */
+export interface HudTime {
+  asset: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  digits: HudDigits;
+}
+
 /** Шрифт HUD из отдельных ресурсов-символов; размер символа на экране может отличаться от размера спрайта. */
 export interface HudFont {
   /** Размер символа на экране. */
@@ -72,6 +85,8 @@ export type Hud =
       label: HudDigits;
       score: HudDigits;
       font: HudFont;
+      /** Необязательно: без него таймер на HUD не рисуется (подпись остаётся). */
+      time?: HudTime;
     };
 
 export interface ScreenProfile {
@@ -163,6 +178,16 @@ export interface RuleParams {
   secret?: { lives: number };
   /** 0 — таймер выключен. */
   timerLimitTicks: number;
+  /**
+   * Длительность одной единицы таймера на HUD в тактах (не обязательно целая: в видео геймплея единица ≈ 0,77 с). По умолчанию — `tickRateHz`
+   * (единица — секунда). Число на HUD — `ceil(осталось тактов / timerUnitTicks)`.
+   */
+  timerUnitTicks?: number;
+  /**
+   * `section` (по умолчанию) — таймер начинается заново на каждом участке и после гибели; `game` — один на всю игру: гибель и переходы между
+   * участками его не сбрасывают (стоит, пока герой не играет), а когда время вышло, игра заканчивается сразу — все жизни теряются.
+   */
+  timerScope?: 'section' | 'game';
   deathDelayTicks: number;
   /**
    * Что лежит за нижним краем карты: `pit` — провал (герой выпадает и погибает), `floor` — земля
