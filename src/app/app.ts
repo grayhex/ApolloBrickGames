@@ -1,6 +1,7 @@
 import { screenSize, type ContentPack } from '../content/schema';
-import { cueForEvent, type AudioPort } from '../audio/audio';
+import type { AudioPort } from '../audio/audio';
 import { WebAudioPort } from '../audio/beeper';
+import { SoundDirector } from '../audio/director';
 import {
   actionBit,
   actionsIn,
@@ -186,8 +187,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     onGamepadDisconnect: () => suspend('gamepad'),
   });
 
-  // Звук: условные 1-битные сигналы; громкость включается настройкой и жестом пользователя (политика браузеров).
-  const audio: AudioPort & { unlock(): void } = new WebAudioPort({ muted: !hub.settings.display.sound });
+  // Звук: мелодия и эффекты, восстановленные по записи со звуком (src/audio); включается настройкой и жестом пользователя (политика браузеров).
+  const audio: AudioPort & { unlock(): void } = new WebAudioPort({ muted: !hub.settings.display.sound, volume: hub.settings.display.volume });
   const unlockAudio = (): void => audio.unlock();
   window.addEventListener('keydown', unlockAudio);
   window.addEventListener('pointerdown', unlockAudio);
@@ -200,13 +201,18 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);
       entry.onEvent(event);
-      const cue = cueForEvent(event);
-      if (cue) audio.play(cue);
+      director.onEvent(event);
     }
   };
 
   let entry = new EntryScript(pack.animations?.entry);
   entry.arm(game.state.levelId);
+  // События и фазы движка → эффекты и мелодия; мелодия ждёт конца сценария входа (там герой выпрыгивает из ямы).
+  const director = new SoundDirector({
+    audio,
+    typeOf: (id) => ctx.levels.get(game.state.levelId)?.def.objects.find((object) => object.id === id)?.type ?? null,
+    entryPending: (phase) => entry.pending(phase),
+  });
 
   const makeSession = (): GameSession =>
     new GameSession({
@@ -303,12 +309,14 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     renderer.setGhost(ghostOn());
     refs.chkSound.checked = display.sound;
     audio.setMuted(!display.sound);
+    audio.setVolume(display.volume);
     refs.toy.toggleAttribute('data-compact', display.compact);
     refs.arena.toggleAttribute('data-compact', display.compact);
     if (route.lid) applyTheme(display.theme);
     controls?.update({
       shell: currentShell,
       sound: display.sound,
+      volume: display.volume,
       ghost: renderer.hasGhostLayer ? ghostOn() : null,
       compact: display.compact,
       theme: display.theme,
@@ -365,6 +373,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     entry = new EntryScript(original ? pack.animations?.entry : null);
     entry.arm(game.state.levelId);
     session = makeSession();
+    director.reset();
     suspendReason = null;
     snapCamera = true;
     powered = true;
@@ -386,6 +395,16 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       applyDisplay();
     },
     toggleSound: () => setSound(!hub.settings.display.sound),
+    setVolume: (volume, commit) => {
+      audio.setVolume(volume);
+      if (!commit) return;
+      hub.updateSettings((s) => {
+        s.display.volume = volume;
+      });
+      applyDisplay();
+      audio.unlock();
+      audio.play('confirm'); // услышать выбранный уровень (при выключенном звуке молчит)
+    },
     toggleGhost: () => {
       hub.updateSettings((s) => {
         s.display.ghost = !ghostOn();
@@ -456,7 +475,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     });
     applyDisplay();
     audio.unlock();
-    audio.play('start'); // короткий сигнал-подтверждение (при выключении звука молчит)
+    audio.play('confirm'); // короткий сигнал-подтверждение (при выключении звука молчит)
   };
   refs.chkSound.addEventListener('change', () => {
     setSound(refs.chkSound.checked);
@@ -473,11 +492,13 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     powered = on;
     refs.toy.dataset['power'] = on ? 'on' : 'off';
     suspendReason = null;
+    director.reset();
     if (on) {
       session.restart();
       hub.tracker.reset();
     } else {
       session.suspend();
+      audio.play('powerOff'); // щелчок выключения (после silence: этот эффект самый сильный)
     }
   };
   const toy = new ToyPanel(refs.toy, hub, {
@@ -569,7 +590,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('entry', entry.pending(s.phase) ? 'on' : 'off');
     setData('cameraX', camera.x);
     setData('intro', fx.intro ? 'on' : 'off');
-    showLeds(powered ? ledState(s.phase, s.tick) : { red: false, yellow: false, green: false });
+    showLeds(powered ? ledState(s.phase, s.tick, audio.ledBeat()) : { red: false, yellow: false, green: false });
     setText.status(powered ? statusLine(s.phase) : 'Выключено');
 
     // Пока идёт интро участка, оверлей «Старт» не закрывает поле (Enter всё равно запускает игру).
@@ -626,6 +647,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
     hub.poll(); // опрос геймпада — каждый кадр, в том числе на паузе (там ждём команду продолжения)
     if (powered) session.frame(now);
+    director.frame(); // мелодия стартует, когда игрок получил управление; порт планирует звук на ~0,3 с вперёд
     toy.sync(hub.tracker.down); // кнопки корпуса подсвечиваются от клавиатуры, геймпада и мыши
     if (!powered) {
       fx = NO_EFFECTS;
@@ -649,6 +671,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     snapCamera = false;
 
     fx = effects.frame(game.state, level);
+    // Построение комнаты: щелчок на каждый шаг героя по маршруту интро.
+    director.introStep(fx.intro && typeof fx.hero === 'object' ? `${fx.hero.x},${fx.hero.y}` : null);
     renderer.render({
       state: game.state,
       level,

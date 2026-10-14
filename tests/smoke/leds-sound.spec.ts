@@ -1,10 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/** Подставной AudioContext: считает, какие частоты были запущены (1-битный звук — прямоугольные сигналы). */
+interface Beep {
+  freq: number;
+  type: string;
+  at: number;
+  glideTo: number | null;
+}
+
+/** Подставной AudioContext: записывает каждый запущенный голос (прямоугольная волна, частота, время) и уровни усилителей. */
 async function fakeAudio(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const w = window as unknown as { __beeps: { freq: number; type: string }[] };
+    const w = window as unknown as { __beeps: Beep[]; __gains: { gain: { value: number } }[] };
     w.__beeps = [];
+    w.__gains = [];
     class FakeAudioContext {
       state = 'running';
       destination = {};
@@ -12,15 +20,24 @@ async function fakeAudio(page: Page): Promise<void> {
         return performance.now() / 1000;
       }
       createGain() {
-        return { gain: { value: 1 }, connect() {} };
+        const gain = { gain: { value: 1 }, connect() {} };
+        w.__gains.push(gain);
+        return gain;
       }
       createOscillator() {
+        const ramps: number[] = [];
         const osc = {
           type: 'sine',
-          frequency: { value: 0 },
+          frequency: {
+            value: 0,
+            setValueAtTime() {},
+            exponentialRampToValueAtTime(value: number) {
+              ramps.push(value);
+            },
+          },
           connect() {},
-          start() {
-            w.__beeps.push({ freq: osc.frequency.value, type: osc.type });
+          start(when = 0) {
+            w.__beeps.push({ freq: osc.frequency.value, type: osc.type, at: when, glideTo: ramps[0] ?? null });
           },
           stop() {},
         };
@@ -34,59 +51,137 @@ async function fakeAudio(page: Page): Promise<void> {
   });
 }
 
-const beeps = (page: Page): Promise<{ freq: number; type: string }[]> =>
-  page.evaluate(() => (window as unknown as { __beeps: { freq: number; type: string }[] }).__beeps.slice());
+const beeps = (page: Page): Promise<Beep[]> => page.evaluate(() => (window as unknown as { __beeps: Beep[] }).__beeps.slice());
+const hz = (st: number): number => Math.round(762 * 2 ** (st / 12));
+const rounded = async (page: Page): Promise<number[]> => (await beeps(page)).map((b) => Math.round(b.freq));
 
-const led = (page: Page, name: 'Red' | 'Yellow' | 'Green'): Promise<string | undefined> =>
-  page.locator('#lid').evaluate((element, key) => (element as HTMLElement).dataset[key], `led${name}`);
+/** Какие светодиоды горят сейчас: подмножество «RYG». */
+const lit = (page: Page): Promise<string> =>
+  page.locator('#lid').evaluate((element) => {
+    const d = (element as HTMLElement).dataset;
+    return `${d['ledRed'] === 'on' ? 'R' : ''}${d['ledYellow'] === 'on' ? 'Y' : ''}${d['ledGreen'] === 'on' ? 'G' : ''}`;
+  });
 
 async function ready(page: Page): Promise<void> {
   await page.goto('./');
   await page.waitForSelector('#game-area[data-phase="ready"]');
 }
 
-test('светодиоды: готов и игра — горят все три (как на видео), пауза — жёлтый мигает', async ({ page }) => {
-  await ready(page);
-  await expect.poll(() => led(page, 'Red')).toBe('on');
-  expect([await led(page, 'Yellow'), await led(page, 'Green')]).toEqual(['on', 'on']);
-  await expect(page.locator('#lid .led--lit')).toHaveCount(3);
-
+/** Игра началась и сценарий входа закончился: игрок получил управление. */
+async function control(page: Page): Promise<void> {
   await page.keyboard.press('Enter');
   await page.waitForSelector('#game-area[data-phase="playing"]');
-  await expect.poll(() => led(page, 'Red')).toBe('on');
-  expect([await led(page, 'Yellow'), await led(page, 'Green')]).toEqual(['on', 'on']);
-  await expect(page.locator('#lid .led--lit')).toHaveCount(3);
+  await page.waitForSelector('#game-area[data-entry="off"]', { timeout: 10_000 });
+}
 
-  await page.keyboard.press('Escape');
-  await page.waitForSelector('#game-area[data-phase="paused"]');
+test('светодиоды не зависят от кнопки «Звук»: при заглушённом звуке они всё равно бегут в такт мелодии', async ({ page }) => {
+  await ready(page);
+  await page.locator('[data-key="sound"]').click(); // звук выключен
+  await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false');
+  expect(await lit(page)).toBe(''); // комната строится в тишине: все погашены
+
+  await control(page);
   const seen = new Set<string>();
-  for (let i = 0; i < 24; i++) {
-    seen.add((await led(page, 'Yellow')) ?? '');
-    await page.waitForTimeout(60);
+  for (let i = 0; i < 60; i++) {
+    seen.add(await lit(page));
+    await page.waitForTimeout(40);
   }
-  expect([...seen].sort()).toEqual(['off', 'on']);
-  expect(await led(page, 'Green')).toBe('off');
-  expect(await led(page, 'Red')).toBe('off');
+  expect(seen.has('R') && seen.has('Y') && seen.has('G')).toBe(true);
+  expect([...seen].every((state) => state.length <= 1)).toBe(true);
 });
 
-test('звук: 1-битные сигналы на старт и прыжок, переключатель «Звук» глушит и запоминается', async ({ page }) => {
+test('светодиоды со звуком: в тишине (построение комнаты) погашены, под мелодию бегут по одному красный → жёлтый → зелёный', async ({ page }) => {
   await fakeAudio(page);
   await ready(page);
+  await page.keyboard.press('Shift'); // жест пользователя: «разбудить» звук (клавиша не игровая)
+  expect(await lit(page)).toBe('');
+  await expect(page.locator('#lid .led--lit')).toHaveCount(0);
 
-  await page.keyboard.press('Enter');
-  await page.waitForSelector('#game-area[data-phase="playing"]');
-  await expect.poll(async () => (await beeps(page)).some((b) => b.freq === 1047)).toBe(true); // старт
-  expect((await beeps(page)).every((b) => b.type === 'square')).toBe(true);
+  await control(page);
+  // Фанфара и мелодия: за пару секунд побывали все три светодиода, и никогда не горят двое сразу.
+  const seen = new Set<string>();
+  for (let i = 0; i < 60; i++) {
+    seen.add(await lit(page));
+    await page.waitForTimeout(40);
+  }
+  expect(seen.has('R') && seen.has('Y') && seen.has('G')).toBe(true);
+  expect([...seen].every((state) => state.length <= 1)).toBe(true);
 
-  await page.waitForTimeout(250); // сигнал старта звучит ~0,1 с и мелкими сигналами не прерывается
-  await page.keyboard.press('Space');
-  await expect.poll(async () => (await beeps(page)).some((b) => b.freq === 880)).toBe(true); // прыжок
+  // Пауза замораживает мелодию: светодиоды переходят на условное мигание паузы (жёлтый).
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#game-area[data-phase="paused"]');
+  const paused = new Set<string>();
+  for (let i = 0; i < 24; i++) {
+    paused.add(await lit(page));
+    await page.waitForTimeout(60);
+  }
+  expect([...paused].sort()).toEqual(['', 'Y']);
+});
 
-  // Выключили звук кнопкой SOUND на корпусе: новые прыжки молчат.
+test('звук: шаги построения, фанфара и мелодия по кругу, эффекты прыжка; мелодия не прерывается эффектами', async ({ page }) => {
+  await fakeAudio(page);
+  await ready(page);
+  await page.keyboard.press('Shift');
+
+  // Построение комнаты в готовности: щелчки шагов (падающий свип 3000 → 1550 Гц), мелодии ещё нет.
+  await expect.poll(async () => (await beeps(page)).some((b) => b.glideTo === 1550)).toBe(true);
+  expect((await beeps(page)).every((b) => b.type === 'square' || b.type === 'sine')).toBe(true);
+
+  await control(page);
+  // Фанфара запуска: ми ре ми ре до ре ми ре ми ля си до.
+  const fanfare = [4, 2, 4, 2, 0, 2, 4, 2, 4, 9, 11, 12].map(hz);
+  await expect
+    .poll(async () => {
+      const list = await rounded(page);
+      for (let i = 0; i + fanfare.length <= list.length; i++) {
+        if (fanfare.every((f, k) => Math.abs((list[i + k] ?? 0) - f) <= 1)) return true;
+      }
+      return false;
+    })
+    .toBe(true);
+
+  // Дальше — мелодия: нота «ми» + «до» (аккорд) и «ре».
+  await expect.poll(async () => (await rounded(page)).filter((f) => f === hz(0)).length).toBeGreaterThan(8);
+  await page.waitForTimeout(800); // герой допрыгал и стоит на земле
+  const countBefore = (await rounded(page)).filter((f) => f === hz(7)).length;
+  await page.keyboard.press('Space'); // прыжок: «лесенка» до-ре-ми-фа-соль-фа-ми (соль есть только в прыжке)
+  await expect.poll(async () => (await rounded(page)).filter((f) => f === hz(7)).length).toBeGreaterThan(countBefore);
+});
+
+test('звук: переключатель «Звук» глушит, выбор запоминается; ползунок громкости меняет уровень и сохраняется', async ({ page }) => {
+  await fakeAudio(page);
+  await ready(page);
+  await page.keyboard.press('Shift');
+
+  // Ползунок громкости в правом блоке: по умолчанию 50 %.
+  const slider = page.locator('#volume');
+  await expect(slider).toHaveValue('50');
+  await expect(page.locator('#volume-row .vol__value')).toHaveText('50%');
+  const master = (): Promise<number> => page.evaluate(() => (window as unknown as { __gains: { gain: { value: number } }[] }).__gains[0]?.gain.value ?? -1);
+  await expect.poll(master).toBeCloseTo(0.07, 3);
+  await slider.focus();
+  await page.keyboard.press('End');
+  await expect(slider).toHaveValue('100');
+  await expect.poll(master).toBeCloseTo(0.14, 3);
+  await page.keyboard.press('Home');
+  await expect.poll(master).toBe(0);
+  await page.keyboard.press('End');
+  await expect.poll(master).toBeCloseTo(0.14, 3);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('crocodile-mario:settings:v1') ?? '{}').display.volume);
+  expect(saved).toBe(1);
+  await page.reload();
+  await page.waitForSelector('#game-area[data-phase="ready"]');
+  await expect(page.locator('#volume')).toHaveValue('100');
+
+  // Выключили звук кнопкой «Звук»: новые голоса не создаются.
+  await page.locator('#game-area').focus();
+  await page.keyboard.press('Shift');
   await page.locator('[data-key="sound"]').click();
-  await page.waitForTimeout(700); // приземление
+  await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#volume-row')).toHaveAttribute('data-muted', 'true');
   const before = (await beeps(page)).length;
   await page.locator('#game-area').focus();
+  await control(page);
   await page.keyboard.press('Space');
   await page.waitForTimeout(500);
   expect((await beeps(page)).length).toBe(before);
@@ -94,14 +189,10 @@ test('звук: 1-битные сигналы на старт и прыжок, �
   // Выбор сохраняется между перезагрузками.
   await page.reload();
   await page.waitForSelector('#game-area[data-phase="ready"]');
-  await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false'); // выбор запомнен
-  await page.locator('#game-area').focus();
-  await page.keyboard.press('Enter');
-  await page.waitForSelector('#game-area[data-phase="playing"]');
-  await page.waitForTimeout(300);
-  expect((await beeps(page)).length).toBe(0);
+  await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false');
 
   // Включили обратно — короткий сигнал-подтверждение.
+  const quiet = (await beeps(page)).length;
   await page.locator('[data-key="sound"]').click();
-  await expect.poll(async () => (await beeps(page)).length).toBeGreaterThan(0);
+  await expect.poll(async () => (await beeps(page)).length).toBeGreaterThan(quiet);
 });

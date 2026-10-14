@@ -286,7 +286,7 @@ body {
   border-radius: 50%;
   box-shadow: inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.35);
   filter: brightness(0.42) saturate(0.55);
-  transition: filter 60ms linear, box-shadow 60ms linear;
+  transition: filter 25ms linear, box-shadow 25ms linear; /* фанфара — по 53 мс на ноту: переключение должно быть быстрее */
 }
 
 .led--lit {
@@ -852,6 +852,91 @@ body:not([data-chrome='toy']) .side {
   background: var(--chip);
   border-color: var(--line);
   box-shadow: none;
+}
+
+/* Громкость: ползунок под быстрыми кнопками. При выключенном звуке ряд приглушён (кнопка «Звук» заглушает независимо от уровня). */
+.vol {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  color: var(--muted);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: opacity 120ms;
+}
+
+.vol[data-muted='true'] {
+  opacity: 0.55;
+}
+
+.vol__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+}
+
+.vol__icon .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.vol__range {
+  --pct: 50%;
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.vol__range:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--tone) 70%, var(--text));
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.vol__range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--tone) 70%, var(--muted)) var(--pct), var(--line) var(--pct));
+}
+
+.vol__range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--tone) 70%, var(--muted)) var(--pct), var(--line) var(--pct));
+}
+
+.vol__range::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid color-mix(in srgb, var(--tone) 70%, var(--muted));
+  border-radius: 50%;
+  background: var(--text);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.vol__range::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 2px solid color-mix(in srgb, var(--tone) 70%, var(--muted));
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.vol__value {
+  min-width: 3.4ch;
+  font: 700 0.66rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Переключатель цвета: четыре миниатюрные консоли. Цвета берутся из палитры `[data-shell]`, как у настоящей игрушки. */

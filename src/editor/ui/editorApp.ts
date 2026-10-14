@@ -246,7 +246,7 @@ export async function startEditor(): Promise<void> {
     onGamepadStatus: (status) => runnerRef.current?.onGamepadStatus(status),
     onGamepadDisconnect: () => runnerRef.current?.onGamepadDisconnect(),
   });
-  const audio = new WebAudioPort({ muted: !hub.settings.display.sound });
+  const audio = new WebAudioPort({ muted: !hub.settings.display.sound, volume: hub.settings.display.volume });
   window.addEventListener('keydown', () => audio.unlock());
   window.addEventListener('pointerdown', () => audio.unlock());
   const runner = new TestRunner(hub, settingsDialog, audio);

@@ -1,60 +1,31 @@
-import type { AudioCue, AudioPort } from './audio';
+import type { AudioCue, AudioPort, MelodyKind } from './audio';
+import { MelodyPlayer } from './melody';
+import { CUES, type Note } from './phrases';
 
 /**
- * Базовый 1-битный звук: один канал, прямоугольная волна фиксированной громкости, без огибающих и миксования.
- * Это условные сигналы демо — оригинальные звуки устройства не измерены и сюда не перенесены.
+ * Звук через Web Audio в духе пищалки игрушки: только прямоугольные волны, до двух голосов, никаких огибающих.
+ * Два слоя поверх одного выхода: мелодия (идёт по часам, не прерывается) и эффекты (один канал, приоритеты).
+ * Всё планируется заранее из `update()` (раз в кадр, окно ~0,3 с) — таймеры не нужны, а пауза просто глушит голоса.
  */
-export interface Beep {
-  /** Частота, Гц; 0 — пауза. */
-  freq: number;
-  ms: number;
-}
 
-export const CUE_BEEPS: Readonly<Record<AudioCue, readonly Beep[]>> = {
-  start: [{ freq: 1047, ms: 45 }, { freq: 1568, ms: 70 }],
-  jump: [{ freq: 880, ms: 40 }, { freq: 1175, ms: 55 }],
-  land: [{ freq: 196, ms: 35 }],
-  shot: [{ freq: 1480, ms: 30 }, { freq: 988, ms: 40 }],
-  hit: [{ freq: 660, ms: 45 }, { freq: 0, ms: 20 }, { freq: 660, ms: 60 }],
-  blocked: [{ freq: 330, ms: 30 }],
-  death: [{ freq: 440, ms: 90 }, { freq: 330, ms: 90 }, { freq: 247, ms: 90 }, { freq: 196, ms: 200 }],
-  levelCompleted: [{ freq: 523, ms: 80 }, { freq: 659, ms: 80 }, { freq: 784, ms: 80 }, { freq: 1047, ms: 180 }],
-  gameOver: [{ freq: 392, ms: 130 }, { freq: 330, ms: 130 }, { freq: 262, ms: 130 }, { freq: 196, ms: 320 }],
-};
-
-/** Важные сигналы не обрываются мелкими: один канал, побеждает более высокий приоритет. */
-export const CUE_PRIORITY: Readonly<Record<AudioCue, number>> = {
-  land: 0,
-  blocked: 0,
-  jump: 1,
-  shot: 1,
-  hit: 2,
-  start: 2,
-  death: 3,
-  levelCompleted: 3,
-  gameOver: 3,
-};
-
-export function cueDurationMs(cue: AudioCue): number {
-  return CUE_BEEPS[cue].reduce((sum, beep) => sum + beep.ms, 0);
-}
-
-/** Расписание сигнала от момента `start` (секунды): только звучащие отрезки. */
-export function scheduleBeeps(cue: AudioCue, start: number): { freq: number; start: number; end: number }[] {
-  const result: { freq: number; start: number; end: number }[] = [];
-  let at = start;
-  for (const beep of CUE_BEEPS[cue]) {
-    const end = at + beep.ms / 1000;
-    if (beep.freq > 0) result.push({ freq: beep.freq, start: at, end });
-    at = end;
-  }
-  return result;
-}
+/** Общий множитель: при громкости 0,5 ползунка выходное усиление ≈ 0,07 — как у прежнего демо-сигнала. */
+export const MASTER_GAIN = 0.14;
+/** Мелодия тише эффектов (допущение: в записи эффекты слышны отчётливо поверх мелодии). */
+export const MELODY_GAIN = 0.6;
+/** На сколько вперёд ставить мелодию в расписание, мс. */
+export const LOOKAHEAD_MS = 300;
+const FALLBACK_VOLUME = 0.5;
 
 // Минимальные структурные типы Web Audio: порт тестируется без браузера.
+export interface AudioParamLike {
+  value: number;
+  setValueAtTime(value: number, time: number): void;
+  exponentialRampToValueAtTime(value: number, time: number): void;
+}
+
 export interface OscillatorLike {
   type: string;
-  frequency: { value: number };
+  frequency: AudioParamLike;
   connect(destination: unknown): void;
   start(when?: number): void;
   stop(when?: number): void;
@@ -67,6 +38,9 @@ export interface GainLike {
 
 export interface AudioContextLike {
   readonly currentTime: number;
+  /** Задержка вывода звука, с (если браузер сообщает): светодиоды отстают на столько же, чтобы совпасть со слышимым. */
+  readonly baseLatency?: number;
+  readonly outputLatency?: number;
   readonly state: string;
   readonly destination: unknown;
   createOscillator(): OscillatorLike;
@@ -76,63 +50,150 @@ export interface AudioContextLike {
 
 export interface WebAudioOptions {
   muted?: boolean;
-  /** Громкость (0…1): фиксирована, 1-битный звук без динамики. */
+  /** Громкость 0…1 (ползунок страницы). */
   volume?: number;
   factory?: () => AudioContextLike | null;
+  /** Стенные часы, мс (по умолчанию `performance.now`); в тестах подменяются. */
+  clock?: () => number;
 }
 
 const defaultFactory = (): AudioContextLike | null =>
   typeof AudioContext === 'undefined' ? null : (new AudioContext() as unknown as AudioContextLike);
 
-/** Звук через Web Audio: прямоугольные сигналы по расписанию CUE_BEEPS; без API или при mute молчит. */
+const defaultClock = (): number => (typeof performance === 'undefined' ? Date.now() : performance.now());
+
+const clampVolume = (volume: number): number => (Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : FALLBACK_VOLUME);
+
+interface Voice {
+  oscillator: OscillatorLike;
+  /** Когда голос закончит звучать (время контекста, с). */
+  end: number;
+}
+
 export class WebAudioPort implements AudioPort {
   muted: boolean;
+  volume: number;
   private context: AudioContextLike | null = null;
-  private gain: GainLike | null = null;
-  private active: OscillatorLike[] = [];
+  private master: GainLike | null = null;
+  private melodyBus: GainLike | null = null;
+  private sfxBus: GainLike | null = null;
+  private melodyVoices: Voice[] = [];
+  private sfxVoices: Voice[] = [];
   private busyUntil = 0;
   private busyPriority = -1;
-  private readonly volume: number;
+  private noise = 0x2545f491;
+  private lastResume = Number.NEGATIVE_INFINITY;
+  private readonly melody = new MelodyPlayer();
   private readonly factory: () => AudioContextLike | null;
+  private readonly clock: () => number;
 
   constructor(options: WebAudioOptions = {}) {
     this.muted = options.muted ?? false;
-    this.volume = options.volume ?? 0.07;
+    this.volume = clampVolume(options.volume ?? FALLBACK_VOLUME);
     this.factory = options.factory ?? defaultFactory;
+    this.clock = options.clock ?? defaultClock;
+  }
+
+  get melodyKind(): MelodyKind | null {
+    return this.melody.active(this.clock()) ? this.melody.kind : null;
   }
 
   setMuted(muted: boolean): void {
     this.muted = muted;
-    if (muted) this.silence();
+    if (muted) {
+      this.cut(this.melodyVoices);
+      this.melody.rewind(this.clock());
+      this.cut(this.sfxVoices);
+      this.busyUntil = 0;
+      this.busyPriority = -1;
+    }
+  }
+
+  setVolume(volume: number): void {
+    this.volume = clampVolume(volume);
+    if (this.master) this.master.gain.value = this.volume * MASTER_GAIN;
   }
 
   /** Создаёт и «будит» контекст; вызывается по жесту пользователя (политика автовоспроизведения браузеров). */
   unlock(): void {
-    const context = this.ensure();
-    if (context && context.state === 'suspended') void context.resume().catch(() => {});
+    this.wake(this.ensure());
   }
 
   play(cue: AudioCue): void {
     if (this.muted) return;
     const context = this.ensure();
-    if (!context || !this.gain) return;
-    if (context.state === 'suspended') void context.resume().catch(() => {});
+    if (!context || !this.sfxBus) return;
+    this.wake(context);
+    const def = CUES[cue];
     const now = context.currentTime;
-    const priority = CUE_PRIORITY[cue];
-    if (now < this.busyUntil && priority < this.busyPriority) return;
-    this.silence(now);
-    for (const piece of scheduleBeeps(cue, now)) {
-      const oscillator = context.createOscillator();
-      oscillator.type = 'square';
-      oscillator.frequency.value = piece.freq;
-      oscillator.connect(this.gain);
-      oscillator.start(piece.start);
-      oscillator.stop(piece.end);
-      this.active.push(oscillator);
+    if (now < this.busyUntil && def.priority < this.busyPriority) return;
+    this.cut(this.sfxVoices);
+    let target: GainLike = this.sfxBus;
+    if (def.gain !== undefined && def.gain !== 1) {
+      target = context.createGain();
+      target.gain.value = def.gain;
+      target.connect(this.sfxBus);
     }
-    this.busyUntil = now + cueDurationMs(cue) / 1000;
-    this.busyPriority = priority;
+    let at = now + (def.delayMs ?? 0) / 1000;
+    for (const note of def.notes) {
+      this.sound(context, note, at, note.ms, target, this.sfxVoices);
+      at += note.ms / 1000;
+    }
+    this.busyUntil = at;
+    this.busyPriority = def.priority;
   }
+
+  startMelody(kind: MelodyKind): void {
+    this.cut(this.melodyVoices);
+    this.melody.start(kind, this.clock());
+  }
+
+  pauseMelody(): void {
+    this.melody.pause(this.clock());
+    this.cut(this.melodyVoices);
+  }
+
+  resumeMelody(): void {
+    this.melody.resume(this.clock());
+  }
+
+  stopMelody(): void {
+    this.melody.stop();
+    this.cut(this.melodyVoices);
+  }
+
+  silence(): void {
+    this.stopMelody();
+    this.cut(this.sfxVoices);
+    this.busyUntil = 0;
+    this.busyPriority = -1;
+  }
+
+  update(): void {
+    const context = this.context;
+    if (!context) return;
+    this.prune(context.currentTime);
+    if (this.muted || !this.melodyBus) return;
+    if (context.state !== 'running') {
+      this.wake(context);
+      return;
+    }
+    const now = this.clock();
+    const ahead = this.melody.collect(now, LOOKAHEAD_MS);
+    for (const item of ahead) {
+      const skip = Math.max(0, -item.offsetMs);
+      const at = context.currentTime + Math.max(0, item.offsetMs) / 1000;
+      this.sound(context, item.note, at, item.note.ms - skip, this.melodyBus, this.melodyVoices);
+    }
+  }
+
+  ledBeat(): number {
+    const context = this.context;
+    const latency = context ? ((context.baseLatency ?? 0) + (context.outputLatency ?? 0)) * 1000 : 0;
+    return this.melody.led(this.clock() - Math.min(300, Math.max(0, latency)));
+  }
+
+  // ── Внутреннее ─────────────────────────────────────────────────────────────
 
   private ensure(): AudioContextLike | null {
     if (this.context) return this.context;
@@ -141,24 +202,92 @@ export class WebAudioPort implements AudioPort {
     } catch {
       this.context = null;
     }
-    if (this.context) {
-      this.gain = this.context.createGain();
-      this.gain.gain.value = this.volume;
-      this.gain.connect(this.context.destination);
+    const context = this.context;
+    if (context) {
+      this.master = context.createGain();
+      this.master.gain.value = this.volume * MASTER_GAIN;
+      this.master.connect(context.destination);
+      this.melodyBus = context.createGain();
+      this.melodyBus.gain.value = MELODY_GAIN;
+      this.melodyBus.connect(this.master);
+      this.sfxBus = context.createGain();
+      this.sfxBus.gain.value = 1;
+      this.sfxBus.connect(this.master);
     }
-    return this.context;
+    return context;
   }
 
-  private silence(at?: number): void {
-    for (const oscillator of this.active) {
+  /** Просит у браузера продолжить контекст (без жеста он откажет — это не ошибка); не чаще раза в полсекунды. */
+  private wake(context: AudioContextLike | null): void {
+    if (!context || context.state !== 'suspended') return;
+    const now = this.clock();
+    if (now - this.lastResume < 500) return;
+    this.lastResume = now;
+    void context.resume().catch(() => {});
+  }
+
+  /** Ставит ноту в расписание: голоса звучат `ms` мс с момента `at` (с контекстного времени), в конце — артикуляционная пауза. */
+  private sound(context: AudioContextLike, note: Note, at: number, ms: number, bus: GainLike, sink: Voice[]): void {
+    const length = Math.max(0, ms - (note.gap ?? 0)) / 1000;
+    if (length <= 0) return;
+    const end = at + length;
+    const voices = note.noise ? 1 : note.hz.length;
+    if (voices === 0) return;
+    let target = bus;
+    if (voices > 1) {
+      // Два голоса складываются: делим уровень, чтобы аккорд не был вдвое громче одиночной ноты.
+      target = context.createGain();
+      target.gain.value = 1 / voices;
+      target.connect(bus);
+    }
+    for (let i = 0; i < voices; i++) {
+      const oscillator = context.createOscillator();
+      oscillator.type = 'square';
+      const { frequency } = oscillator;
+      if (note.noise) {
+        const { lo, hi, hop } = note.noise;
+        frequency.value = this.noiseHz(lo, hi);
+        for (let t = at + hop / 1000; t < end; t += hop / 1000) frequency.setValueAtTime(this.noiseHz(lo, hi), t);
+      } else {
+        const hz = note.hz[i] ?? 0;
+        frequency.value = hz;
+        if (i === 0 && note.glideTo !== undefined) {
+          frequency.setValueAtTime(hz, at);
+          frequency.exponentialRampToValueAtTime(note.glideTo, end);
+        }
+      }
+      oscillator.connect(target);
+      oscillator.start(at);
+      oscillator.stop(end);
+      sink.push({ oscillator, end });
+    }
+  }
+
+  /** Псевдослучайная частота шума (xorshift): воспроизводимо, без `Math.random`. */
+  private noiseHz(lo: number, hi: number): number {
+    let x = this.noise;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    this.noise = x >>> 0;
+    return lo + (this.noise / 0x100000000) * (hi - lo);
+  }
+
+  /** Немедленно обрывает голоса (и ещё не начавшиеся — они так и не прозвучат). */
+  private cut(list: Voice[]): void {
+    const at = this.context?.currentTime;
+    for (const voice of list) {
       try {
-        oscillator.stop(at);
+        voice.oscillator.stop(at);
       } catch {
         // Уже остановлен.
       }
     }
-    this.active = [];
-    this.busyUntil = 0;
-    this.busyPriority = -1;
+    list.length = 0;
+  }
+
+  private prune(now: number): void {
+    this.melodyVoices = this.melodyVoices.filter((voice) => voice.end > now);
+    this.sfxVoices = this.sfxVoices.filter((voice) => voice.end > now);
   }
 }
