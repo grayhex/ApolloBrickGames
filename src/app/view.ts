@@ -22,8 +22,19 @@ export function parseView(value: string | null, powerOn = false): View {
  */
 export const PHONE_QUERY = '(max-width: 899px)';
 
-/** Вид после раскрытия крышки: на узком экране — «только экран» с пультом под ним, иначе — игрушка целиком. */
-export function openedView(phone: boolean): View {
-  return phone ? 'screen' : 'full';
+/**
+ * Нужен ли пульт для телефона: пока крышка закрыта — нет; иначе по выбору пользователя (`pad`), а без выбора (`null`) — только в «только экран»,
+ * где кнопок корпуса нет. Ширину экрана не учитывает: на широком экране пульт скрывает CSS (`PHONE_QUERY`).
+ */
+export function padWanted(view: View, pad: boolean | null): boolean {
+  return view !== 'closed' && (pad ?? view === 'screen');
+}
+
+/**
+ * Вид после раскрытия крышки: на узком экране — «только экран» (там пульт для телефона), иначе — игрушка целиком. Если пульт выключен
+ * явно (`pad === false`), на телефоне тоже открывается целиком — с настоящими кнопками корпуса.
+ */
+export function openedView(phone: boolean, pad: boolean | null = null): View {
+  return phone && pad !== false ? 'screen' : 'full';
 }
 

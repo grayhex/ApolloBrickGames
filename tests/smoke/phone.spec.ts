@@ -29,6 +29,9 @@ interface Box {
   height: number;
 }
 
+const savedPad = (page: Page): Promise<boolean | null | undefined> =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('crocodile-mario:settings:v1') ?? '{}').display?.pad);
+
 async function box(page: Page, selector: string): Promise<Box> {
   const b = await page.locator(selector).first().boundingBox();
   if (!b) throw new Error(`Нет элемента ${selector}`);
@@ -286,6 +289,113 @@ test.describe('телефон в портрете', () => {
   });
 });
 
+test.describe('пульт необязателен: переключатель «Для телефона»', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test('в «только экран» пульт есть сам; выключили — пропал, и крышка теперь открывается целиком; выбор сохраняется', async ({ page }) => {
+    await page.goto('./?view=screen');
+    await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
+    const toggle = page.locator('#tgl-pad');
+    await toggle.scrollIntoViewIfNeeded();
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toContainText('Для телефона');
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true'); // по умолчанию в «только экран» пульт показан
+    await expect(page.locator('#deck')).toBeVisible();
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#deck')).toBeHidden();
+    expect(await savedPad(page)).toBe(false);
+
+    // Выключен явно: после перезагрузки его нет, а касание закрытой крышки открывает игрушку целиком — с настоящими кнопками корпуса.
+    await page.goto('./');
+    await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
+    const cover = await center(page, '#lid-cover');
+    await page.touchscreen.tap(cover.x, cover.y);
+    await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
+    await expect(page.locator('#deck')).toBeHidden();
+    await expect(page.locator('#base')).toBeVisible();
+    // Вернули пульт в «только экран».
+    await page.locator('#view-screen').scrollIntoViewIfNeeded();
+    await page.locator('#view-screen').tap();
+    await expect(page.locator('#deck')).toBeHidden(); // выбор «нет» действует во всех видах
+    await page.locator('#tgl-pad').scrollIntoViewIfNeeded();
+    await page.locator('#tgl-pad').tap();
+    await expect(page.locator('#deck')).toBeVisible();
+    expect(await savedPad(page)).toBe(true);
+  });
+
+  test('в «Полной» пульт включается тем же переключателем и заменяет нижнюю половину игрушки: лампы, шарнир и шлейф остаются', async ({ page }) => {
+    await page.goto('./?power=on');
+    await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
+    await expect(page.locator('#deck')).toBeHidden(); // по умолчанию в «Полной» кнопки корпуса
+    await expect(page.locator('#base')).toBeVisible();
+    const toggle = page.locator('#tgl-pad');
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await toggle.scrollIntoViewIfNeeded();
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#deck')).toBeVisible();
+    await expect(page.locator('#base')).toBeHidden(); // кнопки корпуса заменены пультом
+    await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full'); // вид тот же: крышка открыта, шарнир на месте
+    expect(await savedPad(page)).toBe(true);
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    // Раскладка: пульт стоит прямо под шарниром, целиком в окне выше нижней панели браузера, шарнир и шлейф видны.
+    const stage = await box(page, '#stage');
+    const deck = await box(page, '#deck');
+    expect(deck.y).toBeGreaterThan(stage.y + stage.height - 40);
+    expect(deck.y).toBeLessThan(stage.y + stage.height + 30);
+    expect(deck.y + deck.height).toBeLessThanOrEqual(844 - 60);
+    expect(deck.x).toBeGreaterThanOrEqual(0);
+    expect(deck.x + deck.width).toBeLessThanOrEqual(390);
+    await expect(page.locator('.toy__knuckle').first()).toBeVisible();
+    await expect(page.locator('.toy__band')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+    // И он работает: S./P. на пульте запускает игру, крестовина двигает героя.
+    const sp = await center(page, '#deck [data-pad="sp"]');
+    await page.touchscreen.tap(sp.x, sp.y);
+    await expect.poll(phase(page)).toBe('playing');
+    await expect.poll(() => area(page, 'entry'), { timeout: 8000 }).toBe('off');
+    const touch = await fingers(page);
+    const x0 = await num(page, 'heroX')();
+    const right = await dpad(page, 0.85, 0.5);
+    await touch.down(1, right.x, right.y);
+    await expect.poll(num(page, 'heroX'), { timeout: 4000 }).toBeGreaterThan(x0 + 1);
+    await touch.up(1);
+
+    // Выключили переключатель — нижняя половина на месте.
+    await page.locator('#tgl-pad').scrollIntoViewIfNeeded();
+    await page.locator('#tgl-pad').tap();
+    await expect(page.locator('#deck')).toBeHidden();
+    await expect(page.locator('#base')).toBeVisible();
+  });
+
+  test('включённый в «Полной» пульт запоминается: после перезагрузки он на месте; у закрытой игрушки пульта нет', async ({ page }) => {
+    await page.goto('./?view=full');
+    await page.locator('#tgl-pad').scrollIntoViewIfNeeded();
+    await page.locator('#tgl-pad').tap();
+    await expect(page.locator('#deck')).toBeVisible();
+    await page.goto('./?view=full');
+    await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
+    await expect(page.locator('#deck')).toBeVisible();
+    await expect(page.locator('#tgl-pad')).toHaveAttribute('aria-pressed', 'true');
+    await page.goto('./'); // при загрузке игрушка закрыта
+    await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
+    await expect(page.locator('#deck')).toBeHidden();
+    await expect(page.locator('#tgl-pad')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('на широком экране переключателя «Для телефона» нет', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('./?view=full');
+    await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
+    await expect(page.locator('#tgl-ghost')).toBeVisible();
+    await expect(page.locator('#tgl-pad')).toBeHidden();
+    await expect(page.locator('#deck')).toBeHidden();
+  });
+});
+
 test.describe('телефон в альбомной ориентации', () => {
   test.use({ hasTouch: true, viewport: { width: 844, height: 390 } });
 
@@ -321,6 +431,25 @@ test.describe('телефон в альбомной ориентации', () =>
     const power = await center(page, '#deck [data-pad="onoff"]');
     await page.touchscreen.tap(power.x, power.y);
     await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
+  });
+});
+
+test.describe('телефон в альбомной ориентации: «Полная»', () => {
+  test.use({ hasTouch: true, viewport: { width: 844, height: 390 } });
+
+  test('с включённым пультом «Полная» остаётся целой игрушкой, кнопки лежат по бокам', async ({ page }) => {
+    await page.goto('./?view=full');
+    await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
+    await page.locator('#tgl-pad').scrollIntoViewIfNeeded();
+    await page.locator('#tgl-pad').tap();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator('#deck')).toBeVisible();
+    await expect(page.locator('#base')).toBeVisible(); // нижняя половина на месте
+    const jump = await box(page, '#deck .pad--jump');
+    const dpadBox = await box(page, '#deck [data-pad-zone="dpad"]');
+    expect(jump.x).toBeGreaterThan(844 / 2);
+    expect(dpadBox.x + dpadBox.width).toBeLessThan(844 / 2);
+    expect(jump.y + jump.height).toBeLessThanOrEqual(390);
   });
 });
 

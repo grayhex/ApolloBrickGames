@@ -1313,6 +1313,24 @@ body:not([data-chrome='toy']) .side {
   display: none;
 }
 
+/* Ряд малых кнопок-переключателей блока «Вид» («Сегменты», «Для телефона»). */
+.side__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Переключатель пульта для телефона нужен только там, где пульт бывает — на узком экране. */
+.tgl--pad {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .tgl--pad {
+    display: flex;
+  }
+}
+
 .tgl .icon {
   width: 18px;
   height: 18px;
@@ -2146,7 +2164,8 @@ body:not([data-chrome='toy']) .side {
 }
 
 /* ── Пульт для телефона ─────────────────────────────────────────────────────
-   На узком экране в виде «только экран» кнопок корпуса нет, поэтому под экраном рисуется свой пульт — крупные кнопки по руке большого пальца:
+   Необязательный (переключатель «Для телефона» в блоке «Вид»; по умолчанию — в виде «только экран», где кнопок корпуса нет, а в «полной» нет;
+   в «полной» пульт заменяет нижнюю половину игрушки). На узком экране под экраном рисуется свой пульт — крупные кнопки по руке большого пальца:
    сверху четыре кнопки корпуса (ON/OFF, S./P., SOUND, FIRE), ниже слева крестовина, справа JUMP и FIRE. Корпус — цвета игрушки.
    Нажатия обрабатывает ToyPanel (app/toy.ts): те же действия, что у кнопок корпуса; мультитач, палец по крестовине меняет направление.
    В портрете пульт идёт в потоке сразу под экраном и заканчивается выше нижней кромки окна (внизу браузер рисует свою панель, она
@@ -2156,7 +2175,7 @@ body:not([data-chrome='toy']) .side {
 }
 
 @media (max-width: 899px) {
-  body[data-chrome='toy'] .arena[data-view='screen'] .deck {
+  body[data-chrome='toy'] .arena[data-pad='on'] .deck {
     --dome: 13cqw;
     --dpad: 50cqw;
     --jump: 27cqw;
@@ -2170,7 +2189,7 @@ body:not([data-chrome='toy']) .side {
     width: 100%;
     max-width: 520px;
     /* Высота — всё свободное место под экраном, но так, чтобы низ пульта оставался выше плавающей панели браузера (≈ 100 px). */
-    min-height: clamp(270px, calc(100dvh - 52px - 0.98 * (100vw - 24px) - 108px), 400px);
+    min-height: clamp(270px, calc(100dvh - 52px - (100vw - 24px) - 108px), 400px);
     padding: 12px 14px 16px;
     background: radial-gradient(95% 45% at 20% 6%, rgba(255, 255, 255, 0.28), transparent 62%),
       linear-gradient(172deg, var(--rim-hi) 0%, var(--rim) 16%, var(--rim-dark) 82%, var(--rim-lo) 100%);
@@ -2181,6 +2200,30 @@ body:not([data-chrome='toy']) .side {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+  }
+}
+
+/* «Полная» с пультом: нижняя половина игрушки заменена пультом, он стоит прямо под шарниром той же ширины; игрушка короче целой, поэтому
+   крышка крупнее (как в «только экран»). */
+@media (max-width: 899px) {
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] {
+    --stage-w: clamp(300px, calc((100dvh - 24px) / 0.98), 1100px);
+  }
+
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] .toy__lower {
+    display: none;
+  }
+
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] .deck {
+    width: min(100%, var(--stage-w));
+    margin-top: -14px;
+    border-radius: 12px 12px 34px 34px;
+  }
+}
+
+@media (max-width: 640px) {
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] {
+    --stage-w: clamp(300px, calc((100dvh - 76px) / 0.98), 1100px);
   }
 }
 
@@ -2392,7 +2435,7 @@ body:not([data-chrome='toy']) .side {
 /* Альбомная ориентация телефона: экран занимает середину, кнопки — по бокам, там, где лежат пальцы. Слева крестовина и ON/OFF, S./P.;
    справа JUMP, FIRE и SOUND, FIRE. Снизу оставлен запас под плавающую панель браузера. */
 @media (max-width: 899px) and (orientation: landscape) and (max-height: 540px) {
-  body[data-chrome='toy'] .arena[data-view='screen'] .deck {
+  body[data-chrome='toy'] .arena[data-pad='on'] .deck {
     --dome: min(15dvh, 7vw);
     --dpad: min(40dvh, 22vw);
     --jump: min(27dvh, 14vw);
@@ -2415,6 +2458,21 @@ body:not([data-chrome='toy']) .side {
     box-shadow: none;
     container-type: normal;
     pointer-events: none;
+  }
+
+  /* В альбомной ориентации и «полная» остаётся целой игрушкой (пульт лежит по бокам), нижняя половина на месте. */
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] {
+    --stage-w: clamp(240px, calc((100dvh - 24px) / 2.6), 640px);
+  }
+
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] .toy__lower {
+    display: grid;
+  }
+
+  body[data-chrome='toy'] .arena[data-pad='on'][data-view='full'] .deck {
+    width: auto;
+    margin-top: 0;
+    border-radius: 0;
   }
 
   .deck__top,

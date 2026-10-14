@@ -140,11 +140,11 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(defaultSettings().display).toEqual({ ghost: null, pad: null, shell: 'blue', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(saved.display).toEqual({ ghost: false, pad: null, shell: 'red', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(junk.display).toEqual({ ghost: null, pad: null, shell: 'blue', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
     expect(sanitizeSettings({ version: 1, display: { music: 'remaster' } }).display.music).toBe('remaster');
@@ -159,6 +159,11 @@ describe('сохранение настроек', () => {
     expect(sanitizeSettings({ version: 1, display: { lang: 'en' } }).display.lang).toBe('en');
     expect(sanitizeSettings({ version: 1, display: { lang: 'de' } }).display.lang).toBe('ru'); // неизвестный язык — по умолчанию
     expect(sanitizeSettings({ version: 1 }).display.lang).toBe('ru');
+    // Пульт для телефона: выбор пользователя или null (по умолчанию: в «только экран» есть, в «полной» нет).
+    expect(sanitizeSettings({ version: 1 }).display.pad).toBeNull();
+    expect(sanitizeSettings({ version: 1, display: { pad: true } }).display.pad).toBe(true);
+    expect(sanitizeSettings({ version: 1, display: { pad: false } }).display.pad).toBe(false);
+    expect(sanitizeSettings({ version: 1, display: { pad: 'да' } }).display.pad).toBeNull();
     expect(sanitizeSettings({ version: 1 }).display.volume).toBe(0.25); // громкость по умолчанию — 25 %
     // Громкость музыки — отдельное значение; в старых сохранениях её нет — тогда она равна громкости звука.
     expect(sanitizeSettings({ version: 1, display: { volume: 0.8 } }).display.musicVolume).toBe(0.8);
@@ -167,9 +172,9 @@ describe('сохранение настроек', () => {
     expect(sanitizeSettings({ version: 1, display: { volume: 0.5, musicVolume: 'громко' } }).display.musicVolume).toBe(0.5);
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white', sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' };
+    settings.display = { ghost: true, pad: false, shell: 'white', sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, pad: false, shell: 'white', sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' });
   });
 });
 

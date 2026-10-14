@@ -45,7 +45,7 @@ import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
-import { openedView, parseView, PHONE_QUERY, type View } from './view';
+import { openedView, padWanted, parseView, PHONE_QUERY, type View } from './view';
 import {
   controlsHint,
   deviceView,
@@ -372,6 +372,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (route.lid) applyTheme(display.theme);
     corner?.setTheme(display.theme);
     refs.gameArea.dataset['music'] = display.music;
+    const padOn = padWanted(view, display.pad);
+    refs.arena.dataset['pad'] = padOn ? 'on' : 'off'; // пульт для телефона: показывает его только CSS на узком экране
     controls?.update({
       shell: currentShell,
       sound: display.sound,
@@ -379,6 +381,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       musicVolume: musicVolumeOf(display),
       music: display.music,
       ghost: renderer.hasGhostLayer ? ghostOn() : null,
+      pad: padOn,
       view,
       powered,
       level: currentLevel,
@@ -470,7 +473,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     snapCamera = true;
     powered = true;
     if (view === 'closed') {
-      view = openedView(phone.matches); // уровень выбран на пульте при закрытой крышке: игрушка раскрывается, включённой она закрытой не бывает
+      view = openedView(phone.matches, hub.settings.display.pad); // уровень выбран на пульте при закрытой крышке: игрушка раскрывается, включённой она закрытой не бывает
       applyView();
     }
     showPower();
@@ -512,6 +515,12 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     toggleGhost: () => {
       hub.updateSettings((s) => {
         s.display.ghost = !ghostOn();
+      });
+      applyDisplay();
+    },
+    togglePad: () => {
+      hub.updateSettings((s) => {
+        s.display.pad = !padWanted(view, s.display.pad);
       });
       applyDisplay();
     },
@@ -647,7 +656,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (on === powered) return;
     powered = on;
     if (on && view === 'closed') {
-      view = openedView(phone.matches);
+      view = openedView(phone.matches, hub.settings.display.pad);
       applyView();
     }
     showPower();
@@ -687,7 +696,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (id) toy.hotkey(id, false);
   });
   // Закрытая игрушка: щелчок по крышке (или Enter / пробел) раскрывает её с анимацией.
-  refs.lidCover.addEventListener('click', () => setView(openedView(phone.matches)));
+  refs.lidCover.addEventListener('click', () => setView(openedView(phone.matches, hub.settings.display.pad)));
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
@@ -695,7 +704,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     const active = document.activeElement;
     if (active !== null && active !== document.body && active !== refs.lidCover) return; // фокус в кнопке или поле — клавиша им и нужна
     event.preventDefault();
-    setView(openedView(phone.matches));
+    setView(openedView(phone.matches, hub.settings.display.pad));
   });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
   refs.cornerHelp.addEventListener('click', () => helpDialog.open());

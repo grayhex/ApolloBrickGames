@@ -43,6 +43,8 @@ export interface Settings {
   display: {
     /** Слой неактивных сегментов: true/false — выбор пользователя, null — как задано профилем экрана. */
     ghost: boolean | null;
+    /** Пульт для телефона под экраном (только на узком экране): true/false — выбор пользователя, null — по умолчанию: в «только экран» есть, в «полной» нет. */
+    pad: boolean | null;
     /** Цвет корпуса по умолчанию: с него начинается каждая игра; выбор на странице (для текущей игры) его не меняет. */
     shell: Shell;
     /** Звук включён. */
@@ -70,7 +72,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, musicVolume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: DEFAULT_LANG },
+    display: { ghost: null, pad: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, musicVolume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: DEFAULT_LANG },
   };
 }
 
@@ -123,6 +125,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     },
     display: {
       ghost: typeof display['ghost'] === 'boolean' ? display['ghost'] : null,
+      pad: typeof display['pad'] === 'boolean' ? display['pad'] : null,
       shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
       sound: typeof display['sound'] === 'boolean' ? display['sound'] : true,
       volume,
