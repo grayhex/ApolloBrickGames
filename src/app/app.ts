@@ -45,7 +45,7 @@ import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
-import { parseView, type View } from './view';
+import { openedView, parseView, PHONE_QUERY, type View } from './view';
 import {
   controlsHint,
   deviceView,
@@ -165,6 +165,13 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   let view: View = route.lid ? parseView(params.get('view'), params.get('power') === 'on') : 'full';
   // Питание (ON/OFF): игрушка при открытии страницы выключена; `?power=on` включает сразу. Технические страницы всегда включены.
   let powered = !route.lid || params.get('power') === 'on';
+  /** Питание на корпусе и на арене (пульт для телефона стоит вне корпуса: ON/OFF на нём мерцает, пока игрушка выключена). */
+  const showPower = (): void => {
+    const state = powered ? 'on' : 'off';
+    refs.toy.dataset['power'] = state;
+    refs.arena.dataset['power'] = state;
+  };
+  const phone = window.matchMedia(PHONE_QUERY);
   if (powered && view === 'closed') view = 'full'; // включённая игрушка не бывает закрытой, даже по адресу `?view=closed&power=on`
   const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
   let ctx = createContext(start.pack);
@@ -463,10 +470,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     snapCamera = true;
     powered = true;
     if (view === 'closed') {
-      view = 'full'; // уровень выбран на пульте при закрытой крышке: игрушка раскрывается, включённой она закрытой не бывает
+      view = openedView(phone.matches); // уровень выбран на пульте при закрытой крышке: игрушка раскрывается, включённой она закрытой не бывает
       applyView();
     }
-    refs.toy.dataset['power'] = 'on';
+    showPower();
     hub.resetDevices();
     hub.tracker.reset();
     stepper.reset();
@@ -635,15 +642,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
   // Игрушка при открытии страницы выключена: включает кнопка ON/OFF (клавиша O); `?power=on` включает сразу (для ссылок и тестов).
   // Технические страницы кнопок корпуса не показывают — они всегда включены.
-  refs.toy.dataset['power'] = powered ? 'on' : 'off';
+  showPower();
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
     if (on && view === 'closed') {
-      view = 'full';
+      view = openedView(phone.matches);
       applyView();
     }
-    refs.toy.dataset['power'] = on ? 'on' : 'off';
+    showPower();
     applyDisplay(); // «Свёрнута» на пульте доступна, только пока игрушка выключена
     suspendReason = null;
     director.reset();
@@ -656,7 +663,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       audio.play('powerOff'); // щелчок выключения (после silence: этот эффект самый сильный)
     }
   };
-  const toy = new ToyPanel(refs.toy, hub, {
+  const toy = new ToyPanel(refs.arena, hub, {
     phase: () => game.state.phase,
     powered: () => powered,
     onPower: () => setPower(!powered),
@@ -680,7 +687,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (id) toy.hotkey(id, false);
   });
   // Закрытая игрушка: щелчок по крышке (или Enter / пробел) раскрывает её с анимацией.
-  refs.lidCover.addEventListener('click', () => setView('full'));
+  refs.lidCover.addEventListener('click', () => setView(openedView(phone.matches)));
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
@@ -688,7 +695,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     const active = document.activeElement;
     if (active !== null && active !== document.body && active !== refs.lidCover) return; // фокус в кнопке или поле — клавиша им и нужна
     event.preventDefault();
-    setView('full');
+    setView(openedView(phone.matches));
   });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
   refs.cornerHelp.addEventListener('click', () => helpDialog.open());

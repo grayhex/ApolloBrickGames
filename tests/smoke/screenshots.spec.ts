@@ -171,3 +171,29 @@ test.describe('редактор уровней', () => {
   });
 });
 
+test.describe('телефон: пульт под экраном', () => {
+  for (const [name, size] of [
+    ['phone-portrait', { width: 390, height: 844 }],
+    ['phone-landscape', { width: 844, height: 390 }],
+  ] as const) {
+    test.describe(name, () => {
+      test.use({ viewport: size, hasTouch: true, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+
+      test(`${name}: игра идёт, пульт на месте`, async ({ page }) => {
+        mkdirSync(dir, { recursive: true });
+        await page.goto('./?view=screen');
+        await page.waitForSelector('#game-area[data-phase="ready"]');
+        const tap = async (selector: string): Promise<void> => {
+          const b = await page.locator(selector).boundingBox();
+          if (b) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+        };
+        await tap('#deck [data-pad="onoff"]');
+        await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
+        await tap('#deck [data-pad="sp"]');
+        await page.waitForSelector('#game-area[data-entry="off"]', { timeout: 8000 });
+        await page.screenshot({ path: `${dir}/${name}.png` });
+      });
+    });
+  }
+});
+

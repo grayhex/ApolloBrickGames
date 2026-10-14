@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { helpRows, POWER_KEY, SOUND_KEY } from '../../src/app/help';
-import { KEY_ACTIONS, pressedKeys, startPauseAction, START_PAUSE_MASK, TOY_KEY_IDS } from '../../src/app/toy';
+import { dpadMask, KEY_ACTIONS, pressedKeys, startPauseAction, START_PAUSE_MASK, TOY_KEY_IDS } from '../../src/app/toy';
 import { actionBit, maskOf } from '../../src/core/actions';
 import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindings';
 import { sanitizeSettings, SHELLS } from '../../src/input/settings';
@@ -56,3 +56,44 @@ describe('цвет корпуса в настройках', () => {
     expect(sanitizeSettings({ ...base, display: { ...base.display, shell: 'green' } }).display.shell).toBe('blue');
   });
 });
+
+describe('крестовина пульта для телефона', () => {
+  const left = actionBit('left');
+  const right = actionBit('right');
+  const up = actionBit('up');
+  const down = actionBit('down');
+
+  it('в центре (мёртвая зона) ничего не нажато; у осей — одно направление', () => {
+    expect(dpadMask(0, 0)).toBe(0);
+    expect(dpadMask(0.1, -0.1)).toBe(0); // внутри мёртвой зоны
+    expect(dpadMask(1, 0)).toBe(right);
+    expect(dpadMask(-1, 0)).toBe(left);
+    expect(dpadMask(0, -1)).toBe(up);
+    expect(dpadMask(0, 1)).toBe(down);
+    expect(dpadMask(0.85, 0.2)).toBe(right); // чуть мимо оси — всё ещё одно направление
+    expect(dpadMask(-0.2, -0.85)).toBe(up);
+  });
+
+  it('между осями — диагональ: две стрелки сразу (прыжок вправо или влево)', () => {
+    expect(dpadMask(0.7, -0.7)).toBe(right | up);
+    expect(dpadMask(-0.7, -0.7)).toBe(left | up);
+    expect(dpadMask(0.7, 0.7)).toBe(right | down);
+    expect(dpadMask(-0.7, 0.7)).toBe(left | down);
+  });
+
+  it('границы полос симметричны: углы к оси около 23° и 66° — граница одиночного направления и диагонали', () => {
+    const at = (degrees: number) => dpadMask(Math.cos((degrees * Math.PI) / 180), -Math.sin((degrees * Math.PI) / 180)); // от оси вправо, вверх
+    expect(at(0)).toBe(right);
+    expect(at(20)).toBe(right);
+    expect(at(30)).toBe(right | up);
+    expect(at(60)).toBe(right | up);
+    expect(at(70)).toBe(up);
+    expect(at(90)).toBe(up);
+  });
+
+  it('палец за пределами зоны направление не теряет: оно определяется углом', () => {
+    expect(dpadMask(3, 0.2)).toBe(right);
+    expect(dpadMask(-2, -2)).toBe(left | up);
+  });
+});
+

@@ -14,3 +14,16 @@ export const DEFAULT_VIEW: View = 'closed';
 export function parseView(value: string | null, powerOn = false): View {
   return VIEWS.find((view) => view === value) ?? (powerOn ? 'full' : DEFAULT_VIEW);
 }
+
+/**
+ * Узкий экран (телефон в портрете и узкое окно): макет в одну колонку — игрушка сверху, панели под ней. В этом виде под экраном
+ * (`«только экран»`) рисуется пульт с крупными кнопками: кнопок корпуса там нет, а касание экрана только запускает игру.
+ * Тот же порог — в `styles.css` (`@media (max-width: 899px)`).
+ */
+export const PHONE_QUERY = '(max-width: 899px)';
+
+/** Вид после раскрытия крышки: на узком экране — «только экран» с пультом под ним, иначе — игрушка целиком. */
+export function openedView(phone: boolean): View {
+  return phone ? 'screen' : 'full';
+}
+

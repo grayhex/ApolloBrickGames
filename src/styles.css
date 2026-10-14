@@ -2145,6 +2145,343 @@ body:not([data-chrome='toy']) .side {
   }
 }
 
+/* ── Пульт для телефона ─────────────────────────────────────────────────────
+   На узком экране в виде «только экран» кнопок корпуса нет, поэтому под экраном рисуется свой пульт — крупные кнопки по руке большого пальца:
+   сверху четыре кнопки корпуса (ON/OFF, S./P., SOUND, FIRE), ниже слева крестовина, справа JUMP и FIRE. Корпус — цвета игрушки.
+   Нажатия обрабатывает ToyPanel (app/toy.ts): те же действия, что у кнопок корпуса; мультитач, палец по крестовине меняет направление.
+   В портрете пульт идёт в потоке сразу под экраном и заканчивается выше нижней кромки окна (внизу браузер рисует свою панель, она
+   перекрыла бы кнопки); в альбомной ориентации кнопки стоят по бокам экрана. Размеры — в долях ширины пульта (`cqw`). */
+.deck {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  body[data-chrome='toy'] .arena[data-view='screen'] .deck {
+    --dome: 13cqw;
+    --dpad: 50cqw;
+    --jump: 27cqw;
+    --fire: 19.5cqw;
+    grid-column: 1 / -1;
+    justify-self: center;
+    container-type: inline-size;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 520px;
+    /* Высота — всё свободное место под экраном, но так, чтобы низ пульта оставался выше плавающей панели браузера (≈ 100 px). */
+    min-height: clamp(270px, calc(100dvh - 52px - 0.98 * (100vw - 24px) - 108px), 400px);
+    padding: 12px 14px 16px;
+    background: radial-gradient(95% 45% at 20% 6%, rgba(255, 255, 255, 0.28), transparent 62%),
+      linear-gradient(172deg, var(--rim-hi) 0%, var(--rim) 16%, var(--rim-dark) 82%, var(--rim-lo) 100%);
+    border-radius: 26px 26px 34px 34px;
+    box-shadow: inset 0 3px 3px rgba(255, 255, 255, 0.4), inset 0 -5px 9px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.3);
+    /* Пульт не прокручивает страницу и не масштабируется двойным касанием; выделения и меню по долгому нажатию нет. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+.deck__top {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  justify-items: center;
+  align-items: start;
+}
+
+.deck__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+}
+
+.pad {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Верхние кнопки — купол и подпись под ним, как на корпусе (там подпись напечатана над кнопкой). Нажимается вся кнопка вместе с подписью. */
+.pad--round {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 2px 4px 4px;
+}
+
+.pad__dome {
+  position: relative;
+  width: var(--dome);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, var(--key-hi), var(--key) 52%, var(--key-lo));
+  box-shadow: 1px 3px 4px rgba(0, 0, 0, 0.42), 0 2px 0 color-mix(in srgb, var(--key-lo) 85%, #000), inset 0 1px 1.5px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 45ms ease-out, box-shadow 45ms ease-out, filter 45ms ease-out;
+}
+
+.pad__dome::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  width: 36%;
+  height: 22%;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  filter: blur(1px);
+  transform: rotate(-28deg);
+}
+
+.pad__name {
+  font: 800 10.5px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.06em;
+  color: var(--label);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.pad--round[data-pressed] .pad__dome {
+  transform: translateY(2px) scale(0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 0 color-mix(in srgb, var(--key-lo) 85%, #000), inset 0 2px 4px rgba(0, 0, 0, 0.35);
+  filter: brightness(0.9);
+}
+
+/* Крестовина: одна зона на четыре стрелки (палец ведут по ней — направление меняется без отрыва), нажатая стрелка светится цветом корпуса. */
+.deck__dpad {
+  position: relative;
+  width: var(--dpad);
+  aspect-ratio: 1;
+  touch-action: none;
+}
+
+.deck__dpad svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.38));
+}
+
+.dpad__well {
+  fill: rgba(0, 0, 0, 0.2);
+  stroke: rgba(255, 255, 255, 0.24);
+  stroke-width: 1;
+}
+
+.dpad__cross {
+  fill: url(#deck-arm);
+  stroke: color-mix(in srgb, var(--key-lo) 80%, #000);
+  stroke-width: 0.8;
+}
+
+/* Нажатая рука креста темнеет, стрелка на ней загорается цветом корпуса. */
+.dpad__arm rect {
+  fill: transparent;
+}
+
+.dpad__arm path {
+  fill: color-mix(in srgb, var(--key-lo) 60%, #4a4a42);
+}
+
+.dpad__arm[data-pressed] rect {
+  fill: rgba(0, 0, 0, 0.2);
+}
+
+.dpad__arm[data-pressed] path {
+  fill: var(--tone);
+}
+
+.dpad__hub {
+  fill: url(#deck-hub);
+  stroke: color-mix(in srgb, var(--key-lo) 80%, #000);
+  stroke-width: 0.8;
+}
+
+/* JUMP — большая, FIRE — поменьше выше слева от неё: так лежит большой палец. */
+.deck__acts {
+  position: relative;
+  width: 100%;
+  height: var(--dpad);
+}
+
+.pad--jump,
+.pad--fire {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, var(--key-hi), var(--key) 52%, var(--key-lo));
+  box-shadow: 2px 6px 8px rgba(0, 0, 0, 0.42), 0 4px 0 color-mix(in srgb, var(--key-lo) 80%, #000), inset 0 2px 3px rgba(255, 255, 255, 0.6),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 45ms ease-out, box-shadow 45ms ease-out, filter 45ms ease-out;
+}
+
+.pad--jump {
+  right: 1%;
+  bottom: 6%;
+  width: var(--jump);
+}
+
+.pad--fire {
+  left: 2%;
+  top: 8%;
+  width: var(--fire);
+}
+
+/* Вогнутая шапка в ободе, как у JUMP на корпусе; у FIRE она тёплая. */
+.pad--jump::before,
+.pad--fire::before {
+  content: '';
+  position: absolute;
+  inset: 17%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(0, 0, 0, 0.17), rgba(0, 0, 0, 0.03) 72%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.65), 0 1px 1px rgba(0, 0, 0, 0.16);
+}
+
+.pad--fire::before {
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--art) 55%, rgba(0, 0, 0, 0.2)), color-mix(in srgb, var(--art) 22%, transparent) 75%);
+}
+
+.pad--jump .pad__name,
+.pad--fire .pad__name {
+  position: relative;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--key-lo) 30%, #34342c);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.pad--jump[data-pressed],
+.pad--fire[data-pressed] {
+  transform: translateY(3px) scale(0.95);
+  box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.45), 0 1px 0 color-mix(in srgb, var(--key-lo) 80%, #000), inset 0 3px 7px rgba(0, 0, 0, 0.35);
+  filter: brightness(0.92);
+}
+
+/* Игрушка выключена: действуют только ON/OFF и SOUND — остальные приглушены, а ON/OFF мягко мерцает ореолом (как на корпусе). */
+.arena[data-power='off'] .deck :is(.deck__dpad, .pad--jump, .pad--fire, [data-pad='sp'], [data-pad='fire']) {
+  opacity: 0.55;
+  filter: saturate(0.7);
+}
+
+.arena[data-power='off'] .deck [data-pad='onoff']:not([data-pressed]) .pad__dome {
+  animation: power-hint 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arena[data-power='off'] .deck [data-pad='onoff']:not([data-pressed]) .pad__dome {
+    animation: none;
+    filter: drop-shadow(0 0 0.8cqw rgba(255, 244, 190, 0.8));
+  }
+}
+
+/* Альбомная ориентация телефона: экран занимает середину, кнопки — по бокам, там, где лежат пальцы. Слева крестовина и ON/OFF, S./P.;
+   справа JUMP, FIRE и SOUND, FIRE. Снизу оставлен запас под плавающую панель браузера. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 540px) {
+  body[data-chrome='toy'] .arena[data-view='screen'] .deck {
+    --dome: min(15dvh, 7vw);
+    --dpad: min(40dvh, 22vw);
+    --jump: min(27dvh, 14vw);
+    --fire: min(19dvh, 10vw);
+    --gutter: max(12px, env(safe-area-inset-left, 0px));
+    --lift: clamp(10px, 14dvh, 56px);
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: block;
+    /* justify-self: center из портрета сжал бы абсолютно позиционированную рамку до нуля ширины: растягиваем на всё окно. */
+    justify-self: stretch;
+    align-self: stretch;
+    width: auto;
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    container-type: normal;
+    pointer-events: none;
+  }
+
+  .deck__top,
+  .deck__main,
+  .deck__acts {
+    display: contents;
+  }
+
+  .deck .pad,
+  .deck .deck__dpad {
+    position: absolute;
+    pointer-events: auto;
+  }
+
+  /* Верхние кнопки — у верхней кромки боковых полей, под угловым меню: нижние кластеры остаются свободными для больших пальцев. */
+  .deck .pad--round {
+    top: clamp(50px, 14dvh, 70px);
+    width: calc(var(--dome) + 14px);
+  }
+
+  .deck .pad--round:nth-child(1) {
+    left: var(--gutter);
+  }
+
+  .deck .pad--round:nth-child(2) {
+    left: calc(var(--gutter) + var(--dome) + 22px);
+  }
+
+  .deck .pad--round:nth-child(3) {
+    right: calc(var(--gutter) + var(--dome) + 22px);
+  }
+
+  .deck .pad--round:nth-child(4) {
+    right: var(--gutter);
+  }
+
+  .deck .deck__dpad {
+    left: var(--gutter);
+    bottom: var(--lift);
+  }
+
+  .deck .pad--jump {
+    right: var(--gutter);
+    bottom: var(--lift);
+  }
+
+  /* FIRE — над JUMP и чуть левее: в узких боковых полях рядом она не поместилась бы. */
+  .deck .pad--fire {
+    right: calc(var(--gutter) + var(--jump) * 0.55);
+    bottom: calc(var(--lift) + var(--jump) + 8px);
+    left: auto;
+    top: auto;
+  }
+
+  /* Подписи на корпусе плывут по тёмному фону страницы, а не по пластику: читаемый цвет и тень. */
+  .deck .pad__name {
+    color: var(--text);
+    text-shadow: none;
+  }
+
+  .deck .pad--jump .pad__name,
+  .deck .pad--fire .pad__name {
+    color: color-mix(in srgb, var(--key-lo) 30%, #34342c);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+}
+
 /* ── Уголок: настройки, справка, редактор ──────────────────────────────── */
 .corner {
   position: fixed;
