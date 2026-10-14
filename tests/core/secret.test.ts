@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Game, makeFrame, SECRET_CHORD, type GameEvent, type InputFrame } from '../../src/core';
-import { contextFor, corridor } from '../helpers/builders';
+import { Game, makeFrame, NEUTRAL_FRAME, SECRET_CHORD, type GameEvent, type InputFrame } from '../../src/core';
+import { contextFor, corridor, startedGame } from '../helpers/builders';
 import { marioContext, loadRoomPack } from '../helpers/content';
 import { enteredGame } from '../helpers/solver';
 
@@ -9,6 +9,9 @@ import { enteredGame } from '../helpers/solver';
  * из колодца, будет 200 жизней». Аккорд — отдельный бит кадра (`SECRET_CHORD`), его выставляет оболочка (tests/app/secret.test.ts).
  */
 
+const tick = (game: Game, n: number): void => {
+  for (let i = 0; i < n; i++) game.step(NEUTRAL_FRAME);
+};
 const chord: InputFrame = { pressed: 0, held: SECRET_CHORD, released: 0 };
 const secretEvents = (events: readonly GameEvent[]): GameEvent[] => events.filter((e) => e.type === 'secretLives');
 
@@ -48,6 +51,17 @@ describe('жизни и секрет: правила пакета комнаты
 
     game.reset(); // новая игра: снова в колодце
     expect(game.state.inWell).toBe(true);
+    game.step(chord);
+    expect(game.state.lives).toBe(200);
+  });
+
+  it('колодец — стартовая яма в начале каждого уровня: после перехода на следующий уровень аккорд снова работает', () => {
+    const game = startedGame(marioContext(1));
+    tick(game, 100);
+    (game as unknown as { completeLevel(id: string): void }).completeLevel('goal');
+    expect(game.state.levelId).toBe('mario-2');
+    expect(game.state.inWell).toBe(true); // герой снова в стартовой яме
+    expect(game.state.lives).toBe(4);
     game.step(chord);
     expect(game.state.lives).toBe(200);
   });
