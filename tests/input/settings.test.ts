@@ -139,11 +139,11 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.5, compact: false, theme: 'dark' });
+    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, compact: false, theme: 'dark', lang: 'ru' });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, volume: 0.5, compact: false, theme: 'dark' });
+    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, volume: 0.25, compact: false, theme: 'dark', lang: 'ru' });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.5, compact: false, theme: 'dark' });
+    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, compact: false, theme: 'dark', lang: 'ru' });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
     expect(sanitizeSettings({ version: 1, display: { compact: true } }).display.compact).toBe(true);
@@ -151,13 +151,17 @@ describe('сохранение настроек', () => {
     expect(sanitizeSettings({ version: 1, display: { volume: 0.8 } }).display.volume).toBe(0.8);
     expect(sanitizeSettings({ version: 1, display: { volume: 7 } }).display.volume).toBe(1); // за пределами — по границе
     expect(sanitizeSettings({ version: 1, display: { volume: -1 } }).display.volume).toBe(0);
-    expect(sanitizeSettings({ version: 1, display: { volume: 'тихо' } }).display.volume).toBe(0.5);
+    expect(sanitizeSettings({ version: 1, display: { volume: 'тихо' } }).display.volume).toBe(0.25);
     expect(sanitizeSettings({ version: 1, display: { theme: 'light' } }).display.theme).toBe('light');
     expect(sanitizeSettings({ version: 1, display: { theme: 'sepia' } }).display.theme).toBe('dark');
+    expect(sanitizeSettings({ version: 1, display: { lang: 'en' } }).display.lang).toBe('en');
+    expect(sanitizeSettings({ version: 1, display: { lang: 'de' } }).display.lang).toBe('ru'); // неизвестный язык — по умолчанию
+    expect(sanitizeSettings({ version: 1 }).display.lang).toBe('ru');
+    expect(sanitizeSettings({ version: 1 }).display.volume).toBe(0.25); // громкость по умолчанию — 25 %
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white', sound: false, volume: 0.25, compact: true, theme: 'light' };
+    settings.display = { ghost: true, shell: 'white', sound: false, volume: 0.25, compact: true, theme: 'light', lang: 'en' };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, volume: 0.25, compact: true, theme: 'light' });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, volume: 0.25, compact: true, theme: 'light', lang: 'en' });
   });
 });

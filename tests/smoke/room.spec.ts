@@ -71,7 +71,7 @@ test.afterEach(async ({ page }) => {
 test('по умолчанию открывается тестовый уровень в игрушке; технического текста на странице нет', async ({ page }) => {
   await ready(page);
   expect((await snap(page)).level).toBe('tunnel-run');
-  // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: игрушка, две панели по бокам и три кнопки в уголке.
+  // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: игрушка, две панели по бокам и четыре кнопки в уголке.
   for (const id of ['#badge', '#subtitle', '#debug-toggle', '#row-timer', '#controls-hint', '#status-keyboard', '#status-gamepad', '#overlay', '#focus-hint', '.shell__footer']) {
     await expect(page.locator(id)).toBeHidden();
   }
@@ -79,7 +79,8 @@ test('по умолчанию открывается тестовый урове
   for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'тестовая комната', 'Таймер']) {
     expect(text, word).not.toContain(word);
   }
-  await expect(page.locator('#corner button, #corner a')).toHaveCount(3);
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(4); // язык, настройки, справка, редактор
+  await expect(page.locator('#corner-lang')).toBeVisible();
   await expect(page.locator('#corner-settings')).toBeVisible();
   await expect(page.locator('#corner-help')).toBeVisible();
   await expect(page.locator('#corner-editor')).toBeVisible();

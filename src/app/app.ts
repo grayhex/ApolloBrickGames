@@ -22,9 +22,12 @@ import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { openIndexedDbStore, type DraftStore } from '../editor/drafts';
 import { loadUserLevels, type LibraryTarget, type UserLevel } from '../editor/library';
 import { browserStorage, needsGamepadSetup, THEMES, type Shell } from '../input/settings';
+import { LANGS } from '../input/lang';
 import { boundSources, keySource } from '../input/bindings';
+import { CableGlitch } from './cableGlitch';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { HelpDialog } from './help';
+import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
@@ -86,6 +89,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     base: byId<HTMLElement>('base'),
     cornerSettings: byId<HTMLButtonElement>('corner-settings'),
     cornerHelp: byId<HTMLButtonElement>('corner-help'),
+    cornerLang: byId<HTMLButtonElement>('corner-lang'),
     help: byId<HTMLDialogElement>('help'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
@@ -186,6 +190,19 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     },
     onGamepadDisconnect: () => suspend('gamepad'),
   });
+
+  // Язык интерфейса игрушки (настройки, справка, панели): из настроек; подписи страницы следуют за ним на лету.
+  if (route.lid) setLang(hub.settings.display.lang);
+  const applyLangUi = (): void => {
+    const lang = getLang();
+    document.documentElement.lang = lang;
+    if (!route.lid) return;
+    applyStatic();
+    refs.cornerLang.dataset['lang'] = lang;
+    refs.cornerLang.setAttribute('aria-label', t('corner.lang'));
+    refs.cornerLang.title = t('corner.langTitle');
+  };
+  applyLangUi();
 
   // Звук: мелодия и эффекты, восстановленные по записи со звуком (src/audio); включается настройкой и жестом пользователя (политика браузеров).
   const audio: AudioPort & { unlock(): void } = new WebAudioPort({ muted: !hub.settings.display.sound, volume: hub.settings.display.volume });
@@ -344,7 +361,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       controls.setUserLevels(userLevels, null);
     } catch {
       userLevels = [];
-      controls.setUserLevels([], 'Хранилище браузера недоступно — карты из редактора здесь не видны.');
+      controls.setUserLevels([], 'lv.noStorage');
     }
     applyDisplay();
   }
@@ -428,8 +445,28 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   };
   const controls = route.lid ? new ControlPanel(refs.sideCtl, { slots, actions: panelActions, onPointerUse: refocusGame }) : null;
 
+  // Шутка со шлейфом: пока шлейф между половинами держат курсором или пальцем, экран рассыпается и гаснет; отпустили — возвращается.
+  const glitch = new CableGlitch();
+  let glitchLevel = 0;
+  const applyGlitch = (now: number): void => {
+    glitchLevel = glitch.level(now);
+    if (glitchLevel > 0) renderer.dropout(glitchLevel, Math.floor(now / 90)); // зерно меняется ~11 раз в секунду: куски мерцают
+    refs.toy.toggleAttribute('data-glitch', glitchLevel > 0);
+    setData('glitch', glitchLevel.toFixed(2));
+  };
+
+  // Последняя нарисованная сцена: смена размера очищает холст, а ResizeObserver срабатывает уже после кадра игры,
+  // поэтому сцену дорисовываем сразу — иначе при плавном изменении размера экран мигал бы пустым.
+  let lastScene: Parameters<Renderer['render']>[0] | null = null;
   const resize = (): void => {
     renderer.resize(refs.lcdWindow.clientWidth, refs.lcdWindow.clientHeight, window.devicePixelRatio);
+    if (!lastScene) return; // первый вызов до начала игры: рисовать нечего
+    if (!powered) {
+      renderer.clear();
+    } else {
+      renderer.render(lastScene);
+      applyGlitch(performance.now());
+    }
   };
   new ResizeObserver(resize).observe(refs.lcdWindow);
   window.addEventListener('resize', resize);
@@ -485,6 +522,19 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   applyDisplay();
   void refreshUserLevels();
 
+  // Плавные переходы (вид «только экран») включаются после первой отрисовки, чтобы сохранённый вид не «выезжал» при загрузке,
+  // и на время изменения размера окна выключаются: иначе ширина игрушки отставала бы от окна.
+  const enableMotion = (): void => {
+    delete document.body.dataset['motion'];
+  };
+  requestAnimationFrame(() => requestAnimationFrame(enableMotion));
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+  window.addEventListener('resize', () => {
+    document.body.dataset['motion'] = 'off';
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(enableMotion, 200);
+  });
+
   // ── Питание и кнопки корпуса ─────────────────────────────────────────────
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
   let powered = true;
@@ -527,6 +577,36 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
   refs.cornerHelp.addEventListener('click', () => helpDialog.open());
+  // Шлейф можно «зажать»: см. CableGlitch. Захват указателя — чтобы отпускание засчиталось, где бы ни оказался курсор.
+  const band = refs.toy.querySelector<HTMLElement>('.toy__band');
+  if (band) {
+    const letGo = (): void => {
+      glitch.release(performance.now());
+      delete band.dataset['held'];
+    };
+    band.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault(); // фокус остаётся у игры, текст не выделяется
+      band.setPointerCapture(event.pointerId);
+      glitch.grab(performance.now());
+      band.dataset['held'] = '';
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) band.addEventListener(type, letGo);
+    band.addEventListener('contextmenu', (event) => event.preventDefault());
+    window.addEventListener('blur', letGo);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) letGo();
+    });
+  }
+  refs.cornerLang.addEventListener('click', (event) => {
+    const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length] ?? 'ru';
+    hub.updateSettings((s) => {
+      s.display.lang = next;
+    });
+    setLang(next); // панели и открытые диалоги перерисуются сами
+    applyLangUi();
+    if (event.detail !== 0) refocusGame(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на кнопке
+  });
   // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
   refs.gameArea.addEventListener('pointerdown', () => {
     if (hub.settings.display.compact && game.state.phase !== 'playing' && powered) session.requestStart();
@@ -562,7 +642,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   };
   /** Короткое состояние для скринридеров (на экране текста нет). */
   const statusLine = (phase: Phase): string =>
-    ({ ready: 'Готов к игре', playing: '', paused: 'Пауза', dead: 'Герой погиб', gameOver: 'Игра окончена', completed: 'Участок пройден' })[phase];
+    phase === 'playing' ? '' : t(`status.${phase}`);
   const lastData = new Map<string, string>();
   const setData = (name: string, value: string | number): void => {
     const text = String(value);
@@ -592,7 +672,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('cameraX', camera.x);
     setData('intro', fx.intro ? 'on' : 'off');
     showLeds(powered ? ledState(s.phase, s.tick, audio.ledBeat()) : { red: false, yellow: false, green: false });
-    setText.status(powered ? statusLine(s.phase) : 'Выключено');
+    setText.status(powered ? statusLine(s.phase) : t('status.off'));
 
     // Пока идёт интро участка, оверлей «Старт» не закрывает поле (Enter всё равно запускает игру).
     const overlay = fx.intro ? null : overlayView(s, suspendReason);
@@ -674,14 +754,16 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     fx = effects.frame(game.state, level);
     // Построение комнаты: щелчок на каждый шаг героя по маршруту интро.
     director.introStep(fx.intro && typeof fx.hero === 'object' ? `${fx.hero.x},${fx.hero.y}` : null);
-    renderer.render({
+    lastScene = {
       state: game.state,
       level,
       camera,
       sprites,
       debug: { grid: refs.chkGrid.checked, collisions: refs.chkCollisions.checked },
       effects: fx,
-    });
+    };
+    renderer.render(lastScene);
+    applyGlitch(now);
     updateUi();
   }
 

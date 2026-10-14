@@ -74,7 +74,7 @@ describe('тестовая комната demo-room: данные', () => {
     expect(pack.manifest.sprites.projectile).toBe('cell.heart');
     expect(pack.rules.params.timerLimitTicks).toBe(0);
     expect(pack.rules.params.lives).toBe(3);
-    expect(pack.rules.params.jump.triggers).toEqual(['jump']);
+    expect(pack.rules.params.jump.triggers).toEqual(['jump', 'up']); // по упаковке: UP — тоже прыжок вверх
   });
 
   it('все ресурсы-картинки комнаты помечены происхождением; нет ни одного «confirmed» без подтверждения', () => {

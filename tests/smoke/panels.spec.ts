@@ -82,13 +82,18 @@ test('слева справка, справа пульт; панели отод�
   await expect(info.getByRole('heading', { name: 'Путешествие Марио' })).toBeVisible();
   await expect(info.getByRole('heading', { name: 'Управление' })).toBeVisible();
   await expect(info.getByRole('heading', { name: 'Очки' })).toBeVisible();
-  for (const text of ['MARIO', 'TETRIS', 'SHOOTING', 'Сердце', 'Малый враг', 'Большой враг', '+100', '+200', '+400']) {
+  await expect(info.getByRole('heading', { name: 'Фигуры и враги' })).toBeVisible();
+  for (const text of ['MARIO', 'TETRIS', 'SHOOTING', 'Сердце', 'Малый чёрт', 'Большой чёрт', '+100', '+200', '+400']) {
     await expect(info.getByText(text, { exact: false }).first()).toBeVisible();
   }
   await expect(info.locator('.facts li')).toHaveCount(3);
-  await expect(info.locator('.hazard')).toHaveCount(4);
-  // На упаковке фигурки нарисованы LCD-ячейками игры: «чертей» и «драконов» (и их картинок) в справке нет.
-  expect(await info.innerText()).not.toMatch(/чёрт|черт|дракон/i);
+  await expect(info.locator('.hazard')).toHaveCount(5); // река, чёрт, огненный дракон, ракета, железные ворота
+  // «Figure introduction» с упаковки: 12 фигур, нарисованных теми же LCD-ячейками, что и игра.
+  await expect(info.locator('#figures .fig')).toHaveCount(12);
+  await expect(info.locator('#figures .fig__name')).toHaveText([
+    'Марио', 'Сердце', 'Малый чёрт', 'Большой чёрт', 'Ракета', 'Огненный дракон', 'Пуля', 'Железные ворота', 'Выдвижной мост', 'Колодец', 'Вулкан', 'Тетрис',
+  ]);
+  await expect(info.locator('#figures .spr').first()).toBeVisible();
   await expect(info.locator('.score__fig .spr').first()).toBeVisible();
   // Справка — фон: приглушена и без картинок кнопок корпуса.
   expect(Number(await info.evaluate((e) => getComputedStyle(e).opacity))).toBeLessThan(0.8);

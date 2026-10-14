@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "room-rules",
   "status": "demo",
-  "version": 4,
+  "version": 5,
   "params": {
     "tickRateHz": 20,
     "move": { "repeatDelayTicks": 3, "repeatIntervalTicks": 3 },
-    "jump": { "triggers": ["jump"], "table": [-1, -1, -1], "stepTicks": 3 },
+    "jump": { "triggers": ["jump", "up"], "table": [-1, -1, -1], "stepTicks": 3 },
     "fall": { "periodTicks": 3 },
     "fire": {
       "intervalTicks": 6,

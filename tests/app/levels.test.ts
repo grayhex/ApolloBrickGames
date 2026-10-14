@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultLevelRef, ORIGINAL_LEVEL_COUNT, originalPack, originalSlots, sameLevel, userPack } from '../../src/app/levels';
+import { defaultLevelRef, ORIGINAL_LEVEL_COUNT, originalPack, originalSlots, sameLevel, slotTitle, userPack, type OriginalSlot } from '../../src/app/levels';
 import { createContext, Game } from '../../src/core';
 import { levelOf, loadRoomPack } from '../helpers/content';
 
@@ -11,8 +11,8 @@ describe('оригинальные уровни 1–9', () => {
     expect(slots).toHaveLength(ORIGINAL_LEVEL_COUNT);
     expect(slots.map((s) => s.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(slots[0]).toMatchObject({ number: 1, levelId: 'tunnel-run' });
-    expect(slots[0]?.title).toMatch(/тестовый/);
-    expect(slots.slice(1).every((s) => s.levelId === null && /не восстановлен/.test(s.title))).toBe(true);
+    expect(slotTitle(slots[0] as OriginalSlot)).toMatch(/тестовый/);
+    expect(slots.slice(1).every((s) => s.levelId === null && /не восстановлен/.test(slotTitle(s)))).toBe(true);
   });
 
   it('слот не открывается, если уровня нет в пакете', () => {

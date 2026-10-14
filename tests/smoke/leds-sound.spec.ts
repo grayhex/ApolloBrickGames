@@ -153,12 +153,12 @@ test('звук: переключатель «Звук» глушит, выбор
   await ready(page);
   await page.keyboard.press('Shift');
 
-  // Ползунок громкости в правом блоке: по умолчанию 50 %.
+  // Ползунок громкости в правом блоке: по умолчанию 25 %.
   const slider = page.locator('#volume');
-  await expect(slider).toHaveValue('50');
-  await expect(page.locator('#volume-row .vol__value')).toHaveText('50%');
+  await expect(slider).toHaveValue('25');
+  await expect(page.locator('#volume-row .vol__value')).toHaveText('25%');
   const master = (): Promise<number> => page.evaluate(() => (window as unknown as { __gains: { gain: { value: number } }[] }).__gains[0]?.gain.value ?? -1);
-  await expect.poll(master).toBeCloseTo(0.07, 3);
+  await expect.poll(master).toBeCloseTo(0.035, 3); // 25 % × MASTER_GAIN
   await slider.focus();
   await page.keyboard.press('End');
   await expect(slider).toHaveValue('100');

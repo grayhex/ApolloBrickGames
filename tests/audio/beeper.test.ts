@@ -155,7 +155,7 @@ describe('WebAudioPort: эффекты', () => {
     const { context, port } = make();
     port.play('jump');
     const master = context.gains[0];
-    expect(master?.gain.value).toBeCloseTo(0.5 * MASTER_GAIN);
+    expect(master?.gain.value).toBeCloseTo(0.25 * MASTER_GAIN);
     expect(master?.connectedTo[0]).toBe(context.destination);
     expect(context.oscillators).toHaveLength(7);
     expect(context.oscillators.every((o) => o.type === 'square')).toBe(true);
@@ -179,7 +179,7 @@ describe('WebAudioPort: эффекты', () => {
     port.setVolume(-3);
     expect(port.volume).toBe(0);
     port.setVolume(Number.NaN);
-    expect(port.volume).toBe(0.5);
+    expect(port.volume).toBe(0.25); // по умолчанию 25 %
   });
 
   it('выстрел и свипы — экспоненциальное скольжение частоты первого голоса; шум — быстро меняющиеся частоты', () => {

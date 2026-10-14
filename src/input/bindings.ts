@@ -1,4 +1,5 @@
 import { ACTIONS, actionBit, type Action, type ActionMask } from '../core/actions';
+import type { Lang } from './lang';
 
 /**
  * Физический источник ввода — строка:
@@ -109,20 +110,27 @@ const KEY_LABELS: Record<string, string> = {
   ShiftRight: 'Shift (прав.)',
 };
 
+/** Названия клавиш, которые на английском пишутся иначе. */
+const KEY_LABELS_EN: Record<string, string> = {
+  Space: 'Space',
+  ShiftLeft: 'Left Shift',
+  ShiftRight: 'Right Shift',
+};
+
 /** Человекочитаемое имя источника для настроек. */
-export function describeSource(id: SourceId): string {
+export function describeSource(id: SourceId, lang: Lang = 'ru'): string {
   if (id.startsWith('k:')) {
     const code = id.slice(2);
     const label = KEY_LABELS[code];
-    if (label) return label;
+    if (label) return lang === 'en' ? (KEY_LABELS_EN[code] ?? label) : label;
     if (/^Key[A-Z]$/.test(code)) return code.slice(3);
     if (/^Digit\d$/.test(code)) return code.slice(5);
     return code;
   }
-  if (id.startsWith('b:')) return `Кнопка ${id.slice(2)}`;
+  if (id.startsWith('b:')) return `${lang === 'en' ? 'Button' : 'Кнопка'} ${id.slice(2)}`;
   if (id.startsWith('a:')) {
     const [, index, direction] = id.split(':');
-    return `Ось ${index} ${direction === '-' ? '−' : '+'}`;
+    return `${lang === 'en' ? 'Axis' : 'Ось'} ${index} ${direction === '-' ? '−' : '+'}`;
   }
   return id;
 }

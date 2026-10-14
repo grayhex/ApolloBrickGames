@@ -92,7 +92,7 @@ export function timerText(state: GameState, tickRateHz: number, limitTicks: numb
 /** Краткая подсказка по клавишам — по текущим привязкам, поэтому после переназначения она меняется. */
 export function controlsHint(bindings: Bindings, withFire: boolean): string {
   const keys = (...actions: (keyof Bindings)[]): string => {
-    const list = [...new Set(actions.flatMap((action) => bindings[action]))].map(describeSource);
+    const list = [...new Set(actions.flatMap((action) => bindings[action]))].map((source) => describeSource(source));
     return list.length === 0 ? 'не назначено' : list.join(' · ');
   };
   const parts = [`Ходьба: ${keys('left', 'right')}`, `Прыжок: ${keys('jump')}`];

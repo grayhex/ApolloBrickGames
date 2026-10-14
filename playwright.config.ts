@@ -21,6 +21,8 @@ export default defineConfig({
   },
   use: {
     baseURL: `http://localhost:${port}${base}`,
+    // Переходы страницы (вид «только экран») в тестах мгновенные; анимацию проверяет отдельный тест, включая движение.
+    reducedMotion: 'reduce',
     launchOptions: executablePath ? { executablePath } : {},
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
