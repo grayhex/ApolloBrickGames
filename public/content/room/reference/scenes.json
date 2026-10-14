@@ -8,7 +8,7 @@
         "label": "1-09",
         "score": 10
       },
-      "compare": "docs/references/raw/screens/reference_1_obstacle.png",
+      "compare": "tests/fixtures/reference/reference_1_obstacle.png",
       "hero": true
     },
     {
@@ -18,7 +18,7 @@
         "label": "3-01",
         "score": 300
       },
-      "compare": "docs/references/raw/screens/reference_2_obstacle.png",
+      "compare": "tests/fixtures/reference/reference_2_obstacle.png",
       "hero": false
     }
   ]

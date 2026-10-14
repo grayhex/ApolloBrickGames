@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Основной маршрут (#2): одна неподвижная комната `demo-room`, один герой.
+ * Основной маршрут: игрушка с тестовым уровнем `tunnel-run`, один герой.
  * Состояние читается из data-* игровой области; для проверки рендера считаются пиксели Canvas.
  * Геймпад — подставной navigator.getGamepads().
  */
@@ -33,16 +33,28 @@ const snap = (page: Page): Promise<Snap> =>
 
 const FLOOR_Y = 4;
 const phase = (page: Page) => async () => (await snap(page)).phase;
+const entry = (page: Page) => (): Promise<string> => page.evaluate(() => document.getElementById('game-area')?.dataset['entry'] ?? '');
 
 async function ready(page: Page): Promise<void> {
   await page.goto('./');
   await expect.poll(phase(page)).toBe('ready');
 }
 
+/** Старт и конец сценария входа: герой вышел из ямы и стоит на верхушке правой стойки (2, 2). */
 async function start(page: Page): Promise<void> {
   await ready(page);
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('off');
+}
+
+/** То же, но герой сходит на пол (y = 4) и стоит правее колонны. */
+async function startOnFloor(page: Page): Promise<void> {
+  await start(page);
+  await page.keyboard.down('ArrowRight');
+  await expect.poll(async () => (await snap(page)).heroY).toBe(FLOOR_Y);
+  await page.keyboard.up('ArrowRight');
+  await page.waitForTimeout(250);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -56,10 +68,10 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
 });
 
-test('по умолчанию открывается ровно одна комната в игрушке; технического текста на странице нет', async ({ page }) => {
+test('по умолчанию открывается тестовый уровень в игрушке; технического текста на странице нет', async ({ page }) => {
   await ready(page);
-  expect((await snap(page)).level).toBe('demo-room');
-  // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: только игрушка и три кнопки в уголке.
+  expect((await snap(page)).level).toBe('tunnel-run');
+  // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: только игрушка и четыре кнопки в уголке.
   for (const id of ['#badge', '#subtitle', '#debug-toggle', '#row-timer', '#controls-hint', '#status-keyboard', '#overlay', '#focus-hint', '.shell__footer']) {
     await expect(page.locator(id)).toBeHidden();
   }
@@ -67,32 +79,15 @@ test('по умолчанию открывается ровно одна ком�
   for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'Геймпад:', 'тестовая комната', 'Таймер']) {
     expect(text, word).not.toContain(word);
   }
-  await expect(page.locator('#corner button, #corner a')).toHaveCount(3);
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(4);
   await expect(page.locator('#corner-settings')).toBeVisible();
   await expect(page.locator('#corner-help')).toBeVisible();
+  await expect(page.locator('#corner-compact')).toBeVisible();
   await expect(page.locator('#corner-editor')).toBeVisible();
 });
 
-test('ввод: в комнате нет стрельбы — кнопка огня ничего не создаёт', async ({ page }) => {
-  await start(page);
-  await page.evaluate(() => {
-    const el = document.getElementById('game-area') as HTMLElement;
-    const w = window as unknown as { __maxProj: number };
-    w.__maxProj = 0;
-    new MutationObserver(() => (w.__maxProj = Math.max(w.__maxProj, Number(el.dataset['projectiles'])))).observe(el, {
-      attributes: true,
-      attributeFilter: ['data-projectiles'],
-    });
-  });
-  for (let i = 0; i < 6; i++) {
-    await page.keyboard.press('KeyX');
-    await page.waitForTimeout(60);
-  }
-  expect(await page.evaluate(() => (window as unknown as { __maxProj: number }).__maxProj)).toBe(0);
-});
-
 test('клавиатура: ходьба до уступа, прыжок и приземление, один прыжок на одно нажатие', async ({ page }) => {
-  await start(page);
+  await startOnFloor(page);
   await page.keyboard.down('ArrowRight');
   await expect.poll(async () => (await snap(page)).heroX).toBe(8); // дальше уступ (x = 9, 10)
   await page.waitForTimeout(400);
@@ -125,16 +120,22 @@ test('клавиатура: ходьба до уступа, прыжок и пр
   expect((await snap(page)).heroY).toBe(FLOOR_Y); // приземлился
 });
 
-test('границы: влево до края комнаты и не дальше', async ({ page }) => {
+test('границы: влево герой падает обратно в яму и упирается в левую стойку, за карту не выходит', async ({ page }) => {
   await start(page);
   await page.keyboard.down('ArrowLeft');
-  await expect.poll(async () => (await snap(page)).heroX).toBe(0);
+  await expect.poll(async () => (await snap(page)).heroY).toBe(5); // яма в x = 1: крышки больше нет
   await page.waitForTimeout(400);
-  expect((await snap(page)).heroX).toBe(0);
+  expect(await snap(page)).toMatchObject({ heroX: 1, heroY: 5 }); // слева стойка (x = 0)
   await page.keyboard.up('ArrowLeft');
+  // Из ямы можно выбраться тем же прыжком: на три клетки вверх, и вправо на верхушку стойки.
+  await page.keyboard.press('Space');
+  await page.keyboard.down('ArrowRight');
+  await expect.poll(async () => (await snap(page)).heroX, { timeout: 3000 }).toBeGreaterThanOrEqual(2);
+  await page.keyboard.up('ArrowRight');
+  await expect.poll(async () => (await snap(page)).heroY).toBeLessThanOrEqual(4);
 });
 
-test('пауза замораживает сцену, сброс возвращает героя на старт', async ({ page }) => {
+test('пауза замораживает сцену; ON/OFF возвращает героя на старт, и сценарий входа идёт заново', async ({ page }) => {
   await start(page);
   await page.keyboard.down('ArrowRight');
   await expect.poll(async () => (await snap(page)).heroX).toBeGreaterThan(3);
@@ -154,7 +155,12 @@ test('пауза замораживает сцену, сброс возвращ�
   await page.locator('[data-key="onoff"]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
   await expect.poll(phase(page)).toBe('ready');
-  expect(await snap(page)).toMatchObject({ heroX: 1, heroY: FLOOR_Y });
+  expect(await snap(page)).toMatchObject({ heroX: 1, heroY: 5 }); // в яме под крышкой
+  await page.keyboard.press('Enter');
+  await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('on');
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('off');
+  expect(await snap(page)).toMatchObject({ heroX: 2, heroY: 2 }); // снова вышел на стойку
 });
 
 test('переназначение прыжка из настроек действует в комнате', async ({ page }) => {
@@ -174,11 +180,12 @@ test('переназначение прыжка из настроек дейст
 
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('off');
   await page.keyboard.press('KeyJ');
-  await expect.poll(async () => (await snap(page)).heroY).toBeLessThan(FLOOR_Y);
+  await expect.poll(async () => (await snap(page)).heroY).toBeLessThan(2); // прыжок со стойки (2, 2)
 });
 
-test('геймпад (подставной) управляет той же комнатой: ходьба и прыжок', async ({ page }) => {
+test('геймпад (подставной) управляет той же игрой: ходьба и прыжок', async ({ page }) => {
   await page.addInitScript(() => {
     const w = window as unknown as { __pads: unknown[] };
     w.__pads = [];
@@ -199,17 +206,16 @@ test('геймпад (подставной) управляет той же ко�
   await setPad([9]); // Start
   await expect.poll(phase(page)).toBe('playing');
   await setPad([]);
+  await expect.poll(entry(page), { timeout: 6000 }).toBe('off'); // герой вышел из ямы
 
-  // Влево до границы: над героем свободно (платформа правее, x = 3..5).
-  await setPad([14]);
-  await expect.poll(async () => (await snap(page)).heroX).toBe(0);
+  await setPad([15]); // крестовина вправо: сходит со стойки на пол и идёт дальше
+  await expect.poll(async () => (await snap(page)).heroX).toBeGreaterThan(4);
   await setPad([]);
-  await setPad([15]); // и крестовина вправо тоже работает
-  await expect.poll(async () => (await snap(page)).heroX).toBeGreaterThan(0);
-  await setPad([14]);
-  await expect.poll(async () => (await snap(page)).heroX).toBe(0);
+  await expect.poll(async () => (await snap(page)).heroY, { timeout: 3000 }).toBe(FLOOR_Y);
+  await setPad([14]); // и влево
+  await expect.poll(async () => (await snap(page)).heroX).toBeLessThan(4);
   await setPad([]);
-  await setPad([0]);
+  await setPad([0]); // прыжок
   await expect.poll(async () => (await snap(page)).heroY).toBeLessThan(FLOOR_Y);
   await setPad([]);
   await expect.poll(async () => (await snap(page)).heroY, { timeout: 5000 }).toBe(FLOOR_Y);
@@ -217,6 +223,7 @@ test('геймпад (подставной) управляет той же ко�
 
 test('рендер игры: цвета LCD-профиля владельца, препятствия и фигурка на своих клетках', async ({ page }) => {
   await ready(page);
+  await expect.poll(() => page.evaluate(() => document.getElementById('game-area')?.dataset['intro'] ?? ''), { timeout: 8000 }).toBe('off');
   const result = await page.evaluate(() => {
     const canvas = document.getElementById('screen') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -246,7 +253,7 @@ test('рендер игры: цвета LCD-профиля владельца, �
       bgShare: bg / (width * height),
       ground: inkShare(6, 5), // нижний ряд — препятствие
       step: inkShare(9, 4), // уступ
-      hero: inkShare(1, 4), // клетка героя на старте (1, 4)
+      hero: inkShare(1, 5), // клетка героя на старте (1, 5): яма под крышкой арки
       empty: inkShare(11, 1), // воздух (виден только слой неактивных сегментов)
     };
   });
@@ -263,7 +270,7 @@ for (const n of [1, 2]) {
   test(`сверка с эталоном владельца: сцена ${n} с фотографии рендерится так же, как reference_${n}_obstacle.png`, async ({ page }) => {
     await page.goto('./#/sheet');
     await page.waitForSelector(`#ref-scene-${n}`);
-    const reference = readFileSync(`docs/references/raw/screens/reference_${n}_obstacle.png`).toString('base64');
+    const reference = readFileSync(`tests/fixtures/reference/reference_${n}_obstacle.png`).toString('base64');
     const diff = await page.evaluate(
       async ({ n, reference }) => {
         const canvas = document.getElementById(`ref-scene-${n}`) as HTMLCanvasElement;
@@ -329,6 +336,7 @@ test('корпус вокруг экрана: три светодиода, вы�
 
 test('слой неактивных сегментов переключается и запоминается', async ({ page }) => {
   await ready(page);
+  await expect.poll(() => page.evaluate(() => document.getElementById('game-area')?.dataset['intro'] ?? ''), { timeout: 8000 }).toBe('off');
   const emptyCellInk = (): Promise<number> =>
     page.evaluate(() => {
       const canvas = document.getElementById('screen') as HTMLCanvasElement;
@@ -367,12 +375,12 @@ test('Canvas сохраняет пропорции при изменении о�
 
 test('контрольный лист ресурсов открывается: сцены с фотографий, все ресурсы атласа со статусами', async ({ page }) => {
   await page.goto('./#/sheet');
-  await expect(page.getByRole('heading', { name: 'Контрольный лист ресурсов (комната demo-room)' })).toBeVisible();
-  for (const id of ['cell.player', 'cell.obstacle', 'cell.ghost', 'hud.life', 'hud.digit.0', 'hud.digit.ghost']) {
+  await expect(page.getByRole('heading', { name: 'Контрольный лист ресурсов' })).toBeVisible();
+  for (const id of ['cell.player', 'cell.obstacle', 'cell.heart', 'cell.ghost', 'hud.life', 'hud.digit.0', 'hud.digit.ghost']) {
     await expect(page.locator('#sheet code', { hasText: new RegExp(`^${id.replace('.', '\\.')}$`) })).toBeVisible();
   }
   await expect(page.locator('.sheet__status--draft').first()).toBeVisible();
   await expect(page.locator('.sheet__scene')).toHaveCount(2);
-  await expect(page.locator('.sheet__asset')).toHaveCount(22); // весь атлас владельца
+  await expect(page.locator('.sheet__asset')).toHaveCount(23); // весь атлас владельца и сердечко-снаряд
   await expect(page.locator('.sheet__status--confirmed')).toHaveCount(0); // подтверждённых пока нет
 });

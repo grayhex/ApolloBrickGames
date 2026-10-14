@@ -7,6 +7,7 @@ import {
   type ContentPack,
   type CellPos,
   type ContentStatus,
+  type EntryStep,
   DEFAULT_LCD_COLORS,
   type FireRules,
   type Hud,
@@ -690,8 +691,10 @@ export function validatePackManifest(raw: unknown, source = 'manifest'): PackMan
 
 export const MAX_ANIMATION_TICKS = 1000;
 export const MAX_ROUTE_CELLS = 2048;
+export const MAX_ENTRY_STEPS = 64;
+export const MAX_ENTRY_TICKS = 2000;
 
-export function validateAnimations(raw: unknown, source = 'animations'): AnimationsDef {
+export function validateAnimations(raw: unknown, source = 'animations', env?: ValidationEnv): AnimationsDef {
   const c = new Checker();
   const rec = c.record(raw, '$');
   if (!rec) return c.abort(source);
@@ -741,12 +744,53 @@ export function validateAnimations(raw: unknown, source = 'animations'): Animati
     };
   }
 
+  let entry: AnimationsDef['entry'] = null;
+  if (rec['entry'] !== undefined && rec['entry'] !== null) {
+    const e = c.record(rec['entry'], '$.entry') ?? {};
+    const rawScripts = e['scripts'] === undefined ? {} : (c.record(e['scripts'], '$.entry.scripts') ?? {});
+    const scripts: Record<string, EntryStep[]> = {};
+    const actions = (path: string, value: unknown): string[] => {
+      if (value === undefined) return [];
+      if (!Array.isArray(value)) {
+        c.fail(path, 'ожидался массив действий');
+        return [];
+      }
+      const out: string[] = [];
+      value.forEach((name: unknown, index: number) => {
+        const known = typeof name === 'string' && (env ? env.actions.includes(name) : true);
+        if (known) out.push(name as string);
+        else c.fail(`${path}[${index}]`, `неизвестное действие ${JSON.stringify(name)}`);
+      });
+      return out;
+    };
+    for (const [levelId, value] of Object.entries(rawScripts)) {
+      const path = `$.entry.scripts["${levelId}"]`;
+      if (!Array.isArray(value) || value.length === 0 || value.length > MAX_ENTRY_STEPS) {
+        c.fail(path, `ожидался непустой массив шагов (не более ${MAX_ENTRY_STEPS})`);
+        continue;
+      }
+      let total = 0;
+      const steps: EntryStep[] = [];
+      value.forEach((step: unknown, index: number) => {
+        const where = `${path}[${index}]`;
+        const s = c.record(step, where) ?? {};
+        const ticks = c.int(s, 'ticks', where, 1, MAX_ANIMATION_TICKS);
+        total += ticks;
+        steps.push({ ticks, held: actions(`${where}.held`, s['held']), press: actions(`${where}.press`, s['press']) });
+      });
+      if (total > MAX_ENTRY_TICKS) c.fail(path, `сценарий длиннее ${MAX_ENTRY_TICKS} тактов`);
+      scripts[levelId] = steps;
+    }
+    entry = { scripts };
+  }
+
   const result: AnimationsDef = {
     schemaVersion: c.schemaVersion(rec, '$'),
     id: c.str(rec, 'id', '$', ID_PATTERN),
     status: c.status(rec, '$'),
     bump,
     intro,
+    entry,
   };
   c.done(source);
   return result;
@@ -782,7 +826,7 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
     throw new ContentError('manifest', ['файл анимаций объявлен в манифесте и загружен не одинаково']);
   }
   const animations =
-    manifest.animations !== undefined ? validateAnimations(raw.animations, manifest.animations) : undefined;
+    manifest.animations !== undefined ? validateAnimations(raw.animations, manifest.animations, env) : undefined;
 
   const issues: string[] = [];
   const levelIds = new Set<string>();
@@ -799,6 +843,9 @@ export function assemblePack(raw: RawPack, env: ValidationEnv): ContentPack {
         issues.push(`уровень «${level.id}»: переход из «${tr.from}» ведёт в несуществующий уровень «${tr.to}»`);
       }
     }
+  }
+  for (const levelId of Object.keys(animations?.entry?.scripts ?? {})) {
+    if (!levelIds.has(levelId)) issues.push(`animations.entry.scripts["${levelId}"]: уровень «${levelId}» не найден в пакете`);
   }
   if (animations?.intro) {
     for (const [levelId, route] of Object.entries(animations.intro.routes)) {

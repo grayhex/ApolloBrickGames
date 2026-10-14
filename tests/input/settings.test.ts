@@ -139,17 +139,19 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true });
+    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, compact: false });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true });
+    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, compact: false });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true });
+    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, compact: false });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
+    expect(sanitizeSettings({ version: 1, display: { compact: true } }).display.compact).toBe(true);
+    expect(sanitizeSettings({ version: 1, display: { compact: 'да' } }).display.compact).toBe(false);
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white', sound: false };
+    settings.display = { ghost: true, shell: 'white', sound: false, compact: true };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, compact: true });
   });
 });

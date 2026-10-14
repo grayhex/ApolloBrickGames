@@ -268,7 +268,7 @@ describe('сборка пакета и ссылки между файлами', 
     expect(issuesOf(() => assemblePack(ghost, env))).toMatch(/screen\.ghost\.asset: ресурс «cell\.nope» не найден/);
     const glyph = room((r) => delete (r.assets as { assets: Record<string, unknown> }).assets['hud.digit.minus']);
     expect(issuesOf(() => assemblePack(glyph, env))).toMatch(/font\.glyphs\["-"\]: ресурс «hud\.digit\.minus» не найден/);
-    const label = room((r) => ((r.screen as { hud: { fixed: { label: string } } }).hud.fixed.label = '0-0Z0'));
+    const label = room((r) => ((r.screen as { hud: { fixed: unknown } }).hud.fixed = { lives: 3, label: '0-0Z0', score: 0 }));
     expect(issuesOf(() => assemblePack(label, env))).toMatch(/длиннее числа позиций|нет в шрифте/);
   });
 

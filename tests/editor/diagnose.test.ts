@@ -6,6 +6,7 @@ import { diagnose, diagnoseForTest, errorsOf, gameLevelJson, levelFromDoc } from
 import { fillRect, setCells } from '../../src/editor/grid';
 import { addMark, addObject, setStart, updateObject } from '../../src/editor/ops';
 import { makeTestPack } from '../../src/editor/testPack';
+import { levelOf } from '../helpers/content';
 import { demoRoomDoc, env, freshDoc, pack } from './helpers';
 
 describe('диагностика: проверка общим валидатором игры с адресами проблем', () => {
@@ -15,8 +16,7 @@ describe('диагностика: проверка общим валидатор
   });
 
   it('игровой JSON из документа совпадает с исходным уровнем demo-room и проходит общий валидатор', () => {
-    const level = pack.levels[0];
-    if (!level) throw new Error('нет уровня');
+    const level = levelOf(pack, 'demo-room');
     const json = gameLevelJson(demoRoomDoc());
     expect(json).toEqual(levelToJson(level));
     expect(validateLevel(json, pack.assets, env.validation)).toEqual(level);

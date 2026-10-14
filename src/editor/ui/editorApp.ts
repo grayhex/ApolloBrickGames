@@ -179,7 +179,6 @@ export async function startEditor(): Promise<void> {
         'div',
         { class: 'editor__pages-list' },
         el('a', { href: '#/tech', id: 'editor-link-tech' }, 'Техническая демоверсия движка'),
-        el('a', { href: '#/clip', id: 'editor-link-clip' }, 'Тестовый уровень по видео'),
         el('a', { href: '#/sheet', id: 'editor-link-sheet' }, 'Контрольный лист ресурсов'),
       ),
     ),
@@ -392,7 +391,7 @@ export async function startEditor(): Promise<void> {
         el('label', { class: 'check' }, floor, 'Добавить ряд земли внизу и старт над ним'),
         el('p', { class: 'muted' }, 'Размер берётся из видимого поля выбранного профиля. Это шаблон редактора, а не оригинальный уровень.'),
       ],
-      [{ label: 'Создать пустую комнату', primary: true }, { label: 'Копия demo-room из профиля «room»' }, { label: 'Отмена' }],
+      [{ label: 'Создать пустую комнату', primary: true }, { label: 'Копия demo-room (тестовая комната профиля «room»)' }, { label: 'Отмена' }],
     );
     if (choice === 0) {
       const packName = packSelect.value;
@@ -402,7 +401,7 @@ export async function startEditor(): Promise<void> {
       await adopt(doc, new Map(), `Создана карта «${title}».`);
     } else if (choice === 1) {
       if (!(await useBundle('room'))) return;
-      const level = bundle.pack.levels.find((l) => l.id === bundle.pack.manifest.firstLevel) ?? bundle.pack.levels[0];
+      const level = bundle.pack.levels.find((l) => l.id === 'demo-room') ?? bundle.pack.levels[0];
       if (!level) return;
       const doc = docFromLevel(level, { projectId: projectId(), name: `${level.id} (копия для редактирования)`, pack: 'room', id: level.id });
       await adopt(doc, new Map(), `Открыта копия «${level.id}».`);

@@ -1,19 +1,21 @@
 {
   "schemaVersion": 1,
   "id": "demo-room-pack",
-  "title": "Однокомнатное демо: тестовая карта, не оригинальный уровень",
+  "title": "Игрушка: тестовый уровень по видео (не оригинальный уровень)",
   "status": "demo",
-  "version": 3,
+  "version": 4,
   "screen": "screen.json",
   "rules": "rules.json",
   "assets": "assets.json",
   "animations": "animations.json",
   "levels": [
+    "levels/tunnel-run.json",
     "levels/demo-room.json"
   ],
-  "firstLevel": "demo-room",
+  "firstLevel": "tunnel-run",
   "sprites": {
     "hero": "cell.player",
+    "projectile": "cell.heart",
     "life": "hud.life"
   }
 }

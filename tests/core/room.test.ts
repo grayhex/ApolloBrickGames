@@ -6,7 +6,7 @@ import { assemblePack } from '../../src/content/validate';
 import type { LevelDef } from '../../src/content/schema';
 import { createContext, Game, makeFrame, playReplay, stateHash, validationEnv, type Replay } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
-import { loadRawPack, loadRoomPack, roomContext } from '../helpers/content';
+import { demoRoomContext, levelOf, loadRawPack, loadRoomPack } from '../helpers/content';
 import { Pilot } from '../helpers/pilot';
 import { idle, run } from '../helpers/script';
 
@@ -34,17 +34,18 @@ function playRoomScenario(p: Pilot): void {
 }
 
 if (process.env['UPDATE_FIXTURES']) {
-  const pilot = new Pilot(roomContext());
+  const pilot = new Pilot(demoRoomContext());
   playRoomScenario(pilot);
   writeFileSync(fixturePath, JSON.stringify(pilot.replay()) + '\n');
 }
 
-describe('однокомнатное демо: данные', () => {
+describe('тестовая комната demo-room: данные', () => {
   const pack = loadRoomPack();
-  const room = pack.levels[0] as LevelDef;
+  const room = levelOf(pack, 'demo-room') as LevelDef;
 
-  it('ровно одна комната demo-room, без переходов и объектов; явная пометка «не оригинальный уровень»', () => {
-    expect(pack.levels).toHaveLength(1);
+  it('в пакете тестовый уровень по видео (первый) и песочница demo-room без переходов и объектов; явная пометка «не оригинальный уровень»', () => {
+    expect(pack.levels.map((l) => l.id)).toEqual(['tunnel-run', 'demo-room']);
+    expect(pack.manifest.firstLevel).toBe('tunnel-run');
     expect(room.id).toBe('demo-room');
     expect(room.status).toBe('demo');
     expect(room.note).toMatch(/Искусственная тестовая карта; не оригинальный уровень/);
@@ -67,10 +68,12 @@ describe('однокомнатное демо: данные', () => {
     expect(solidCells).toBeLessThan(room.width * room.height * 0.35);
   });
 
-  it('правила комнаты без стрельбы, таймера и потери жизни; профиль помечен demo', () => {
+  it('правила: профиль помечен demo; без таймера; стрельба есть (снаряд — сердечко); три жизни', () => {
     expect(pack.rules.status).toBe('demo');
-    expect(pack.rules.params.fire).toBeNull();
+    expect(pack.rules.params.fire).not.toBeNull();
+    expect(pack.manifest.sprites.projectile).toBe('cell.heart');
     expect(pack.rules.params.timerLimitTicks).toBe(0);
+    expect(pack.rules.params.lives).toBe(3);
     expect(pack.rules.params.jump.triggers).toEqual(['jump']);
   });
 
@@ -93,7 +96,7 @@ describe('однокомнатное демо: данные', () => {
 
 describe('однокомнатное демо: механика', () => {
   const started = (): Game => {
-    const game = new Game(roomContext());
+    const game = new Game(demoRoomContext());
     game.step(makeFrame({ pressed: ['start'] }));
     return game;
   };
@@ -148,13 +151,6 @@ describe('однокомнатное демо: механика', () => {
     }
   });
 
-  it('огня нет: кнопка не создаёт выстрелов и снарядов', () => {
-    const game = started();
-    const events = run(game, { press: ['fire'], held: ['fire'], ticks: 30 });
-    expect(events.some((e) => e.type === 'shot')).toBe(false);
-    expect(game.state.projectiles).toHaveLength(0);
-  });
-
   it('пауза замораживает прыжок, продолжение возвращает ту же траекторию', () => {
     const plain = started();
     run(plain, { press: ['jump'], held: ['jump'] }, idle(5));
@@ -178,7 +174,8 @@ describe('однокомнатное демо: механика', () => {
   it('другие значения таймингов меняют прыжок без правок кода (данные, а не константы)', () => {
     const raw = loadRawPack('room');
     (raw.rules as { params: { jump: { table: number[] } } }).params.jump.table = [-1, -1, 0];
-    const ctx = createContext(assemblePack(raw, validationEnv(undefined, GLYPH_NAMES)));
+    const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));
+    const ctx = createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: 'demo-room' } });
     const game = new Game(ctx);
     game.step(makeFrame({ pressed: ['start'] }));
     let top = 4;
@@ -190,13 +187,15 @@ describe('однокомнатное демо: механика', () => {
   });
 
   it('графика не определяет коллизии: замена ресурсов не меняет механику', () => {
-    const withArt = roomContext();
+    const withArt = demoRoomContext();
     const raw = loadRawPack('room');
-    const level = raw.levels[0] as { legend: Record<string, { collision: string; asset?: string }> };
+    const level = raw.levels[1] as { id: string; legend: Record<string, { collision: string; asset?: string }> };
+    expect(level.id).toBe('demo-room');
     for (const entry of Object.values(level.legend)) delete entry.asset; // уровень вообще без рисунков
-    const withoutArt = createContext(assemblePack(raw, validationEnv(undefined, GLYPH_NAMES)));
+    const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));
+    const withoutArt = createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: 'demo-room' } });
 
-    const play = (ctx: ReturnType<typeof roomContext>): string => {
+    const play = (ctx: ReturnType<typeof demoRoomContext>): string => {
       const pilot = new Pilot(ctx);
       playRoomScenario(pilot);
       return stateHash(pilot.state);
@@ -210,13 +209,13 @@ describe('однокомнатное демо: replay', () => {
 
   it('fixture на месте и воспроизводится одинаково', () => {
     expect(existsSync(fixturePath)).toBe(true);
-    const a = playReplay(roomContext(), fixture());
-    const b = playReplay(roomContext(), fixture());
+    const a = playReplay(demoRoomContext(), fixture());
+    const b = playReplay(demoRoomContext(), fixture());
     expect(stateHash(a.game.state)).toBe(stateHash(b.game.state));
   });
 
   it('сценарий «движение → прыжок → приземление → граница → платформа» даёт ожидаемый итог', () => {
-    const { game, events } = playReplay(roomContext(), fixture());
+    const { game, events } = playReplay(demoRoomContext(), fixture());
     expect(events.filter((e) => e.type === 'jump').length).toBeGreaterThanOrEqual(2);
     expect(events.filter((e) => e.type === 'land').length).toBeGreaterThanOrEqual(2);
     expect(events.some((e) => e.type === 'shot' || e.type === 'death')).toBe(false);
