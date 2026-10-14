@@ -170,6 +170,19 @@ export async function startEditor(): Promise<void> {
     { class: 'editor__top' },
     el('a', { class: 'editor__back', href: '#/' }, '← К игре'),
     el('h1', { class: 'editor__title' }, 'Редактор уровней'),
+    // Технические страницы проекта (для разработки): вынесены из игры сюда.
+    el(
+      'details',
+      { class: 'editor__pages', id: 'editor-pages' },
+      el('summary', { title: 'Технические страницы проекта' }, 'Страницы'),
+      el(
+        'div',
+        { class: 'editor__pages-list' },
+        el('a', { href: '#/tech', id: 'editor-link-tech' }, 'Техническая демоверсия движка'),
+        el('a', { href: '#/clip', id: 'editor-link-clip' }, 'Тестовый уровень по видео'),
+        el('a', { href: '#/sheet', id: 'editor-link-sheet' }, 'Контрольный лист ресурсов'),
+      ),
+    ),
     projectName,
     button('Создать / открыть…', () => void openProjects(), { id: 'editor-projects' }),
     undoButton,

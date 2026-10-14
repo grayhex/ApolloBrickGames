@@ -13,7 +13,7 @@ import type { PadInfo } from './gamepad';
 export const SETTINGS_KEY = 'crocodile-mario:settings:v1';
 export const SETTINGS_VERSION = 1;
 
-export const SHELLS = ['blue', 'red', 'white'] as const;
+export const SHELLS = ['blue', 'red', 'yellow', 'white'] as const;
 export type Shell = (typeof SHELLS)[number];
 
 export const MIN_STICK_THRESHOLD = 0.1;

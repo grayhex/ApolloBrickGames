@@ -4,6 +4,8 @@ import { parseRoute } from './app/routes';
 import { startSheet } from './app/sheet';
 
 const route = parseRoute(window.location.hash);
+// Вид страницы: игрушка (комната, клип) выставляет startApp; контрольный лист и редактор — технические страницы.
+if (route === 'sheet' || route === 'editor') document.body.dataset['chrome'] = 'tech';
 // Смена маршрута — простая перезагрузка: у каждого маршрута свой пакет данных и свои обработчики.
 window.addEventListener('hashchange', () => window.location.reload());
 

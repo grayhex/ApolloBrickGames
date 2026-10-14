@@ -11,8 +11,9 @@ test.use({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 2 });
 
 const dir = 'docs/screenshots';
 
-test('комната: старт и прыжок', async ({ page }) => {
+test('игрушка: страница целиком, нажатые кнопки', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1100, height: 1000 });
   await page.goto('./');
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.keyboard.press('Enter');
@@ -22,6 +23,13 @@ test('комната: старт и прыжок', async ({ page }) => {
   await page.keyboard.press('Space');
   await page.waitForTimeout(330);
   await page.screenshot({ path: `${dir}/demo-room-page.png` });
+  // Нажатые кнопки: вправо и прыжок удерживаются.
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.down('Space');
+  await page.waitForTimeout(260);
+  await page.locator('#stage').screenshot({ path: `${dir}/toy-pressed.png` });
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.up('Space');
 });
 
 test('клип по видео: заливка, растворение, построение, отскок перекладины', async ({ page }) => {
@@ -45,16 +53,27 @@ test('клип по видео: заливка, растворение, пост
   await shot('room');
 });
 
-test('комната: красный и белый корпус', async ({ page }) => {
+test('игрушка: четыре цвета корпуса, настройки и справка', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1100, height: 1000 });
   await page.goto('./');
   await page.waitForSelector('#game-area[data-phase="ready"]');
-  await page.keyboard.press('Enter');
-  await page.waitForSelector('#game-area[data-phase="playing"]');
-  for (const shell of ['red', 'white']) {
-    await page.selectOption('#sel-shell', shell);
-    await page.locator('#stage').screenshot({ path: `${dir}/demo-room-${shell}.png` });
+  for (const shell of ['blue', 'red', 'yellow', 'white']) {
+    await page.locator('#corner-settings').click();
+    await page.selectOption('#settings-shell', shell);
+    await page.keyboard.press('Escape');
+    await page.locator('#game-area').waitFor();
+    await page.waitForTimeout(150);
+    await page.locator('#stage').screenshot({ path: `${dir}/toy-${shell}.png` });
   }
+  await page.locator('#corner-settings').click();
+  await page.selectOption('#settings-shell', 'blue');
+  await page.waitForTimeout(100);
+  await page.screenshot({ path: `${dir}/toy-settings.png` });
+  await page.keyboard.press('Escape');
+  await page.locator('#corner-help').click();
+  await page.waitForTimeout(100);
+  await page.screenshot({ path: `${dir}/toy-help.png` });
 });
 
 test.describe('контрольный лист', () => {

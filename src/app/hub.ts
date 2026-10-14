@@ -6,6 +6,7 @@ import {
   type PadInfo,
 } from '../input/gamepad';
 import { KeyboardInput } from '../input/keyboard';
+import { ScreenInput } from '../input/screen';
 import {
   defaultSettings,
   gamepadBindingsFor,
@@ -28,13 +29,15 @@ export interface InputHubOptions {
 }
 
 /**
- * Все устройства ввода за одним объектом: клавиатура и геймпад пишут в один трекер,
+ * Все устройства ввода за одним объектом: клавиатура, геймпад и экранные кнопки пишут в один трекер,
  * настройки читаются/сохраняются здесь. Игра получает только логические действия.
  */
 export class InputHub {
   readonly tracker = new ActionTracker();
   readonly keyboard: KeyboardInput;
   readonly gamepad: GamepadInput;
+  /** Экранные кнопки игрушки (мышь, касание). */
+  readonly screen = new ScreenInput((mask) => this.tracker.setSource('screen', mask));
   settings: Settings;
   private readonly storage: StorageLike | null;
   private readonly provider: GamepadProvider;
@@ -89,9 +92,10 @@ export class InputHub {
     this.gamepad.poll();
   }
 
-  /** Сброс клавиш и нейтральная синхронизация геймпада. */
+  /** Сброс клавиш, экранных кнопок и нейтральная синхронизация геймпада. */
   resetDevices(): void {
     this.keyboard.releaseAll();
+    this.screen.releaseAll();
     this.gamepad.sync();
   }
 

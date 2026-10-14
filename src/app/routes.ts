@@ -34,9 +34,8 @@ export interface GameRoute {
 export const GAME_ROUTES: Record<'room' | 'tech' | 'clip', GameRoute> = {
   room: {
     manifest: 'content/room/pack.json',
-    badge: 'DEMO — тестовая комната',
-    subtitle:
-      'Искусственная тестовая карта, не оригинальный уровень. Тайминги прыжка временные, графика — черновик по неполным референсам.',
+    badge: '',
+    subtitle: '',
     restartLabel: 'Сброс',
     fireHint: false,
     lid: true,
@@ -44,9 +43,8 @@ export const GAME_ROUTES: Record<'room' | 'tech' | 'clip', GameRoute> = {
   },
   clip: {
     manifest: 'content/clip/pack.json',
-    badge: 'DEMO — по видео',
-    subtitle:
-      'Тестовый уровень по фрагменту видео владельца: интро, перекладина с отскоком, яма в арке. Физика и анимации — наблюдения по видео (черновик), не правила оригинала.',
+    badge: '',
+    subtitle: '',
     restartLabel: 'Сброс',
     fireHint: false,
     lid: true,

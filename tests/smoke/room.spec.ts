@@ -56,18 +56,21 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
 });
 
-test('по умолчанию открывается ровно одна комната; подпись «тестовая комната» вне LCD-поля', async ({ page }) => {
+test('по умолчанию открывается ровно одна комната в игрушке; технического текста на странице нет', async ({ page }) => {
   await ready(page);
   expect((await snap(page)).level).toBe('demo-room');
-  await expect(page.locator('#badge')).toHaveText('DEMO — тестовая комната');
-  await expect(page.locator('#subtitle')).toContainText('не оригинальный уровень');
-  // Отладка и технические подробности не выносятся на основной маршрут.
-  await expect(page.locator('#debug-toggle')).toBeHidden();
-  await expect(page.locator('#row-timer')).toBeHidden();
-  await expect(page.locator('#controls-hint')).toContainText('Прыжок: Пробел · Z');
-  await expect(page.getByRole('button', { name: 'Сброс' })).toBeVisible();
-  // Подпись находится вне Canvas.
-  expect(await page.locator('#screen').evaluate((canvas) => canvas.closest('.game-area')?.contains(document.getElementById('badge')))).toBe(false);
+  // Ни плашки DEMO, ни подсказок, ни статусов, ни отладки: только игрушка и три кнопки в уголке.
+  for (const id of ['#badge', '#subtitle', '#debug-toggle', '#row-timer', '#controls-hint', '#status-keyboard', '#overlay', '#focus-hint', '.shell__footer']) {
+    await expect(page.locator(id)).toBeHidden();
+  }
+  const text = await page.locator('body').innerText();
+  for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'Геймпад:', 'тестовая комната', 'Таймер']) {
+    expect(text, word).not.toContain(word);
+  }
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(3);
+  await expect(page.locator('#corner-settings')).toBeVisible();
+  await expect(page.locator('#corner-help')).toBeVisible();
+  await expect(page.locator('#corner-editor')).toBeVisible();
 });
 
 test('ввод: в комнате нет стрельбы — кнопка огня ничего не создаёт', async ({ page }) => {
@@ -145,21 +148,29 @@ test('пауза замораживает сцену, сброс возвращ�
   await page.keyboard.press('Escape');
   await expect.poll(phase(page)).toBe('playing');
 
-  await page.getByRole('button', { name: 'Сброс' }).click();
+  // Сброса на корпусе нет: как на устройстве — выключить и включить заново (ON/OFF).
+  await page.locator('[data-key="onoff"]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
+  await page.locator('[data-key="onoff"]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
   await expect.poll(phase(page)).toBe('ready');
   expect(await snap(page)).toMatchObject({ heroX: 1, heroY: FLOOR_Y });
 });
 
 test('переназначение прыжка из настроек действует в комнате', async ({ page }) => {
   await ready(page);
-  await page.getByRole('button', { name: 'Настройки…' }).click();
+  await page.locator('#corner-settings').click();
   const row = page.locator('tr', { hasText: 'Прыжок' }).first();
   await row.getByRole('button', { name: 'Назначить' }).click();
   await page.keyboard.press('KeyJ');
   await expect(row).toContainText('J');
   await page.getByRole('button', { name: 'Закрыть' }).click();
-  await expect(page.locator('#controls-hint')).toContainText('Прыжок: J');
   await expect(page.locator('#game-area')).toBeFocused(); // после закрытия настроек управление вернулось игре
+  // Справка показывает актуальные клавиши.
+  await page.locator('#corner-help').click();
+  await expect(page.locator('#help tr', { hasText: 'JUMP' })).toContainText('J');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#help')).toBeHidden();
 
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
@@ -240,9 +251,9 @@ test('рендер игры: цвета LCD-профиля владельца, �
     };
   });
   expect(result.bgShare).toBeGreaterThan(0.4); // подложка и слабый слой неактивных сегментов преобладают
-  expect(result.ground).toBeGreaterThan(0.45); // тёмный прямоугольник с вырезом под фигурку
+  expect(result.ground).toBeGreaterThan(0.35); // тёмный прямоугольник с вырезом под фигурку (экран в корпусе мелкий)
   expect(result.ground).toBeLessThan(0.9); // а не сплошной квадрат
-  expect(result.step).toBeGreaterThan(0.45);
+  expect(result.step).toBeGreaterThan(0.35);
   expect(result.hero).toBeGreaterThan(0.05);
   expect(result.hero).toBeLessThan(result.ground);
   expect(result.empty).toBe(0);
@@ -296,12 +307,17 @@ test('корпус вокруг экрана: три светодиода, вы�
   await ready(page);
   await expect(page.locator('#lid .led')).toHaveCount(3);
   await expect(page.locator('#lid .lid__screw')).toHaveCount(4);
-  await expect(page.locator('#lid')).toHaveAttribute('data-shell', 'blue');
-  await page.selectOption('#sel-shell', 'white');
-  await expect(page.locator('#lid')).toHaveAttribute('data-shell', 'white');
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
+  // Цвет корпуса — в настройках: четыре варианта, выбор запоминается.
+  await page.locator('#corner-settings').click();
+  await expect(page.locator('#settings-shell option')).toHaveCount(4);
+  await page.selectOption('#settings-shell', 'white');
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
+  await page.keyboard.press('Escape');
   await page.reload();
-  await expect(page.locator('#lid')).toHaveAttribute('data-shell', 'white');
-  await expect(page.locator('#sel-shell')).toHaveValue('white');
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
+  await page.locator('#corner-settings').click();
+  await expect(page.locator('#settings-shell')).toHaveValue('white');
   // Окно LCD сохраняет пропорции холста, Canvas целиком помещается в нём.
   const fits = await page.evaluate(() => {
     const win = (document.getElementById('lcd-window') as HTMLElement).getBoundingClientRect();
@@ -323,13 +339,16 @@ test('слой неактивных сегментов переключаетс�
       const [r = 0, g = 0, b = 0] = ctx.getImageData(x, y, 1, 1).data;
       return Math.abs(r - 173) + Math.abs(g - 179) + Math.abs(b - 140);
     });
-  await expect(page.locator('#chk-ghost')).toBeChecked();
+  await page.locator('#corner-settings').click();
+  await expect(page.locator('#settings-ghost')).toBeChecked();
   const withGhost = await emptyCellInk();
-  await page.locator('#chk-ghost').uncheck();
+  await page.locator('#settings-ghost').uncheck();
   await expect.poll(emptyCellInk).toBe(0); // чистая подложка
   expect(withGhost).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
   await page.reload();
-  await expect(page.locator('#chk-ghost')).not.toBeChecked();
+  await page.locator('#corner-settings').click();
+  await expect(page.locator('#settings-ghost')).not.toBeChecked();
 });
 
 test('Canvas сохраняет пропорции при изменении окна', async ({ page }) => {

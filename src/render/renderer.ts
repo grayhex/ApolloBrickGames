@@ -88,6 +88,15 @@ export class Renderer {
     canvas.style.height = `${layout.cssHeight}px`;
   }
 
+  /** Выключенный экран: только подложка, без сегментов (питание игрушки выключено). */
+  clear(): void {
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(this.layout.scale, 0, 0, this.layout.scale, 0, 0);
+    ctx.fillStyle = this.screen.colors.background;
+    ctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
+  }
+
   render(input: RenderInput): void {
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
