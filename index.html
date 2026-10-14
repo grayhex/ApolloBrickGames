@@ -190,12 +190,12 @@
                   <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
                   <stop offset="1" stop-color="#000" stop-opacity="0.4"/>
                 </linearGradient>
-                <clipPath id="cover-clip"><path d="M14,0 L128,0 L128,19 L272,19 L272,0 L386,0 Q400,0 400,14 L400,319 C400,348 383,362 358,364 C298,370 262,374 244,380 C230,385 220,391 200,391 C180,391 170,385 156,380 C138,374 102,370 42,364 C17,362 0,348 0,319 L0,14 Q0,0 14,0 Z"/></clipPath>
+                <clipPath id="cover-clip"><path d="M14,0 L386,0 Q400,0 400,14 L400,364 Q200,418 0,364 L0,14 Q0,0 14,0 Z"/></clipPath>
               </defs>
-              <!-- Оборот крышки: тот же контур, что у лицевой стороны, вверх ногами — вырез под шарнир наверху, заострение внизу. -->
-              <path d="M14,0 L128,0 L128,19 L272,19 L272,0 L386,0 Q400,0 400,14 L400,319 C400,348 383,362 358,364 C298,370 262,374 244,380 C230,385 220,391 200,391 C180,391 170,385 156,380 C138,374 102,370 42,364 C17,362 0,348 0,319 L0,14 Q0,0 14,0 Z" fill="url(#cover-body)"/>
-              <path d="M14,0 L128,0 L128,19 L272,19 L272,0 L386,0 Q400,0 400,14 L400,319 C400,348 383,362 358,364 C298,370 262,374 244,380 C230,385 220,391 200,391 C180,391 170,385 156,380 C138,374 102,370 42,364 C17,362 0,348 0,319 L0,14 Q0,0 14,0 Z" fill="url(#cover-gloss)"/>
-              <path d="M14,0 L128,0 L128,19 L272,19 L272,0 L386,0 Q400,0 400,14 L400,319 C400,348 383,362 358,364 C298,370 262,374 244,380 C230,385 220,391 200,391 C180,391 170,385 156,380 C138,374 102,370 42,364 C17,362 0,348 0,319 L0,14 Q0,0 14,0 Z" fill="none" stroke="url(#cover-rim)" stroke-width="7" clip-path="url(#cover-clip)"/>
+              <!-- Оборот крышки (по фото закрытой игрушки): верхняя кромка прямая — по краям из-за неё выглядывают втулки шарнира, посередине ничего нет; свободная кромка внизу — плавная дуга без выступа. -->
+              <path d="M14,0 L386,0 Q400,0 400,14 L400,364 Q200,418 0,364 L0,14 Q0,0 14,0 Z" fill="url(#cover-body)"/>
+              <path d="M14,0 L386,0 Q400,0 400,14 L400,364 Q200,418 0,364 L0,14 Q0,0 14,0 Z" fill="url(#cover-gloss)"/>
+              <path d="M14,0 L386,0 Q400,0 400,14 L400,364 Q200,418 0,364 L0,14 Q0,0 14,0 Z" fill="none" stroke="url(#cover-rim)" stroke-width="7" clip-path="url(#cover-clip)"/>
             </svg>
             <img class="lid__logo lid__logo--white" src="/brand/apollo-logo-white-caption.svg" width="1000" height="1000" alt="" aria-hidden="true" />
             <img class="lid__logo lid__logo--red" src="/brand/apollo-logo.svg" width="1000" height="1000" alt="" aria-hidden="true" />
@@ -203,7 +203,7 @@
         </div>
         </div>
 
-        <div class="toy__hinge" aria-hidden="true"><i class="toy__knuckle"></i><i class="toy__band"><i class="toy__barrel"></i></i><i class="toy__knuckle"></i></div>
+        <div class="toy__hinge" aria-hidden="true"><i class="toy__knuckle"></i><i class="toy__band"></i><i class="toy__knuckle"></i></div>
 
         <div class="toy__lower" id="lower"><div class="toy__lower-in">
         <div class="base" id="base" role="group" aria-label="Кнопки игрушки" data-i18n-attrs="aria-label=base.label">

@@ -61,6 +61,21 @@ test('по умолчанию игрушка закрыта: на крышке �
   expect(fit.top).toBeGreaterThanOrEqual(0);
   expect(fit.bottom).toBeLessThanOrEqual(fit.innerH);
   expect(fit.scrollH).toBeLessThanOrEqual(fit.innerH + 1);
+  // По фото закрытой игрушки: две втулки шарнира слева и справа выглядывают над верхней кромкой, посередине ничего нет (шлейф скрыт).
+  const hinge = await page.evaluate(() => {
+    const top = (selector: string): DOMRect[] => [...document.querySelectorAll<HTMLElement>(selector)].map((e) => e.getBoundingClientRect());
+    const cover = (document.getElementById('lid-cover') as HTMLElement).getBoundingClientRect();
+    const band = document.querySelector<HTMLElement>('.toy__band') as HTMLElement;
+    return { knuckles: top('.toy__knuckle'), coverTop: cover.top, coverLeft: cover.left, coverRight: cover.right, bandOpacity: Number(getComputedStyle(band).opacity) };
+  });
+  expect(hinge.knuckles).toHaveLength(2);
+  const [left, right] = hinge.knuckles as [DOMRect, DOMRect];
+  expect(left.top).toBeLessThan(hinge.coverTop - 8); // выступают над кромкой крышки
+  expect(right.top).toBeLessThan(hinge.coverTop - 8);
+  expect(left.right).toBeLessThan(right.left - 40); // между ними — пустой промежуток
+  expect(left.left).toBeGreaterThan(hinge.coverLeft);
+  expect(right.right).toBeLessThan(hinge.coverRight);
+  expect(hinge.bandOpacity).toBe(0); // посередине ничего нет
   // Оборот лежит поверх верхней части нижней половины (крышка почти квадратная), снизу виден «подбородок».
   expect(fit.coverTop).toBeGreaterThanOrEqual(fit.baseTop - 14); // чуть выше нижней половины: накрывает шарнир
   expect(fit.coverBottom).toBeLessThan(fit.baseBottom - 40);

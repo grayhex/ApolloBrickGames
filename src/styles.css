@@ -1055,37 +1055,29 @@ body[data-chrome='toy'] {
   transition: grid-template-rows var(--flip, 0s) var(--flip-ease, ease), z-index 0s;
 }
 
-/* Крышка чуть ниже верхнего торца: втулки шарнира выступают над ней, как на фото закрытых игрушек. */
 .toy[data-closed] .toy__lidslot > .lid {
-  transform: translateY(calc(-100% + 4.4cqw)) perspective(240cqw) rotateX(-180deg);
+  transform: translateY(-100%) perspective(240cqw) rotateX(-180deg);
 }
 
-/* Закрытая: между втулками вместо шлейфа — гладкая гильза шарнира цвета корпуса (шлейф уложен внутрь). */
-.toy__barrel {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: linear-gradient(180deg, var(--rim-hi), var(--rim) 34%, var(--rim-dark) 80%);
-  box-shadow: inset 0 0.35cqw 0.45cqw rgba(255, 255, 255, 0.34), inset 0 -0.6cqw 0.8cqw rgba(0, 0, 0, 0.32);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity calc(var(--flip, 0s) * 0.45) ease calc(var(--flip, 0s) * 0.3);
+/* Закрытая (по фото): шарниры — две аккуратные разделённые втулки слева и справа, выглядывают из-за верхней кромки крышки;
+   посередине ничего нет (шлейф уложен внутрь), кромка крышки ровная. */
+.toy__knuckle {
+  transition: margin-top var(--flip, 0s) var(--flip-ease, ease);
 }
 
-.toy[data-closed] .toy__barrel {
-  opacity: 1;
-  transition: opacity calc(var(--flip, 0s) * 0.3) ease calc(var(--flip, 0s) * 0.55);
+.toy[data-closed] .toy__knuckle {
+  margin-top: -1.2cqw;
 }
 
-/* Закрытая: гильза вровень со втулками (у открытой игрушки пластина шлейфа выше втулок). */
 .toy__band {
-  transition: margin-top var(--flip, 0s) var(--flip-ease, ease), height var(--flip, 0s) var(--flip-ease, ease);
+  transition: opacity calc(var(--flip, 0s) * 0.35) ease calc(var(--flip, 0s) * 0.5);
 }
 
-.toy[data-closed] .toy__hinge .toy__band {
-  height: 8.6cqw;
-  margin-top: 3cqw;
+.toy[data-closed] .toy__band {
+  opacity: 0;
   cursor: default;
+  pointer-events: none;
+  transition: opacity calc(var(--flip, 0s) * 0.3) ease;
 }
 
 /* ── Арена: слева справка, посередине игрушка, справа пульт ─────────────────
