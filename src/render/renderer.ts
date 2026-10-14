@@ -3,6 +3,7 @@ import type { GameState } from '../core/state';
 import type { AssetStore } from './assets';
 import type { CameraPos } from './camera';
 import { NO_EFFECTS, type EffectsFrame } from './effects';
+import { lifeIconCount, shownLives } from './hudLives';
 import { drawText as drawBuiltinText, FONT_HEIGHT, textWidth } from './font';
 import { dropoutRects } from './glitch';
 import { computeLayout, type Layout } from './layout';
@@ -31,6 +32,8 @@ export interface RenderInput {
   hideHero?: boolean;
   /** Презентационные эффекты кадра (интро, отскок перекладины); без них — обычная сцена. */
   effects?: EffectsFrame;
+  /** Число на таймере (`TIME 397`) вместо подписи уровня; `null` или отсутствие — подпись (игра ещё не началась или таймера нет). */
+  time?: number | null;
 }
 
 /**
@@ -277,7 +280,10 @@ export class Renderer {
   private hudValues(input: RenderInput): { lives: number; label: string; score: number } {
     const fixed = input.hudOverride ?? this.screen.hud.fixed;
     if (fixed) return fixed;
-    return { lives: input.state.lives, label: input.level.hudLabel, score: input.state.score };
+    const { hud } = this.screen;
+    // LCD-HUD может показывать запасные жизни: игра с 4 жизнями рисует три значка, последняя жизнь — ни одного.
+    const lives = hud.kind === 'lcd' ? shownLives(hud.lives, input.state.lives) : input.state.lives;
+    return { lives, label: input.level.hudLabel, score: input.state.score };
   }
 
   private drawHud(ctx: CanvasRenderingContext2D, input: RenderInput): void {
@@ -293,7 +299,8 @@ export class Renderer {
     const ink = this.screen.colors.ink;
     const tick = input.state.worldTick;
 
-    for (let i = 0; i < Math.min(values.lives, 9); i++) {
+    const shown = input.effects?.livesHidden ? 0 : lifeIconCount(hud.lives, values.lives);
+    for (let i = 0; i < shown; i++) {
       this.assets.draw(ctx, hud.lives.asset, tick, hud.lives.x + i * hud.lives.pitch, hud.lives.y, hud.lives.width, hud.lives.height, ink);
     }
 
@@ -308,7 +315,15 @@ export class Renderer {
         if (asset) this.assets.draw(ctx, asset, tick, x, digits.y, hud.font.width, hud.font.height, ink);
       });
     };
-    row(values.label, hud.label);
+    const fixed = input.hudOverride ?? this.screen.hud.fixed;
+    if (input.time != null && hud.time && !fixed) {
+      // Игра с таймером: слово TIME и три цифры вместо подписи (на видео геймплея — `TIME 397`).
+      const { time } = hud;
+      this.assets.draw(ctx, time.asset, tick, time.x, time.y, time.width, time.height, ink);
+      row(String(Math.min(input.time, 10 ** time.digits.slots - 1)), time.digits);
+    } else {
+      row(values.label, hud.label);
+    }
     row(String(Math.min(values.score, 10 ** hud.score.slots - 1)).padStart(hud.score.slots, '0'), hud.score);
   }
 

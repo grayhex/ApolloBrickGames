@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AnimationsDef, LevelDef } from '../../src/content/schema';
+import type { AnimationsDef } from '../../src/content/schema';
 import { Game, makeFrame, type GameEvent, type GameEventBody } from '../../src/core';
 import {
   blockAssetAt,
@@ -7,14 +7,15 @@ import {
   effectsWorld,
   LevelEffects,
   NO_EFFECTS,
+  SECRET_BLINK_TICKS,
   shuffledOrder,
   type EffectsWorld,
 } from '../../src/render/effects';
-import { loadRoomPack, roomContext } from '../helpers/content';
+import { levelOf, loadRoomPack, roomContext } from '../helpers/content';
 
 const pack = loadRoomPack();
 const animations = pack.animations as AnimationsDef;
-const level = pack.levels[0] as LevelDef;
+const level = levelOf(pack, 'tunnel-run');
 const viewport = pack.screen.viewport;
 const intro = animations.intro as NonNullable<AnimationsDef['intro']>;
 const route = intro.routes['tunnel-run'] ?? [];
@@ -192,5 +193,37 @@ describe('интро участка (наблюдение по видео)', () 
     expect(game.serialize()).toBe(before);
     game.step(makeFrame({ pressed: ['start'] }));
     expect(game.state.phase).toBe('playing');
+  });
+});
+
+describe('секрет «200 жизней»: значки жизни мигают', () => {
+  it('после события secretLives значки гаснут и загораются по фазам и затем остаются зажжёнными', () => {
+    const game = new Game(roomContext());
+    const fx = new LevelEffects(animations, { viewport, intro: false });
+    fx.onEvent(ev({ type: 'secretLives', lives: 200 }, 100), world(game));
+    const hiddenAt = (tick: number): boolean => {
+      game.state.tick = tick;
+      game.state.phase = 'playing';
+      return fx.frame(game.state, level).livesHidden;
+    };
+    expect(hiddenAt(99)).toBe(false); // до события
+    expect(hiddenAt(100)).toBe(true); // сразу погашены
+    expect(hiddenAt(103)).toBe(true);
+    expect(hiddenAt(104)).toBe(false);
+    expect(hiddenAt(108)).toBe(true);
+    expect(hiddenAt(100 + SECRET_BLINK_TICKS)).toBe(false); // мигание кончилось
+    expect(hiddenAt(100 + SECRET_BLINK_TICKS + 4)).toBe(false);
+    // Без мигания кадр без эффектов — тот же объект, что и раньше.
+    expect(fx.frame(game.state, level)).toBe(NO_EFFECTS);
+  });
+
+  it('новый участок или новая игра сбрасывают мигание', () => {
+    const game = new Game(roomContext());
+    const fx = new LevelEffects(animations, { viewport, intro: false });
+    fx.onEvent(ev({ type: 'secretLives', lives: 200 }, 100), world(game));
+    fx.onEvent(ev({ type: 'levelStarted', levelId: 'tunnel-run' }, 101), world(game));
+    game.state.tick = 101;
+    game.state.phase = 'playing';
+    expect(fx.frame(game.state, level).livesHidden).toBe(false);
   });
 });

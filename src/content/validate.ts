@@ -12,6 +12,7 @@ import {
   type FireRules,
   type Hud,
   type HudDigits,
+  type HudTime,
   type HudFixed,
   type IntroAnimation,
   type LegendEntry,
@@ -199,6 +200,25 @@ export function validateScreenProfile(raw: unknown, source = 'screen'): ScreenPr
   return profile;
 }
 
+function validateHudTime(c: Checker, raw: unknown): HudTime {
+  const t = c.record(raw, '$.hud.time') ?? {};
+  const d = c.record(t['digits'], '$.hud.time.digits') ?? {};
+  const path = '$.hud.time.digits';
+  return {
+    asset: c.str(t, 'asset', '$.hud.time'),
+    x: c.int(t, 'x', '$.hud.time', -4096, 4096),
+    y: c.int(t, 'y', '$.hud.time', -4096, 4096),
+    width: c.int(t, 'width', '$.hud.time', 1, 1024),
+    height: c.int(t, 'height', '$.hud.time', 1, 1024),
+    digits: {
+      x: c.int(d, 'x', path, -4096, 4096),
+      y: c.int(d, 'y', path, -4096, 4096),
+      pitch: c.int(d, 'pitch', path, 1, 1024),
+      slots: c.int(d, 'slots', path, 1, 16),
+    },
+  };
+}
+
 function validateHud(
   c: Checker,
   raw: unknown,
@@ -245,9 +265,12 @@ function validateHud(
         width: c.int(lives, 'width', '$.hud.lives', 1, 1024),
         height: c.int(lives, 'height', '$.hud.lives', 1, 1024),
         pitch: c.int(lives, 'pitch', '$.hud.lives', 1, 1024),
+        ...(lives['spare'] === undefined ? {} : { spare: c.bool(lives, 'spare', '$.hud.lives') }),
+        ...(lives['max'] === undefined ? {} : { max: c.int(lives, 'max', '$.hud.lives', 1, 9) }),
       },
       label: digits('label'),
       score: digits('score'),
+      ...(hud['time'] === undefined ? {} : { time: validateHudTime(c, hud['time']) }),
       font: {
         width: c.int(rawFont, 'width', '$.hud.font', 1, 512),
         height: c.int(rawFont, 'height', '$.hud.font', 1, 512),
@@ -416,6 +439,20 @@ export function validateRuleSet(raw: unknown, env: ValidationEnv, source = 'rule
     timerLimitTicks: c.int(p, 'timerLimitTicks', '$.params', 0, 1_000_000),
     deathDelayTicks: c.int(p, 'deathDelayTicks', '$.params', 0, 10_000),
   };
+  if (p['secret'] !== undefined) {
+    const secret = c.record(p['secret'], '$.params.secret') ?? {};
+    params.secret = { lives: c.int(secret, 'lives', '$.params.secret', 1, 999) };
+  }
+  if (p['timerUnitTicks'] !== undefined) {
+    const unit = p['timerUnitTicks'];
+    if (typeof unit === 'number' && Number.isFinite(unit) && unit >= 1 && unit <= 10_000) params.timerUnitTicks = unit;
+    else c.fail('$.params.timerUnitTicks', `ожидалось число от 1 до 10000 (тактов в единице таймера), получено ${JSON.stringify(unit)}`);
+  }
+  const timerScope = p['timerScope'];
+  if (timerScope === 'section' || timerScope === 'game') params.timerScope = timerScope;
+  else if (timerScope !== undefined) {
+    c.fail('$.params.timerScope', `ожидалось «section» или «game», получено ${JSON.stringify(timerScope)}`);
+  }
   const bottomEdge = p['bottomEdge'];
   if (bottomEdge === 'pit' || bottomEdge === 'floor') params.bottomEdge = bottomEdge;
   else if (bottomEdge !== undefined) {

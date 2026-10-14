@@ -87,7 +87,7 @@ const RU = {
   'info.orig.cheat':
     '**Секрет:** если нажать LEFT и DOWN вместе до того, как Марио выпрыгнет из колодца (в SHOOTING — до старта), будет 200 жизней вместо 4.',
   'info.note':
-    'Данные — с упаковки оригинала. Правила в этой версии приблизительные и уточняются; TETRIS и SHOOTING, демонстрация при включении, автоотключение и секрет с 200 жизнями в проект пока не входят.',
+    'Данные — с упаковки оригинала. Правила в этой версии приблизительные и уточняются; TETRIS и SHOOTING, демонстрация при включении и автоотключение в проект пока не входят; 4 жизни, таймер, растаптывание малого чёрта и секрет с 200 жизнями — входят.',
 
   // ── Правая панель: пульт ────────────────────────────────────────────────
   'ctl.title': 'Пульт',
@@ -123,7 +123,7 @@ const RU = {
   'lv.customAria': 'Карты из редактора',
   'lv.editor': 'Редактор',
   'lv.editorTitle': 'Редактор уровней',
-  'lv.open': 'Уровень {n} — тестовый, по видео (оригинал ещё не восстановлен)',
+  'lv.open': 'Уровень {n} — геймплейное приближение по видео (оригинал ещё не восстановлен)',
   'lv.locked': 'Уровень {n} — ещё не восстановлен',
   'lv.empty': 'Здесь появятся ваши карты. Нарисуйте уровень в редакторе — он сохранится сам и сразу окажется в этом списке.',
   'lv.noStorage': 'Хранилище браузера недоступно — карты из редактора здесь не видны.',
@@ -277,7 +277,7 @@ const EN: Record<MsgKey, string> = {
   'info.orig.cheat':
     '**Secret:** press LEFT and DOWN together before Mario jumps out of the well (in SHOOTING — before the start) to get 200 lives instead of 4.',
   'info.note':
-    'The data come from the original packaging. The rules in this version are approximate and still being refined; TETRIS and SHOOTING, the power-on demo, auto power-off and the 200-lives secret are not included yet.',
+    'The data come from the original packaging. The rules in this version are approximate and still being refined; TETRIS and SHOOTING, the power-on demo and auto power-off are not included yet; the 4 lives, the timer, stomping the small devil and the 200-lives secret are.',
 
   'ctl.title': 'Control panel',
   'dev.aria': 'Input device',
@@ -312,7 +312,7 @@ const EN: Record<MsgKey, string> = {
   'lv.customAria': 'Maps from the editor',
   'lv.editor': 'Editor',
   'lv.editorTitle': 'Level editor',
-  'lv.open': 'Level {n} — test level based on the video (the original is not restored yet)',
+  'lv.open': 'Level {n} — gameplay approximation based on the video (the original is not restored yet)',
   'lv.locked': 'Level {n} — not restored yet',
   'lv.empty': 'Your maps will appear here. Draw a level in the editor — it saves itself and shows up in this list right away.',
   'lv.noStorage': 'Browser storage is unavailable — maps from the editor cannot be shown here.',

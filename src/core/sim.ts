@@ -1,5 +1,5 @@
 import type { ContentPack, ObjectDef, RuleSetDef } from '../content/schema';
-import { actionBit, isAction, maskOf, type ActionMask, type InputFrame } from './actions';
+import { actionBit, isAction, maskOf, SECRET_CHORD, type ActionMask, type InputFrame } from './actions';
 import { DEMO_BEHAVIORS, type BehaviorRegistry, type SimApi } from './behaviors';
 import { prepareLevel, tileSolid, type LevelRuntime } from './level';
 import type {
@@ -68,6 +68,8 @@ export class Game implements SimApi {
   private events: GameEvent[] = [];
   /** Меняется при загрузке участка; защищает от «хвоста» такта на старом участке. */
   private serial = 0;
+  /** Идёт шаг героя вниз: касание объекта в этот момент — наступание сверху (см. `ObjectBehavior.stomp`). */
+  private stomping = false;
 
   constructor(ctx: GameContext, seed = 1, state?: GameState) {
     this.ctx = ctx;
@@ -82,9 +84,14 @@ export class Game implements SimApi {
     const s = this.state;
     s.tick += 1;
 
+    if ((s.phase === 'ready' || s.phase === 'playing') && (frame.held & SECRET_CHORD) !== 0) this.applySecret();
+
     switch (s.phase) {
       case 'ready':
-        if (frame.pressed & START) this.setPhase('playing');
+        if (frame.pressed & START) {
+          s.gameStarted = true;
+          this.setPhase('playing');
+        }
         break;
       case 'playing':
         if (frame.pressed & PAUSE) this.setPhase('paused');
@@ -140,6 +147,18 @@ export class Game implements SimApi {
     const level = this.ctx.levels.get(this.state.levelId);
     if (!level) throw new Error(`Уровень «${this.state.levelId}» не найден.`);
     return level;
+  }
+
+  /**
+   * Секрет оригинала: аккорд, пока герой ещё в «колодце» (с начала участка не уходил из столбца старта), даёт бонусные жизни.
+   * Повторное нажатие ничего не меняет (жизни только растут до `secret.lives`); после гибели герой снова на старте — секрет снова доступен.
+   */
+  private applySecret(): void {
+    const secret = this.ctx.rules.params.secret;
+    const s = this.state;
+    if (!secret || !s.inWell || s.lives >= secret.lives) return;
+    s.lives = secret.lives;
+    this.emit({ type: 'secretLives', lives: secret.lives });
   }
 
   // ── SimApi для обработчиков объектов ─────────────────────────────────────
@@ -206,6 +225,8 @@ export class Game implements SimApi {
       score: 0,
       lives: ctx.rules.params.lives,
       timerTicks: ctx.rules.params.timerLimitTicks,
+      inWell: true,
+      gameStarted: false,
       phaseTimer: 0,
       deathCause: null,
     };
@@ -254,7 +275,8 @@ export class Game implements SimApi {
     s.hero = this.newHero(level);
     s.objects = this.newObjects(level);
     s.projectiles = [];
-    s.timerTicks = this.ctx.rules.params.timerLimitTicks;
+    if (this.ctx.rules.params.timerScope !== 'game') s.timerTicks = this.ctx.rules.params.timerLimitTicks;
+    s.inWell = true;
     this.serial += 1;
     this.emit({ type: 'levelStarted', levelId });
   }
@@ -298,12 +320,14 @@ export class Game implements SimApi {
     if (params.timerLimitTicks > 0) {
       s.timerTicks -= 1;
       if (s.timerTicks <= 0) {
+        if (params.timerScope === 'game') s.lives = 1; // время игры вышло — игра окончена, а не потеря одной жизни
         this.die('time');
         return;
       }
     }
 
     this.updateHero(frame);
+    if (s.hero.x !== this.level.def.start.x) s.inWell = false; // выпрыгнул из колодца — секрет закрыт до возрождения
     if (!this.alive(serial)) return;
     this.updateFire(frame);
     this.updateObjects();
@@ -358,7 +382,9 @@ export class Game implements SimApi {
     if (this.blocked(nx, ny)) return false;
     hero.x = nx;
     hero.y = ny;
+    this.stomping = dy > 0; // вошёл в клетку сверху (спуск) — это наступание, а не касание
     this.checkHeroTouch();
+    this.stomping = false;
     return true;
   }
 
@@ -563,7 +589,9 @@ export class Game implements SimApi {
       const state = objects[i];
       const def = defs[i];
       if (!state || !def || !state.active || !overlaps(state, def, s.hero.x, s.hero.y)) continue;
-      this.ctx.behaviors[def.type]?.heroTouch?.(this, state, def);
+      const behavior = this.ctx.behaviors[def.type];
+      if (this.stomping && behavior?.stomp?.(this, state, def)) continue;
+      behavior?.heroTouch?.(this, state, def);
       if (!this.alive(serial)) return;
     }
   }

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { assemblePack } from '../../src/content/validate';
-import type { LevelDef } from '../../src/content/schema';
 import { createContext, Game, makeFrame, validationEnv, type GameEvent } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
-import { demoRoomContext, loadRawPack, loadRoomPack, roomContext } from '../helpers/content';
+import { demoRoomContext, levelOf, loadRawPack, loadRoomPack, roomContext } from '../helpers/content';
 import { idle, run, type Segment } from '../helpers/script';
 
 /**
@@ -158,7 +157,7 @@ describe('удар головой: событие bump и пробиваемый
   });
 
   it('уровень по видео: арка с ямой и крышкой слева, старт в яме, дальше бег вправо; пометки наблюдений на месте', () => {
-    const level = loadRoomPack().levels[0] as LevelDef;
+    const level = levelOf(loadRoomPack(), 'tunnel-run');
     expect(level.id).toBe('tunnel-run');
     expect(level.start).toEqual({ x: 1, y: 5 });
     expect(level.hudLabel).toBe('1-09');

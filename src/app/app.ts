@@ -8,6 +8,8 @@ import {
   createContext,
   DEMO_BEHAVIORS,
   Game,
+  timerUnits,
+  timerUnitTicks,
   validationEnv,
   type GameEvent,
   type InputFrame,
@@ -31,7 +33,7 @@ import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
-import { defaultLevelRef, originalPack, originalSlots, userPack, type LevelRef } from './levels';
+import { originalPack, originalSlots, refAfterLevelStart, startingLevel, userPack, type LevelRef } from './levels';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { EntryScript } from './entry';
@@ -149,8 +151,9 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   for (const warning of assetWarnings) console.warn(warning);
 
   // Контекст, игра, эффекты, сценарий входа и сессия пересоздаются при выборе другого уровня (см. launch).
-  let ctx = createContext(pack);
   const params = new URLSearchParams(window.location.search);
+  const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
+  let ctx = createContext(start.pack);
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
   let game = new Game(ctx, seed);
   const renderer = new Renderer(refs.canvas, pack.screen, assets);
@@ -214,7 +217,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   const onEvents = (events: readonly GameEvent[]): void => {
     for (const event of events) {
-      if (event.type === 'levelStarted') snapCamera = true;
+      if (event.type === 'levelStarted') {
+        snapCamera = true;
+        // Переход на следующий уровень после финиша: плитка на пульте следует за игрой.
+        const shown = refAfterLevelStart(currentLevel, slots, event.levelId);
+        if (shown !== currentLevel) {
+          currentLevel = shown;
+          applyDisplay();
+        }
+      }
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);
       entry.onEvent(event);
@@ -343,7 +354,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // ── Выбор уровня: оригинальные 1–9 и карты из редактора ──────────────────
   const slots = originalSlots(pack);
-  let currentLevel: LevelRef = defaultLevelRef(pack);
+  let currentLevel: LevelRef = start.ref;
   let userLevels: readonly UserLevel[] = [];
   const libraryTarget: LibraryTarget = {
     packName: route.packName,
@@ -537,7 +548,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // ── Питание и кнопки корпуса ─────────────────────────────────────────────
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
-  let powered = true;
+  // Игрушка при открытии страницы выключена: включает кнопка ON/OFF (клавиша O); `?power=on` включает сразу (для ссылок и тестов).
+  // Технические страницы кнопок корпуса не показывают — они всегда включены.
+  let powered = !route.lid || params.get('power') === 'on';
+  refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
@@ -608,8 +622,11 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (event.detail !== 0) refocusGame(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на кнопке
   });
   // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
+  // Выключенная игрушка в этом виде включается касанием экрана: кнопки ON/OFF на экране нет.
   refs.gameArea.addEventListener('pointerdown', () => {
-    if (hub.settings.display.compact && game.state.phase !== 'playing' && powered) session.requestStart();
+    if (!hub.settings.display.compact) return;
+    if (!powered) setPower(true);
+    else if (game.state.phase !== 'playing') session.requestStart();
   });
 
   // Светодиоды: наблюдение по видео — в игре горят все три; остальное условно, см. app/leds.ts. состояния (оригинальная логика не установлена), см. app/leds.ts.
@@ -658,6 +675,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
     setData('phase', s.phase);
     setData('level', s.levelId);
+    setData('hud', game.level.def.hudLabel); // подпись `G-LL` на экране
+    setData('time', timerUnits(ctx.rules, s) ?? ''); // число на таймере (`TIME 397`); пусто — на HUD подпись
     setData('tick', s.tick);
     setData('worldTick', s.worldTick);
     setData('heroX', s.hero.x);
@@ -696,7 +715,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
     controls?.setDevices(deviceView(gamepadStatus, hub.lastDevice));
     setText.hint(controlsHint(hub.settings.keyboard, route.fireHint));
-    setText.timer(timerText(s, ctx.rules.params.tickRateHz, ctx.rules.params.timerLimitTicks));
+    setText.timer(timerText(s, timerUnitTicks(ctx.rules), ctx.rules.params.timerLimitTicks, ctx.rules.params.timerUnitTicks ? 'ед.' : 'с'));
 
     const warnings: string[] = [...assetWarnings];
     if (!hub.settingsPersisted) warnings.push('Настройки не сохраняются: хранилище браузера недоступно.');
@@ -761,6 +780,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       sprites,
       debug: { grid: refs.chkGrid.checked, collisions: refs.chkCollisions.checked },
       effects: fx,
+      time: timerUnits(ctx.rules, game.state),
     };
     renderer.render(lastScene);
     applyGlitch(now);

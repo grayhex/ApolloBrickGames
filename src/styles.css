@@ -855,6 +855,28 @@ body {
   filter: brightness(0.94) saturate(0.85);
 }
 
+/* Игрушка при открытии страницы выключена: кнопка ON/OFF мягко мерцает ореолом, пока питание не включено (без движения — ореол неподвижный). */
+.toy[data-power='off'] .key[data-key='onoff']:not([data-pressed]) {
+  animation: power-hint 1.8s ease-in-out infinite;
+}
+
+@keyframes power-hint {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0.2cqw rgba(255, 244, 190, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 1.1cqw rgba(255, 244, 190, 0.95));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toy[data-power='off'] .key[data-key='onoff']:not([data-pressed]) {
+    animation: none;
+    filter: drop-shadow(0 0 0.8cqw rgba(255, 244, 190, 0.8));
+  }
+}
+
 /* Вид «только экран»: нижняя половина скрыта, крышка с экраном занимает окно целиком (ширину задаёт `.arena[data-compact]`).
    Переход плавный: арена меняет ширину игрушки (`--stage-w` зарегистрирована как длина, поэтому анимируется), нижняя половина
    сворачивается по высоте, шарнир тает, вырез на крышке закрывается. Время — `--morph` (0 на загрузке, при смене размера окна и

@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { EntryScript } from '../../src/app/entry';
-import type { LevelDef } from '../../src/content/schema';
 import { Game, makeFrame, NEUTRAL_FRAME, type GameEvent, type InputFrame } from '../../src/core';
 import { centerCamera } from '../../src/render/camera';
-import { loadRoomPack, roomContext } from '../helpers/content';
+import { levelOf, loadRoomPack, roomContext } from '../helpers/content';
 import { idle, run } from '../helpers/script';
 
 const pack = loadRoomPack();
-const level = pack.levels[0] as LevelDef;
+const level = levelOf(pack, 'tunnel-run');
 const animations = pack.animations;
 
 /** Игра на тестовом уровне: старт нажат, сценарий входа ждёт. */
@@ -183,6 +182,6 @@ describe('уровень проходим: бот бежит вправо, пр�
     expect(completed).toBe(true);
     expect(game.state.phase).toBe('completed');
     expect(game.state.score).toBe(40); // четыре мишени по 10
-    expect(game.state.lives).toBe(3);
+    expect(game.state.lives).toBe(4);
   });
 });

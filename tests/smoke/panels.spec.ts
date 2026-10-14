@@ -14,7 +14,7 @@ const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 const level = (page: Page) => (): Promise<string> => area(page, 'level');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./');
+  await page.goto('./?power=on');
   await expect.poll(phase(page)).toBe('ready');
 }
 
@@ -163,33 +163,49 @@ test('технические страницы остаются тёмными, �
   await expect(page.locator('#side-ctl')).toBeHidden();
 });
 
-test('уровни: оригинальные 1–9 (занят только первый), закрытые не запускаются; выбор перезапускает игру', async ({ page }) => {
+test('уровни: девять оригинальных открыты (геймплейное приближение); выбор запускает выбранный уровень и перезапускает игру', async ({ page }) => {
   await ready(page);
   const tiles = page.locator('#original-levels .lv');
   await expect(tiles).toHaveCount(9);
   await expect(tiles.nth(0)).toHaveAttribute('aria-current', 'true');
-  await expect(tiles.nth(0)).not.toHaveAttribute('aria-disabled', 'true');
-  for (let i = 1; i < 9; i++) await expect(tiles.nth(i)).toHaveAttribute('aria-disabled', 'true');
-  expect(await level(page)()).toBe('tunnel-run');
+  for (let i = 0; i < 9; i++) await expect(tiles.nth(i)).not.toHaveAttribute('aria-disabled', 'true');
+  expect(await level(page)()).toBe('mario-1');
+  expect(await area(page, 'hud')).toBe('1-01');
 
-  // Закрытый уровень: ничего не происходит.
-  await tiles.nth(4).click({ force: true }); // кнопка помечена aria-disabled: обычный клик Playwright ждал бы её «включения»
-  expect(await level(page)()).toBe('tunnel-run');
-  await expect(page.locator('#game-area')).toBeFocused(); // клавиатура осталась у игры
-  await expect(tiles.nth(4)).not.toHaveAttribute('aria-current', 'true');
+  // Выбор другого уровня: игра начинается заново на нём, подпись HUD меняется, плитка подсвечена, клавиатура у игры.
+  await tiles.nth(4).click();
+  await expect.poll(level(page)).toBe('mario-5');
+  await expect.poll(phase(page)).toBe('ready');
+  await expect(tiles.nth(4)).toHaveAttribute('aria-current', 'true');
+  await expect(tiles.nth(0)).not.toHaveAttribute('aria-current', 'true');
+  expect(await area(page, 'hud')).toBe('1-05');
+  await expect(page.locator('#game-area')).toBeFocused();
 
-  // Игра идёт, выбор открытого уровня начинает её заново.
+  // Игра идёт, выбор уровня начинает её заново; у каждого уровня — тот же старт: яма и сценарий выхода.
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
-  await page.waitForTimeout(300);
-  await tiles.nth(0).click();
+  await expect.poll(() => area(page, 'entry'), { timeout: 6000 }).toBe('off');
+  expect(await area(page, 'heroX')).toBe('2');
+  expect(await area(page, 'heroY')).toBe('2');
+  await tiles.nth(8).click();
   await expect.poll(phase(page)).toBe('ready');
-  expect(await level(page)()).toBe('tunnel-run');
+  expect(await level(page)()).toBe('mario-9');
+  expect(await area(page, 'hud')).toBe('1-09');
   await expect(page.locator('#game-area')).toBeFocused();
 
   // Пустой список карт редактора — подсказка и ссылка на редактор.
   await expect(page.locator('#user-levels')).toContainText('Нарисуйте уровень в редакторе');
   await expect(page.locator('#open-editor')).toHaveAttribute('href', '#/editor');
+});
+
+test('?level=N открывает уровень N сразу; неверное значение — уровень 1', async ({ page }) => {
+  await page.goto('./?level=7&power=on');
+  await expect.poll(phase(page)).toBe('ready');
+  expect(await level(page)()).toBe('mario-7');
+  await expect(page.locator('#original-levels .lv').nth(6)).toHaveAttribute('aria-current', 'true');
+  await page.goto('./?level=42&power=on');
+  await expect.poll(phase(page)).toBe('ready');
+  expect(await level(page)()).toBe('mario-1');
 });
 
 test('карты из редактора: появляются в «Пользовательских», запускаются, открываются в редакторе; сломанные названы', async ({ page }) => {
@@ -205,7 +221,7 @@ test('карты из редактора: появляются в «Пользо
     meta: { projectId: 'broken-1', name: 'Сломанная карта', levelId: 'broken', width: 3, height: 3, savedAt: 1 },
     doc: { мусор: true },
   });
-  await page.goto('./#/');
+  await page.goto('./?power=on#/');
   await expect.poll(phase(page)).toBe('ready');
 
   const list = page.locator('#user-levels');
@@ -218,7 +234,7 @@ test('карты из редактора: появляются в «Пользо
 
   // 2. Запуск: уровень меняется, игра готова к старту и проходится как обычно.
   await broken.locator('.uv__go').click({ force: true });
-  expect(await level(page)()).toBe('tunnel-run'); // сломанная карта не запускается
+  expect(await level(page)()).toBe('mario-1'); // сломанная карта не запускается
   await copy.locator('.uv__go').click();
   await expect.poll(level(page)).toBe('demo-room');
   await expect.poll(phase(page)).toBe('ready');
@@ -233,7 +249,7 @@ test('карты из редактора: появляются в «Пользо
 
   // 3. Назад к оригинальному уровню 1.
   await page.locator('#original-levels .lv').nth(0).click();
-  await expect.poll(level(page)).toBe('tunnel-run');
+  await expect.poll(level(page)).toBe('mario-1');
   await expect(page.locator('#original-levels .lv').nth(0)).toHaveAttribute('aria-current', 'true');
 
   // 4. «Карандаш» открывает именно эту карту в редакторе.

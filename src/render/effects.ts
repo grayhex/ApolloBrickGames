@@ -45,6 +45,8 @@ export interface EffectsFrame {
   hero: 'state' | 'hidden' | CellPos;
   /** Дополнительные тайлы (отскок перекладины). */
   extra: readonly ExtraTile[];
+  /** Значки жизни сейчас погашены: они мигают после секрета с бонусными жизнями (в LCD-HUD). */
+  livesHidden: boolean;
 }
 
 export const NO_EFFECTS: EffectsFrame = {
@@ -54,7 +56,12 @@ export const NO_EFFECTS: EffectsFrame = {
   objects: true,
   hero: 'state',
   extra: [],
+  livesHidden: false,
 };
+
+/** Сколько тактов мигают значки жизни после секрета и сколько тактов длится одна фаза мигания (допущение: в оригинале реакции на секрет не измерено). */
+export const SECRET_BLINK_TICKS = 40;
+export const SECRET_BLINK_PHASE_TICKS = 4;
 
 interface BumpRecord {
   levelId: string;
@@ -154,6 +161,7 @@ export interface EffectsOptions {
 export class LevelEffects {
   private introStart = 0;
   private bumps: BumpRecord[] = [];
+  private secretTick: number | null = null;
   private readonly orders = new Map<string, number[]>();
   private readonly animations: AnimationsDef | null;
   private readonly options: EffectsOptions;
@@ -167,6 +175,9 @@ export class LevelEffects {
     if (event.type === 'levelStarted') {
       this.introStart = event.tick;
       this.bumps = [];
+      this.secretTick = null;
+    } else if (event.type === 'secretLives') {
+      this.secretTick = event.tick;
     } else if (event.type === 'bump' && this.animations?.bump) {
       const tiles = bumpTiles(world, event.x, event.y);
       if (tiles.length > 0) this.bumps.push({ levelId: world.level.id, tick: event.tick, tiles });
@@ -189,10 +200,23 @@ export class LevelEffects {
   }
 
   frame(state: GameState, level: LevelDef): EffectsFrame {
+    const base = this.sceneFrame(state, level);
+    return this.livesHidden(state) ? { ...base, livesHidden: true } : base;
+  }
+
+  private sceneFrame(state: GameState, level: LevelDef): EffectsFrame {
     const intro = this.introFrame(state, level);
     if (intro) return intro;
     const extra = this.bumpFrame(state, level);
     return extra.length === 0 ? NO_EFFECTS : { ...NO_EFFECTS, extra };
+  }
+
+  /** Мигание значков жизни после секрета: фаза «погашены» чередуется с «горят», начиная с погашенных. */
+  private livesHidden(state: GameState): boolean {
+    if (this.secretTick === null) return false;
+    const dt = state.tick - this.secretTick;
+    if (dt < 0 || dt >= SECRET_BLINK_TICKS) return false;
+    return Math.floor(dt / SECRET_BLINK_PHASE_TICKS) % 2 === 0;
   }
 
   private bumpFrame(state: GameState, level: LevelDef): ExtraTile[] {
@@ -269,6 +293,7 @@ export class LevelEffects {
       objects: true,
       hero: here ?? 'hidden',
       extra: [],
+      livesHidden: false,
     };
   }
 }

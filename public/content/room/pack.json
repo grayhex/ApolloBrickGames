@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "demo-room-pack",
-  "title": "Игрушка: тестовый уровень по видео (не оригинальный уровень)",
+  "title": "Игрушка: девять уровней MARIO — геймплейное приближение (не оригинальные уровни)",
   "status": "demo",
   "version": 4,
   "screen": "screen.json",
@@ -9,10 +9,19 @@
   "assets": "assets.json",
   "animations": "animations.json",
   "levels": [
+    "levels/mario-1.json",
+    "levels/mario-2.json",
+    "levels/mario-3.json",
+    "levels/mario-4.json",
+    "levels/mario-5.json",
+    "levels/mario-6.json",
+    "levels/mario-7.json",
+    "levels/mario-8.json",
+    "levels/mario-9.json",
     "levels/tunnel-run.json",
     "levels/demo-room.json"
   ],
-  "firstLevel": "tunnel-run",
+  "firstLevel": "mario-1",
   "sprites": {
     "hero": "cell.player",
     "projectile": "cell.heart",

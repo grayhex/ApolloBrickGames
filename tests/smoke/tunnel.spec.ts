@@ -6,6 +6,9 @@ import { expect, test, type Page } from '@playwright/test';
  * Состояние — из data-* игровой области; эффекты и снаряды проверяются по пикселям Canvas.
  */
 
+/** Тестовый уровень по видео открывается явно: страница по умолчанию начинается с `mario-1`. */
+const TUNNEL = './?level=tunnel-run&power=on';
+
 const area = (page: Page, key: string): Promise<string> =>
   page.evaluate((name) => document.getElementById('game-area')?.dataset[name] ?? '', key);
 const num = (page: Page, key: string) => async (): Promise<number> => Number(await area(page, key));
@@ -67,7 +70,7 @@ function watchInk(page: Page, cols: number[], row: number, ms: number, threshold
 
 /** Нажать S./P. и дождаться конца сценария входа: герой стоит на верхушке правой стойки, управление у игрока. */
 async function startAndEnter(page: Page): Promise<void> {
-  await page.goto('./');
+  await page.goto(TUNNEL);
   await expect.poll(phase(page)).toBe('ready');
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
@@ -86,7 +89,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('интро: поле не закрыто текстом, герой идёт по маршруту, потом уровень построен и игра ждёт S./P.', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(TUNNEL);
   await expect.poll(() => area(page, 'level')).toBe('tunnel-run');
   await expect.poll(phase(page)).toBe('ready');
   await expect(page.locator('#overlay')).toBeHidden(); // текстовых подсказок на экране нет вовсе
@@ -107,7 +110,7 @@ test('интро: поле не закрыто текстом, герой идё
 });
 
 test('Enter во время интро пропускает его и сразу запускает игру', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(TUNNEL);
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'intro')).toBe('on');
   await page.keyboard.press('Enter');
@@ -120,7 +123,7 @@ test('Enter во время интро пропускает его и сразу
 test('старт: герой сам выходит из туннеля — копия перекладины мигает ≈ 0,25 с, на третий удар крышка исчезает, герой на стойке', async ({
   page,
 }) => {
-  await page.goto('./');
+  await page.goto(TUNNEL);
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'intro'), { timeout: 8000 }).toBe('off');
   expect(await inkShare(page, 1, 2)).toBe(0);
