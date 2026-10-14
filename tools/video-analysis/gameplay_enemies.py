@@ -1,6 +1,6 @@
 """Враги, таймер и сцены по видео геймплея: контактные листы и трекинг «чертей» по выпрямленному LCD (gameplay_lcd.py).
 
-Запуск (out_dir — каталог с lcd.npy и meta.json из gameplay_lcd.py; время — секунды видео, кадр LCD каждые 0,1 с):
+Запуск (out_dir — каталог с lcd.npy и meta.json из gameplay_lcd.py; время — секунды видео; кадры LCD выбираются по времени из meta.json, шаг извлечения любой):
 
   python3 gameplay_enemies.py montage out_dir от шаг число out.png [столбцов=4] [масштаб=1.0] [y0=0] [y1=216]
       контактный лист: `число` кадров LCD, начиная с `от`, через `шаг` секунд (подписи времени)
@@ -15,6 +15,7 @@
 Кластер 2 × 2 — левый верхний угол, у которого заняты ≥ 2 из 4 клеток. Точность — клетка; кадры размыты, пальцы и блики дают одиночные промахи.
 Нужны numpy, opencv-python, pillow.
 """
+import json
 import sys
 from pathlib import Path
 
@@ -25,8 +26,15 @@ from PIL import Image, ImageDraw
 X0, PX, Y0, PY = 8.0, 32.0, 38.5, 28.0
 
 
-def load(out: Path) -> np.ndarray:
-    return np.load(out / 'lcd.npy')
+def load(out: Path):
+    """→ (кадры LCD, время каждого кадра в секундах из meta.json)."""
+    times = np.array([m['t'] for m in json.loads((out / 'meta.json').read_text())])
+    return np.load(out / 'lcd.npy'), times
+
+
+def index_at(times, t):
+    """Индекс ближайшего по времени кадра."""
+    return int(np.abs(times - t).argmin())
 
 
 def dark(img: np.ndarray, sigma: float = 12) -> np.ndarray:
@@ -39,14 +47,14 @@ def stretch(im: np.ndarray) -> np.ndarray:
     return np.clip((im - lo) / (hi - lo + 1e-6), 0, 1) * 255
 
 
-def montage(lcd, t0, dt, n, out, cols=4, scale=1.0, y0=0, y1=216):
+def montage(lcd, times, t0, dt, n, out, cols=4, scale=1.0, y0=0, y1=216):
     tw, th = int(432 * scale), int((y1 - y0) * scale)
     rows = (n + cols - 1) // cols
     sheet = Image.new('L', (cols * (tw + 4), rows * (th + 14)), 30)
     draw = ImageDraw.Draw(sheet)
     for k in range(n):
         t = t0 + k * dt
-        i = min(int(round(t * 10)), len(lcd) - 1)
+        i = index_at(times, t)
         tile = Image.fromarray(stretch(lcd[i][y0:y1].astype(np.float32)).astype(np.uint8)).resize((tw, th), Image.LANCZOS)
         x, y = (k % cols) * (tw + 4), (k // cols) * (th + 14)
         sheet.paste(tile, (x, y + 12))
@@ -54,11 +62,11 @@ def montage(lcd, t0, dt, n, out, cols=4, scale=1.0, y0=0, y1=216):
     sheet.save(out)
 
 
-def timer_strip(lcd, t0, dt, n, out):
+def timer_strip(lcd, times, t0, dt, n, out):
     tiles = []
     for k in range(n):
         t = t0 + k * dt
-        crop = stretch(lcd[min(int(round(t * 10)), len(lcd) - 1)][0:42, 40:200].astype(np.float32))
+        crop = stretch(lcd[index_at(times, t)][0:42, 40:200].astype(np.float32))
         tile = Image.fromarray(crop.astype(np.uint8)).resize((480, 126), Image.LANCZOS)
         ImageDraw.Draw(tile).text((4, 2), '%.1fs' % t, fill=255)
         tiles.append(tile)
@@ -97,9 +105,9 @@ def hero_col(img):
     return cols[0] if cols else None
 
 
-def track_big(lcd, t0, t1):
+def track_big(lcd, times, t0, t1):
     prev = None
-    for i in range(int(t0 * 10), int(t1 * 10)):
+    for i in range(int(np.searchsorted(times, t0)), int(np.searchsorted(times, t1))):
         cells = sorted({cell_of(x, y) for x, y in blobs(lcd[i])})
         best = None
         for c in range(-1, 13):
@@ -109,7 +117,7 @@ def track_big(lcd, t0, t1):
                     best = (k, c, r)
         state = ((best[1], best[2]) if best else None, hero_col(lcd[i]))
         if state != prev:
-            print('%.1f чёрт=%s герой=%s' % (i / 10, state[0], state[1]))
+            print('%.1f чёрт=%s герой=%s' % (times[i], state[0], state[1]))
             prev = state
 
 
@@ -118,16 +126,16 @@ def main():
         print(__doc__)
         sys.exit(1)
     command, out = sys.argv[1], Path(sys.argv[2])
-    lcd = load(out)
+    lcd, times = load(out)
     if command == 'montage':
         t0, dt, n, png = float(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5]), sys.argv[6]
         extra = sys.argv[7:]
-        montage(lcd, t0, dt, n, png, int(extra[0]) if extra else 4, float(extra[1]) if len(extra) > 1 else 1.0,
+        montage(lcd, times, t0, dt, n, png, int(extra[0]) if extra else 4, float(extra[1]) if len(extra) > 1 else 1.0,
                 int(extra[2]) if len(extra) > 2 else 0, int(extra[3]) if len(extra) > 3 else 216)
     elif command == 'timer':
-        timer_strip(lcd, float(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
+        timer_strip(lcd, times, float(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
     elif command == 'big':
-        track_big(lcd, float(sys.argv[3]), float(sys.argv[4]))
+        track_big(lcd, times, float(sys.argv[3]), float(sys.argv[4]))
     else:
         print(__doc__)
 

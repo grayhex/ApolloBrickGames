@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defaultLevelRef, ORIGINAL_LEVEL_COUNT, originalPack, originalSlots, sameLevel, slotTitle, startingLevel, userPack, type OriginalSlot } from '../../src/app/levels';
-import { createContext, Game } from '../../src/core';
+import { defaultLevelRef, ORIGINAL_LEVEL_COUNT, originalPack, originalSlots, refAfterLevelStart, sameLevel, slotTitle, startingLevel, userPack, type OriginalSlot } from '../../src/app/levels';
+import { createContext, Game, makeFrame } from '../../src/core';
 import { levelOf, loadRoomPack } from '../helpers/content';
 
 const pack = loadRoomPack();
@@ -44,6 +44,31 @@ describe('оригинальные уровни 1–9', () => {
     expect(at('tunnel-run').ref).toEqual({ kind: 'original', number: 0 });
     expect(new Game(createContext(at('tunnel-run').pack)).state.levelId).toBe('tunnel-run');
     expect(startingLevel({ ...pack, levels: pack.levels.filter((l) => l.id !== 'mario-3') }, '3').ref).toEqual({ kind: 'original', number: 1 });
+  });
+});
+
+describe('подсветка плитки следует за игрой', () => {
+  const slots = originalSlots(pack);
+
+  it('финиш уровня N переводит игру на N + 1 — подсвечивается плитка N + 1', () => {
+    const one = { kind: 'original', number: 1 } as const;
+    expect(refAfterLevelStart(one, slots, 'mario-2')).toEqual({ kind: 'original', number: 2 });
+    expect(refAfterLevelStart(one, slots, 'mario-1')).toBe(one); // тот же уровень (возрождение, новая игра) — без изменений
+  });
+
+  it('карта из редактора и участок вне слотов подсветку не меняют', () => {
+    const user = { kind: 'user', projectId: 'a' } as const;
+    expect(refAfterLevelStart(user, slots, 'mario-3')).toBe(user);
+    const one = { kind: 'original', number: 1 } as const;
+    expect(refAfterLevelStart(one, slots, 'tunnel-run')).toBe(one);
+  });
+
+  it('в реальной игре: проход mario-1 → mario-2 приводит к событию levelStarted, по которому подсветка переключается', () => {
+    const game = new Game(createContext(originalPack(pack, 'mario-1')));
+    game.step(makeFrame({ pressed: ['start'] }));
+    (game as unknown as { completeLevel(id: string): void }).completeLevel('goal');
+    expect(game.state.levelId).toBe('mario-2');
+    expect(refAfterLevelStart({ kind: 'original', number: 1 }, slots, game.state.levelId)).toEqual({ kind: 'original', number: 2 });
   });
 });
 

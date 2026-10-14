@@ -46,6 +46,16 @@ export type LevelRef = { kind: 'original'; number: number } | { kind: 'user'; pr
 export const sameLevel = (a: LevelRef, b: LevelRef): boolean =>
   a.kind === 'original' ? b.kind === 'original' && a.number === b.number : b.kind === 'user' && a.projectId === b.projectId;
 
+/**
+ * Какая плитка подсвечена после начала участка `levelId`: когда игрок проходит уровень, игра сама переходит на следующий (`mario-N → mario-N+1`),
+ * и подсветка должна идти следом. Карта из редактора и участок вне девяти слотов (тестовый по видео) подсветку не меняют.
+ */
+export function refAfterLevelStart(current: LevelRef, slots: readonly OriginalSlot[], levelId: string): LevelRef {
+  if (current.kind !== 'original') return current;
+  const slot = slots.find((s) => s.levelId === levelId);
+  return slot && slot.number !== current.number ? { kind: 'original', number: slot.number } : current;
+}
+
 /** Слот, с которого пакет начинается по умолчанию (`firstLevel`). */
 export function defaultLevelRef(pack: ContentPack): LevelRef {
   const slot = originalSlots(pack).find((s) => s.levelId === pack.manifest.firstLevel);

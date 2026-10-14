@@ -33,7 +33,7 @@ import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
-import { originalPack, originalSlots, startingLevel, userPack, type LevelRef } from './levels';
+import { originalPack, originalSlots, refAfterLevelStart, startingLevel, userPack, type LevelRef } from './levels';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { EntryScript } from './entry';
@@ -217,7 +217,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   const onEvents = (events: readonly GameEvent[]): void => {
     for (const event of events) {
-      if (event.type === 'levelStarted') snapCamera = true;
+      if (event.type === 'levelStarted') {
+        snapCamera = true;
+        // Переход на следующий уровень после финиша: плитка на пульте следует за игрой.
+        const shown = refAfterLevelStart(currentLevel, slots, event.levelId);
+        if (shown !== currentLevel) {
+          currentLevel = shown;
+          applyDisplay();
+        }
+      }
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);
       entry.onEvent(event);

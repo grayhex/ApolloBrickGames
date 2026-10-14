@@ -9,7 +9,7 @@
 Как это работает.
  1. «Занятость» клетки — доля тёмных пикселей в ней после вычитания размытого фона (порог T): ≥ 0,30 — клетка занята. Сетка LCD:
     13 × 6 клеток, X0 = 8, шаг 32 px по x, Y0 = 38,5, шаг 28 px по y на холсте 432 × 216.
- 2. Кадры идут по порядку (шаг 3 кадра = 0,1 с). Прокрутка между соседними кадрами — сдвиг сетки на −2…+2 столбца, который
+ 2. Кадры идут по порядку; время каждого — из meta.json (поле `t`), поэтому шаг кадров при извлечении может быть любым. Прокрутка между соседними кадрами — сдвиг сетки на −2…+2 столбца, который
     минимизирует число отличающихся клеток; столбец героя (6) в сравнение не входит (герой движется, камера держит его в середине).
     При размытии или пальце в кадре сдвиг ищется в окне ±12 от последнего хорошего кадра.
  3. Начало попытки — экран «ямы» (колонны слева и справа от пустого столбца, крышка над ним): после гибели уровень начинается заново,
@@ -26,7 +26,6 @@ import cv2
 import numpy as np
 
 X0, PX, Y0, PY, T = 8.0, 32.0, 38.5, 28.0, 18
-STEP_S = 0.1  # секунд между кадрами в lcd.npy при шаге 3 кадра и 30 кадр/с
 
 
 def ink_grid(img):
@@ -62,9 +61,9 @@ def shift_score(a, b, s):
     return (a[:, cols] != b[:, [c + s for c in cols]]).sum() / len(cols)
 
 
-def stitch(occupied, t0, t1):
-    """→ (кадры [(индекс, смещение, номер попытки)], индексы начал попыток)."""
-    i0, i1 = int(t0 / STEP_S), int(t1 / STEP_S)
+def stitch(occupied, times, t0, t1):
+    """→ (кадры [(индекс, смещение, номер попытки)], индексы начал попыток). `times` — время каждого выбранного кадра (из meta.json: шаг кадров любой)."""
+    i0, i1 = int(np.searchsorted(times, t0)), int(np.searchsorted(times, t1))
     offset, prev, attempts, lost, skipped = 0, None, [], True, 0
     frames = []
 
@@ -134,8 +133,8 @@ def show(acc, cnt, lo, width=110):
             print(line)
 
 
-def attempt_maps(occupied, t0, t1, min_len=12):
-    frames, starts = stitch(occupied, t0, t1)
+def attempt_maps(occupied, times, t0, t1, min_len=12):
+    frames, starts = stitch(occupied, times, t0, t1)
     maps = []
     for a in range(len(starts)):
         part = [f for f in frames if f[2] == a]
@@ -187,15 +186,16 @@ def main():
     occupied = np.load(out / 'ink.npy') > 0.30
     nan = np.isnan(np.load(out / 'ink.npy')).any(axis=(1, 2))
     occupied_nan = np.where(nan[:, None, None], np.nan, occupied.astype(float))
+    times = np.array([m['t'] for m in json.loads((out / 'meta.json').read_text())])
     t0, t1 = float(sys.argv[3]), float(sys.argv[4])
     if command == 'stitch':
-        frames, starts = stitch(occupied_nan, t0, t1)
-        print('попыток:', len(starts), [round(a * STEP_S, 1) for a in starts])
+        frames, starts = stitch(occupied_nan, times, t0, t1)
+        print('попыток:', len(starts), [round(float(times[a]), 1) for a in starts])
         show(*world(occupied_nan, frames))
     elif command == 'consensus':
-        maps = attempt_maps(occupied_nan, t0, t1)
+        maps = attempt_maps(occupied_nan, times, t0, t1)
         if len(sys.argv) >= 7:
-            maps += attempt_maps(occupied_nan, float(sys.argv[5]), float(sys.argv[6]))
+            maps += attempt_maps(occupied_nan, times, float(sys.argv[5]), float(sys.argv[6]))
         cons, cover = consensus(maps)
         np.save(out / 'cons.npy', cons)
         np.save(out / 'cover.npy', cover)
