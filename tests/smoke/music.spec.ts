@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 /**
  * Музыка «Ремастер»: запись public/audio/remaster.m4a подменяет мелодию-пищалку; нет файла или он битый — звучит оригинал.
  * Вместо настоящего m4a тест отдаёт по этому адресу короткий WAV: браузер определяет формат по содержимому, а проверяется логика
- * загрузки, декодирования и переключения (декодирование m4a / AAC — дело браузера).
+ * загрузки, декодирования и переключения; последний тест берёт настоящий файл из public/audio и проверяет, что браузер его декодирует.
  */
 
 const area = (page: Page, key: string): Promise<string> =>
@@ -86,5 +86,23 @@ test('«Ремастер» без файла или с битым файлом: 
   await page.waitForTimeout(1500);
   expect(await area(page, 'musicSource')).toBe('original');
   expect(await area(page, 'music')).toBe('remaster'); // выбор сохранён, просто записи нет
+  expect(errors).toEqual([]);
+});
+
+test('«Ремастер»: настоящий файл public/audio/remaster.m4a отдаётся и декодируется браузером', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const sizes: number[] = [];
+  page.on('response', async (response) => {
+    if (response.url().endsWith('/audio/remaster.m4a')) sizes.push((await response.body()).length);
+  });
+  await startGame(page);
+  await page.locator('#music [data-music="remaster"]').click();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => area(page, 'phase')).toBe('playing');
+  await expect.poll(() => area(page, 'entry'), { timeout: 8000 }).toBe('off');
+  await expect.poll(() => area(page, 'musicSource'), { timeout: 15000 }).toBe('remaster'); // 3 МБ Opus в m4a декодируются целиком
+  expect(sizes).toHaveLength(1);
+  expect(sizes[0]).toBeGreaterThan(1_000_000);
   expect(errors).toEqual([]);
 });

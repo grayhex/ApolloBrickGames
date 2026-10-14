@@ -9,11 +9,17 @@
 
 export interface BufferLike {
   readonly duration: number;
+  /** Нужны, чтобы найти тишину в конце записи (если декодер их даёт; иначе зацикливается вся запись). */
+  readonly sampleRate?: number;
+  readonly numberOfChannels?: number;
+  getChannelData?(channel: number): Float32Array;
 }
 
 export interface BufferSourceLike {
   buffer: BufferLike | null;
   loop: boolean;
+  loopStart?: number;
+  loopEnd?: number;
   connect(destination: unknown): void;
   start(when?: number, offset?: number): void;
   stop(when?: number): void;
@@ -27,6 +33,32 @@ export interface TrackContextLike {
   decodeAudioData?(data: ArrayBuffer): Promise<BufferLike>;
 }
 
+/** Что тише этого порога (≈ −60 дБ) в конце записи считается тишиной. */
+export const TAIL_SILENCE = 0.001;
+/** Запас после последнего слышимого звука, с: хвост затухания не обрезается резко. */
+export const TAIL_MARGIN = 0.05;
+
+/**
+ * До какого места зацикливать запись, с: тишина в конце (у сгенерированных и экспортированных треков она бывает) обрезается,
+ * иначе между кругами повисала бы пауза. Нет данных каналов или тишины — вся длительность.
+ */
+export function loopEndOf(buffer: BufferLike): number {
+  const { duration, sampleRate, numberOfChannels, getChannelData } = buffer;
+  if (!sampleRate || !numberOfChannels || !getChannelData) return duration;
+  let last = -1;
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const data = getChannelData.call(buffer, channel);
+    for (let i = data.length - 1; i > last; i--) {
+      if (Math.abs(data[i] ?? 0) > TAIL_SILENCE) {
+        last = i;
+        break;
+      }
+    }
+  }
+  if (last < 0) return duration; // сплошная тишина — зацикливать нечего, оставляем как есть
+  return Math.min(duration, (last + 1) / sampleRate + TAIL_MARGIN);
+}
+
 /** Состояние записи: `idle` — ещё не грузили, `loading`, `ready` — декодирована, `failed` — нет файла или не декодируется. */
 export type TrackStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
@@ -36,6 +68,8 @@ export type TrackFetcher = () => Promise<ArrayBuffer | null>;
 export class RemasterTrack {
   private state: TrackStatus = 'idle';
   private buffer: BufferLike | null = null;
+  /** Длина круга, с: запись без тишины в конце. */
+  private loopLength = 0;
   private source: BufferSourceLike | null = null;
   private loading: Promise<void> | null = null;
   /** Позиция в записи (с), с которой начнётся следующий запуск. */
@@ -61,6 +95,11 @@ export class RemasterTrack {
     return this.buffer?.duration ?? 0;
   }
 
+  /** Длина круга зацикливания, с: длительность без тишины в конце (0 — запись ещё не декодирована). */
+  get loopSeconds(): number {
+    return this.loopLength;
+  }
+
   /** Грузит и декодирует запись (один раз; повторные вызовы возвращают тот же ожидающий результат). */
   load(context: TrackContextLike): Promise<void> {
     if (this.loading) return this.loading;
@@ -77,6 +116,7 @@ export class RemasterTrack {
         const buffer = await decode(data);
         if (!(buffer.duration > 0)) throw new Error('пустая запись');
         this.buffer = buffer;
+        this.loopLength = loopEndOf(buffer);
         this.state = 'ready';
       } catch {
         this.buffer = null;
@@ -92,8 +132,12 @@ export class RemasterTrack {
     const source = context.createBufferSource();
     source.buffer = this.buffer;
     source.loop = true;
+    if (this.loopLength < this.buffer.duration) {
+      source.loopStart = 0;
+      source.loopEnd = this.loopLength;
+    }
     source.connect(destination);
-    source.start(0, this.offset % this.buffer.duration);
+    source.start(0, this.offset % this.loopLength);
     this.source = source;
     this.startedAt = context.currentTime;
   }
@@ -102,7 +146,7 @@ export class RemasterTrack {
   position(now: number): number {
     if (!this.buffer) return 0;
     const played = this.source ? Math.max(0, now - this.startedAt) : 0;
-    return (this.offset + played) % this.buffer.duration;
+    return (this.offset + played) % this.loopLength;
   }
 
   /** Пауза: звук обрывается, позиция запоминается. */

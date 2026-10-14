@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { TRACK_GAIN, WebAudioPort, type AudioContextLike, type GainLike, type OscillatorLike } from '../../src/audio/beeper';
-import { RemasterTrack, type BufferLike, type BufferSourceLike } from '../../src/audio/remaster';
+import { loopEndOf, RemasterTrack, TAIL_MARGIN, type BufferLike, type BufferSourceLike } from '../../src/audio/remaster';
 
 class FakeSource implements BufferSourceLike {
   buffer: BufferLike | null = null;
   loop = false;
+  loopStart: number | undefined;
+  loopEnd: number | undefined;
   connectedTo: unknown[] = [];
   started: [number | undefined, number | undefined][] = [];
   stopped = 0;
@@ -28,6 +30,8 @@ class FakeContext implements AudioContextLike {
   sources: FakeSource[] = [];
   decoded: ArrayBuffer[] = [];
   duration = 8;
+  /** Сколько секунд тишины в конце декодированной записи (0 — данные каналов не отдаются вовсе). */
+  silentTail = 0;
   decodeFails = false;
   createOscillator(): OscillatorLike {
     const osc: OscillatorLike = {
@@ -59,11 +63,20 @@ class FakeContext implements AudioContextLike {
   async decodeAudioData(data: ArrayBuffer): Promise<BufferLike> {
     this.decoded.push(data);
     if (this.decodeFails) throw new Error('не декодируется');
-    return { duration: this.duration };
+    if (this.silentTail <= 0) return { duration: this.duration };
+    return stereo(this.duration, this.silentTail);
   }
   async resume(): Promise<void> {
     this.state = 'running';
   }
+}
+
+/** Запись с тишиной в конце: звук (0,5) до `duration − tail`, дальше нули. 100 отсчётов в секунду. */
+function stereo(duration: number, tail: number): BufferLike {
+  const rate = 100;
+  const data = new Float32Array(Math.round(duration * rate));
+  data.fill(0.5, 0, Math.round((duration - tail) * rate));
+  return { duration, sampleRate: rate, numberOfChannels: 2, getChannelData: () => data };
 }
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
@@ -167,6 +180,48 @@ describe('RemasterTrack: загрузка и позиция', () => {
     expect(context.sources[1]?.stopped).toBe(1);
     track.play(context, out);
     expect(context.sources[2]?.started).toEqual([[0, 0]]); // после остановки — с начала
+  });
+});
+
+describe('зацикливание: тишина в конце записи обрезается', () => {
+  it('loopEndOf: круг кончается на последнем слышимом звуке плюс небольшой запас; без данных или без тишины — вся запись', () => {
+    expect(loopEndOf(stereo(8, 1.1))).toBeCloseTo(8 - 1.1 + TAIL_MARGIN, 2);
+    expect(loopEndOf(stereo(8, 0))).toBe(8); // тишины нет
+    expect(loopEndOf({ duration: 8 })).toBe(8); // декодер данных каналов не отдаёт
+    const silent: BufferLike = { duration: 3, sampleRate: 10, numberOfChannels: 1, getChannelData: () => new Float32Array(30) };
+    expect(loopEndOf(silent)).toBe(3); // сплошная тишина — как есть
+    const quiet: BufferLike = { duration: 3, sampleRate: 10, numberOfChannels: 1, getChannelData: () => new Float32Array(30).fill(0.0005) };
+    expect(loopEndOf(quiet)).toBe(3); // тише порога (≈ −60 дБ) — тоже тишина
+  });
+
+  it('источник зацикливается на [0; loopEnd), позиция считается по кругу, а не по всей записи', async () => {
+    const context = new FakeContext();
+    context.silentTail = 1; // из 8 секунд последняя — тишина
+    const track = new RemasterTrack(async () => BYTES);
+    await track.load(context);
+    expect(track.duration).toBe(8);
+    expect(track.loopSeconds).toBeCloseTo(7 + TAIL_MARGIN, 2);
+    track.play(context, {});
+    const source = context.sources[0];
+    expect(source?.loopStart).toBe(0);
+    expect(source?.loopEnd).toBeCloseTo(7 + TAIL_MARGIN, 2);
+    context.currentTime += 8; // 8 с по кругу длиной 7,05 с → позиция 0,95
+    expect(track.position(context.currentTime)).toBeCloseTo(8 - (7 + TAIL_MARGIN), 2);
+  });
+
+  it('без тишины в конце loopStart/loopEnd не трогаются', async () => {
+    const context = new FakeContext();
+    const track = new RemasterTrack(async () => BYTES);
+    await track.load(context);
+    track.play(context, {});
+    expect(context.sources[0]?.loopEnd).toBeUndefined();
+  });
+});
+
+describe('громкость записи не выше оригинала', () => {
+  it('TRACK_GAIN не превышает допустимый предел из замера tools/audio/loudness.mjs (запись −14,1 LUFS, мелодия −22,2 LUFS → ≤ 0,394)', () => {
+    expect(TRACK_GAIN).toBeLessThanOrEqual(0.394);
+    expect(TRACK_GAIN).toBeGreaterThan(0.3); // и не уходит в тишину: запас не больше 2,5 дБ
   });
 });
 

@@ -272,8 +272,10 @@ test('рендер игры: цвета LCD-профиля владельца, �
   expect(result.empty).toBe(0);
 });
 
+// Снимки сцен `reference_*_obstacle.png` пересняты со страницы после перерисовки спрайтов по макрофото (tools/sprites): это регрессия
+// размещения и слоёв, а не исторически точный эталон; прежние экраны владельца (с блоком «фигурка выключена») больше не сверяются.
 for (const n of [1, 2]) {
-  test(`сверка с эталоном владельца: сцена ${n} с фотографии рендерится так же, как reference_${n}_obstacle.png`, async ({ page }) => {
+  test(`сверка со снимком: сцена ${n} с фотографии рендерится так же, как tests/fixtures/reference/reference_${n}_obstacle.png`, async ({ page }) => {
     await page.goto('./#/sheet');
     await page.waitForSelector(`#ref-scene-${n}`);
     const reference = readFileSync(`tests/fixtures/reference/reference_${n}_obstacle.png`).toString('base64');
@@ -323,7 +325,7 @@ for (const n of [1, 2]) {
       },
       { n, reference },
     );
-    expect(diff.size).toBe(''); // размеры холста совпадают с эталоном (1728 × 864 / 1088)
+    expect(diff.size).toBe(''); // размеры холста совпадают со снимком (1728 × 864 / 1088)
     expect(diff.board).toBe(0); // игровое поле совпадает попиксельно
     // Строка HUD подогнана не по эталонам, а по фото оригинала и записи со звуком (docs/video-observations.md §8): цифры крупнее,
     // чем на эталонах (58 × 94). Счёт — пять цифр ≈ 36 % ширины экрана, цифра ≈ 14 % высоты; правый край — у правого поля.
