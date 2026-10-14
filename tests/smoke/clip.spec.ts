@@ -43,18 +43,18 @@ test.afterEach(async ({ page }) => {
   expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
 });
 
-test('интро: оверлей «Старт» не закрывает поле, герой идёт по маршруту, потом готов к старту', async ({ page }) => {
+test('интро: поле не закрыто текстом, герой идёт по маршруту, потом комната построена', async ({ page }) => {
   await page.goto('./#/clip');
-  await expect(page.locator('#badge')).toContainText('по видео');
   await expect.poll(phase(page)).toBe('ready');
-  await expect(page.locator('#overlay')).toBeHidden(); // идёт интро (≈ 4,7 с)
+  await expect(page.locator('#overlay')).toBeHidden(); // идёт интро (≈ 4,7 с); текстовых подсказок на экране нет вовсе
 
   // Через ≈ 3 с герой уже на пути (построение началось), часть пола построена.
   await expect.poll(() => inkShare(page, 11, 5), { timeout: 6000 }).toBeGreaterThan(0.3);
 
-  // Интро кончилось: оверлей «Старт», комната построена целиком, крышка арки на месте.
-  await expect(page.locator('#overlay')).toBeVisible({ timeout: 8000 });
-  await expect(page.locator('#overlay-action')).toHaveText('Старт');
+  // Интро кончилось: комната построена целиком, крышка арки на месте, игра ждёт S./P.
+  await expect.poll(() => inkShare(page, 1, 3), { timeout: 8000 }).toBeGreaterThan(0.3);
+  await expect(page.locator('#overlay')).toBeHidden();
+  expect(await area(page, 'phase')).toBe('ready');
   expect(await inkShare(page, 6, 5)).toBeGreaterThan(0.3); // пол
   expect(await inkShare(page, 1, 3)).toBeGreaterThan(0.3); // крышка (объект brick)
   expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.3); // верх левой стойки
@@ -137,7 +137,7 @@ test('удар головой: копия перекладины над крыш
 test('основная комната: отскок перекладины есть и там (платформа над героем), интро — нет', async ({ page }) => {
   await page.goto('./');
   await expect.poll(phase(page)).toBe('ready');
-  await expect(page.locator('#overlay')).toBeVisible(); // у комнаты интро не включено: оверлей сразу
+  await expect.poll(() => inkShare(page, 6, 5)).toBeGreaterThan(0.3); // у комнаты интро нет: пол виден сразу
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
   await page.keyboard.down('ArrowRight');

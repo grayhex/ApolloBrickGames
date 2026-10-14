@@ -91,10 +91,10 @@ test.afterEach(async ({ page }) => {
 test('техническое демо загружается под /CrocodileMario/: ENGINE DEMO, готов к старту, Canvas нарисован', async ({ page }) => {
   await page.goto('./#/tech');
   await expect(page.locator('#badge')).toHaveText('ENGINE DEMO');
-  // Логотип в заголовке: картинка действительно загрузилась под базовым путём (alt остаётся именем заголовка).
-  const logo = page.getByRole('heading', { name: 'Crocodile Mario' }).locator('img');
-  await expect(logo).toBeVisible();
-  expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+  // Техническая страница без корпуса: заголовок страницы есть, игрушки (кнопок, углового меню) нет.
+  await expect(page.getByRole('heading', { name: 'Crocodile Mario' })).toHaveCount(1);
+  await expect(page.locator('#base')).toBeHidden();
+  await expect(page.locator('#corner')).toBeHidden();
   await expect.poll(phase(page)).toBe('ready');
   await expect(page.locator('#overlay-title')).toHaveText('Готов к старту');
 

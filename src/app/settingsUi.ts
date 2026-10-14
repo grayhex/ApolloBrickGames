@@ -13,6 +13,8 @@ import {
   MAX_STICK_THRESHOLD,
   MIN_STICK_THRESHOLD,
   needsGamepadSetup,
+  SHELLS,
+  type Shell,
 } from '../input/settings';
 import { h } from './dom';
 import type { InputHub } from './hub';
@@ -36,14 +38,33 @@ function describeList(sources: readonly string[]): string {
   return sources.length === 0 ? 'не назначено' : sources.map(describeSource).join(' · ');
 }
 
+/** Подписи цветов корпуса в настройках. */
+export const SHELL_LABELS: Record<Shell, string> = {
+  blue: 'синий',
+  red: 'красный',
+  yellow: 'жёлтый',
+  white: 'белый',
+};
+
+/** Раздел «Внешний вид и звук» (только в игре, не в редакторе). */
+export interface DisplayOptions {
+  /** Есть ли у экрана слой неактивных сегментов. */
+  hasGhost: boolean;
+  /** Значение по умолчанию для слоя, если пользователь не выбирал. */
+  ghostDefault: boolean;
+  /** Настройка изменена: применить к странице. */
+  onChange(): void;
+}
+
 export interface SettingsDialogOptions {
   onOpen(): void;
   onClose(): void;
+  display?: DisplayOptions;
 }
 
 /**
- * Минимальный экран настроек: переназначение кнопок клавиатуры и геймпада, порог стика,
- * выбор устройства, сброс к стандартному профилю. Пока диалог открыт, игра на паузе,
+ * Экран настроек: цвет корпуса, неактивные сегменты и звук (в игре), переназначение кнопок клавиатуры и геймпада,
+ * порог стика, выбор устройства, сброс к стандартному профилю. Пока диалог открыт, игра на паузе,
  * а клавиатура игре не принадлежит (работают обычные Tab/Enter/Esc).
  */
 export class SettingsDialog {
@@ -60,6 +81,11 @@ export class SettingsDialog {
     dialog.addEventListener('close', () => {
       this.endCapture();
       this.options.onClose();
+    });
+    // Esc: закрыть сразу и вернуть фокус игре в том же событии, а не после `close` (браузер сперва возвращает его на кнопку-опенер).
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      this.close();
     });
     window.addEventListener('keydown', this.onCaptureKey, true);
   }
@@ -156,14 +182,14 @@ export class SettingsDialog {
     const pad = this.targetPad();
     const padBindings: Bindings | null = pad ? gamepadBindingsFor(settings, pad) : null;
 
-    const title = h('h2', { id: 'settings-title' }, 'Настройки управления');
+    const title = h('h2', { id: 'settings-title' }, 'Настройки');
     this.dialog.setAttribute('aria-labelledby', 'settings-title');
 
     const keyboard = h(
       'section',
       { class: 'settings__section' },
       h('h3', {}, 'Клавиатура'),
-      h('p', { class: 'settings__note' }, 'Назначение работает по физическому положению клавиши (KeyboardEvent.code), раскладка не важна. Esc отменяет назначение.'),
+      h('p', { class: 'settings__note' }, 'Клавиша назначается по её положению на клавиатуре — раскладка не важна. Esc отменяет назначение.'),
       this.bindingsTable(settings.keyboard, 'keyboard'),
       h('div', { class: 'settings__row' }, this.button('Сбросить клавиатуру', () => {
         this.hub.updateSettings((s) => {
@@ -191,7 +217,7 @@ export class SettingsDialog {
       'p',
       { class: 'settings__note' },
       this.hub.settingsPersisted
-        ? 'Настройки сохраняются в этом браузере (localStorage).'
+        ? 'Настройки сохраняются в этом браузере.'
         : 'Хранилище браузера недоступно: настройки действуют только до перезагрузки страницы.',
     );
 
@@ -205,8 +231,50 @@ export class SettingsDialog {
       this.button('Закрыть', () => this.close(), 'btn--primary'),
     );
 
-    this.dialog.replaceChildren(title, keyboard, gamepad, storage, actions);
+    const appearance = this.options.display ? this.appearanceSection(this.options.display) : null;
+    this.dialog.replaceChildren(...(appearance ? [title, appearance] : [title]), keyboard, gamepad, storage, actions);
     this.restoreFocus();
+  }
+
+  private appearanceSection(display: DisplayOptions): HTMLElement {
+    const { settings } = this.hub;
+    const apply = (change: () => void): void => {
+      change();
+      display.onChange();
+    };
+
+    const shell = h('select', { id: 'settings-shell' });
+    for (const value of SHELLS) shell.append(h('option', { value }, SHELL_LABELS[value]));
+    shell.value = settings.display.shell;
+    shell.addEventListener('change', () => {
+      const chosen = SHELLS.find((value) => value === shell.value) ?? 'blue';
+      apply(() => this.hub.updateSettings((s) => void (s.display.shell = chosen)));
+    });
+
+    const check = (id: string, label: string, checked: boolean, onChange: (value: boolean) => void): HTMLElement => {
+      const input = h('input', { type: 'checkbox', id });
+      input.checked = checked;
+      input.addEventListener('change', () => apply(() => onChange(input.checked)));
+      return h('label', { class: 'settings__check', for: id }, input, ` ${label}`);
+    };
+
+    const section = h(
+      'section',
+      { class: 'settings__section' },
+      h('h3', {}, 'Внешний вид и звук'),
+      h('div', { class: 'settings__pad' }, h('label', { for: 'settings-shell' }, 'Цвет корпуса'), shell),
+      check('settings-sound', 'Звук', settings.display.sound, (value) =>
+        this.hub.updateSettings((s) => void (s.display.sound = value)),
+      ),
+    );
+    if (display.hasGhost) {
+      section.append(
+        check('settings-ghost', 'Показывать неактивные сегменты экрана', settings.display.ghost ?? display.ghostDefault, (value) =>
+          this.hub.updateSettings((s) => void (s.display.ghost = value)),
+        ),
+      );
+    }
+    return section;
   }
 
   private gamepadControls(pad: PadInfo | null): Node {

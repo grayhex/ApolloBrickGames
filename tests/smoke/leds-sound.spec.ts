@@ -72,7 +72,6 @@ test('светодиоды: готов и игра — горят все три 
 test('звук: 1-битные сигналы на старт и прыжок, переключатель «Звук» глушит и запоминается', async ({ page }) => {
   await fakeAudio(page);
   await ready(page);
-  await expect(page.locator('#chk-sound')).toBeChecked();
 
   await page.keyboard.press('Enter');
   await page.waitForSelector('#game-area[data-phase="playing"]');
@@ -83,8 +82,8 @@ test('звук: 1-битные сигналы на старт и прыжок, �
   await page.keyboard.press('Space');
   await expect.poll(async () => (await beeps(page)).some((b) => b.freq === 880)).toBe(true); // прыжок
 
-  // Выключили звук: новые прыжки молчат.
-  await page.locator('#chk-sound').uncheck();
+  // Выключили звук кнопкой SOUND на корпусе: новые прыжки молчат.
+  await page.locator('[data-key="sound"]').click();
   await page.waitForTimeout(700); // приземление
   const before = (await beeps(page)).length;
   await page.locator('#game-area').focus();
@@ -95,13 +94,16 @@ test('звук: 1-битные сигналы на старт и прыжок, �
   // Выбор сохраняется между перезагрузками.
   await page.reload();
   await page.waitForSelector('#game-area[data-phase="ready"]');
-  await expect(page.locator('#chk-sound')).not.toBeChecked();
+  await page.locator('#corner-settings').click();
+  await expect(page.locator('#settings-sound')).not.toBeChecked(); // выбор запомнен
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#game-area')).toBeFocused(); // диалог закрыт, управление вернулось игре
   await page.keyboard.press('Enter');
   await page.waitForSelector('#game-area[data-phase="playing"]');
   await page.waitForTimeout(300);
   expect((await beeps(page)).length).toBe(0);
 
   // Включили обратно — короткий сигнал-подтверждение.
-  await page.locator('#chk-sound').check();
+  await page.locator('[data-key="sound"]').click();
   await expect.poll(async () => (await beeps(page)).length).toBeGreaterThan(0);
 });

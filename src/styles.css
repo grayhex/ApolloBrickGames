@@ -55,14 +55,6 @@ body {
   line-height: 0;
 }
 
-.logo {
-  display: block;
-  width: auto;
-  height: 72px;
-  max-width: 100%;
-  object-fit: contain;
-}
-
 .shell__sub {
   flex-basis: 100%;
   margin: 0;
@@ -89,12 +81,12 @@ body {
 .stage {
   container-type: inline-size;
   width: 100%;
-  /* Крышка почти квадратная (по фото), поэтому ширину ограничиваем и высотой окна. */
-  max-width: clamp(360px, calc(100dvh - 260px), 820px);
+  /* Игрушка целиком (крышка и нижняя половина ≈ 2,3 ширины) вписывается в окно по высоте. */
+  max-width: clamp(300px, calc((100dvh - 24px) / 2.4), 640px);
   margin: 0 auto;
 }
 
-.lid {
+.toy {
   --rim: #2456c9;
   --rim-dark: #1a3fa0;
   --face: #dcd8c6;
@@ -105,15 +97,18 @@ body {
   --art: #dc8a22;
   --lcd-bg: #adb38c;
   --lcd-aspect: 2 / 1;
+  --label: #efe6a6;
+  --key: #dedcce;
+  --key-hi: #f6f5ee;
+  --key-lo: #a9a799;
   position: relative;
-  padding: 4.4cqw 4.4cqw 4.8cqw;
-  background: linear-gradient(170deg, var(--rim), var(--rim-dark));
-  border-radius: 7cqw 7cqw 8cqw 8cqw;
-  box-shadow: 0 1.6cqw 3.6cqw rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  filter: drop-shadow(0 1.8cqw 2.6cqw rgba(0, 0, 0, 0.55));
 }
 
-/* Белый корпус: светлая лицевая панель и розоватый рисунок — по фото жёлтого корпуса, где панель такая же. */
-.lid[data-shell='white'] {
+/* Белый корпус: светлая лицевая панель и розоватый рисунок. */
+.toy[data-shell='white'] {
   --rim: #f6f6f3;
   --rim-dark: #d9d9d4;
   --face: #e0e1e5;
@@ -122,9 +117,12 @@ body {
   --bezel-hi: #f2f2f4;
   --bezel-lo: #c2c3cb;
   --art: #e0786e;
+  --label: #46658c;
+  --key: #e4e3dc;
+  --key-lo: #b3b1a4;
 }
 
-.lid[data-shell='red'] {
+.toy[data-shell='red'] {
   --rim: #c92d40;
   --rim-dark: #96202f;
   --face: #e4e3e1;
@@ -133,6 +131,28 @@ body {
   --bezel-hi: #f3f2f0;
   --bezel-lo: #c4c2c0;
   --art: #d9645a;
+  --label: #f6e8c4;
+}
+
+/* Жёлтый корпус — по фотографиям владельца: жёлтый пластик, серо-белая панель экрана, голубоватые надписи. */
+.toy[data-shell='yellow'] {
+  --rim: #f3dc3f;
+  --rim-dark: #dcc02a;
+  --face: #dedfe4;
+  --face-2: #cbccd3;
+  --shade: #c1c2ca;
+  --bezel-hi: #f0f0f3;
+  --bezel-lo: #bfc0c9;
+  --art: #e0786e;
+  --label: #47698f;
+  --key: #dad9cd;
+}
+
+.lid {
+  position: relative;
+  padding: 4.4cqw 4.4cqw 4.8cqw;
+  background: linear-gradient(170deg, var(--rim), var(--rim-dark));
+  border-radius: 7cqw 7cqw 3cqw 3cqw;
 }
 
 .lid__face {
@@ -264,16 +284,6 @@ body {
   stroke-width: 1.3;
 }
 
-.lid__hinge {
-  position: absolute;
-  left: 34%;
-  bottom: -1cqw;
-  width: 32%;
-  height: 3.6cqw;
-  background: linear-gradient(#1d1d1d, #060606);
-  border-radius: 0 0 1cqw 1cqw;
-}
-
 /* Без корпуса (технические маршруты): просто окно с игрой. */
 .stage--plain .lid {
   padding: 0;
@@ -293,8 +303,13 @@ body {
 .stage--plain .lid__screw,
 .stage--plain .lid__leds,
 .stage--plain .lid__art,
-.stage--plain .lid__hinge {
+.stage--plain .toy__hinge,
+.stage--plain .base {
   display: none;
+}
+
+.stage--plain .toy {
+  filter: none;
 }
 
 .stage--plain .lid__bezel {
@@ -310,6 +325,269 @@ body {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: none;
+}
+
+/* ── Нижняя половина игрушки: шарнир, кнопки, динамик, логотип ──────────────
+   Всё в единицах cqw/viewBox 400 × 530: масштабируется вместе с крышкой. Расположение — по фотографиям владельца. */
+.toy__hinge {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  height: 6.6cqw;
+  margin: -1.8cqw 7% -3.6cqw;
+}
+
+.toy__knuckle {
+  flex: 0 0 25%;
+  background: linear-gradient(180deg, var(--rim), var(--rim-dark));
+  border-radius: 1.6cqw;
+  box-shadow: inset 0 0.35cqw 0.5cqw rgba(255, 255, 255, 0.3), inset 0 -0.5cqw 0.8cqw rgba(0, 0, 0, 0.25),
+    inset 0.3cqw 0 0 rgba(0, 0, 0, 0.12), inset -0.3cqw 0 0 rgba(0, 0, 0, 0.12);
+}
+
+.toy__band {
+  flex: 1;
+  margin: 0.6cqw -0.4cqw 0;
+  background: linear-gradient(180deg, #232323, #070707);
+  border-radius: 0 0 0.8cqw 0.8cqw;
+  box-shadow: inset 0 0.3cqw 0.6cqw rgba(0, 0, 0, 0.6);
+}
+
+.base {
+  position: relative;
+  aspect-ratio: 400 / 530;
+  background: linear-gradient(172deg, var(--rim), var(--rim-dark));
+  border-radius: 3cqw 3cqw 15cqw 15cqw;
+  box-shadow: inset 0 0.45cqw 0.8cqw rgba(255, 255, 255, 0.28), inset 0 -0.9cqw 1.3cqw rgba(0, 0, 0, 0.22);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.base__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.base__label {
+  font: 700 10.5px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.7px;
+  fill: var(--label);
+}
+
+.base__led {
+  fill: rgba(0, 0, 0, 0.45);
+}
+
+.base__speaker {
+  fill: rgba(12, 12, 10, 0.6);
+}
+
+.base__seam {
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1.6;
+}
+
+.base__logo {
+  position: absolute;
+  left: 12%;
+  top: 73%;
+  width: 76%;
+  height: auto;
+  pointer-events: none;
+}
+
+/* Печать на корпусе: на синем и красном — белая (как на фото), на жёлтом и белом — красная с белым. */
+.base__logo--white {
+  display: none;
+}
+
+.toy[data-shell='blue'] .base__logo--color,
+.toy[data-shell='red'] .base__logo--color {
+  display: none;
+}
+
+.toy[data-shell='blue'] .base__logo--white,
+.toy[data-shell='red'] .base__logo--white {
+  display: block;
+}
+
+.key {
+  position: absolute;
+  left: calc(var(--x) * 0.25%);
+  top: calc(var(--y) / 530 * 100%);
+  width: calc(var(--w) * 0.25%);
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.key svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  transition: transform 45ms ease-out, filter 45ms ease-out;
+}
+
+/* Круглые кнопки верхнего ряда: утопленная лунка, серая шапка. */
+.key--round {
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, var(--key-hi), var(--key) 58%, var(--key-lo));
+  box-shadow: 0 0 0 1cqw rgba(0, 0, 0, 0.13), 0 0 0 1.7cqw rgba(255, 255, 255, 0.07), 0 0.8cqw 1cqw rgba(0, 0, 0, 0.38),
+    inset 0 -0.5cqw 0.8cqw rgba(0, 0, 0, 0.2);
+  transition: transform 45ms ease-out, box-shadow 45ms ease-out, filter 45ms ease-out;
+}
+
+.key--round[data-pressed] {
+  transform: translate(-50%, -50%) translateY(0.45cqw) scale(0.94);
+  box-shadow: 0 0 0 1cqw rgba(0, 0, 0, 0.2), 0 0 0 1.7cqw rgba(255, 255, 255, 0.05), 0 0.1cqw 0.3cqw rgba(0, 0, 0, 0.45),
+    inset 0 0.35cqw 0.8cqw rgba(0, 0, 0, 0.35);
+  filter: brightness(0.9);
+}
+
+/* Клавиши крестовины: ромбы (вверх — «домик»), с круглой вмятиной. */
+.key--pad svg {
+  filter: drop-shadow(0 0.6cqw 0.55cqw rgba(0, 0, 0, 0.4));
+}
+
+.key__shape {
+  fill: var(--key);
+  stroke: var(--key);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.key__dish {
+  fill: rgba(0, 0, 0, 0.1);
+  stroke: rgba(255, 255, 255, 0.65);
+  stroke-width: 0.9;
+}
+
+.key--pad[data-pressed] svg {
+  transform: translateY(0.35cqw) scale(0.93);
+  filter: drop-shadow(0 0.1cqw 0.2cqw rgba(0, 0, 0, 0.5)) brightness(0.9);
+}
+
+/* Большая кнопка JUMP с кольцом точек. */
+.key--jump svg {
+  filter: drop-shadow(0 0.9cqw 0.9cqw rgba(0, 0, 0, 0.4));
+}
+
+.key__cap {
+  fill: var(--key);
+  stroke: var(--key-lo);
+  stroke-width: 1;
+}
+
+.key__ring {
+  fill: rgba(0, 0, 0, 0.26);
+}
+
+.key--jump .key__dish {
+  fill: rgba(0, 0, 0, 0.07);
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1.4;
+}
+
+.key--jump[data-pressed] svg {
+  transform: translateY(0.5cqw) scale(0.95);
+  filter: drop-shadow(0 0.15cqw 0.3cqw rgba(0, 0, 0, 0.5)) brightness(0.9);
+}
+
+/* Питание выключено: экран и светодиоды погашены. */
+.toy[data-power='off'] .lid__window {
+  filter: brightness(0.94) saturate(0.85);
+}
+
+/* ── Уголок: настройки, справка, редактор ──────────────────────────────── */
+.corner {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  display: flex;
+  gap: 6px;
+}
+
+.corner__btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: rgba(226, 232, 226, 0.7);
+  background: rgba(20, 23, 26, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 120ms, background 120ms;
+}
+
+.corner__btn:hover,
+.corner__btn:focus-visible {
+  color: #fff;
+  background: rgba(44, 50, 56, 0.92);
+}
+
+.corner__btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.corner__btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Чистая страница игрушки и технические страницы ───────────────────────── */
+body[data-chrome='toy'] {
+  background: radial-gradient(120% 90% at 50% 22%, #30363c 0%, #1a1d21 62%, #101215 100%) fixed;
+}
+
+body[data-chrome='toy'] .shell {
+  min-height: 100dvh;
+  align-content: center;
+  padding: 12px;
+}
+
+body[data-chrome='toy']:not([data-debug]) :is(#tech-header, .toolbar, .status, .debug, .shell__footer) {
+  display: none;
+}
+
+body[data-chrome='toy'] :is(.overlay, .focus-hint) {
+  display: none !important;
+}
+
+body:not([data-chrome='toy']) .corner {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  body[data-chrome='toy'] .shell {
+    padding-top: 52px;
+  }
+
+  .stage {
+    max-width: clamp(300px, calc((100dvh - 76px) / 2.4), 640px);
+  }
 }
 
 .game-area {
@@ -525,6 +803,30 @@ input:focus-visible {
 .settings__section {
   border-top: 1px solid var(--line);
   padding-top: 4px;
+}
+
+.settings__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.help__text {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.help__table th {
+  width: 8.5rem;
+}
+
+.help__keys {
+  width: 11rem;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .settings__note,
@@ -745,6 +1047,52 @@ body.route-editor--ready {
 .editor__back {
   color: var(--muted);
   text-decoration: none;
+}
+
+.editor__pages {
+  position: relative;
+}
+
+.editor__pages summary {
+  padding: 2px 8px;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.editor__pages summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor__pages[open] summary {
+  color: var(--text);
+}
+
+.editor__pages-list {
+  position: absolute;
+  z-index: 30;
+  top: 100%;
+  left: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 18rem;
+  padding: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.editor__pages-list a {
+  padding: 6px 8px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.editor__pages-list a:hover,
+.editor__pages-list a:focus-visible {
+  background: var(--panel);
 }
 
 .editor__project {

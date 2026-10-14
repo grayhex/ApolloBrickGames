@@ -3,28 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Crocodile Mario: техническая демоверсия браузерного движка. Оригинальный контент ещё не восстановлен." />
+    <meta name="description" content="Crocodile Mario — браузерная версия электронной игрушки: кнопки, экран, светодиоды." />
     <link rel="icon" href="data:," />
-    <title>Crocodile Mario — движок (демо)</title>
+    <title>Crocodile Mario</title>
   </head>
-  <body>
+  <body data-chrome="toy">
     <main class="shell">
-      <header class="shell__header">
-        <h1 class="shell__title">
-          <img class="logo" src="/brand/crocodile-mario-logo.png" width="1000" height="443" alt="Crocodile Mario" />
-        </h1>
-        <span class="badge" id="badge" role="note">DEMO — тестовая комната</span>
+      <h1 class="visually-hidden">Crocodile Mario</h1>
+      <nav class="corner" id="corner" aria-label="Сервис">
+        <button type="button" class="corner__btn" id="corner-settings" title="Настройки" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm8.2 4.4-.1-2 1.9-1.4-1.8-3.2-2.2.8a7.6 7.6 0 0 0-1.7-1l-.4-2.3h-3.6l-.4 2.3a7.6 7.6 0 0 0-1.7 1l-2.2-.8-1.8 3.2L6 11l-.1 2 .1 0-1.9 1.5 1.8 3.2 2.2-.9c.5.4 1.1.7 1.7 1l.4 2.3h3.6l.4-2.3c.6-.3 1.2-.6 1.7-1l2.2.9 1.8-3.2-1.9-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="corner__btn" id="corner-help" title="Справка" aria-label="Справка">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.9 2.4c-.9.5-1.3 1-1.3 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg>
+        </button>
+        <a class="corner__btn" id="corner-editor" href="#/editor" title="Редактор уровней" aria-label="Редактор уровней">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20l1-4.2L16.4 4.4a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.2 19 4 20Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14.5 6.3l3.2 3.2" stroke="currentColor" stroke-width="1.6"/></svg>
+        </a>
+      </nav>
+
+      <header class="shell__header" id="tech-header">
+        <span class="badge" id="badge" role="note"></span>
         <p class="shell__sub" id="subtitle"></p>
       </header>
 
-      <section class="stage" id="stage" aria-label="Игра">
-        <div class="lid" id="lid" data-shell="blue">
+      <section class="stage" id="stage" aria-label="Игрушка Crocodile Mario">
+        <p class="visually-hidden" id="sr-status" role="status"></p>
+        <div class="toy" id="toy" data-shell="blue" data-power="on">
+        <div class="lid" id="lid">
           <div class="lid__face">
             <i class="lid__screw lid__screw--tl" aria-hidden="true"></i>
             <i class="lid__screw lid__screw--tr" aria-hidden="true"></i>
             <i class="lid__screw lid__screw--bl" aria-hidden="true"></i>
             <i class="lid__screw lid__screw--br" aria-hidden="true"></i>
-            <div class="lid__leds" aria-hidden="true" title="Светодиоды оригинала: пока только оформление, поведение не установлено">
+            <div class="lid__leds" aria-hidden="true">
               <i class="led led--red"></i><i class="led led--yellow"></i><i class="led led--green"></i>
             </div>
             <div class="lid__bezel">
@@ -34,7 +46,7 @@
                   id="game-area"
                   tabindex="0"
                   role="application"
-                  aria-label="Игровая область. Стрелки или WASD — движение, Пробел или Z — прыжок, X — огонь, Enter — старт, Esc или P — пауза."
+                  aria-label="Экран игры"
                 >
                   <canvas id="screen" aria-hidden="true"></canvas>
                   <div class="overlay" id="overlay" hidden>
@@ -69,7 +81,138 @@
               </g>
             </svg>
           </div>
-          <i class="lid__hinge" aria-hidden="true"></i>
+        </div>
+
+        <div class="toy__hinge" aria-hidden="true"><i class="toy__knuckle"></i><i class="toy__band"></i><i class="toy__knuckle"></i></div>
+
+        <div class="base" id="base" role="group" aria-label="Кнопки игрушки">
+      <svg class="base__art" viewBox="0 0 400 530" aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient id="dish" cx="50%" cy="45%" r="55%">
+            <stop offset="0" stop-color="#000" stop-opacity="0"/>
+            <stop offset="0.82" stop-color="#000" stop-opacity="0.05"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0.16"/>
+          </radialGradient>
+          <linearGradient id="cover" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#000" stop-opacity="0.2"/>
+            <stop offset="0.12" stop-color="#000" stop-opacity="0.07"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0.1"/>
+          </linearGradient>
+        </defs>
+        <path id="arc-onoff" d="M37 52 Q68 34 99 52" fill="none"/><text class="base__label"><textPath href="#arc-onoff" startOffset="50%" text-anchor="middle">ON/OFF</textPath></text>
+        <path id="arc-sp" d="M121 52 Q152 34 183 52" fill="none"/><text class="base__label"><textPath href="#arc-sp" startOffset="50%" text-anchor="middle">S./P.</textPath></text>
+        <path id="arc-sound" d="M209 52 Q240 34 271 52" fill="none"/><text class="base__label"><textPath href="#arc-sound" startOffset="50%" text-anchor="middle">SOUND</textPath></text>
+        <path id="arc-fire" d="M293 52 Q324 34 355 52" fill="none"/><text class="base__label"><textPath href="#arc-fire" startOffset="50%" text-anchor="middle">FIRE</textPath></text>
+        <circle class="base__led" cx="60" cy="128" r="2.4"/>
+        <text class="base__label" x="110" y="143" text-anchor="middle">UP</text>
+        <text class="base__label" x="28" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 28 218)">LEFT</text>
+        <text class="base__label" x="192" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 192 218)">RIGHT</text>
+        <text class="base__label" x="110" y="306" text-anchor="middle">DOWN</text>
+        <text class="base__label" x="292" y="146" text-anchor="middle">JUMP</text>
+        <circle cx="110" cy="218" r="98" fill="url(#dish)"/>
+        <g class="base__speaker">
+        <circle cx="92.0" cy="324" r="2.9"/>
+        <circle cx="110.0" cy="324" r="2.9"/>
+        <circle cx="128.0" cy="324" r="2.9"/>
+        <circle cx="146.0" cy="324" r="2.9"/>
+        <circle cx="164.0" cy="324" r="2.9"/>
+        <circle cx="182.0" cy="324" r="2.9"/>
+        <circle cx="200.0" cy="324" r="2.9"/>
+        <circle cx="218.0" cy="324" r="2.9"/>
+        <circle cx="236.0" cy="324" r="2.9"/>
+        <circle cx="254.0" cy="324" r="2.9"/>
+        <circle cx="272.0" cy="324" r="2.9"/>
+        <circle cx="290.0" cy="324" r="2.9"/>
+        <circle cx="308.0" cy="324" r="2.9"/>
+        <circle cx="101.0" cy="337" r="2.9"/>
+        <circle cx="119.0" cy="337" r="2.9"/>
+        <circle cx="137.0" cy="337" r="2.9"/>
+        <circle cx="155.0" cy="337" r="2.9"/>
+        <circle cx="173.0" cy="337" r="2.9"/>
+        <circle cx="191.0" cy="337" r="2.9"/>
+        <circle cx="209.0" cy="337" r="2.9"/>
+        <circle cx="227.0" cy="337" r="2.9"/>
+        <circle cx="245.0" cy="337" r="2.9"/>
+        <circle cx="263.0" cy="337" r="2.9"/>
+        <circle cx="281.0" cy="337" r="2.9"/>
+        <circle cx="299.0" cy="337" r="2.9"/>
+        <circle cx="92.0" cy="350" r="2.9"/>
+        <circle cx="110.0" cy="350" r="2.9"/>
+        <circle cx="128.0" cy="350" r="2.9"/>
+        <circle cx="146.0" cy="350" r="2.9"/>
+        <circle cx="164.0" cy="350" r="2.9"/>
+        <circle cx="182.0" cy="350" r="2.9"/>
+        <circle cx="200.0" cy="350" r="2.9"/>
+        <circle cx="218.0" cy="350" r="2.9"/>
+        <circle cx="236.0" cy="350" r="2.9"/>
+        <circle cx="254.0" cy="350" r="2.9"/>
+        <circle cx="272.0" cy="350" r="2.9"/>
+        <circle cx="290.0" cy="350" r="2.9"/>
+        <circle cx="308.0" cy="350" r="2.9"/>
+        <circle cx="101.0" cy="363" r="2.9"/>
+        <circle cx="119.0" cy="363" r="2.9"/>
+        <circle cx="137.0" cy="363" r="2.9"/>
+        <circle cx="155.0" cy="363" r="2.9"/>
+        <circle cx="173.0" cy="363" r="2.9"/>
+        <circle cx="191.0" cy="363" r="2.9"/>
+        <circle cx="209.0" cy="363" r="2.9"/>
+        <circle cx="227.0" cy="363" r="2.9"/>
+        <circle cx="245.0" cy="363" r="2.9"/>
+        <circle cx="263.0" cy="363" r="2.9"/>
+        <circle cx="281.0" cy="363" r="2.9"/>
+        <circle cx="299.0" cy="363" r="2.9"/>
+        </g>
+        <path class="base__cover" d="M0 384 Q200 408 400 384 L400 530 L0 530 Z" fill="url(#cover)"/>
+        <path class="base__seam" d="M0 384 Q200 408 400 384" fill="none"/>
+      </svg>
+      <button type="button" class="key key--round" data-key="onoff" tabindex="-1" aria-label="ON/OFF — включить или выключить" style="--x:68;--y:74;--w:36"></button>
+      <button type="button" class="key key--round" data-key="sp" tabindex="-1" aria-label="S./P. — старт и пауза" style="--x:152;--y:74;--w:36"></button>
+      <button type="button" class="key key--round" data-key="sound" tabindex="-1" aria-label="SOUND — звук" style="--x:240;--y:74;--w:36"></button>
+      <button type="button" class="key key--round" data-key="fire" tabindex="-1" aria-label="FIRE — огонь" style="--x:324;--y:74;--w:36"></button>
+
+      <button type="button" class="key key--pad key--up" data-key="up" tabindex="-1" aria-label="UP — вверх" style="--x:110;--y:170;--w:40">
+        <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 4 36 18v16H4V18Z"/><circle class="key__dish" cx="20" cy="22" r="8.5"/></svg>
+      </button>
+      <button type="button" class="key key--pad" data-key="left" tabindex="-1" aria-label="LEFT — влево" style="--x:62;--y:218;--w:40">
+        <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 3 37 20 20 37 3 20Z"/><circle class="key__dish" cx="20" cy="20" r="8.5"/></svg>
+      </button>
+      <button type="button" class="key key--pad" data-key="right" tabindex="-1" aria-label="RIGHT — вправо" style="--x:158;--y:218;--w:40">
+        <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 3 37 20 20 37 3 20Z"/><circle class="key__dish" cx="20" cy="20" r="8.5"/></svg>
+      </button>
+      <button type="button" class="key key--pad" data-key="down" tabindex="-1" aria-label="DOWN — вниз" style="--x:110;--y:266;--w:40">
+        <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 3 37 20 20 37 3 20Z"/><circle class="key__dish" cx="20" cy="20" r="8.5"/></svg>
+      </button>
+
+      <button type="button" class="key key--jump" data-key="jump" tabindex="-1" aria-label="JUMP — прыжок" style="--x:292;--y:198;--w:80">
+        <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+          <circle class="key__cap" cx="40" cy="40" r="38"/>
+          <g class="key__ring">
+          <circle cx="71.0" cy="40.0" r="1.9"/>
+          <circle cx="69.1" cy="50.6" r="1.9"/>
+          <circle cx="63.7" cy="59.9" r="1.9"/>
+          <circle cx="55.5" cy="66.8" r="1.9"/>
+          <circle cx="45.4" cy="70.5" r="1.9"/>
+          <circle cx="34.6" cy="70.5" r="1.9"/>
+          <circle cx="24.5" cy="66.8" r="1.9"/>
+          <circle cx="16.3" cy="59.9" r="1.9"/>
+          <circle cx="10.9" cy="50.6" r="1.9"/>
+          <circle cx="9.0" cy="40.0" r="1.9"/>
+          <circle cx="10.9" cy="29.4" r="1.9"/>
+          <circle cx="16.3" cy="20.1" r="1.9"/>
+          <circle cx="24.5" cy="13.2" r="1.9"/>
+          <circle cx="34.6" cy="9.5" r="1.9"/>
+          <circle cx="45.4" cy="9.5" r="1.9"/>
+          <circle cx="55.5" cy="13.2" r="1.9"/>
+          <circle cx="63.7" cy="20.1" r="1.9"/>
+          <circle cx="69.1" cy="29.4" r="1.9"/>
+          </g>
+          <circle class="key__dish" cx="40" cy="40" r="19"/>
+        </svg>
+      </button>
+
+      <img class="base__logo base__logo--color" src="/brand/crocodile-mario-logo.png" width="1000" height="443" alt="Crocodile Mario" />
+      <img class="base__logo base__logo--white" src="/brand/crocodile-mario-logo-white.png" width="1000" height="443" alt="" aria-hidden="true" />
+        </div>
         </div>
       </section>
 
@@ -114,7 +257,7 @@
         </div>
       </aside>
 
-      <p class="shell__footer"><a id="route-link" href="#/">Однокомнатное демо</a> · <a id="clip-link" href="#/clip">Тестовый уровень по видео</a> · <a id="editor-link" href="#/editor">Редактор уровней</a></p>
+      <p class="shell__footer"><a id="route-link" href="#/">Однокомнатное демо</a></p>
 
       <section class="sheet" id="sheet" hidden aria-label="Контрольный лист ресурсов"></section>
 
@@ -127,6 +270,7 @@
     <div class="editor" id="editor-root" hidden></div>
 
     <dialog class="settings" id="settings"></dialog>
+    <dialog class="settings help" id="help"></dialog>
     <noscript>Для игры нужен JavaScript.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>

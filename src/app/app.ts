@@ -10,6 +10,7 @@ import {
   validationEnv,
   type GameEvent,
   type InputFrame,
+  type Phase,
 } from '../core';
 import { centerCamera, followCamera, type CameraArea, type CameraPos } from '../render/camera';
 import { AssetStore } from '../render/assets';
@@ -18,12 +19,15 @@ import { effectsWorld, LevelEffects, NO_EFFECTS, type EffectsFrame } from '../re
 import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { browserStorage, needsGamepadSetup, SHELLS } from '../input/settings';
+import { boundSources, keySource } from '../input/bindings';
+import { HelpDialog } from './help';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { GameSession } from './session';
 import { SettingsDialog } from './settingsUi';
+import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
 import {
   controlsHint,
@@ -66,6 +70,12 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
     lid: byId<HTMLElement>('lid'),
+    toy: byId<HTMLElement>('toy'),
+    base: byId<HTMLElement>('base'),
+    cornerSettings: byId<HTMLButtonElement>('corner-settings'),
+    cornerHelp: byId<HTMLButtonElement>('corner-help'),
+    help: byId<HTMLDialogElement>('help'),
+    srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
     shellToggle: byId<HTMLElement>('shell-toggle'),
     selShell: byId<HTMLSelectElement>('sel-shell'),
@@ -101,6 +111,11 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     btnDebugRestart: byId<HTMLButtonElement>('btn-debug-restart'),
     settings: byId<HTMLDialogElement>('settings'),
   };
+
+  // Вид страницы: игрушка (комната, клип) или техническая страница. `?debug` возвращает панели разработчика.
+  document.body.dataset['chrome'] = route.lid ? 'toy' : 'tech';
+  if (new URLSearchParams(window.location.search).has('debug')) document.body.dataset['debug'] = '';
+  if (!route.lid) document.title = 'Crocodile Mario — движок (демо)';
 
   // Подписи маршрута ставятся до загрузки данных, чтобы страница не «мигала».
   refs.badge.textContent = route.badge;
@@ -139,9 +154,13 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
   let fps = 0;
   let lastFrameTime: number | null = null;
 
-  // Клавиатура принадлежит игре, пока в фокусе игровая область. Когда открыт диалог настроек,
-  // фокус внутри него, так что клавиши игре не достаются и работают обычные Tab/Enter/Esc.
-  const isKeyboardActive = (): boolean => refs.gameArea.contains(document.activeElement);
+  // Клавиатура принадлежит игре, пока не открыт диалог и фокус не в кнопке/поле страницы: на пустом месте
+  // страницы или на игровой области клавиши работают без предварительного клика.
+  const isKeyboardActive = (): boolean => {
+    if (settingsDialog.isOpen || helpDialog.isOpen) return false;
+    const active = document.activeElement;
+    return active === null || active === document.body || refs.gameArea.contains(active);
+  };
 
   const hub = new InputHub({
     keyboardTarget: window,
@@ -182,17 +201,31 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     resetDevices: () => hub.resetDevices(),
   });
 
+  const openMenu = (): void => {
+    if (game.state.phase === 'playing') suspendReason = 'settings';
+    session.suspend();
+    session.setContext('menu');
+  };
+  const closeMenu = (): void => {
+    session.setContext('game');
+    refocusGame();
+  };
+
   const settingsDialog = new SettingsDialog(refs.settings, hub, {
-    onOpen: () => {
-      if (game.state.phase === 'playing') suspendReason = 'settings';
-      session.suspend();
-      session.setContext('menu');
-    },
-    onClose: () => {
-      session.setContext('game');
-      refocusGame();
-    },
+    onOpen: openMenu,
+    onClose: closeMenu,
+    // Цвет корпуса, неактивные сегменты и звук — в настройках игрушки (у технических страниц свои флажки).
+    ...(route.lid
+      ? {
+          display: {
+            hasGhost: pack.screen.ghost !== null,
+            ghostDefault: pack.screen.ghost?.enabled ?? false,
+            onChange: () => applyDisplay(),
+          },
+        }
+      : {}),
   });
+  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu });
 
   function refocusGame(): void {
     refs.gameArea.focus({ preventScroll: true });
@@ -206,14 +239,15 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
 
   /** Навигация по настройкам с геймпада: вверх/вниз — фокус, подтвердить — нажатие, назад — закрыть. */
   function handleMenuInput(frame: InputFrame): void {
-    if (!settingsDialog.isOpen || settingsDialog.capturing) return;
+    if (settingsDialog.capturing) return;
+    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : null;
+    if (!dialog) return;
     if (frame.pressed & NAV_BACK) {
       settingsDialog.close();
+      helpDialog.close();
       return;
     }
-    const focusable = [
-      ...refs.settings.querySelectorAll<HTMLElement>('button:not([disabled]), select, input'),
-    ];
+    const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]), select, input')];
     const index = focusable.indexOf(document.activeElement as HTMLElement);
     if (frame.pressed & NAV_DOWN) focusable[(index + 1) % focusable.length]?.focus();
     if (frame.pressed & NAV_UP) focusable[(index - 1 + focusable.length) % focusable.length]?.focus();
@@ -235,16 +269,22 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
   refs.lid.style.setProperty('--lcd-bg', pack.screen.colors.background);
   refs.stage.classList.toggle('stage--plain', !route.lid);
   refs.shellToggle.hidden = !route.lid;
-  const applyShell = (): void => {
-    refs.lid.dataset['shell'] = hub.settings.display.shell;
-    refs.selShell.value = hub.settings.display.shell;
+  // Внешний вид из настроек: цвет корпуса, слой неактивных сегментов, звук. Источник правды — hub.settings.display.
+  const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
+  const applyDisplay = (): void => {
+    const { display } = hub.settings;
+    refs.toy.dataset['shell'] = display.shell;
+    refs.selShell.value = display.shell;
+    refs.chkGhost.checked = ghostOn();
+    renderer.setGhost(ghostOn());
+    refs.chkSound.checked = display.sound;
+    audio.setMuted(!display.sound);
   };
-  applyShell();
   refs.selShell.addEventListener('change', () => {
     hub.updateSettings((s) => {
       s.display.shell = SHELLS.find((shell) => shell === refs.selShell.value) ?? 'blue';
     });
-    applyShell();
+    applyDisplay();
     refocusGame();
   });
 
@@ -277,32 +317,74 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     refocusGame();
   });
   // Слой неактивных сегментов: значение по умолчанию задаёт профиль экрана, выбор пользователя сохраняется.
-  const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
   refs.ghostToggle.hidden = !renderer.hasGhostLayer;
-  refs.chkGhost.checked = ghostOn();
-  renderer.setGhost(ghostOn());
   refs.chkGhost.addEventListener('change', () => {
     hub.updateSettings((s) => {
       s.display.ghost = refs.chkGhost.checked;
     });
-    renderer.setGhost(refs.chkGhost.checked);
+    applyDisplay();
     refocusGame();
   });
   refs.chkDebug.addEventListener('change', () => {
     refs.debug.hidden = !refs.chkDebug.checked;
   });
-  refs.chkSound.checked = hub.settings.display.sound;
-  refs.chkSound.addEventListener('change', () => {
+  /** Включить или выключить звук (кнопка SOUND, флажок, настройки). */
+  const setSound = (on: boolean): void => {
     hub.updateSettings((s) => {
-      s.display.sound = refs.chkSound.checked;
+      s.display.sound = on;
     });
-    audio.setMuted(!refs.chkSound.checked);
+    applyDisplay();
     audio.unlock();
     audio.play('start'); // короткий сигнал-подтверждение (при выключении звука молчит)
+  };
+  refs.chkSound.addEventListener('change', () => {
+    setSound(refs.chkSound.checked);
     refocusGame();
   });
+  applyDisplay();
 
-  // Светодиоды: условная схема состояния (оригинальная логика не установлена), см. app/leds.ts.
+  // ── Питание и кнопки корпуса ─────────────────────────────────────────────
+  // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
+  let powered = true;
+  const setPower = (on: boolean): void => {
+    if (on === powered) return;
+    powered = on;
+    refs.toy.dataset['power'] = on ? 'on' : 'off';
+    suspendReason = null;
+    if (on) {
+      session.restart();
+      hub.tracker.reset();
+    } else {
+      session.suspend();
+    }
+  };
+  const toy = new ToyPanel(refs.toy, hub, {
+    phase: () => game.state.phase,
+    powered: () => powered,
+    onPower: () => setPower(!powered),
+    onSound: () => setSound(!hub.settings.display.sound),
+  });
+  // Горячие клавиши питания и звука (в настройках управления не переназначаются).
+  const hotkeys: Record<string, 'onoff' | 'sound'> = { KeyO: 'onoff', KeyM: 'sound' };
+  const hotkeyAllowed = (event: KeyboardEvent): 'onoff' | 'sound' | null => {
+    const id = hotkeys[event.code];
+    if (!id || event.ctrlKey || event.altKey || event.metaKey || !isKeyboardActive()) return null;
+    return boundSources(hub.settings.keyboard).has(keySource(event.code)) ? null : id; // занято привязкой игры — не трогаем
+  };
+  window.addEventListener('keydown', (event) => {
+    const id = hotkeyAllowed(event);
+    if (!id || event.repeat) return;
+    event.preventDefault();
+    toy.hotkey(id, true);
+  });
+  window.addEventListener('keyup', (event) => {
+    const id = hotkeys[event.code];
+    if (id) toy.hotkey(id, false);
+  });
+  refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
+  refs.cornerHelp.addEventListener('click', () => helpDialog.open());
+
+  // Светодиоды: наблюдение по видео — в игре горят все три; остальное условно, см. app/leds.ts. состояния (оригинальная логика не установлена), см. app/leds.ts.
   const leds = {
     red: refs.lid.querySelector<HTMLElement>('.led--red'),
     yellow: refs.lid.querySelector<HTMLElement>('.led--yellow'),
@@ -328,7 +410,11 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     overlayTitle: cachedText(refs.overlayTitle),
     overlayHint: cachedText(refs.overlayHint),
     debug: cachedText(refs.debugText),
+    status: cachedText(refs.srStatus),
   };
+  /** Короткое состояние для скринридеров (на экране текста нет). */
+  const statusLine = (phase: Phase): string =>
+    ({ ready: 'Готов к игре', playing: '', paused: 'Пауза', dead: 'Герой погиб', gameOver: 'Игра окончена', completed: 'Участок пройден' })[phase];
   const lastData = new Map<string, string>();
   const setData = (name: string, value: string | number): void => {
     const text = String(value);
@@ -353,7 +439,9 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     setData('projectiles', s.projectiles.length);
     setData('gamepad', gamepadStatus.kind);
     setData('context', session.context);
-    showLeds(ledState(s.phase, s.tick));
+    setData('power', powered ? 'on' : 'off');
+    showLeds(powered ? ledState(s.phase, s.tick) : { red: false, yellow: false, green: false });
+    setText.status(powered ? statusLine(s.phase) : 'Выключено');
 
     // Пока идёт интро участка, оверлей «Старт» не закрывает поле (Enter всё равно запускает игру).
     const overlay = fx.intro ? null : overlayView(s, suspendReason);
@@ -407,7 +495,14 @@ export async function startApp(routeName: 'room' | 'tech' | 'clip'): Promise<voi
     lastFrameTime = now;
 
     hub.poll(); // опрос геймпада — каждый кадр, в том числе на паузе (там ждём команду продолжения)
-    session.frame(now);
+    if (powered) session.frame(now);
+    toy.sync(hub.tracker.down); // кнопки корпуса подсвечиваются от клавиатуры, геймпада и мыши
+    if (!powered) {
+      fx = NO_EFFECTS;
+      renderer.clear();
+      updateUi();
+      return;
+    }
 
     const level = ctx.levels.get(game.state.levelId)?.def;
     if (!level) return;
