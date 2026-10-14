@@ -446,6 +446,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   });
   const restart = (): void => {
     suspendReason = null;
+    director.reset(); // явный рестарт — не возрождение после гибели: обрывает звучащую гибель и снова с фанфары
     session.restart();
     refocusGame();
   };

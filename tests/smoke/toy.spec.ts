@@ -75,12 +75,56 @@ for (const size of [
     expect(m.loaded).toBe(true);
     expect(m.logo.width / m.base.width).toBeGreaterThan(0.7);
     expect(Math.abs(m.logo.left + m.logo.width / 2 - (m.base.left + m.base.width / 2)) / m.base.width).toBeLessThan(0.02);
-    expect(m.logo.top).toBeGreaterThan(m.base.top + (m.base.bottom - m.base.top) * 0.7); // в нижней части
+    expect(m.logo.top).toBeGreaterThan(m.base.top + (m.base.bottom - m.base.top) * 0.6); // в нижней части: на фото «подбородок» с логотипом — нижние ≈ 40 % корпуса
     expect(m.logo.bottom).toBeLessThanOrEqual(m.base.bottom);
     // Уголок не наезжает на игрушку на узком экране.
     if (size.width < 640) expect(m.corner.bottom).toBeLessThanOrEqual(m.toy.top + 1);
   });
 }
+
+test('форма по фото: нижняя половина ≈ 1,55 ширины, втулки шарнира у краёв и проём ≈ 36 % ширины, у крышки заострённая верхняя кромка', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await ready(page);
+  const m = await page.evaluate(() => {
+    const rect = (selector: string): DOMRect => (document.querySelector(selector) as HTMLElement).getBoundingClientRect();
+    const toy = rect('#toy');
+    const knuckles = [...document.querySelectorAll('.toy__knuckle')].map((k) => k.getBoundingClientRect());
+    const band = rect('.toy__band');
+    const base = rect('#base');
+    const lid = rect('#lid');
+    // Верхняя кромка корпуса крышки: у центра выше, чем у плеч (путь SVG: вершина около y = 3, плечи около y = 27 из 391).
+    const top = document.querySelector('.lid__body') as SVGPathElement;
+    const length = top.getTotalLength();
+    let apex = Infinity;
+    let shoulder = Infinity;
+    for (let i = 0; i <= 400; i++) {
+      const p = top.getPointAtLength((length * i) / 400);
+      if (p.y < 60 && Math.abs(p.x - 200) < 20) apex = Math.min(apex, p.y);
+      if (p.y < 60 && Math.abs(p.x - 42) < 6) shoulder = Math.min(shoulder, p.y);
+    }
+    return {
+      w: toy.width,
+      base: base.height / base.width,
+      lid: lid.height / lid.width,
+      knuckleLeft: (knuckles[0]!.left - toy.left) / toy.width,
+      knuckleWidth: knuckles[0]!.width / toy.width,
+      bandWidth: band.width / toy.width,
+      apex,
+      shoulder,
+    };
+  });
+  expect(m.base).toBeGreaterThan(1.5);
+  expect(m.base).toBeLessThan(1.6);
+  expect(m.lid).toBeGreaterThan(0.95); // крышка почти квадратная
+  expect(m.lid).toBeLessThan(1.02);
+  expect(m.knuckleLeft).toBeGreaterThan(0.12);
+  expect(m.knuckleLeft).toBeLessThan(0.16);
+  expect(m.knuckleWidth).toBeGreaterThan(0.16);
+  expect(m.knuckleWidth).toBeLessThan(0.2);
+  expect(m.bandWidth).toBeGreaterThan(0.34);
+  expect(m.bandWidth).toBeLessThan(0.38);
+  expect(m.shoulder - m.apex).toBeGreaterThan(15); // вершина заметно выше плеч: кромка не прямая
+});
 
 test('логотип: на синем и красном корпусе — белая печать, на жёлтом и белом — цветная', async ({ page }) => {
   await ready(page);

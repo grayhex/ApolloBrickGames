@@ -140,6 +140,7 @@ describe('WebAudioPort: эффекты', () => {
     const context = running();
     let wall = 0;
     const port = new WebAudioPort({ ...options, factory: () => context, clock: () => wall });
+    port.unlock(); // жест пользователя: контекст создан и работает
     return {
       context,
       port,
@@ -278,6 +279,39 @@ describe('WebAudioPort: эффекты', () => {
       },
     });
     expect(() => broken.play('jump')).not.toThrow();
+  });
+
+  it('без жеста пользователя эффекты отбрасываются, контекст не создаётся: интро при открытии страницы не копится до первого нажатия', () => {
+    let created = 0;
+    const context = new FakeContext();
+    context.resume = async () => {}; // браузер без жеста контекст не будит: он остаётся приостановленным
+    let wall = 0;
+    const port = new WebAudioPort({
+      factory: () => {
+        created += 1;
+        return context;
+      },
+      clock: () => wall,
+    });
+    port.play('introStep');
+    port.play('introStep');
+    expect(created).toBe(0);
+    expect(context.oscillators).toHaveLength(0);
+    // Жест: пока браузер будит контекст (он ещё приостановлен), эффект подтверждения ставится — по нажатию это его же звук.
+    port.unlock();
+    expect(created).toBe(1);
+    port.play('confirm');
+    expect(context.oscillators.length).toBeGreaterThan(0);
+    // Контекст так и остался приостановленным, жест давно позади: эффекты не накапливаются в замороженном времени.
+    const count = context.oscillators.length;
+    context.state = 'suspended';
+    wall += 2000;
+    port.play('jump');
+    expect(context.oscillators).toHaveLength(count);
+    // Контекст проснулся — эффекты снова звучат.
+    context.state = 'running';
+    port.play('jump');
+    expect(context.oscillators.length).toBeGreaterThan(count);
   });
 
   it('unlock будит приостановленный контекст по жесту пользователя', () => {

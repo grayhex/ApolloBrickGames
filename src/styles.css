@@ -121,8 +121,8 @@ body {
 .stage {
   container-type: inline-size;
   width: 100%;
-  /* Игрушка целиком (крышка и нижняя половина ≈ 2,3 ширины) вписывается в окно по высоте. */
-  max-width: clamp(300px, calc((100dvh - 24px) / 2.4), 640px);
+  /* Игрушка целиком (крышка и нижняя половина ≈ 2,5 ширины) вписывается в окно по высоте. */
+  max-width: clamp(240px, calc((100dvh - 24px) / 2.6), 640px);
   margin: 0 auto;
 }
 
@@ -130,6 +130,9 @@ body {
 :is(.toy, .arena, .shellpick__btn) {
   --rim: #2456c9;
   --rim-dark: #1a3fa0;
+  /* Блик и тень пластика выводятся из цвета корпуса: объём одинаков у всех четырёх цветов. */
+  --rim-hi: color-mix(in srgb, var(--rim) 58%, #fff);
+  --rim-lo: color-mix(in srgb, var(--rim-dark) 62%, #000);
   --face: #dcd8c6;
   --face-2: #cdc9b6;
   --shade: #c2beaa;
@@ -150,7 +153,8 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  filter: drop-shadow(0 1.8cqw 2.6cqw var(--toy-shadow));
+  /* Мягкая тень вокруг и плотная под нижней кромкой: игрушка лежит на столе, а не висит. */
+  filter: drop-shadow(0 0.6cqw 0.7cqw rgba(0, 0, 0, 0.32)) drop-shadow(0 2.4cqw 3cqw var(--toy-shadow));
 }
 
 /* Палитры корпуса: у игрушки, у кнопок-миниатюр переключателя цвета и у панелей вокруг неё (`--tone` — акцент панелей). */
@@ -209,8 +213,58 @@ body {
 .lid {
   position: relative;
   padding: 4.4cqw 4.4cqw 4.8cqw;
-  background: linear-gradient(170deg, var(--rim), var(--rim-dark));
-  border-radius: 7cqw 7cqw 3cqw 3cqw;
+}
+
+/* Корпус и лицевая панель крышки — SVG в координатах 400 × 391: верхняя кромка с заострением по центру (на фото жёлтого корпуса видно хорошо),
+   вырез между «ушами» шарнира, панель утоплена в рамку (зазор, фаска, тень от кромки), блик и светлая кромка сверху и слева.
+   Цвета берутся из палитры корпуса через классы `s-*`. */
+.lid__shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lid__closed {
+  display: none;
+}
+
+.lid__lip {
+  stroke: color-mix(in srgb, var(--rim-dark) 70%, #000);
+}
+
+.lid__chamfer {
+  stroke: color-mix(in srgb, var(--rim) 55%, #fff);
+}
+
+.lid__gap {
+  stroke: rgba(0, 0, 0, 0.45);
+}
+
+.s-rim-hi {
+  stop-color: var(--rim-hi);
+}
+
+.s-rim {
+  stop-color: var(--rim);
+}
+
+.s-rim-dark {
+  stop-color: var(--rim-dark);
+}
+
+.s-rim-lo {
+  stop-color: var(--rim-lo);
+}
+
+.s-face {
+  stop-color: var(--face);
+}
+
+.s-face-2 {
+  stop-color: var(--face-2);
 }
 
 .lid__face {
@@ -218,9 +272,6 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   padding: 5cqw 3.9cqw 2.4cqw;
-  background: linear-gradient(180deg, var(--face), var(--face-2));
-  border-radius: 4cqw 4cqw 7cqw 7cqw;
-  box-shadow: inset 0 0.3cqw 0.6cqw rgba(255, 255, 255, 0.5), inset 0 -0.4cqw 0.8cqw rgba(0, 0, 0, 0.18);
 }
 
 .lid__screw {
@@ -228,8 +279,10 @@ body {
   width: 4cqw;
   height: 4cqw;
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, #ffffff, #c4c4c4 52%, #8a8a8a);
-  box-shadow: 0 0 0 0.35cqw var(--shade), inset 0 0 0.5cqw rgba(0, 0, 0, 0.45);
+  background: radial-gradient(circle at 36% 30%, #ffffff, #c4c4c4 52%, #7f7f7f);
+  /* Головка в раззенковке: кольцо тени, светлая кромка и тень от головки. */
+  box-shadow: 0 0 0 0.4cqw rgba(0, 0, 0, 0.3), 0 0 0 0.75cqw rgba(255, 255, 255, 0.4), 0.2cqw 0.35cqw 0.5cqw 0.5cqw rgba(0, 0, 0, 0.3),
+    inset 0 0 0.5cqw rgba(0, 0, 0, 0.5);
 }
 
 .lid__screw::before,
@@ -237,8 +290,9 @@ body {
   content: '';
   position: absolute;
   inset: 44% 15%;
-  background: rgba(40, 40, 40, 0.55);
+  background: rgba(40, 40, 40, 0.6);
   border-radius: 1px;
+  box-shadow: 0 0.12cqw 0 rgba(255, 255, 255, 0.5);
   transform: rotate(38deg);
 }
 
@@ -247,12 +301,12 @@ body {
 }
 
 .lid__screw--tl {
-  top: 6cqw;
+  top: 9cqw;
   left: 5cqw;
 }
 
 .lid__screw--tr {
-  top: 5.4cqw;
+  top: 8.4cqw;
   right: 4cqw;
 }
 
@@ -266,31 +320,49 @@ body {
   right: 3.6cqw;
 }
 
+/* Прорезь со светодиодами: глубокий паз, на фото — тёмнее панели; светодиоды выступают куполами. */
 .lid__leds {
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  width: 44%;
-  height: 6.6cqw;
+  justify-content: space-between;
+  width: 38%;
+  height: 7.4cqw;
   margin: 0 auto 9.5cqw;
-  padding: 0 1cqw;
-  background: var(--face-2);
-  border-radius: 3cqw;
-  box-shadow: inset 0 0.35cqw 0.6cqw rgba(0, 0, 0, 0.2), 0 0.2cqw 0 var(--bezel-hi);
+  padding: 0 2cqw;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--face-2) 42%, #000), color-mix(in srgb, var(--face-2) 74%, #000));
+  border-radius: 3.7cqw;
+  box-shadow: inset 0 0.6cqw 0.9cqw rgba(0, 0, 0, 0.6), inset 0 -0.25cqw 0.4cqw rgba(255, 255, 255, 0.22), 0 0.3cqw 0 rgba(255, 255, 255, 0.6),
+    0 -0.15cqw 0 rgba(0, 0, 0, 0.18);
 }
 
 .led {
+  position: relative;
   display: block;
-  width: 4.4cqw;
-  height: 4.4cqw;
+  width: 4.9cqw;
+  height: 4.9cqw;
   border-radius: 50%;
-  box-shadow: inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.35);
+  /* Купол линзы: тень внизу, обод в гнезде и тень под выступом. */
+  box-shadow: inset 0 -0.55cqw 0.85cqw rgba(0, 0, 0, 0.42), 0 0 0 0.45cqw rgba(0, 0, 0, 0.38), 0 0.3cqw 0.5cqw 0.45cqw rgba(0, 0, 0, 0.35);
   filter: brightness(0.42) saturate(0.55);
   transition: filter 25ms linear, box-shadow 25ms linear; /* фанфара — по 53 мс на ноту: переключение должно быть быстрее */
 }
 
+/* Блик на линзе. */
+.led::after {
+  content: '';
+  position: absolute;
+  top: 14%;
+  left: 20%;
+  width: 34%;
+  height: 26%;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  filter: blur(0.5px);
+  transform: rotate(-24deg);
+}
+
 .led--lit {
-  box-shadow: inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.35), 0 0 1.3cqw var(--glow);
+  box-shadow: inset 0 -0.55cqw 0.85cqw rgba(0, 0, 0, 0.35), 0 0 0 0.45cqw rgba(0, 0, 0, 0.3), 0 0 1.5cqw 0.3cqw var(--glow);
   filter: none;
 }
 
@@ -309,24 +381,37 @@ body {
   background: radial-gradient(circle at 38% 32%, #d4fff0 0 12%, #3fd1a0 40%, #0f6e52);
 }
 
-/* Окно LCD в углублённой рамке с фаской: разные цвета сторон дают диагональные «швы» по углам. */
+/* Окно LCD в углублённой рамке с фаской: разные цвета сторон дают диагональные «швы» по углам;
+   стекло лежит глубже рамки — внутри него тень от верхней и левой стенок и мягкий блик. */
 .lid__bezel {
   margin-bottom: 2.5cqw;
   padding: 0.6cqw;
   background: linear-gradient(180deg, var(--bezel-hi), var(--face-2));
   border: 3.6cqw solid;
   border-color: var(--bezel-lo) var(--bezel-hi) var(--bezel-hi) var(--bezel-lo);
-  border-radius: 0.5cqw;
+  border-radius: 0.6cqw;
+  box-shadow: 0 0 0 0.25cqw rgba(0, 0, 0, 0.22), 0 0.35cqw 0.4cqw 0.1cqw rgba(255, 255, 255, 0.5), inset 0 0.3cqw 0.3cqw rgba(0, 0, 0, 0.25);
 }
 
 .lid__window {
+  position: relative;
   display: grid;
   place-items: center;
   min-width: 0;
   overflow: hidden;
   aspect-ratio: var(--lcd-aspect);
   background: var(--lcd-bg);
-  box-shadow: 0 0 0 0.35cqw rgba(0, 0, 0, 0.55), inset 0 0 1.4cqw rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 0.35cqw rgba(0, 0, 0, 0.62), inset 0.9cqw 1cqw 1.5cqw rgba(0, 0, 0, 0.3), inset -0.35cqw -0.4cqw 0.8cqw rgba(255, 255, 255, 0.18);
+}
+
+/* Блик на стекле: две косые полосы, едва заметные, поверх картинки (кликов не перехватывает). */
+.lid__window::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.1) 0 18%, rgba(255, 255, 255, 0) 18.5% 24%, rgba(255, 255, 255, 0.06) 24.5% 29%, rgba(255, 255, 255, 0) 29.5%);
+  pointer-events: none;
 }
 
 .lid__art {
@@ -370,6 +455,11 @@ body {
   filter: none;
 }
 
+.stage--plain .lid__shell,
+.stage--plain .lid__window::after {
+  display: none;
+}
+
 .stage--plain .lid__bezel {
   margin: 0;
   padding: 0;
@@ -386,38 +476,108 @@ body {
 }
 
 /* ── Нижняя половина игрушки: шарнир, кнопки, динамик, логотип ──────────────
-   Всё в единицах cqw/viewBox 400 × 530: масштабируется вместе с крышкой. Расположение — по фотографиям владельца. */
+   Всё в единицах cqw/viewBox 400 × 620: масштабируется вместе с крышкой. Расположение — по фотографиям владельца:
+   нижняя половина длиннее крышки в ≈ 1,5 раза, под ступенькой — широкий «подбородок» с логотипом. */
 .toy__hinge {
   position: relative;
   z-index: 2;
   display: flex;
+  align-items: flex-start;
   justify-content: center;
-  height: 6.6cqw;
-  margin: -1.8cqw 7% -3.6cqw;
+  height: 11.5cqw;
+  /* Втулки стоят ближе к краям, посередине — проём (≈ 36 % ширины) на месте выреза крышки: так на фото всех четырёх корпусов. */
+  margin: -4.73cqw 14% -5.47cqw;
 }
 
+/* Втулки шарнира — цилиндры: блик по вертикали, светлая и тёмная кромки; шов между крышкой и корпусом и шов оси; внешний край скруглён. */
 .toy__knuckle {
+  position: relative;
   flex: 0 0 25%;
-  background: linear-gradient(180deg, var(--rim), var(--rim-dark));
-  border-radius: 1.6cqw;
-  box-shadow: inset 0 0.35cqw 0.5cqw rgba(255, 255, 255, 0.3), inset 0 -0.5cqw 0.8cqw rgba(0, 0, 0, 0.25),
-    inset 0.3cqw 0 0 rgba(0, 0, 0, 0.12), inset -0.3cqw 0 0 rgba(0, 0, 0, 0.12);
+  height: 7cqw;
+  margin-top: 4.5cqw;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.22) 22%, rgba(255, 255, 255, 0.04) 55%, rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, var(--rim-dark), var(--rim) 50%, var(--rim-hi));
+  border-radius: 4.6cqw 1.2cqw 1.2cqw 4.6cqw;
+  box-shadow: inset 0 0.4cqw 0.5cqw rgba(255, 255, 255, 0.35), inset 0 -0.55cqw 0.8cqw rgba(0, 0, 0, 0.3), 0 0.4cqw 0.6cqw rgba(0, 0, 0, 0.3);
 }
 
+.toy__knuckle:last-child {
+  border-radius: 1.2cqw 4.6cqw 4.6cqw 1.2cqw;
+}
+
+/* Горизонтальный шов: ухо крышки сверху, ухо корпуса снизу. */
+.toy__knuckle::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  right: 3%;
+  left: 3%;
+  height: 0.4cqw;
+  background: rgba(0, 0, 0, 0.34);
+  box-shadow: 0 0.22cqw 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Вертикальный шов: ось шарнира делит втулку на малую внешнюю и большую внутреннюю части. */
+.toy__knuckle::before {
+  content: '';
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  left: 34%;
+  width: 0.35cqw;
+  background: rgba(0, 0, 0, 0.26);
+  box-shadow: 0.2cqw 0 0 rgba(255, 255, 255, 0.22);
+}
+
+.toy__knuckle:last-child::before {
+  right: 34%;
+  left: auto;
+  box-shadow: -0.2cqw 0 0 rgba(255, 255, 255, 0.22);
+}
+
+/* Проём шарнира: тёмная ниша под вырезом крышки, в ней чёрный шлейф с тонкими жилами; на красном корпусе жилы цветные (видны на фото). */
 .toy__band {
+  position: relative;
   flex: 1;
-  margin: 0.6cqw -0.4cqw 0;
-  background: linear-gradient(180deg, #232323, #070707);
+  align-self: flex-start;
+  height: 6.6cqw;
+  margin: 0 -0.3cqw;
+  background: linear-gradient(180deg, #151515, #050505 60%, #101010);
   border-radius: 0 0 0.8cqw 0.8cqw;
-  box-shadow: inset 0 0.3cqw 0.6cqw rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 0.7cqw 1cqw rgba(0, 0, 0, 0.8), inset 0.4cqw 0 0.6cqw rgba(0, 0, 0, 0.5), inset -0.4cqw 0 0.6cqw rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.toy__band::before {
+  content: '';
+  position: absolute;
+  inset: 30% 5% 0 5%;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 0.28cqw, rgba(255, 255, 255, 0) 0.28cqw 1.7cqw);
+  border-radius: 0.6cqw 0.6cqw 0 0;
+}
+
+.toy[data-shell='red'] .toy__band::before {
+  background: repeating-linear-gradient(90deg, #d8782a 0 0.5cqw, #0a0a0a 0.5cqw 0.9cqw, #e5c63a 0.9cqw 1.4cqw, #0a0a0a 1.4cqw 1.9cqw, #5a5a5a 1.9cqw 2.3cqw, #0a0a0a 2.3cqw 2.7cqw);
+  opacity: 0.8;
+}
+
+.toy__band::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 28%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent);
 }
 
 .base {
   position: relative;
-  aspect-ratio: 400 / 530;
-  background: linear-gradient(172deg, var(--rim), var(--rim-dark));
-  border-radius: 3cqw 3cqw 15cqw 15cqw;
-  box-shadow: inset 0 0.45cqw 0.8cqw rgba(255, 255, 255, 0.28), inset 0 -0.9cqw 1.3cqw rgba(0, 0, 0, 0.22);
+  aspect-ratio: 400 / 620;
+  background: radial-gradient(95% 45% at 20% 6%, rgba(255, 255, 255, 0.28), transparent 62%),
+    linear-gradient(172deg, var(--rim-hi) 0%, var(--rim) 16%, var(--rim-dark) 82%, var(--rim-lo) 100%);
+  border-radius: 3cqw 3cqw 16cqw 16cqw;
+  /* Толщина стенки: светлая кромка по верху и слева, тень справа и снизу; снизу — торец корпуса. */
+  box-shadow: inset 0 0.6cqw 0.5cqw rgba(255, 255, 255, 0.4), inset 0.5cqw 0 0.6cqw rgba(255, 255, 255, 0.16),
+    inset -0.6cqw 0 0.9cqw rgba(0, 0, 0, 0.22), inset 0 -1.3cqw 1.7cqw rgba(0, 0, 0, 0.32), 0 0.7cqw 0 var(--rim-lo);
   user-select: none;
   -webkit-user-select: none;
 }
@@ -443,18 +603,45 @@ body {
 }
 
 .base__speaker {
-  fill: rgba(12, 12, 10, 0.6);
+  fill: rgba(10, 10, 8, 0.72);
+  /* Светлая кромка снизу: отверстия — сквозные, а не нарисованные точки. */
+  filter: drop-shadow(0 0.6px 0 rgba(255, 255, 255, 0.3));
 }
 
+/* Лунки под кнопками и чаши: тёмный край сверху-слева (тень от стенки), светлый снизу-справа (свет на стенке). */
+.base__rim-lo {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 1.4;
+}
+
+.base__rim-hi {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 1.2;
+}
+
+/* Чаша под JUMP мельче и светлее лунок кнопок: на фото она едва заметна. */
+.base__bowl {
+  opacity: 0.6;
+}
+
+/* Ступенька корпуса: светлая кромка сверху и тёмный шов под ней. */
 .base__seam {
-  stroke: rgba(255, 255, 255, 0.4);
-  stroke-width: 1.6;
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1.7;
+}
+
+.base__seam-lo {
+  stroke: rgba(0, 0, 0, 0.38);
+  stroke-width: 2.4;
 }
 
 .base__logo {
   position: absolute;
   left: 12%;
-  top: 73%;
+  top: 66.5%;
   width: 76%;
   height: auto;
   pointer-events: none;
@@ -478,7 +665,7 @@ body {
 .key {
   position: absolute;
   left: calc(var(--x) * 0.25%);
-  top: calc(var(--y) / 530 * 100%);
+  top: calc(var(--y) / 620 * 100%);
   width: calc(var(--w) * 0.25%);
   aspect-ratio: 1;
   margin: 0;
@@ -504,69 +691,96 @@ body {
   transition: transform 45ms ease-out, filter 45ms ease-out;
 }
 
-/* Круглые кнопки верхнего ряда: утопленная лунка, серая шапка. */
+/* Круглые кнопки верхнего ряда: матовый купол в широкой лунке (сама лунка нарисована в SVG корпуса), блик и тень от купола. */
 .key--round {
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 30%, var(--key-hi), var(--key) 58%, var(--key-lo));
-  box-shadow: 0 0 0 1cqw rgba(0, 0, 0, 0.13), 0 0 0 1.7cqw rgba(255, 255, 255, 0.07), 0 0.8cqw 1cqw rgba(0, 0, 0, 0.38),
-    inset 0 -0.5cqw 0.8cqw rgba(0, 0, 0, 0.2);
+  background: radial-gradient(circle at 36% 28%, var(--key-hi), var(--key) 52%, var(--key-lo));
+  box-shadow: 0.35cqw 0.85cqw 0.9cqw rgba(0, 0, 0, 0.42), 0 0.45cqw 0 color-mix(in srgb, var(--key-lo) 85%, #000),
+    inset 0 0.25cqw 0.3cqw rgba(255, 255, 255, 0.55), inset 0 -0.5cqw 0.8cqw rgba(0, 0, 0, 0.22);
   transition: transform 45ms ease-out, box-shadow 45ms ease-out, filter 45ms ease-out;
 }
 
+/* Блик купола. */
+.key--round::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  width: 36%;
+  height: 22%;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  filter: blur(1.2px);
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+
 .key--round[data-pressed] {
-  transform: translate(-50%, -50%) translateY(0.45cqw) scale(0.94);
-  box-shadow: 0 0 0 1cqw rgba(0, 0, 0, 0.2), 0 0 0 1.7cqw rgba(255, 255, 255, 0.05), 0 0.1cqw 0.3cqw rgba(0, 0, 0, 0.45),
-    inset 0 0.35cqw 0.8cqw rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%) translateY(0.5cqw) scale(0.95);
+  box-shadow: 0.1cqw 0.2cqw 0.35cqw rgba(0, 0, 0, 0.45), 0 0.1cqw 0 color-mix(in srgb, var(--key-lo) 85%, #000), inset 0 0.35cqw 0.8cqw rgba(0, 0, 0, 0.35);
   filter: brightness(0.9);
 }
 
-/* Клавиши крестовины: ромбы (вверх — «домик»), с круглой вмятиной. */
+/* Клавиши крестовины: ромбы (вверх — «домик»), градиентная шапка, боковая стенка и тень, круглая вмятина. */
 .key--pad svg {
-  filter: drop-shadow(0 0.6cqw 0.55cqw rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0.5cqw 0 color-mix(in srgb, var(--key-lo) 80%, #000)) drop-shadow(0.15cqw 1cqw 0.6cqw rgba(0, 0, 0, 0.42));
+}
+
+.ks-hi {
+  stop-color: var(--key-hi);
+}
+
+.ks-mid {
+  stop-color: var(--key);
+}
+
+.ks-lo {
+  stop-color: var(--key-lo);
 }
 
 .key__shape {
-  fill: var(--key);
-  stroke: var(--key);
+  fill: url(#keyg);
+  stroke: url(#keyg);
   stroke-width: 5;
   stroke-linejoin: round;
 }
 
 .key__dish {
-  fill: rgba(0, 0, 0, 0.1);
-  stroke: rgba(255, 255, 255, 0.65);
+  fill: url(#concave);
+  stroke: rgba(255, 255, 255, 0.7);
   stroke-width: 0.9;
 }
 
 .key--pad[data-pressed] svg {
-  transform: translateY(0.35cqw) scale(0.93);
-  filter: drop-shadow(0 0.1cqw 0.2cqw rgba(0, 0, 0, 0.5)) brightness(0.9);
+  transform: translateY(0.4cqw) scale(0.94);
+  filter: drop-shadow(0 0.1cqw 0 color-mix(in srgb, var(--key-lo) 80%, #000)) drop-shadow(0.1cqw 0.25cqw 0.25cqw rgba(0, 0, 0, 0.5)) brightness(0.9);
 }
 
-/* Большая кнопка JUMP с кольцом точек. */
+/* Большая кнопка JUMP: плоский обод с кольцом точек и вогнутая шапка посередине; сидит в круглой лунке. */
 .key--jump svg {
-  filter: drop-shadow(0 0.9cqw 0.9cqw rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0.55cqw 0 color-mix(in srgb, var(--key-lo) 80%, #000)) drop-shadow(0.2cqw 1.1cqw 0.9cqw rgba(0, 0, 0, 0.42));
 }
 
 .key__cap {
-  fill: var(--key);
+  fill: url(#keyg);
   stroke: var(--key-lo);
   stroke-width: 1;
 }
 
 .key__ring {
-  fill: rgba(0, 0, 0, 0.26);
+  fill: rgba(0, 0, 0, 0.3);
+  filter: drop-shadow(0 0.5px 0 rgba(255, 255, 255, 0.55));
 }
 
 .key--jump .key__dish {
-  fill: rgba(0, 0, 0, 0.07);
-  stroke: rgba(255, 255, 255, 0.75);
+  fill: url(#concave);
+  stroke: rgba(255, 255, 255, 0.8);
   stroke-width: 1.4;
 }
 
 .key--jump[data-pressed] svg {
-  transform: translateY(0.5cqw) scale(0.95);
-  filter: drop-shadow(0 0.15cqw 0.3cqw rgba(0, 0, 0, 0.5)) brightness(0.9);
+  transform: translateY(0.55cqw) scale(0.95);
+  filter: drop-shadow(0 0.12cqw 0 color-mix(in srgb, var(--key-lo) 80%, #000)) drop-shadow(0.1cqw 0.3cqw 0.3cqw rgba(0, 0, 0, 0.5)) brightness(0.9);
 }
 
 /* Питание выключено: экран и светодиоды погашены. */
@@ -579,8 +793,13 @@ body {
   display: none;
 }
 
-.toy[data-compact] .lid {
-  border-radius: 7cqw;
+/* Без нижней половины вырез шарнира не нужен: крышка закрыта снизу. */
+.toy[data-compact] .lid__open {
+  display: none;
+}
+
+.toy[data-compact] .lid__closed {
+  display: block;
 }
 
 .toy[data-compact] .lid__window {
@@ -598,7 +817,7 @@ body[data-chrome='toy'] .arena {
   --side-w: clamp(220px, 18vw, 280px);
   /* Минимальный просвет между панелью и игрушкой; остальное свободное место уходит в просвет, и панели прижимаются к краям окна. */
   --arena-gap: clamp(32px, 4vw, 64px);
-  --stage-w: clamp(300px, calc((100dvh - 24px) / 2.4), 640px);
+  --stage-w: clamp(240px, calc((100dvh - 24px) / 2.6), 640px);
   display: grid;
   grid-template-columns:
     var(--side-w)
@@ -1499,11 +1718,11 @@ body:not([data-chrome='toy']) .corner {
   }
 
   .stage {
-    max-width: clamp(300px, calc((100dvh - 76px) / 2.4), 640px);
+    max-width: clamp(240px, calc((100dvh - 76px) / 2.6), 640px);
   }
 
   body[data-chrome='toy'] .arena {
-    --stage-w: clamp(300px, calc((100dvh - 76px) / 2.4), 640px);
+    --stage-w: clamp(240px, calc((100dvh - 76px) / 2.6), 640px);
   }
 
   body[data-chrome='toy'] .arena[data-compact] {

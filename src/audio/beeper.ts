@@ -14,6 +14,12 @@ export const MASTER_GAIN = 0.14;
 export const MELODY_GAIN = 0.6;
 /** На сколько вперёд ставить мелодию в расписание, мс. */
 export const LOOKAHEAD_MS = 300;
+/**
+ * Сколько после жеста пользователя (`unlock`) эффекты ещё ставятся в расписание, пока браузер не «разбудил» контекст, мс.
+ * Без жеста (автоматическое интро при открытии страницы) контекст не создаётся и эффекты отбрасываются: иначе они копились бы
+ * в замороженном контексте и разом прозвучали бы по первому нажатию.
+ */
+export const GESTURE_GRACE_MS = 400;
 const FALLBACK_VOLUME = 0.5;
 
 // Минимальные структурные типы Web Audio: порт тестируется без браузера.
@@ -83,6 +89,7 @@ export class WebAudioPort implements AudioPort {
   private busyPriority = -1;
   private noise = 0x2545f491;
   private lastResume = Number.NEGATIVE_INFINITY;
+  private gestureAt = Number.NEGATIVE_INFINITY;
   private readonly melody = new MelodyPlayer();
   private readonly factory: () => AudioContextLike | null;
   private readonly clock: () => number;
@@ -116,14 +123,19 @@ export class WebAudioPort implements AudioPort {
 
   /** Создаёт и «будит» контекст; вызывается по жесту пользователя (политика автовоспроизведения браузеров). */
   unlock(): void {
+    this.gestureAt = this.clock();
     this.wake(this.ensure());
   }
 
   play(cue: AudioCue): void {
     if (this.muted) return;
+    const gesture = this.clock() - this.gestureAt <= GESTURE_GRACE_MS;
+    if (!this.context && !gesture) return; // жеста ещё не было: контекст не создаём (политика автовоспроизведения)
     const context = this.ensure();
     if (!context || !this.sfxBus) return;
     this.wake(context);
+    // Контекст приостановлен, а жеста нет: время в нём стоит, поставленный эффект зазвучал бы устаревшим при первом нажатии.
+    if (context.state !== 'running' && !gesture) return;
     const def = CUES[cue];
     const now = context.currentTime;
     if (now < this.busyUntil && def.priority < this.busyPriority) return;
