@@ -88,20 +88,20 @@
       "pitch": 50
     },
     "label": {
-      "x": 426,
-      "y": 27,
-      "pitch": 69,
+      "x": 397,
+      "y": 32,
+      "pitch": 133,
       "slots": 4
     },
     "score": {
-      "x": 1311,
-      "y": 27,
-      "pitch": 77,
+      "x": 1050,
+      "y": 32,
+      "pitch": 133,
       "slots": 5
     },
     "font": {
-      "width": 58,
-      "height": 94,
+      "width": 90,
+      "height": 118,
       "glyphs": {
         "0": "hud.digit.0",
         "1": "hud.digit.1",

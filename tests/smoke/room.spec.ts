@@ -223,6 +223,7 @@ test('геймпад (подставной) управляет той же иг�
 });
 
 test('рендер игры: цвета LCD-профиля владельца, препятствия и фигурка на своих клетках', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 }); // экран в корпусе мелкий: в 720 px по высоте клетки сглаживаются и порог доли чернил не держится
   await ready(page);
   await expect.poll(() => page.evaluate(() => document.getElementById('game-area')?.dataset['intro'] ?? ''), { timeout: 8000 }).toBe('off');
   const result = await page.evaluate(() => {
@@ -279,7 +280,7 @@ for (const n of [1, 2]) {
         img.src = `data:image/png;base64,${reference}`;
         await img.decode();
         if (img.width !== canvas.width || img.height !== canvas.height) {
-          return { size: `${canvas.width}×${canvas.height} против ${img.width}×${img.height}`, board: -1, hud: -1, total: 0 };
+          return { size: `${canvas.width}×${canvas.height} против ${img.width}×${img.height}`, board: -1, hud: null };
         }
         const mine = (canvas.getContext('2d') as CanvasRenderingContext2D).getImageData(0, 0, canvas.width, canvas.height).data;
         const scratch = document.createElement('canvas');
@@ -289,25 +290,47 @@ for (const n of [1, 2]) {
         sctx.drawImage(img, 0, 0);
         const theirs = sctx.getImageData(0, 0, img.width, img.height).data;
         let board = 0;
-        let hud = 0;
         for (let i = 0; i < mine.length; i += 4) {
+          if (Math.floor(i / 4 / canvas.width) < 154) continue; // строка HUD — отдельно, ниже
           const d = Math.max(
             Math.abs((mine[i] ?? 0) - (theirs[i] ?? 0)),
             Math.abs((mine[i + 1] ?? 0) - (theirs[i + 1] ?? 0)),
             Math.abs((mine[i + 2] ?? 0) - (theirs[i + 2] ?? 0)),
           );
-          if (d > 40) {
-            if (Math.floor(i / 4 / canvas.width) < 154) hud += 1;
-            else board += 1;
+          if (d > 40) board += 1;
+        }
+        // Счёт в строке HUD: рамка тёмных пикселей правее середины экрана (подпись и значки жизни — левее).
+        let minX = canvas.width;
+        let maxX = 0;
+        let minY = 154;
+        let maxY = 0;
+        for (let y = 0; y < 154; y++) {
+          for (let x = Math.floor(canvas.width * 0.55); x < canvas.width; x++) {
+            const at = (y * canvas.width + x) * 4;
+            if ((mine[at] ?? 255) < 100) {
+              minX = Math.min(minX, x);
+              maxX = Math.max(maxX, x);
+              minY = Math.min(minY, y);
+              maxY = Math.max(maxY, y);
+            }
           }
         }
-        return { size: '', board, hud, total: canvas.width * canvas.height };
+        return { size: '', board, hud: { width: maxX - minX + 1, height: maxY - minY + 1, right: canvas.width - maxX - 1, width1: canvas.width } };
       },
       { n, reference },
     );
     expect(diff.size).toBe(''); // размеры холста совпадают с эталоном (1728 × 864 / 1088)
     expect(diff.board).toBe(0); // игровое поле совпадает попиксельно
-    expect(diff.hud / diff.total).toBeLessThan(0.0025); // HUD — в пределах однопиксельных краёв символов
+    // Строка HUD подогнана не по эталонам, а по фото оригинала и записи со звуком (docs/video-observations.md §8): цифры крупнее,
+    // чем на эталонах (58 × 94). Счёт — пять цифр ≈ 36 % ширины экрана, цифра ≈ 14 % высоты; правый край — у правого поля.
+    expect(diff.hud).not.toBeNull();
+    const hud = diff.hud as { width: number; height: number; right: number; width1: number };
+    expect(hud.width / hud.width1).toBeGreaterThan(0.33);
+    expect(hud.width / hud.width1).toBeLessThan(0.39);
+    expect(hud.height).toBeGreaterThan(105); // эталонная цифра — 94
+    expect(hud.height).toBeLessThan(130);
+    expect(hud.right).toBeGreaterThan(20);
+    expect(hud.right).toBeLessThan(80);
   });
 }
 

@@ -43,6 +43,67 @@
         <p class="visually-hidden" id="sr-status" role="status"></p>
         <div class="toy" id="toy" data-shell="blue" data-power="on">
         <div class="lid" id="lid">
+          <svg class="lid__shell" viewBox="0 0 400 391" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="lid-body" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="140" y2="391">
+                <stop class="s-rim-hi" offset="0"/>
+                <stop class="s-rim" offset="0.2"/>
+                <stop class="s-rim-dark" offset="0.78"/>
+                <stop class="s-rim-lo" offset="1"/>
+              </linearGradient>
+              <linearGradient id="lid-gloss" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="260" y2="190">
+                <stop offset="0" stop-color="#fff" stop-opacity="0.34"/>
+                <stop offset="0.55" stop-color="#fff" stop-opacity="0.06"/>
+                <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="lid-rim" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="391">
+                <stop offset="0" stop-color="#fff" stop-opacity="0.7"/>
+                <stop offset="0.3" stop-color="#fff" stop-opacity="0.14"/>
+                <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
+                <stop offset="1" stop-color="#000" stop-opacity="0.4"/>
+              </linearGradient>
+              <linearGradient id="lid-plate" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="0" y2="372">
+                <stop class="s-face" offset="0"/>
+                <stop class="s-face-2" offset="1"/>
+              </linearGradient>
+              <linearGradient id="lid-plate-gloss" gradientUnits="userSpaceOnUse" x1="20" y1="20" x2="260" y2="200">
+                <stop offset="0" stop-color="#fff" stop-opacity="0.5"/>
+                <stop offset="0.6" stop-color="#fff" stop-opacity="0"/>
+              </linearGradient>
+              <clipPath id="lid-clip"><path d="M14,391 L128,391 L128,372 L272,372 L272,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z"/></clipPath>
+              <clipPath id="lid-clip-closed"><path d="M14,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z"/></clipPath>
+              <filter id="lid-inset" x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+                <feFlood flood-color="#000" flood-opacity="0.38" result="dark"/>
+                <feComposite in="dark" in2="SourceAlpha" operator="out" result="outside"/>
+                <feOffset in="outside" dx="1.4" dy="3" result="shifted"/>
+                <feGaussianBlur in="shifted" stdDeviation="2.2" result="soft"/>
+                <feComposite in="soft" in2="SourceAlpha" operator="in" result="shadow"/>
+                <feFlood flood-color="#fff" flood-opacity="0.55" result="light"/>
+                <feComposite in="light" in2="SourceAlpha" operator="out" result="outsideLight"/>
+                <feOffset in="outsideLight" dx="-1.2" dy="-2" result="shiftedLight"/>
+                <feGaussianBlur in="shiftedLight" stdDeviation="1.6" result="softLight"/>
+                <feComposite in="softLight" in2="SourceAlpha" operator="in" result="glow"/>
+                <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/><feMergeNode in="glow"/></feMerge>
+              </filter>
+            </defs>
+            <!-- Корпус крышки: верхняя кромка с заострением по центру (на фото жёлтого корпуса), между «ушами» шарнира — вырез. -->
+            <g class="lid__open">
+              <path class="lid__body" d="M14,391 L128,391 L128,372 L272,372 L272,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z" fill="url(#lid-body)"/>
+              <path d="M14,391 L128,391 L128,372 L272,372 L272,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z" fill="url(#lid-gloss)"/>
+              <path d="M14,391 L128,391 L128,372 L272,372 L272,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z" fill="none" stroke="url(#lid-rim)" stroke-width="7" clip-path="url(#lid-clip)"/>
+            </g>
+            <g class="lid__closed">
+              <path d="M14,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z" fill="url(#lid-body)"/>
+              <path d="M14,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z" fill="url(#lid-gloss)"/>
+              <path d="M14,391 L386,391 Q400,391 400,377 L400,72 C400,43 383,29 358,27 L228,10 L222,5.5 Q200,3 178,5.5 L172,10 L42,27 C17,29 0,43 0,72 L0,377 Q0,391 14,391 Z" fill="none" stroke="url(#lid-rim)" stroke-width="7" clip-path="url(#lid-clip-closed)"/>
+            </g>
+            <!-- Лицевая панель утоплена в рамку: тёмный зазор, светлая фаска рамки, тень от кромки внутри; верх панели тоже с заострением. -->
+            <path class="lid__lip" d="M45.6,371.7 L354.4,371.7 Q382.4,371.7 382.4,343.7 L382.4,86 C382.4,62 370,45 351,42 L225,24 Q200,19 175,24 L49,42 C30,45 17.6,62 17.6,86 L17.6,343.7 Q17.6,371.7 45.6,371.7 Z" fill="none" stroke-width="8.6"/>
+            <path class="lid__chamfer" d="M45.6,371.7 L354.4,371.7 Q382.4,371.7 382.4,343.7 L382.4,86 C382.4,62 370,45 351,42 L225,24 Q200,19 175,24 L49,42 C30,45 17.6,62 17.6,86 L17.6,343.7 Q17.6,371.7 45.6,371.7 Z" fill="none" stroke-width="6.8"/>
+            <path class="lid__gap" d="M45.6,371.7 L354.4,371.7 Q382.4,371.7 382.4,343.7 L382.4,86 C382.4,62 370,45 351,42 L225,24 Q200,19 175,24 L49,42 C30,45 17.6,62 17.6,86 L17.6,343.7 Q17.6,371.7 45.6,371.7 Z" fill="none" stroke-width="2.4"/>
+            <path d="M45.6,371.7 L354.4,371.7 Q382.4,371.7 382.4,343.7 L382.4,86 C382.4,62 370,45 351,42 L225,24 Q200,19 175,24 L49,42 C30,45 17.6,62 17.6,86 L17.6,343.7 Q17.6,371.7 45.6,371.7 Z" fill="url(#lid-plate)" filter="url(#lid-inset)"/>
+            <path d="M45.6,371.7 L354.4,371.7 Q382.4,371.7 382.4,343.7 L382.4,86 C382.4,62 370,45 351,42 L225,24 Q200,19 175,24 L49,42 C30,45 17.6,62 17.6,86 L17.6,343.7 Q17.6,371.7 45.6,371.7 Z" fill="url(#lid-plate-gloss)"/>
+          </svg>
           <div class="lid__face">
             <i class="lid__screw lid__screw--tl" aria-hidden="true"></i>
             <i class="lid__screw lid__screw--tr" aria-hidden="true"></i>
@@ -98,17 +159,38 @@
         <div class="toy__hinge" aria-hidden="true"><i class="toy__knuckle"></i><i class="toy__band"></i><i class="toy__knuckle"></i></div>
 
         <div class="base" id="base" role="group" aria-label="Кнопки игрушки">
-      <svg class="base__art" viewBox="0 0 400 530" aria-hidden="true" focusable="false">
+      <svg class="base__art" viewBox="0 0 400 620" aria-hidden="true" focusable="false">
         <defs>
           <radialGradient id="dish" cx="50%" cy="45%" r="55%">
             <stop offset="0" stop-color="#000" stop-opacity="0"/>
-            <stop offset="0.82" stop-color="#000" stop-opacity="0.05"/>
-            <stop offset="1" stop-color="#000" stop-opacity="0.16"/>
+            <stop offset="0.82" stop-color="#000" stop-opacity="0.06"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0.2"/>
+          </radialGradient>
+          <radialGradient id="dimple" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#000" stop-opacity="0"/>
+            <stop offset="0.72" stop-color="#000" stop-opacity="0.07"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0.24"/>
           </radialGradient>
           <linearGradient id="cover" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#000" stop-opacity="0.2"/>
-            <stop offset="0.12" stop-color="#000" stop-opacity="0.07"/>
-            <stop offset="1" stop-color="#000" stop-opacity="0.1"/>
+            <stop offset="0" stop-color="#000" stop-opacity="0.26"/>
+            <stop offset="0.07" stop-color="#000" stop-opacity="0.1"/>
+            <stop offset="0.5" stop-color="#000" stop-opacity="0.06"/>
+            <stop offset="1" stop-color="#000" stop-opacity="0.2"/>
+          </linearGradient>
+          <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity="0.2"/>
+            <stop offset="0.45" stop-color="#fff" stop-opacity="0.04"/>
+            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="keyg" x1="0.1" y1="0" x2="0.9" y2="1">
+            <stop class="ks-hi" offset="0"/>
+            <stop class="ks-mid" offset="0.5"/>
+            <stop class="ks-lo" offset="1"/>
+          </linearGradient>
+          <linearGradient id="concave" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#000" stop-opacity="0.3"/>
+            <stop offset="0.55" stop-color="#000" stop-opacity="0.04"/>
+            <stop offset="1" stop-color="#fff" stop-opacity="0.45"/>
           </linearGradient>
         </defs>
         <path id="arc-onoff" d="M37 52 Q68 34 99 52" fill="none"/><text class="base__label"><textPath href="#arc-onoff" startOffset="50%" text-anchor="middle">ON/OFF</textPath></text>
@@ -116,12 +198,33 @@
         <path id="arc-sound" d="M209 52 Q240 34 271 52" fill="none"/><text class="base__label"><textPath href="#arc-sound" startOffset="50%" text-anchor="middle">SOUND</textPath></text>
         <path id="arc-fire" d="M293 52 Q324 34 355 52" fill="none"/><text class="base__label"><textPath href="#arc-fire" startOffset="50%" text-anchor="middle">FIRE</textPath></text>
         <circle class="base__led" cx="60" cy="128" r="2.4"/>
-        <text class="base__label" x="110" y="143" text-anchor="middle">UP</text>
+        <text class="base__label" x="110" y="137" text-anchor="middle">UP</text>
         <text class="base__label" x="28" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 28 218)">LEFT</text>
         <text class="base__label" x="192" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 192 218)">RIGHT</text>
         <text class="base__label" x="110" y="306" text-anchor="middle">DOWN</text>
-        <text class="base__label" x="292" y="146" text-anchor="middle">JUMP</text>
+        <text class="base__label" x="292" y="138" text-anchor="middle">JUMP</text>
+        <g class="base__dimples">
+        <circle cx="68" cy="74" r="27.5" fill="url(#dimple)"/>
+        <circle class="base__rim-lo" cx="67.4" cy="73.1" r="27.5"/>
+        <circle class="base__rim-hi" cx="68.6" cy="75" r="27.9"/>
+        <circle cx="152" cy="74" r="27.5" fill="url(#dimple)"/>
+        <circle class="base__rim-lo" cx="151.4" cy="73.1" r="27.5"/>
+        <circle class="base__rim-hi" cx="152.6" cy="75" r="27.9"/>
+        <circle cx="240" cy="74" r="27.5" fill="url(#dimple)"/>
+        <circle class="base__rim-lo" cx="239.4" cy="73.1" r="27.5"/>
+        <circle class="base__rim-hi" cx="240.6" cy="75" r="27.9"/>
+        <circle cx="324" cy="74" r="27.5" fill="url(#dimple)"/>
+        <circle class="base__rim-lo" cx="323.4" cy="73.1" r="27.5"/>
+        <circle class="base__rim-hi" cx="324.6" cy="75" r="27.9"/>
+        <g class="base__bowl">
+          <circle cx="292" cy="198" r="51" fill="url(#dimple)"/>
+          <circle class="base__rim-lo" cx="291.4" cy="197.1" r="51"/>
+          <circle class="base__rim-hi" cx="292.6" cy="199" r="51.4"/>
+        </g>
+        </g>
         <circle cx="110" cy="218" r="98" fill="url(#dish)"/>
+        <circle class="base__rim-lo" cx="109.4" cy="217" r="98"/>
+        <circle class="base__rim-hi" cx="110.6" cy="219" r="98.4"/>
         <g class="base__speaker">
         <circle cx="92.0" cy="324" r="2.9"/>
         <circle cx="110.0" cy="324" r="2.9"/>
@@ -174,28 +277,30 @@
         <circle cx="281.0" cy="363" r="2.9"/>
         <circle cx="299.0" cy="363" r="2.9"/>
         </g>
-        <path class="base__cover" d="M0 384 Q200 408 400 384 L400 530 L0 530 Z" fill="url(#cover)"/>
-        <path class="base__seam" d="M0 384 Q200 408 400 384" fill="none"/>
+        <path class="base__cover" d="M0 366 Q200 394 400 366 L400 620 L0 620 Z" fill="url(#cover)"/>
+        <path class="base__cover" d="M0 366 Q200 394 400 366 L400 620 L0 620 Z" fill="url(#sheen)"/>
+        <path class="base__seam-lo" d="M0 369 Q200 397 400 369" fill="none"/>
+        <path class="base__seam" d="M0 366 Q200 394 400 366" fill="none"/>
       </svg>
-      <button type="button" class="key key--round" data-key="onoff" tabindex="-1" aria-label="ON/OFF — включить или выключить" style="--x:68;--y:74;--w:36"></button>
-      <button type="button" class="key key--round" data-key="sp" tabindex="-1" aria-label="S./P. — старт и пауза" style="--x:152;--y:74;--w:36"></button>
-      <button type="button" class="key key--round" data-key="sound" tabindex="-1" aria-label="SOUND — звук" style="--x:240;--y:74;--w:36"></button>
-      <button type="button" class="key key--round" data-key="fire" tabindex="-1" aria-label="FIRE — огонь" style="--x:324;--y:74;--w:36"></button>
+      <button type="button" class="key key--round" data-key="onoff" tabindex="-1" aria-label="ON/OFF — включить или выключить" style="--x:68;--y:74;--w:39"></button>
+      <button type="button" class="key key--round" data-key="sp" tabindex="-1" aria-label="S./P. — старт и пауза" style="--x:152;--y:74;--w:39"></button>
+      <button type="button" class="key key--round" data-key="sound" tabindex="-1" aria-label="SOUND — звук" style="--x:240;--y:74;--w:39"></button>
+      <button type="button" class="key key--round" data-key="fire" tabindex="-1" aria-label="FIRE — огонь" style="--x:324;--y:74;--w:39"></button>
 
-      <button type="button" class="key key--pad key--up" data-key="up" tabindex="-1" aria-label="UP — вверх" style="--x:110;--y:170;--w:40">
+      <button type="button" class="key key--pad key--up" data-key="up" tabindex="-1" aria-label="UP — вверх" style="--x:110;--y:170;--w:48">
         <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 4 36 18v16H4V18Z"/><circle class="key__dish" cx="20" cy="22" r="8.5"/></svg>
       </button>
-      <button type="button" class="key key--pad" data-key="left" tabindex="-1" aria-label="LEFT — влево" style="--x:62;--y:218;--w:40">
+      <button type="button" class="key key--pad" data-key="left" tabindex="-1" aria-label="LEFT — влево" style="--x:62;--y:218;--w:48">
         <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 3 37 20 20 37 3 20Z"/><circle class="key__dish" cx="20" cy="20" r="8.5"/></svg>
       </button>
-      <button type="button" class="key key--pad" data-key="right" tabindex="-1" aria-label="RIGHT — вправо" style="--x:158;--y:218;--w:40">
+      <button type="button" class="key key--pad" data-key="right" tabindex="-1" aria-label="RIGHT — вправо" style="--x:158;--y:218;--w:48">
         <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 3 37 20 20 37 3 20Z"/><circle class="key__dish" cx="20" cy="20" r="8.5"/></svg>
       </button>
-      <button type="button" class="key key--pad" data-key="down" tabindex="-1" aria-label="DOWN — вниз" style="--x:110;--y:266;--w:40">
+      <button type="button" class="key key--pad" data-key="down" tabindex="-1" aria-label="DOWN — вниз" style="--x:110;--y:266;--w:48">
         <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="key__shape" d="M20 3 37 20 20 37 3 20Z"/><circle class="key__dish" cx="20" cy="20" r="8.5"/></svg>
       </button>
 
-      <button type="button" class="key key--jump" data-key="jump" tabindex="-1" aria-label="JUMP — прыжок" style="--x:292;--y:198;--w:80">
+      <button type="button" class="key key--jump" data-key="jump" tabindex="-1" aria-label="JUMP — прыжок" style="--x:292;--y:198;--w:86">
         <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
           <circle class="key__cap" cx="40" cy="40" r="38"/>
           <g class="key__ring">
