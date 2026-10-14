@@ -2,6 +2,7 @@ import type { AnimationsDef, CellPos, LevelDef } from '../content/schema';
 import { nextRandom } from '../core/rng';
 import type { GameContext } from '../core/sim';
 import type { GameEvent, GameState } from '../core/state';
+import { bannerCells } from './banner';
 
 /**
  * Презентационные эффекты по наблюдениям видео (docs/video-observations.md): отскок перекладины при ударе головой
@@ -162,6 +163,7 @@ export class LevelEffects {
   private introStart = 0;
   private bumps: BumpRecord[] = [];
   private secretTick: number | null = null;
+  private gameOverTick: number | null = null;
   private readonly orders = new Map<string, number[]>();
   private readonly animations: AnimationsDef | null;
   private readonly options: EffectsOptions;
@@ -176,6 +178,9 @@ export class LevelEffects {
       this.introStart = event.tick;
       this.bumps = [];
       this.secretTick = null;
+      this.gameOverTick = null;
+    } else if (event.type === 'gameOver') {
+      this.gameOverTick = event.tick;
     } else if (event.type === 'secretLives') {
       this.secretTick = event.tick;
     } else if (event.type === 'bump' && this.animations?.bump) {
@@ -205,10 +210,25 @@ export class LevelEffects {
   }
 
   private sceneFrame(state: GameState, level: LevelDef): EffectsFrame {
+    if (state.phase === 'gameOver') return this.gameOverFrame(state, level);
     const intro = this.introFrame(state, level);
     if (intro) return intro;
     const extra = this.bumpFrame(state, level);
     return extra.length === 0 ? NO_EFFECTS : { ...NO_EFFECTS, extra };
+  }
+
+  /** Конец игры: поле пустеет, и по нему плывёт надпись «GAME OVER» из блоков (презентация, как в оригинале). */
+  private gameOverFrame(state: GameState, level: LevelDef): EffectsFrame {
+    const asset = fillAssetOf(level);
+    const dt = state.tick - (this.gameOverTick ?? state.tick);
+    const cells = asset ? bannerCells(dt, this.options.viewport) : [];
+    return {
+      ...NO_EFFECTS,
+      hiddenTiles: 'all',
+      objects: false,
+      hero: 'hidden',
+      fill: asset ? { asset, cells } : null,
+    };
   }
 
   /** Мигание значков жизни после секрета: фаза «погашены» чередуется с «горят», начиная с погашенных. */

@@ -106,6 +106,14 @@ export class HelpDialog {
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.how.h')), h('p', { class: 'help__text' }, ...rich(t('help.how.p')))),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.keys.h')), table),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t('help.pointer.p'))),
+      h(
+        'section',
+        { class: 'settings__section help__orig', id: 'original-device' },
+        h('h3', {}, t('help.orig.h')),
+        ...(['help.orig.pick', 'help.orig.tetris', 'help.orig.shooting', 'help.orig.special', 'help.orig.cheat'] as const).map((key) =>
+          h('p', { class: 'help__text help__text--orig' }, ...rich(t(key))),
+        ),
+      ),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.about.h')), h('p', { class: 'help__text' }, t('help.about.p'))),
       h('div', { class: 'settings__row settings__row--end' }, close),
     );

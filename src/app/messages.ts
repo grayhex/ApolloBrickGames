@@ -35,8 +35,6 @@ const RU = {
   // ── Левая панель: справка по упаковке оригинала ─────────────────────────
   'info.title': 'Об игре',
   'info.journey.h': 'Путешествие Марио',
-  'info.journey.p':
-    'Электронная LCD-игра Apollo: на одном устройстве три игры — **MARIO** (9 уровней), **TETRIS** (99) и **SHOOTING** (1). Здесь — режим MARIO.',
   'info.facts.aria': 'Правила по упаковке',
   'info.facts.lives': 'жизни',
   'info.facts.seconds': 'секунд',
@@ -48,21 +46,20 @@ const RU = {
   'info.keys.startPause': 'Старт и пауза',
   'info.keys.power': 'Питание',
   'info.keys.sound': 'Звук',
-  'info.pad': 'Геймпад: крестовина или стик — шаги, нижняя кнопка — прыжок, левая — огонь, Start — пауза.',
   'info.figs.h': 'Фигуры и враги',
   'info.figs.aria': 'Фигуры с упаковки',
-  'info.fig.mario': 'Марио',
-  'info.fig.heart': 'Сердце',
-  'info.fig.smallDevil': 'Малый чёрт',
-  'info.fig.bigDevil': 'Большой чёрт',
-  'info.fig.missile': 'Ракета',
-  'info.fig.dragon': 'Огненный дракон',
-  'info.fig.bullet': 'Пуля',
-  'info.fig.gate': 'Железные ворота',
-  'info.fig.bridge': 'Выдвижной мост',
-  'info.fig.sewer': 'Колодец',
-  'info.fig.volcano': 'Вулкан',
-  'info.fig.tetris': 'Тетрис',
+  'info.fig.mario': 'Mario',
+  'info.fig.heart': 'Heart',
+  'info.fig.smallDevil': 'Small devil',
+  'info.fig.bigDevil': 'Big devil',
+  'info.fig.missile': 'Missile',
+  'info.fig.dragon': 'Fiery dragon',
+  'info.fig.bullet': 'Bullet',
+  'info.fig.gate': 'Iron gate',
+  'info.fig.bridge': 'Extension bridge',
+  'info.fig.sewer': 'Sewer',
+  'info.fig.volcano': 'Volcano',
+  'info.fig.tetris': 'Tetris',
   'info.score.h': 'Очки',
   'info.way.eat': 'съесть',
   'info.way.trample': 'растоптать',
@@ -70,24 +67,22 @@ const RU = {
   'info.lose.h': 'Жизнь теряется',
   'info.lose.aria': 'Опасности',
   'info.lose.river': 'падение в реку',
-  'info.lose.devil': 'чёрт съедает',
-  'info.lose.dragon': 'огненный дракон',
-  'info.lose.missile': 'ракета',
-  'info.lose.gate': 'железные ворота',
+  'info.lose.devil': 'Devil съедает',
+  'info.lose.dragon': 'Fiery dragon',
+  'info.lose.missile': 'Missile',
+  'info.lose.gate': 'Iron gate',
   'info.over': 'Игра заканчивается, когда потеряны 4 жизни или вышло время (400 секунд).',
-  'info.orig.h': 'Оригинальное устройство',
-  'info.orig.pick':
+  'help.orig.h': 'Оригинальное устройство',
+  'help.orig.pick':
     '**Выбор игры до старта:** UP и RIGHT — следующая игра и номер, DOWN и LEFT — предыдущая, JUMP — следующий тип игры.',
-  'info.orig.tetris':
+  'help.orig.tetris':
     '**TETRIS (99 игр):** UP и DOWN — вверх и вниз, LEFT и RIGHT — быстро двигать, JUMP — повернуть фигуру. Очки: 1 ряд — 10, 2 — 30, 3 — 70, 4 — 150. Чем выше уровень, тем быстрее.',
-  'info.orig.shooting':
+  'help.orig.shooting':
     '**SHOOTING (1):** FIRE и JUMP — огонь, UP и DOWN — вверх и вниз. Каждое уничтожение — 100 очков, за 1000 очков уровень растёт. 4 жизни, 400 секунд.',
-  'info.orig.special':
+  'help.orig.special':
     '**Особые функции:** после включения сама показывается демонстрация игр; питание выключается само, если 3 минуты не нажимать кнопки.',
-  'info.orig.cheat':
+  'help.orig.cheat':
     '**Секрет:** если нажать LEFT и DOWN вместе до того, как Марио выпрыгнет из колодца (в SHOOTING — до старта), будет 200 жизней вместо 4.',
-  'info.note':
-    'Данные — с упаковки оригинала. Правила в этой версии приблизительные и уточняются; TETRIS и SHOOTING, демонстрация при включении и автоотключение в проект пока не входят; 4 жизни, таймер, растаптывание малого чёрта и секрет с 200 жизнями — входят.',
 
   // ── Правая панель: пульт ────────────────────────────────────────────────
   'ctl.title': 'Пульт',
@@ -225,8 +220,6 @@ const EN: Record<MsgKey, string> = {
 
   'info.title': 'About the game',
   'info.journey.h': `Mario's breathtaking journey`,
-  'info.journey.p':
-    'An Apollo electronic LCD game: three games on one device — **MARIO** (9 levels), **TETRIS** (99) and **SHOOTING** (1). This page plays MARIO.',
   'info.facts.aria': 'Rules from the packaging',
   'info.facts.lives': 'lives',
   'info.facts.seconds': 'seconds',
@@ -238,7 +231,6 @@ const EN: Record<MsgKey, string> = {
   'info.keys.startPause': 'Start & pause',
   'info.keys.power': 'Power',
   'info.keys.sound': 'Sound',
-  'info.pad': 'Gamepad: D-pad or stick — move, bottom button — jump, left button — fire, Start — pause.',
   'info.figs.h': 'Figures and enemies',
   'info.figs.aria': 'Figures from the packaging',
   'info.fig.mario': 'Mario',
@@ -265,19 +257,17 @@ const EN: Record<MsgKey, string> = {
   'info.lose.missile': 'a missile hits you',
   'info.lose.gate': 'the iron gate crushes you',
   'info.over': 'The game ends when all 4 lives are lost or the time (400 seconds) runs out.',
-  'info.orig.h': 'The original device',
-  'info.orig.pick':
+  'help.orig.h': 'The original device',
+  'help.orig.pick':
     '**Choosing a game before the start:** UP and RIGHT — next game and number, DOWN and LEFT — previous one, JUMP — next game type.',
-  'info.orig.tetris':
+  'help.orig.tetris':
     '**TETRIS (99 games):** UP and DOWN — move up and down, LEFT and RIGHT — move rapidly, JUMP — rotate the bricks. Rows: 1 — 10, 2 — 30, 3 — 70, 4 — 150 points. The higher the level, the faster it goes.',
-  'info.orig.shooting':
+  'help.orig.shooting':
     '**SHOOTING (1):** FIRE and JUMP — fire, UP and DOWN — move up and down. Every destruction is worth 100 points; 1000 points raise the level. 4 lives, 400 seconds.',
-  'info.orig.special':
+  'help.orig.special':
     '**Special functions:** after power-on a demo of the games plays by itself; the power switches off if no button is pressed for 3 minutes.',
-  'info.orig.cheat':
+  'help.orig.cheat':
     '**Secret:** press LEFT and DOWN together before Mario jumps out of the well (in SHOOTING — before the start) to get 200 lives instead of 4.',
-  'info.note':
-    'The data come from the original packaging. The rules in this version are approximate and still being refined; TETRIS and SHOOTING, the power-on demo and auto power-off are not included yet; the 4 lives, the timer, stomping the small devil and the 200-lives secret are.',
 
   'ctl.title': 'Control panel',
   'dev.aria': 'Input device',

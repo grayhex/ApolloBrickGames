@@ -575,33 +575,6 @@ body {
   filter: brightness(0.82);
 }
 
-/* Пока контакт потерян, светодиоды над экраном мигают. */
-@keyframes led-flicker {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  30% {
-    opacity: 0.22;
-  }
-  55% {
-    opacity: 0.85;
-  }
-  78% {
-    opacity: 0.32;
-  }
-}
-
-.toy[data-glitch] .lid__leds .led {
-  animation: led-flicker 0.34s steps(1, end) infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .toy[data-glitch] .lid__leds .led {
-    animation: none;
-  }
-}
-
 /* Чёрный шлейф между втулками: изношенная лента — трещины и складки, на краях выбелены потёртости. Верх — плоская пластина разъёма. */
 .toy__band {
   position: relative;
@@ -979,13 +952,15 @@ body[data-chrome='toy'] .arena[data-compact] {
 
 body[data-chrome='toy'] .arena {
   --side-w: clamp(220px, 18vw, 280px);
+  /* Левая справка шире и компактнее по высоте: вся помещается в окне без прокрутки. */
+  --info-w: clamp(260px, 21vw, 340px);
   /* Минимальный просвет между панелью и игрушкой; остальное свободное место уходит в просвет, и панели прижимаются к краям окна. */
   --arena-gap: clamp(32px, 4vw, 64px);
   --stage-w: clamp(240px, calc((100dvh - 24px) / 2.6), 640px);
   display: grid;
   grid-template-columns:
-    var(--side-w)
-    minmax(0, min(var(--stage-w), calc(100% - 2 * var(--side-w) - 2 * var(--arena-gap))))
+    var(--info-w)
+    minmax(0, min(var(--stage-w), calc(100% - var(--info-w) - var(--side-w) - 2 * var(--arena-gap))))
     var(--side-w);
   justify-content: space-between;
   align-items: center;
@@ -1078,30 +1053,6 @@ body:not([data-chrome='toy']) .side {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.5;
-}
-
-.side__note {
-  margin: 0;
-  font-size: 0.7rem;
-  line-height: 1.45;
-  color: var(--muted);
-}
-
-.side__pad {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: var(--muted);
-}
-
-.side__pad .icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  color: var(--text);
 }
 
 .side__link {
@@ -1658,28 +1609,21 @@ body:not([data-chrome='toy']) .side {
 }
 
 .score__row {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px 6px 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 10px;
+  padding: 5px 10px;
   background: var(--chip);
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 9px;
 }
 
-.score__fig {
-  display: grid;
-  grid-template-columns: repeat(var(--fig-cols, 1), max-content);
-  align-content: center;
-  justify-content: center;
-  height: 34px;
-  padding: 2px;
-  color: var(--lcd-ink);
-  background: var(--lcd);
-  border-radius: 7px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.14);
-  filter: var(--lcd-dim);
+.score__ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
 }
 
 /* Ячейка LCD из листа спрайтов игры (public/graphics/lcd); размеры и сдвиг задаёт TypeScript через --spr-*. */
@@ -1691,35 +1635,29 @@ body:not([data-chrome='toy']) .side {
   image-rendering: pixelated;
 }
 
-.score__what {
-  display: grid;
-  gap: 2px;
-}
-
 .score__name {
   font: 800 0.78rem/1.15 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 .score__way {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 5px;
   font-size: 0.68rem;
   line-height: 1.2;
   color: var(--muted);
 }
 
 .score__way b {
-  font: 800 0.85rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font: 800 0.8rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: var(--text);
 }
 
 /* «Figure introduction» с упаковки: фигурки из тех же LCD-ячеек, что рисует игра, с подписями. */
 .figs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1727,10 +1665,10 @@ body:not([data-chrome='toy']) .side {
 
 .fig {
   display: grid;
-  grid-template-rows: 40px auto;
-  gap: 4px;
+  grid-template-rows: 34px auto;
+  gap: 3px;
   min-width: 0;
-  padding: 5px 4px 6px;
+  padding: 4px 3px 4px;
   background: var(--chip);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -1741,7 +1679,7 @@ body:not([data-chrome='toy']) .side {
   grid-template-columns: repeat(var(--fig-cols, 1), max-content);
   align-content: center;
   justify-content: center;
-  height: 40px;
+  height: 34px;
   color: var(--lcd-ink);
   background: var(--lcd);
   border-radius: 6px;
@@ -1764,8 +1702,8 @@ body:not([data-chrome='toy']) .side {
 }
 
 .fig__name {
-  font-size: 0.6rem;
-  line-height: 1.15;
+  font-size: 0.56rem;
+  line-height: 1.1;
   text-align: center;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -1773,41 +1711,6 @@ body:not([data-chrome='toy']) .side {
 
 .side__text--over {
   margin: 2px 0 0;
-}
-
-/* Сведения об оригинальном устройстве: свёрнуты, пока не раскрыть. */
-.orig {
-  display: grid;
-  gap: 6px;
-  padding: 8px 10px;
-  background: var(--chip);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-}
-
-.orig__sum {
-  cursor: pointer;
-  font: 800 0.66rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.orig__sum:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-.orig__p {
-  margin: 6px 0 0;
-  font-size: 0.7rem;
-  line-height: 1.45;
-  color: var(--muted);
-}
-
-.orig__p b {
-  color: var(--text);
 }
 
 .hazards {
@@ -1828,42 +1731,60 @@ body:not([data-chrome='toy']) .side {
   border-radius: 999px;
 }
 
-/* Невысокое окно: левая панель уплотняется, чтобы справка помещалась почти целиком (остальное — прокруткой панели). */
+/* Невысокое окно: левая панель уплотняется, чтобы справка целиком помещалась без прокрутки. */
 @media (max-height: 960px) {
   .side {
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px 12px;
   }
 
   .side__sec {
-    gap: 6px;
-    padding-top: 10px;
+    gap: 5px;
+    padding-top: 8px;
   }
 
   .about__sticker {
-    width: 62%;
+    width: 54%;
     margin: 0 auto;
-    padding: 6px 10px;
+    padding: 4px 10px;
   }
 
   .facts li {
-    padding: 5px 4px;
+    padding: 4px 4px;
   }
 
   .facts b {
-    font-size: 1.1rem;
+    font-size: 1rem;
+  }
+
+  .keys__row {
+    padding: 3px 0;
   }
 }
 
-@media (max-height: 900px) {
+@media (max-height: 860px) {
   .side__text {
     display: none;
   }
+
+  .hazard {
+    padding: 2px 7px;
+    font-size: 0.64rem;
+  }
 }
 
-@media (max-height: 760px) {
-  .side__note {
+@media (max-height: 800px) {
+  .about__sticker,
+  .side__sec--facts {
     display: none;
+  }
+
+  .fig {
+    grid-template-rows: 28px auto;
+  }
+
+  .fig__box {
+    height: 28px;
   }
 }
 
@@ -2245,6 +2166,16 @@ input:focus-visible {
 .help__text {
   margin: 0;
   line-height: 1.5;
+}
+
+/* «Оригинальное устройство» в справке: короткие абзацы с жирным лидом. */
+.help__text--orig {
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.help__text--orig b {
+  color: var(--text);
 }
 
 .help__table th {
