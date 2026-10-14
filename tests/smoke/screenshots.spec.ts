@@ -171,3 +171,17 @@ test.describe('редактор уровней', () => {
   });
 });
 
+test.describe('телефон: игрушка во всю ширину экрана', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+
+  test('phone-toy: игра идёт, экран и все кнопки в окне', async ({ page }) => {
+    mkdirSync(dir, { recursive: true });
+    await page.goto('./?power=on');
+    await page.waitForSelector('#game-area[data-phase="ready"]');
+    await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('#game-area[data-entry="off"]', { timeout: 8000 });
+    await page.screenshot({ path: `${dir}/phone-toy.png` });
+  });
+});
+

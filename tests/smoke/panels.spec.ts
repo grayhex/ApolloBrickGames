@@ -428,7 +428,7 @@ test('значок устройства: клавиатура всегда, ге
   await expect(gamepad).toBeHidden();
 });
 
-test('узкий экран: игрушка целиком сверху, панели под ней, горизонтальной прокрутки нет', async ({ page }) => {
+test('узкий экран: игрушка сверху во всю ширину, панели под ней, горизонтальной прокрутки нет', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await ready(page);
   const m = await page.evaluate(() => {
@@ -442,7 +442,7 @@ test('узкий экран: игрушка целиком сверху, пан�
       scrollW: document.documentElement.scrollWidth,
     };
   });
-  expect(m.toy.bottom).toBeLessThanOrEqual(m.innerH + 1); // игрушка по-прежнему целиком в окне
+  expect(m.toy.width).toBeGreaterThanOrEqual(m.vw * 0.94); // оригинальная игрушка масштабируется на всю ширину экрана; подбородок ниже окна
   expect(m.ctl.top).toBeGreaterThanOrEqual(m.toy.bottom - 1);
   expect(m.info.top).toBeGreaterThanOrEqual(m.ctl.bottom - 1);
   expect(m.ctl.right).toBeLessThanOrEqual(m.vw + 1);

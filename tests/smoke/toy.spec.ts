@@ -42,7 +42,7 @@ for (const size of [
   { width: 1920, height: 1080 },
   { width: 390, height: 844 },
 ]) {
-  test(`игрушка целиком помещается в окно ${size.width}×${size.height} без прокрутки; логотип крупно по центру нижней части`, async ({ page }) => {
+  test(`игрушка ${size.width >= 900 ? 'целиком помещается в окно' : 'на телефоне крупнее окна по высоте'} ${size.width}×${size.height}; логотип крупно по центру нижней части`, async ({ page }) => {
     await page.setViewportSize(size);
     await ready(page);
     const m = await page.evaluate(() => {
@@ -68,7 +68,9 @@ for (const size of [
     if (size.width >= 900) expect(m.scrollH).toBeLessThanOrEqual(m.innerH + 1);
     expect(m.scrollW).toBeLessThanOrEqual(m.vw + 1); // горизонтальной прокрутки нет нигде
     expect(m.toy.top).toBeGreaterThanOrEqual(-1);
-    expect(m.toy.bottom).toBeLessThanOrEqual(m.innerH + 1);
+    // На телефоне игрушка крупнее окна по высоте (на всю ширину; подбородок с логотипом ниже, до него страница прокручивается) —
+    // что видно без прокрутки, проверяет тест «телефон» ниже.
+    if (size.width >= 900) expect(m.toy.bottom).toBeLessThanOrEqual(m.innerH + 1);
     expect(m.toy.left).toBeGreaterThanOrEqual(0);
     expect(m.toy.right).toBeLessThanOrEqual(m.vw);
     // Логотип (на синем корпусе — белая печать) — внутри нижней половины, занимает почти всю её ширину, по центру.
@@ -79,6 +81,55 @@ for (const size of [
     expect(m.logo.bottom).toBeLessThanOrEqual(m.base.bottom);
     // Уголок не наезжает на игрушку на узком экране.
     if (size.width < 640) expect(m.corner.bottom).toBeLessThanOrEqual(m.toy.top + 1);
+  });
+}
+
+/**
+ * Телефон: оригинальная игрушка масштабируется на всю ширину экрана (без отдельных кнопок): экран и все девять кнопок помещаются в окно без прокрутки
+ * (с запасом снизу под плавающую панель браузера), а нижний «подбородок» уходит за край. Если окно низкое и в ширину не влезает — ширина по высоте.
+ */
+for (const size of [
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 360, height: 740 },
+  { width: 375, height: 667 },
+]) {
+  test(`телефон ${size.width}×${size.height}: игрушка максимально крупно, экран и все кнопки в окне без прокрутки`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await ready(page);
+    const m = await page.evaluate(() => {
+      const rect = (el: Element): DOMRect => el.getBoundingClientRect();
+      const toy = rect(document.getElementById('toy') as HTMLElement);
+      const lcd = rect(document.getElementById('lcd-window') as HTMLElement);
+      const keys = [...document.querySelectorAll('[data-key]')].map((k) => rect(k));
+      return {
+        toy: { left: toy.left, right: toy.right, width: toy.width },
+        lcd: { top: lcd.top, bottom: lcd.bottom },
+        keys: keys.map((k) => ({ left: k.left, right: k.right, top: k.top, bottom: k.bottom })),
+        vw: innerWidth,
+        vh: innerHeight,
+        scrollW: document.documentElement.scrollWidth,
+      };
+    });
+    expect(m.keys).toHaveLength(9);
+    expect(m.scrollW).toBeLessThanOrEqual(m.vw); // горизонтальной прокрутки нет
+    expect(m.toy.left).toBeGreaterThanOrEqual(0);
+    expect(m.toy.right).toBeLessThanOrEqual(m.vw);
+    expect(m.lcd.top).toBeGreaterThanOrEqual(0);
+    expect(m.lcd.bottom).toBeLessThanOrEqual(m.vh);
+    const lowest = Math.max(...m.keys.map((k) => k.bottom));
+    for (const k of m.keys) {
+      expect(k.left).toBeGreaterThanOrEqual(0);
+      expect(k.right).toBeLessThanOrEqual(m.vw);
+      expect(k.top).toBeGreaterThanOrEqual(0);
+    }
+    expect(lowest).toBeLessThanOrEqual(m.vh - 80); // запас снизу под плавающую панель браузера
+    // Максимально крупно: либо на всю ширину (почти от края до края), либо — в низком окне — по высоте, до самого запаса.
+    const fullWidth = m.toy.width >= m.vw * 0.94;
+    const fullHeight = lowest >= m.vh - 90 - 30;
+    expect(fullWidth || fullHeight, `ширина игрушки ${m.toy.width} из ${m.vw}, низ кнопок ${lowest} из ${m.vh}`).toBe(true);
+    // И заметно крупнее, чем когда игрушка целиком вписывалась в окно (ширина ≈ (высота − 24) / 2,6).
+    expect(m.toy.width).toBeGreaterThan(((m.vh - 24) / 2.6) * 1.15);
   });
 }
 

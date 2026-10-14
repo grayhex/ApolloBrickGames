@@ -2105,18 +2105,31 @@ body:not([data-chrome='toy']) .side {
   }
 }
 
-/* Узкий экран: игрушка сверху (как раньше — целиком в окне), панели под ней; страница прокручивается. */
+/* Узкий экран (телефон): игрушка сверху, панели под ней; страница прокручивается.
+   Оригинальный вид «Полная» масштабируется на всю ширину экрана — кнопки и экран крупные, без отдельного пульта. Игрушка при этом выше
+   окна: чем ниже, тем меньше нужно — экран и все девять кнопок (от верха до нижнего края крестовины ≈ 1,72 ширины, с запасом 1,76) помещаются в окно, а нижний
+   «подбородок» с логотипом уходит за край (до него страница прокручивается). Если окно низкое и в ширину не влезает, ширина берётся по высоте.
+   `--toy-top` — отступ сверху (под угловым меню), `--toy-reserve` — запас снизу под панель браузера (iOS рисует плавающую поверх страницы). */
 @media (max-width: 899px) {
   body[data-chrome='toy'] .arena {
+    --toy-top: 12px;
+    --toy-reserve: 90px;
+    --toy-essential: 1.76;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: 14px;
   }
 
+  body[data-chrome='toy'] .arena:not([data-closed]):not([data-compact]) {
+    --stage-w: clamp(240px, calc((100dvh - var(--toy-top) - var(--toy-reserve)) / var(--toy-essential)), 900px);
+  }
+
+  /* Игрушка почти от края до края: на 8 px выходит в поля страницы с каждой стороны (панели ниже остаются с обычными полями). */
   body[data-chrome='toy'] .arena > .stage {
     grid-column: 1 / -1;
     justify-self: center;
-    width: min(100%, var(--stage-w));
+    margin-inline: 0; /* auto-поля прижали бы шире области игрушку к левому краю: центрируем сами */
+    width: min(calc(100% + 16px), var(--stage-w));
   }
 
   .side {
@@ -2136,6 +2149,7 @@ body:not([data-chrome='toy']) .side {
 
 @media (max-width: 640px) {
   body[data-chrome='toy'] .arena {
+    --toy-top: 52px;
     grid-template-columns: minmax(0, 1fr);
   }
 
