@@ -12,7 +12,47 @@
   --danger: #ff8a7a;
   --lcd: #a9b79a;
   --lcd-ink: #202a1e;
+  /* Оформление страницы игрушки: фон, карточки панелей, «чипы», тени. Светлая тема переопределяет их ниже. */
+  --page-bg: radial-gradient(120% 90% at 50% 22%, #30363c 0%, #1a1d21 62%, #101215 100%);
+  --card-hi: #22282d;
+  --card-lo: #1c2125;
+  --card-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
+  --chip: rgba(255, 255, 255, 0.04);
+  --lcd-dim: saturate(0.55) brightness(0.74);
+  --sticker-light: 0.78;
+  --toy-shadow: rgba(0, 0, 0, 0.55);
+  --corner-fg: rgba(226, 232, 226, 0.7);
+  --corner-bg: rgba(20, 23, 26, 0.55);
+  --corner-bg-hover: rgba(44, 50, 56, 0.92);
+  --corner-line: rgba(255, 255, 255, 0.14);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Светлый фон страницы (кнопка «Фон» в панели справа; только у игрушки). */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #e4e9ee;
+  --panel: #ffffff;
+  --panel-2: #eef1f5;
+  --line: #ccd5dd;
+  --text: #1b2429;
+  --muted: #54646f;
+  --accent: #7ba526;
+  --accent-ink: #11190a;
+  --warn: #9a5f00;
+  --danger: #c0392b;
+  --page-bg: radial-gradient(120% 90% at 50% 22%, #ffffff 0%, #e9edf1 60%, #d6dde4 100%);
+  --card-hi: #fbfcfd;
+  --card-lo: #f1f4f6;
+  --card-shadow: 0 8px 22px rgba(40, 60, 80, 0.1);
+  --chip: rgba(30, 50, 70, 0.045);
+  --lcd-dim: saturate(0.65) brightness(0.97);
+  --sticker-light: 1;
+  --toy-shadow: rgba(30, 50, 70, 0.32);
+  --corner-fg: rgba(30, 40, 48, 0.72);
+  --corner-bg: rgba(255, 255, 255, 0.7);
+  --corner-bg-hover: #ffffff;
+  --corner-line: rgba(30, 50, 70, 0.2);
 }
 
 * {
@@ -86,7 +126,8 @@ body {
   margin: 0 auto;
 }
 
-.toy {
+/* Палитра корпуса по умолчанию (синий): у игрушки, панелей вокруг неё и кнопок-миниатюр; другие цвета — `[data-shell]` ниже. */
+:is(.toy, .arena, .shellpick__btn) {
   --rim: #2456c9;
   --rim-dark: #1a3fa0;
   --face: #dcd8c6;
@@ -96,19 +137,33 @@ body {
   --bezel-lo: #c4bfaa;
   --art: #dc8a22;
   --lcd-bg: #adb38c;
-  --lcd-aspect: 2 / 1;
   --label: #efe6a6;
   --key: #dedcce;
   --key-hi: #f6f5ee;
   --key-lo: #a9a799;
+  --tone: #4c82f0;
+  --print: #f4f4f0;
+}
+
+.toy {
+  --lcd-aspect: 2 / 1;
   position: relative;
   display: flex;
   flex-direction: column;
-  filter: drop-shadow(0 1.8cqw 2.6cqw rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 1.8cqw 2.6cqw var(--toy-shadow));
+}
+
+/* Палитры корпуса: у игрушки, у кнопок-миниатюр переключателя цвета и у панелей вокруг неё (`--tone` — акцент панелей). */
+[data-shell='blue'] {
+  --rim: #2456c9;
+  --rim-dark: #1a3fa0;
+  --tone: #4c82f0;
 }
 
 /* Белый корпус: светлая лицевая панель и розоватый рисунок. */
-.toy[data-shell='white'] {
+[data-shell='white'] {
+  --tone: #aab8cf;
+  --print: #d3392f;
   --rim: #f6f6f3;
   --rim-dark: #d9d9d4;
   --face: #e0e1e5;
@@ -122,7 +177,8 @@ body {
   --key-lo: #b3b1a4;
 }
 
-.toy[data-shell='red'] {
+[data-shell='red'] {
+  --tone: #e5495f;
   --rim: #c92d40;
   --rim-dark: #96202f;
   --face: #e4e3e1;
@@ -135,7 +191,9 @@ body {
 }
 
 /* Жёлтый корпус — по фотографиям владельца: жёлтый пластик, серо-белая панель экрана, голубоватые надписи. */
-.toy[data-shell='yellow'] {
+[data-shell='yellow'] {
+  --tone: #e8c526;
+  --print: #d3392f;
   --rim: #f3dc3f;
   --rim-dark: #dcc02a;
   --face: #dedfe4;
@@ -516,11 +574,7 @@ body {
   filter: brightness(0.94) saturate(0.85);
 }
 
-/* Вид «только экран»: нижняя половина скрыта, крышка с экраном занимает окно целиком. */
-.stage:has(.toy[data-compact]) {
-  max-width: clamp(300px, calc((100dvh - 24px) / 0.98), 1100px);
-}
-
+/* Вид «только экран»: нижняя половина скрыта, крышка с экраном занимает окно целиком (ширину задаёт `.arena[data-compact]`). */
 .toy[data-compact] :is(.toy__hinge, .base) {
   display: none;
 }
@@ -531,6 +585,762 @@ body {
 
 .toy[data-compact] .lid__window {
   cursor: pointer;
+}
+
+/* ── Арена: слева справка, посередине игрушка, справа пульт ─────────────────
+   Обе панели — карточки одного стиля (`.side`); акцент `--tone` берётся от цвета корпуса текущей игры.
+   На технических страницах панелей нет: арена там «прозрачна» (display: contents). */
+.arena {
+  display: contents;
+}
+
+body[data-chrome='toy'] .arena {
+  --side-w: clamp(220px, 18vw, 280px);
+  /* Минимальный просвет между панелью и игрушкой; остальное свободное место уходит в просвет, и панели прижимаются к краям окна. */
+  --arena-gap: clamp(32px, 4vw, 64px);
+  --stage-w: clamp(300px, calc((100dvh - 24px) / 2.4), 640px);
+  display: grid;
+  grid-template-columns:
+    var(--side-w)
+    minmax(0, min(var(--stage-w), calc(100% - 2 * var(--side-w) - 2 * var(--arena-gap))))
+    var(--side-w);
+  justify-content: space-between;
+  align-items: center;
+  column-gap: var(--arena-gap);
+}
+
+body[data-chrome='toy'] .arena[data-compact] {
+  --stage-w: clamp(300px, calc((100dvh - 24px) / 0.98), 1100px);
+}
+
+body[data-chrome='toy'] .arena > .stage {
+  max-width: none;
+}
+
+body:not([data-chrome='toy']) .side {
+  display: none;
+}
+
+.side {
+  min-width: 0;
+  max-height: calc(100dvh - 24px);
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 14px;
+  overflow: auto;
+  scrollbar-width: thin;
+  color: var(--text);
+  background: linear-gradient(170deg, var(--card-hi), var(--card-lo));
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+}
+
+.side__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.side__title {
+  margin: 0;
+  font: 800 0.74rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.side__sec {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.side__h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 800 0.7rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.side__h::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--tone) 75%, var(--muted));
+}
+
+.side__cap {
+  margin: 2px 0 0;
+  font: 700 0.7rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--muted);
+}
+
+.side__cap--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.side__text {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.side__note {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.side__pad {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.side__pad .icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--text);
+}
+
+.side__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 7px;
+  font: 700 0.68rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.side__link:hover,
+.side__link:focus-visible {
+  border-color: color-mix(in srgb, var(--tone) 55%, var(--line));
+}
+
+.side__link .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.side :is(button, a):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Справка слева — фон, а не часть игры: приглушена, оживает при наведении и фокусе. */
+.side--info {
+  opacity: 0.68;
+  transition: opacity 160ms;
+}
+
+.side--info:hover,
+.side--info:focus-within {
+  opacity: 0.9;
+}
+
+/* ── Правая панель: пульт ─────────────────────────────────────────────── */
+.devs {
+  display: flex;
+  gap: 6px;
+}
+
+.dev {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 7px;
+  font: 700 0.66rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--muted);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  opacity: 0.6;
+  transition: color 120ms, background 120ms, border-color 120ms;
+}
+
+.dev[hidden] {
+  display: none;
+}
+
+.dev .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dev[data-state='on'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--tone) 12%, var(--chip));
+  border-color: color-mix(in srgb, var(--tone) 50%, var(--line));
+  opacity: 1;
+}
+
+.quick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tgl {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 10px 2px 7px;
+  font: 700 0.66rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--muted);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: color 120ms, background 120ms, border-color 120ms, transform 80ms;
+}
+
+.tgl[hidden] {
+  display: none;
+}
+
+.tgl .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.tgl:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--tone) 40%, var(--line));
+}
+
+.tgl:active {
+  transform: translateY(1px);
+}
+
+.tgl[aria-pressed='true'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--tone) 11%, var(--chip));
+  border-color: color-mix(in srgb, var(--tone) 45%, var(--line));
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--tone) 60%, transparent);
+}
+
+/* Фон — переключатель вида, а не «включено/выключено»: подсветки нажатого у него нет. */
+.tgl[data-tgl='theme'][aria-pressed='true'] {
+  background: var(--chip);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+/* Переключатель цвета: четыре миниатюрные консоли. Цвета берутся из палитры `[data-shell]`, как у настоящей игрушки. */
+.shellpick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shellpick__btn {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 9px 2px 7px;
+  font: 700 0.64rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--muted);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 120ms, border-color 120ms, box-shadow 120ms, color 120ms;
+}
+
+.shellpick__btn:hover {
+  color: var(--text);
+}
+
+.shellpick__btn:not([aria-checked='true']) .mini {
+  filter: saturate(0.7) brightness(0.9) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+
+.shellpick__btn[aria-checked='true'] {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--tone) 70%, var(--line));
+  background: color-mix(in srgb, var(--tone) 10%, var(--chip));
+}
+
+.mini {
+  display: block;
+  width: 100%;
+  max-width: 40px;
+  height: auto;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+  transition: filter 120ms;
+}
+
+.mini__rim {
+  fill: var(--rim);
+}
+
+.mini__hinge {
+  fill: var(--rim-dark);
+}
+
+.mini__arc {
+  stroke: var(--print);
+}
+
+/* Плитки уровней: «ячейки LCD» — тот же мотив, что в справке слева. */
+.lvgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.lv {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 3px;
+  min-height: 46px;
+  padding: 0;
+  font: 800 1.35rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--lcd-ink);
+  background: var(--lcd);
+  border: 0;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.16);
+  filter: var(--lcd-dim);
+  cursor: pointer;
+  transition: filter 120ms, box-shadow 120ms;
+}
+
+.lv:hover:not([aria-disabled='true']) {
+  filter: var(--lcd-dim) brightness(1.12);
+}
+
+.lv .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.lv[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.lv[aria-current='true'] {
+  color: var(--lcd);
+  background: var(--lcd-ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tone) 65%, transparent);
+}
+
+.uv {
+  display: grid;
+  gap: 6px;
+  max-height: 210px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.uv__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.uv__go {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px 10px;
+  font: 700 0.8rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-align: left;
+  color: var(--text);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+}
+
+.uv__go:hover:not([aria-disabled='true']) {
+  border-color: color-mix(in srgb, var(--tone) 45%, var(--line));
+}
+
+.uv__go[aria-current='true'] {
+  background: color-mix(in srgb, var(--tone) 11%, var(--chip));
+  border-color: color-mix(in srgb, var(--tone) 55%, var(--line));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--tone) 70%, transparent);
+}
+
+.uv__go--bad {
+  color: var(--muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.uv__ico .icon {
+  width: 15px;
+  height: 15px;
+  color: color-mix(in srgb, var(--tone) 70%, var(--muted));
+}
+
+.uv__go--bad .uv__ico .icon {
+  color: var(--warn);
+}
+
+.uv__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.uv__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uv__why {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--warn);
+}
+
+.uv__size {
+  font: 700 0.66rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted);
+}
+
+.uv__edit {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  color: var(--muted);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.uv__edit:hover,
+.uv__edit:focus-visible {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--tone) 55%, var(--line));
+}
+
+.uv__edit .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.uv__empty {
+  padding: 9px 11px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+
+/* ── Левая панель: справка ────────────────────────────────────────────── */
+.side__top--logo {
+  display: block;
+}
+
+.about__sticker {
+  padding: 9px 14px;
+  background: #e9e5d6;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  filter: brightness(var(--sticker-light, 0.8)) saturate(0.85);
+}
+
+.about__logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts li {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px 4px 7px;
+  color: var(--lcd-ink);
+  background: var(--lcd);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.16);
+  filter: var(--lcd-dim);
+}
+
+.facts b {
+  font: 800 1.35rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.facts span {
+  font: 800 0.58rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Клавиши управления: спокойный список «действие — клавиши», без картинок кнопок корпуса. */
+.keys {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.keys__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 2px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.keys__row:last-child {
+  border-bottom: 0;
+}
+
+.keys__what {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.keys__caps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.keys__sep {
+  padding: 0 2px;
+  color: var(--muted);
+}
+
+.keys__none {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.kbd {
+  min-width: 20px;
+  padding: 3px 6px 3px;
+  font: 700 0.64rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-align: center;
+  color: var(--text);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+.score {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.score__row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.score__fig {
+  display: grid;
+  grid-template-columns: repeat(var(--fig-cols, 1), max-content);
+  align-content: center;
+  justify-content: center;
+  height: 34px;
+  padding: 2px;
+  color: var(--lcd-ink);
+  background: var(--lcd);
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.14);
+  filter: var(--lcd-dim);
+}
+
+/* Ячейка LCD из листа спрайтов игры (public/graphics/lcd); размеры и сдвиг задаёт TypeScript через --spr-*. */
+.spr {
+  display: block;
+  width: var(--spr-w);
+  height: var(--spr-h);
+  background: var(--spr-url) var(--spr-pos) / var(--spr-sheet) no-repeat;
+  image-rendering: pixelated;
+}
+
+.score__what {
+  display: grid;
+  gap: 2px;
+}
+
+.score__name {
+  font: 800 0.78rem/1.15 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.score__way {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.score__way b {
+  font: 800 0.85rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+}
+
+.hazards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hazard {
+  padding: 3px 9px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+/* Невысокое окно: левая панель уплотняется, чтобы справка помещалась почти целиком (остальное — прокруткой панели). */
+@media (max-height: 960px) {
+  .side {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .side__sec {
+    gap: 6px;
+    padding-top: 10px;
+  }
+
+  .about__sticker {
+    width: 62%;
+    margin: 0 auto;
+    padding: 6px 10px;
+  }
+
+  .facts li {
+    padding: 5px 4px;
+  }
+
+  .facts b {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-height: 900px) {
+  .side__text {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .side__note {
+    display: none;
+  }
+}
+
+/* Узкий экран: игрушка сверху (как раньше — целиком в окне), панели под ней; страница прокручивается. */
+@media (max-width: 899px) {
+  body[data-chrome='toy'] .arena {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
+  }
+
+  body[data-chrome='toy'] .arena > .stage {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(100%, var(--stage-w));
+  }
+
+  .side {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .side--ctl {
+    order: 1;
+  }
+
+  .side--info {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  body[data-chrome='toy'] .arena {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    width: min(100%, 460px);
+    justify-self: center;
+  }
 }
 
 /* ── Уголок: настройки, справка, редактор ──────────────────────────────── */
@@ -549,9 +1359,9 @@ body {
   width: 34px;
   height: 34px;
   padding: 0;
-  color: rgba(226, 232, 226, 0.7);
-  background: rgba(20, 23, 26, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--corner-fg);
+  background: var(--corner-bg);
+  border: 1px solid var(--corner-line);
   border-radius: 50%;
   cursor: pointer;
   text-decoration: none;
@@ -560,8 +1370,8 @@ body {
 
 .corner__btn:hover,
 .corner__btn:focus-visible {
-  color: #fff;
-  background: rgba(44, 50, 56, 0.92);
+  color: var(--text);
+  background: var(--corner-bg-hover);
 }
 
 .corner__btn:focus-visible {
@@ -576,13 +1386,14 @@ body {
 
 /* ── Чистая страница игрушки и технические страницы ───────────────────────── */
 body[data-chrome='toy'] {
-  background: radial-gradient(120% 90% at 50% 22%, #30363c 0%, #1a1d21 62%, #101215 100%) fixed;
+  background: var(--page-bg) fixed;
 }
 
 body[data-chrome='toy'] .shell {
+  max-width: none;
   min-height: 100dvh;
   align-content: center;
-  padding: 12px;
+  padding: 12px clamp(12px, 2vw, 32px);
 }
 
 body[data-chrome='toy']:not([data-debug]) :is(#tech-header, .toolbar, .status, .debug, .shell__footer) {
@@ -606,8 +1417,12 @@ body:not([data-chrome='toy']) .corner {
     max-width: clamp(300px, calc((100dvh - 76px) / 2.4), 640px);
   }
 
-  .stage:has(.toy[data-compact]) {
-    max-width: clamp(300px, calc((100dvh - 76px) / 0.98), 1100px);
+  body[data-chrome='toy'] .arena {
+    --stage-w: clamp(300px, calc((100dvh - 76px) / 2.4), 640px);
+  }
+
+  body[data-chrome='toy'] .arena[data-compact] {
+    --stage-w: clamp(300px, calc((100dvh - 76px) / 0.98), 1100px);
   }
 }
 

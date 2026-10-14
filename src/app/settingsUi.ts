@@ -13,11 +13,10 @@ import {
   MAX_STICK_THRESHOLD,
   MIN_STICK_THRESHOLD,
   needsGamepadSetup,
-  SHELLS,
-  type Shell,
 } from '../input/settings';
 import { h } from './dom';
 import type { InputHub } from './hub';
+import { ShellPicker } from './shellPicker';
 
 const ACTION_LABELS: Record<Action, string> = {
   left: 'Влево',
@@ -38,21 +37,9 @@ function describeList(sources: readonly string[]): string {
   return sources.length === 0 ? 'не назначено' : sources.map(describeSource).join(' · ');
 }
 
-/** Подписи цветов корпуса в настройках. */
-export const SHELL_LABELS: Record<Shell, string> = {
-  blue: 'синий',
-  red: 'красный',
-  yellow: 'жёлтый',
-  white: 'белый',
-};
-
-/** Раздел «Внешний вид и звук» (только в игре, не в редакторе). */
+/** Раздел «Цвет по умолчанию» (только в игре, не в редакторе). Цвет текущей игры выбирается на самой странице. */
 export interface DisplayOptions {
-  /** Есть ли у экрана слой неактивных сегментов. */
-  hasGhost: boolean;
-  /** Значение по умолчанию для слоя, если пользователь не выбирал. */
-  ghostDefault: boolean;
-  /** Настройка изменена: применить к странице. */
+  /** Цвет по умолчанию изменён или настройки сброшены: применить к странице. */
   onChange(): void;
 }
 
@@ -63,8 +50,8 @@ export interface SettingsDialogOptions {
 }
 
 /**
- * Экран настроек: цвет корпуса, неактивные сегменты и звук (в игре), переназначение кнопок клавиатуры и геймпада,
- * порог стика, выбор устройства, сброс к стандартному профилю. Пока диалог открыт, игра на паузе,
+ * Экран настроек: переназначение кнопок клавиатуры и геймпада, порог стика, выбор устройства, сброс к стандартному
+ * профилю и (в игре) цвет игрушки по умолчанию. Звук, сегменты, вид экрана и фон — кнопки на самой странице. Пока диалог открыт, игра на паузе,
  * а клавиатура игре не принадлежит (работают обычные Tab/Enter/Esc).
  */
 export class SettingsDialog {
@@ -226,55 +213,34 @@ export class SettingsDialog {
       { class: 'settings__row settings__row--end' },
       this.button('Сбросить всё к стандартному', () => {
         this.hub.resetSettings();
+        this.options.display?.onChange();
         this.render();
       }),
       this.button('Закрыть', () => this.close(), 'btn--primary'),
     );
 
-    const appearance = this.options.display ? this.appearanceSection(this.options.display) : null;
-    this.dialog.replaceChildren(...(appearance ? [title, appearance] : [title]), keyboard, gamepad, storage, actions);
+    const defaults = this.options.display ? this.defaultsSection(this.options.display) : null;
+    this.dialog.replaceChildren(...(defaults ? [title, defaults] : [title]), keyboard, gamepad, storage, actions);
     this.restoreFocus();
   }
 
-  private appearanceSection(display: DisplayOptions): HTMLElement {
-    const { settings } = this.hub;
-    const apply = (change: () => void): void => {
-      change();
-      display.onChange();
-    };
-
-    const shell = h('select', { id: 'settings-shell' });
-    for (const value of SHELLS) shell.append(h('option', { value }, SHELL_LABELS[value]));
-    shell.value = settings.display.shell;
-    shell.addEventListener('change', () => {
-      const chosen = SHELLS.find((value) => value === shell.value) ?? 'blue';
-      apply(() => this.hub.updateSettings((s) => void (s.display.shell = chosen)));
+  private defaultsSection(display: DisplayOptions): HTMLElement {
+    const picker = new ShellPicker({
+      id: 'settings-shell',
+      label: 'Цвет игрушки по умолчанию',
+      value: this.hub.settings.display.shell,
+      onPick: (shell) => {
+        this.hub.updateSettings((s) => void (s.display.shell = shell));
+        display.onChange();
+      },
     });
-
-    const check = (id: string, label: string, checked: boolean, onChange: (value: boolean) => void): HTMLElement => {
-      const input = h('input', { type: 'checkbox', id });
-      input.checked = checked;
-      input.addEventListener('change', () => apply(() => onChange(input.checked)));
-      return h('label', { class: 'settings__check', for: id }, input, ` ${label}`);
-    };
-
-    const section = h(
+    return h(
       'section',
       { class: 'settings__section' },
-      h('h3', {}, 'Внешний вид и звук'),
-      h('div', { class: 'settings__pad' }, h('label', { for: 'settings-shell' }, 'Цвет корпуса'), shell),
-      check('settings-sound', 'Звук', settings.display.sound, (value) =>
-        this.hub.updateSettings((s) => void (s.display.sound = value)),
-      ),
+      h('h3', {}, 'Цвет игрушки по умолчанию'),
+      h('p', { class: 'settings__note' }, 'С него начинается каждая игра. Цвет текущей игры меняется переключателем справа от игрушки.'),
+      picker.root,
     );
-    if (display.hasGhost) {
-      section.append(
-        check('settings-ghost', 'Показывать неактивные сегменты экрана', settings.display.ghost ?? display.ghostDefault, (value) =>
-          this.hub.updateSettings((s) => void (s.display.ghost = value)),
-        ),
-      );
-    }
-    return section;
   }
 
   private gamepadControls(pad: PadInfo | null): Node {

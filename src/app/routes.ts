@@ -16,6 +16,8 @@ export function parseRoute(hash: string): RouteName {
 }
 
 export interface GameRoute {
+  /** Каталог пакета данных в public/content. */
+  packName: string;
   /** Путь к pack.json относительно базового пути сайта. */
   manifest: string;
   badge: string;
@@ -31,6 +33,7 @@ export interface GameRoute {
 
 export const GAME_ROUTES: Record<'room' | 'tech', GameRoute> = {
   room: {
+    packName: 'room',
     manifest: 'content/room/pack.json',
     badge: '',
     subtitle: '',
@@ -40,6 +43,7 @@ export const GAME_ROUTES: Record<'room' | 'tech', GameRoute> = {
     otherRoute: { hash: '#/tech', label: 'Техническая демоверсия движка (для разработки)' },
   },
   tech: {
+    packName: 'demo',
     manifest: 'content/demo/pack.json',
     badge: 'ENGINE DEMO',
     subtitle: 'Техническая демоверсия движка: оригинальный контент ещё не восстановлен, уровни и правила — временные.',

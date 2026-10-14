@@ -100,3 +100,24 @@ export function controlsHint(bindings: Bindings, withFire: boolean): string {
   parts.push(`Старт: ${keys('start')}`, `Пауза: ${keys('pause')}`);
   return parts.join(' — ') + '. Геймпад: крестовина или левый стик, нижняя кнопка — прыжок, Start — старт/пауза.';
 }
+
+/** Состояние значка устройства: `on` — сейчас ведёт игру, `ready` — доступно, `hidden` — нет. */
+export type DeviceState = 'on' | 'ready' | 'hidden';
+
+export interface DeviceView {
+  keyboard: Exclude<DeviceState, 'hidden'>;
+  gamepad: DeviceState;
+  /** Имя подключённого геймпада (для подсказки); null — геймпада нет. */
+  padName: string | null;
+}
+
+/**
+ * Какие значки показать в панели справа. Клавиатура есть всегда; значок геймпада появляется при подключении
+ * (`ready` — подключён, ждёт нажатия любой кнопки или не он нажимался последним; `on` — игрой управляют с него).
+ */
+export function deviceView(status: GamepadStatus, last: 'keyboard' | 'gamepad'): DeviceView {
+  if (status.kind === 'none' || status.kind === 'unavailable') return { keyboard: 'on', gamepad: 'hidden', padName: null };
+  if (status.kind === 'idle') return { keyboard: 'on', gamepad: 'ready', padName: status.pads[0]?.id ?? null };
+  const padLast = last === 'gamepad';
+  return { keyboard: padLast ? 'ready' : 'on', gamepad: padLast ? 'on' : 'ready', padName: status.pad.id };
+}

@@ -113,13 +113,19 @@ export async function startEditor(): Promise<void> {
   let initialImages = new Map<string, { mime: 'image/png' | 'image/jpeg' | 'image/webp'; bytes: Uint8Array }>();
   let restoreNote = '';
   try {
-    const [latest] = await drafts.list();
-    if (latest) {
-      const loaded = await drafts.load(latest.projectId);
+    // Страница игры открывает конкретную карту ссылкой `#/editor?project=<id>`; без ссылки (или если карты уже нет) — последний черновик.
+    const wanted = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('project');
+    const all = await drafts.list();
+    const chosen = all.find((meta) => meta.projectId === wanted) ?? all[0];
+    if (chosen) {
+      const loaded = await drafts.load(chosen.projectId);
       if (loaded) {
         initial = parseDoc(loaded.record.doc, 'черновик');
         initialImages = loaded.images;
-        restoreNote = `Восстановлен черновик «${initial.name}».`;
+        restoreNote =
+          wanted !== null && chosen.projectId !== wanted
+            ? `Карта из ссылки не найдена — открыт последний черновик «${initial.name}».`
+            : `Восстановлен черновик «${initial.name}».`;
       }
     }
   } catch (error) {

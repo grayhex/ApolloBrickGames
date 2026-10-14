@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ContentError } from '../../src/content/validate';
 import { ContentLoadError, loadContentPack, type FetchJson } from '../../src/app/loadContent';
-import { gamepadStatusText, keyboardStatusText, overlayView, timerText } from '../../src/app/viewModel';
+import { deviceView, gamepadStatusText, keyboardStatusText, overlayView, timerText } from '../../src/app/viewModel';
 import { validationEnv } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
 import { Game, type GameState } from '../../src/core';
@@ -139,5 +139,23 @@ describe('подсказка по клавишам', () => {
     const text = controlsHint(custom, false);
     expect(text).toContain('Прыжок: J');
     expect(text).toContain('Пауза: не назначено');
+  });
+});
+
+describe('значки устройств в панели справа', () => {
+  const pad = { index: 0, id: 'Pad 1', mapping: 'standard' };
+
+  it('без геймпада — только клавиатура', () => {
+    expect(deviceView({ kind: 'none' }, 'keyboard')).toEqual({ keyboard: 'on', gamepad: 'hidden', padName: null });
+    expect(deviceView({ kind: 'unavailable', reason: 'нет API' }, 'gamepad')).toEqual({ keyboard: 'on', gamepad: 'hidden', padName: null });
+  });
+
+  it('геймпад подключён, но не нажимался — значок появляется, но ведёт клавиатура', () => {
+    expect(deviceView({ kind: 'idle', pads: [pad] }, 'keyboard')).toEqual({ keyboard: 'on', gamepad: 'ready', padName: 'Pad 1' });
+  });
+
+  it('активный геймпад: ведёт тот, с которого нажимали последним', () => {
+    expect(deviceView({ kind: 'active', pad }, 'gamepad')).toEqual({ keyboard: 'ready', gamepad: 'on', padName: 'Pad 1' });
+    expect(deviceView({ kind: 'active', pad }, 'keyboard')).toEqual({ keyboard: 'on', gamepad: 'ready', padName: 'Pad 1' });
   });
 });

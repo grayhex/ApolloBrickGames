@@ -46,9 +46,22 @@ test('игрушка: интро, выход из туннеля, стрельб
   await page.keyboard.up('Space');
   await page.keyboard.up('KeyX');
 
-  await page.locator('#corner-compact').click();
+  await page.locator('#tgl-compact').click();
   await page.waitForTimeout(250);
   await page.screenshot({ path: `${dir}/toy-compact.png` });
+});
+
+test('страница целиком: панели по бокам игрушки, светлый фон', async ({ page }) => {
+  mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  await page.waitForSelector('#game-area[data-phase="ready"]');
+  await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
+  await page.screenshot({ path: `${dir}/toy-panels.png` });
+  await page.locator('#shell-picker [data-shell="red"]').click();
+  await page.locator('#tgl-theme').click();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: `${dir}/toy-light.png` });
 });
 
 test('игрушка: четыре цвета корпуса', async ({ page }) => {
@@ -58,10 +71,7 @@ test('игрушка: четыре цвета корпуса', async ({ page }) 
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   for (const shell of ['blue', 'red', 'yellow', 'white']) {
-    await page.locator('#corner-settings').click();
-    await page.selectOption('#settings-shell', shell);
-    await page.keyboard.press('Escape');
-    await page.locator('#game-area').waitFor();
+    await page.locator(`#shell-picker [data-shell="${shell}"]`).click();
     await page.waitForTimeout(150);
     await page.locator('#stage').screenshot({ path: `${dir}/toy-${shell}.png` });
   }
