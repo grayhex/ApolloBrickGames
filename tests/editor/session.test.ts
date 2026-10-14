@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryDraftStore } from '../../src/editor/drafts';
 import { ImportError, parseDoc } from '../../src/editor/project';
-import { EditorSession, MAX_REFS, type PhotoDecoder } from '../../src/editor/session';
+import { EditorSession, MAX_REFS, SaveFailedError, type PhotoDecoder } from '../../src/editor/session';
 import { EditorStore } from '../../src/editor/store';
 import { fillRect } from '../../src/editor/grid';
+import { removeRef } from '../../src/editor/ops';
 import { freshDoc, pngHeader } from './helpers';
 
 class FakeDecoder implements PhotoDecoder {
   decoded = new Set<string>();
   failNext = false;
+  ensured: string[] = [];
+  has(id: string): boolean {
+    return this.decoded.has(id);
+  }
   async ensure(id: string): Promise<void> {
+    this.ensured.push(id);
     if (this.failNext) {
       this.failNext = false;
       throw new Error('decode');
@@ -187,5 +193,80 @@ describe('импорт: неразрушающий', () => {
     await expect(session.parseImport(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]), 'x.zip')).rejects.toThrow();
     await expect(session.parseImport(new TextEncoder().encode(JSON.stringify({ schemaVersion: 9 })), 'x.json')).rejects.toThrow(/версия схемы уровня 9/);
     expect(store.doc).toBe(before);
+  });
+});
+
+describe('замечания ревью: сохранённые фото и переключение проектов', () => {
+  it('открытие сохранённого проекта при старте не стирает его фотографии из хранилища', async () => {
+    const a = make();
+    await a.session.addPhoto(png(640, 360), 'кадр.png');
+    await a.session.flush();
+    expect(await a.drafts.storedImages('p1')).toEqual(new Set(['ref-1']));
+
+    // Как при запуске редактора: сеанс создаётся вокруг восстановленного документа, затем открывается он же.
+    const loaded = await a.drafts.load('p1');
+    const doc = parseDoc(loaded?.record.doc);
+    const store = new EditorStore(doc);
+    const reopened = new EditorSession(store, a.drafts, new FakeDecoder());
+    await reopened.openDoc(doc, loaded?.images ?? new Map(), { alreadySaved: true });
+    expect(await a.drafts.storedImages('p1')).toEqual(new Set(['ref-1']));
+    await reopened.flush();
+    expect(await a.drafts.storedImages('p1')).toEqual(new Set(['ref-1']));
+    const again = await a.drafts.load('p1');
+    expect(again?.images.get('ref-1')?.bytes.length).toBeGreaterThan(30);
+  });
+
+  it('чистый документ повторно не сохраняется (flush без правок ничего не пишет)', async () => {
+    const { session, drafts } = make();
+    await session.flush();
+    await session.flush();
+    const before = (await drafts.list())[0]?.savedAt;
+    await session.flush();
+    expect((await drafts.list())[0]?.savedAt).toBe(before);
+  });
+
+  it('если текущий проект сохранить не удалось, переключение отменяется и правки остаются', async () => {
+    const { store, drafts, session } = make();
+    await session.addPhoto(png(100, 100), 'a.png');
+    store.commit((d) => fillRect(d, { x: 2, y: 2, w: 2, h: 1 }, '#'));
+    const quota = new Error('quota');
+    quota.name = 'QuotaExceededError';
+    drafts.failWith = quota;
+    const current = store.doc;
+    await expect(session.openDoc({ ...freshDoc(), projectId: 'other', id: 'other' }, new Map())).rejects.toThrow(SaveFailedError);
+    expect(store.doc).toBe(current);
+    expect(session.images.size).toBe(1);
+    expect(session.state.kind).toBe('error');
+    // Дубликат — то же правило.
+    await expect(session.duplicate()).rejects.toThrow(SaveFailedError);
+    expect(store.doc).toBe(current);
+    // После освобождения места переключение проходит, и правки не потеряны (сохранены перед переключением).
+    drafts.failWith = null;
+    await session.openDoc({ ...freshDoc(), projectId: 'other', id: 'other' }, new Map());
+    expect(parseDoc((await drafts.load('p1'))?.record.doc).rows[2]).toBe('..##.........');
+  });
+
+  it('отмена удаления референса возвращает и картинку: она декодируется заново', async () => {
+    const { store, decoder, session } = make();
+    await session.addPhoto(png(640, 360), 'кадр.png');
+    store.commit((d) => removeRef(d, 'ref-1'));
+    session.forget('ref-1');
+    expect(decoder.decoded.has('ref-1')).toBe(false);
+    store.undo();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.doc.refs.map((r) => r.id)).toEqual(['ref-1']);
+    expect(decoder.decoded.has('ref-1')).toBe(true);
+  });
+
+  it('удалённый из документа референс уходит из хранилища, а возвращённый отменой записывается снова', async () => {
+    const { store, drafts, session } = make();
+    await session.addPhoto(png(640, 360), 'кадр.png');
+    await session.flush();
+    store.commit((d) => removeRef(d, 'ref-1'));
+    await session.flush();
+    expect(await drafts.storedImages('p1')).toEqual(new Set());
+    store.undo();
+    await session.flush();
+    expect(await drafts.storedImages('p1')).toEqual(new Set(['ref-1']));
   });
 });

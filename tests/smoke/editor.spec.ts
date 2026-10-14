@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 
 /** Клетка карты → клиентские координаты центра клетки по текущему виду (масштаб, сдвиг, пропорция клетки). */
 async function cellPoint(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
+  // Вид (масштаб, сдвиг) обновляется при отрисовке: ждём два кадра, чтобы не взять устаревшие значения (на медленном CI гонка заметна).
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   const point = await page.evaluate(
     ([cx, cy]) => {
       const canvas = document.querySelector<HTMLCanvasElement>('.map__canvas--main');
@@ -139,6 +141,16 @@ test('редактор: демо → платформа → тест → воз�
   await page.waitForSelector('#editor-root[data-ready="true"]');
   expect(await rows(page)).toEqual(edited);
   await expect(page.locator('#editor-map')).toHaveAttribute('data-refs', '1');
+  // Фото пережило перезагрузку (лежит в IndexedDB и декодируется): калибровка открывается.
+  await page.getByRole('button', { name: 'Калибровать углы…' }).click();
+  await expect(page.locator('.calib')).toBeVisible();
+  await page.getByRole('button', { name: 'Отмена' }).click();
+  await page.reload();
+  await page.waitForSelector('#editor-root[data-ready="true"]');
+  await expect(page.locator('.refs__pick')).toContainText('откалибровано');
+  await page.getByRole('button', { name: 'Калибровать углы…' }).click();
+  await expect(page.locator('.calib')).toBeVisible(); // и после второй перезагрузки
+  await page.getByRole('button', { name: 'Отмена' }).click();
 
   // 8. Архив восстанавливает карту и подложку в чистом хранилище другого браузера.
   const fresh = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
@@ -256,3 +268,10 @@ test('редактор: тест управляется геймпадом че�
   await expect(page.locator('#editor-view')).toBeVisible();
 });
 
+test('редактор: сбой загрузки данных виден как ошибка, а не пустая страница', async ({ page }) => {
+  await page.route('**/content/room/pack.json', (route) => route.abort());
+  await page.goto('./#/editor');
+  await expect(page.locator('#fatal')).toBeVisible();
+  await expect(page.locator('#fatal-text')).toContainText('pack.json');
+  await expect(page.locator('#editor-root')).toBeHidden();
+});

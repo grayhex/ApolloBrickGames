@@ -15,8 +15,17 @@ export type SaveState =
   | { kind: 'saving' }
   | { kind: 'error'; message: string };
 
+/** Сохранить текущий проект не удалось: переключение на другой проект отменено, чтобы не потерять правки. */
+export class SaveFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SaveFailedError';
+  }
+}
+
 /** Декодирование изображений для рисования; ошибка декодирования — исключение. */
 export interface PhotoDecoder {
+  has(id: string): boolean;
   ensure(id: string, image: StoredImage): Promise<void>;
   drop(id: string): void;
   clear(): void;
@@ -76,6 +85,7 @@ export class EditorSession {
     this.savedRevision = store.revision;
     store.subscribe(() => {
       if (store.revision !== this.savedRevision) this.markDirty();
+      this.decodeMissing();
     });
   }
 
@@ -101,27 +111,38 @@ export class EditorSession {
     }, this.debounceMs);
   }
 
-  /** Сохранить сейчас (вызывается автоматически после паузы в правках и при закрытии вкладки). */
-  async flush(): Promise<void> {
+  /**
+   * Сохранить сейчас (вызывается автоматически после паузы в правках и при закрытии вкладки).
+   * true — всё сохранено (или сохранять нечего); false — хранилище отказало, документ остаётся только в памяти.
+   */
+  async flush(): Promise<boolean> {
     if (this.timer !== null) {
       this.cancel(this.timer);
       this.timer = null;
     }
-    if (this.saving) {
-      await this.saving;
-      if (!this.dirty) return;
-    }
-    // Мазок кисти ещё не завершён — сохраним снимок после его окончания.
+    if (this.saving) await this.saving;
+    if (!this.dirty) return true;
     this.saving = this.save().finally(() => {
       this.saving = null;
     });
     await this.saving;
+    return this.state.kind !== 'error';
+  }
+
+  /** Фото, которых нет в кэше декодированных (например, референс вернули отменой удаления), декодируются заново. */
+  private decodeMissing(): void {
+    for (const ref of this.store.doc.refs) {
+      const image = this.images.get(ref.id);
+      if (image && !this.photos.has(ref.id)) void this.photos.ensure(ref.id, image).catch(() => {});
+    }
   }
 
   private async save(): Promise<void> {
     const { doc } = this.store;
     const revision = this.store.revision;
-    const keep = doc.refs.filter((r) => this.images.has(r.id)).map((r) => r.id);
+    // Изображения хранилища удаляются только у референсов, которых больше нет в документе;
+    // неполный набор байтов в памяти никогда не стирает сохранённое.
+    const keep = doc.refs.map((r) => r.id);
     const toPut = new Map<string, StoredImage>();
     for (const id of keep) {
       const image = this.images.get(id);
@@ -139,7 +160,7 @@ export class EditorSession {
       this.setState({ kind: 'error', message: describeStorageError(error) });
       return;
     }
-    this.savedImages = new Set(keep);
+    this.savedImages = new Set(keep.filter((id) => this.images.has(id) || this.savedImages.has(id)));
     this.savedRevision = revision;
     if (this.store.revision !== revision) this.markDirty();
     else this.setState({ kind: 'saved', at });
@@ -153,7 +174,12 @@ export class EditorSession {
 
   /** Открыть документ (после сохранения предыдущего). Историю и выделение новый документ не наследует. */
   async openDoc(doc: EditorDoc, images: Map<string, StoredImage>, options: { alreadySaved?: boolean } = {}): Promise<void> {
-    await this.flush();
+    // Если текущий проект сохранить не удалось, он остаётся открытым: переключение отменяется до любых изменений.
+    if (!(await this.flush())) {
+      throw new SaveFailedError(
+        this.state.kind === 'error' ? this.state.message : 'Текущий проект не удалось сохранить.',
+      );
+    }
     this.photos.clear();
     this.images = new Map(images);
     this.savedImages = options.alreadySaved ? new Set(images.keys()) : new Set();
@@ -199,7 +225,6 @@ export class EditorSession {
 
   /** Копия проекта с новым идентификатором проекта и уровня; изображения копируются. */
   async duplicate(): Promise<void> {
-    await this.flush();
     const { doc } = this.store;
     const copy: EditorDoc = { ...doc, projectId: this.newId(), name: `${doc.name} (копия)`, id: `${doc.id}-copy`.slice(0, 64) };
     await this.openDoc(copy, new Map(this.images));

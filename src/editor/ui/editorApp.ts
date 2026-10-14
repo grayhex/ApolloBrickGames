@@ -12,7 +12,7 @@ import { openIndexedDbStore, MemoryDraftStore, type DraftStore } from '../drafts
 import { planResize, resizeDoc, validSize } from '../grid';
 import { ARCHIVE_LIMITS } from '../archive';
 import { ImportError, parseDoc } from '../project';
-import { EditorSession, type SaveState } from '../session';
+import { EditorSession, SaveFailedError, type SaveState } from '../session';
 import { EditorStore } from '../store';
 import { docFromLevel, newRoomDoc, slugify } from '../templates';
 import { ToolController } from '../tools';
@@ -68,14 +68,13 @@ function formatTime(at: number): string {
 
 /** Встроенный редактор уровней: маршрут `#/editor`. */
 export async function startEditor(): Promise<void> {
+  // Пока редактор не запущен, корневой элемент скрыт, а в оболочке виден только блок ошибки #fatal:
+  // сбой загрузки данных показывается как у игры, а не пустой страницей.
   document.body.classList.add('route-editor');
   document.title = 'Crocodile Mario — редактор уровней';
-  const shell = document.querySelector<HTMLElement>('main.shell');
-  if (shell) shell.hidden = true;
   const root = document.getElementById('editor-root');
   const settingsDialog = document.getElementById('settings');
   if (!root || !(settingsDialog instanceof HTMLDialogElement)) throw new Error('В index.html нет #editor-root или #settings');
-  root.hidden = false;
 
   const behaviors = DEMO_BEHAVIORS;
   const validation = validationEnv(behaviors, GLYPH_NAMES);
@@ -344,9 +343,20 @@ export async function startEditor(): Promise<void> {
     }
   }
 
+  /** Открыть документ вместо текущего. Если текущий проект сохранить не удалось, переключение отменяется. */
   async function adopt(doc: EditorDoc, images: Map<string, { mime: 'image/png' | 'image/jpeg' | 'image/webp'; bytes: Uint8Array }>, note: string): Promise<void> {
+    const previous = bundle;
     if (!(await useBundle(doc.pack))) return;
-    await session.openDoc(doc, images);
+    try {
+      await session.openDoc(doc, images);
+    } catch (error) {
+      bundle = previous;
+      if (error instanceof SaveFailedError) {
+        await showMessage('Переключение отменено', [error.message], 'Текущий проект не сохранён и остаётся открытым. Выгрузите архив проекта («Экспорт проекта (.zip)») или освободите место, затем повторите.');
+        return;
+      }
+      throw error;
+    }
     map.fit();
     recomputeProblems();
     say(note);
@@ -423,7 +433,17 @@ export async function startEditor(): Promise<void> {
           return row;
         });
         return [
-          el('div', { class: 'row row--wrap' }, button('Новая карта…', () => { close(); void newProjectDialog(); }, { class: 'btn btn--primary' }), button('Дублировать текущую', () => { close(); void session.duplicate().then(() => { map.fit(); recomputeProblems(); say('Создана копия проекта.'); }); }), button('Импорт файла…', () => { close(); importInput.click(); })),
+          el('div', { class: 'row row--wrap' }, button('Новая карта…', () => { close(); void newProjectDialog(); }, { class: 'btn btn--primary' }), button('Дублировать текущую', () => {
+            close();
+            void session
+              .duplicate()
+              .then(() => {
+                map.fit();
+                recomputeProblems();
+                say('Создана копия проекта.');
+              })
+              .catch((error: unknown) => reportImportError('Копия не создана', error));
+          }), button('Импорт файла…', () => { close(); importInput.click(); })),
           list.length === 0 ? el('p', { class: 'muted' }, 'Сохранённых проектов пока нет.') : el('ul', { class: 'projects' }, ...items),
           el('p', { class: 'muted' }, 'Черновики хранятся только в этом браузере (IndexedDB). Для переноса на другой компьютер используйте «Экспорт проекта».'),
         ];
@@ -739,7 +759,15 @@ export async function startEditor(): Promise<void> {
   window.addEventListener('pagehide', () => void session.flush());
 
   // ── Запуск ───────────────────────────────────────────────────────────────
-  await session.openDoc(startDoc, initialImages, { alreadySaved: initial !== null });
+  try {
+    await session.openDoc(startDoc, initialImages, { alreadySaved: initial !== null });
+  } catch (error) {
+    // Первое сохранение не удалось (например, нет места): работаем в памяти, предупреждение уже показано.
+    say(error instanceof Error ? error.message : String(error), 'error');
+  }
+  // Редактор готов: показываем его и скрываем страницу игры.
+  root.hidden = false;
+  document.body.classList.add('route-editor--ready');
   recomputeProblems();
   refreshPanels();
   map.resize();

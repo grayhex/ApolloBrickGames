@@ -693,7 +693,7 @@ input:focus-visible {
 }
 
 /* ── Редактор уровней (#/editor) ───────────────────────────────────────────── */
-body.route-editor {
+body.route-editor--ready {
   overflow: hidden;
 }
 
@@ -1363,6 +1363,7 @@ body.route-editor {
   grid-template-rows: minmax(0, 1fr);
 }
 
-body.route-editor .shell {
+/* Страница игры скрыта всегда, кроме блока ошибки: сбой запуска редактора виден. */
+body.route-editor .shell > :not(#fatal) {
   display: none;
 }
