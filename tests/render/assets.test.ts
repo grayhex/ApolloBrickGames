@@ -79,6 +79,7 @@ describe('аудио-порт', () => {
     expect(cueForEvent({ type: 'projectileBlocked', x: 0, y: 0, tick: 1 })).toBe('blocked');
     expect(cueForEvent({ type: 'death', cause: 'pit', x: 0, y: 0, tick: 1 })).toBe('death');
     expect(cueForEvent({ type: 'levelCompleted', levelId: 'a', next: null, tick: 1 })).toBe('levelCompleted');
-    expect(cueForEvent({ type: 'phaseChanged', from: 'ready', to: 'playing', tick: 1 })).toBeNull();
+    expect(cueForEvent({ type: 'phaseChanged', from: 'ready', to: 'playing', tick: 1 })).toBe('start');
+    expect(cueForEvent({ type: 'phaseChanged', from: 'playing', to: 'paused', tick: 1 })).toBeNull();
   });
 });

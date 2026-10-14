@@ -1,7 +1,7 @@
 import type { GameEvent } from '../core/state';
 
-/** Звуковые «реплики» движка. Оригинальные звуки пока не реконструированы. */
-export type AudioCue = 'shot' | 'hit' | 'blocked' | 'jump' | 'land' | 'death' | 'levelCompleted' | 'gameOver';
+/** Звуковые «реплики» движка. Оригинальные звуки пока не реконструированы: в демо — условные 1-битные сигналы (beeper.ts). */
+export type AudioCue = 'start' | 'shot' | 'hit' | 'blocked' | 'jump' | 'land' | 'death' | 'levelCompleted' | 'gameOver';
 
 /** Порт аудио: ядро событий не знает, чем и как воспроизводится звук. */
 export interface AudioPort {
@@ -26,6 +26,8 @@ export class NullAudio implements AudioPort {
 /** Событие ядра → реплика (или null, если звука не требуется). */
 export function cueForEvent(event: GameEvent): AudioCue | null {
   switch (event.type) {
+    case 'phaseChanged':
+      return event.from === 'ready' && event.to === 'playing' ? 'start' : null;
     case 'shot':
       return 'shot';
     case 'hit':

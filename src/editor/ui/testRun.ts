@@ -1,4 +1,4 @@
-import { cueForEvent, NullAudio, type AudioPort } from '../../audio/audio';
+import { cueForEvent, type AudioPort } from '../../audio/audio';
 import { GameSession } from '../../app/session';
 import { SettingsDialog } from '../../app/settingsUi';
 import { FixedStepper } from '../../app/stepper';
@@ -41,7 +41,7 @@ export class TestRunner {
   private readonly status: HTMLElement;
   private readonly pauseButton: HTMLButtonElement;
   private readonly hub: InputHub;
-  private readonly audio: AudioPort = new NullAudio();
+  private readonly audio: AudioPort & { unlock(): void };
   private running = false;
   private raf = 0;
   private game: Game | null = null;
@@ -54,8 +54,9 @@ export class TestRunner {
   private readonly observer: ResizeObserver;
   readonly settings: SettingsDialog;
 
-  constructor(hub: InputHub, settingsDialog: HTMLDialogElement) {
+  constructor(hub: InputHub, settingsDialog: HTMLDialogElement, audio: AudioPort & { unlock(): void }) {
     this.hub = hub;
+    this.audio = audio;
     this.canvas = el('canvas', { id: 'test-screen', 'aria-hidden': 'true' });
     this.overlayTitle = el('p', { class: 'overlay__title' });
     this.overlayHint = el('p', { class: 'overlay__hint' });
@@ -87,6 +88,17 @@ export class TestRunner {
     });
     const ghost = el('input', { type: 'checkbox', id: 'test-ghost' });
     ghost.addEventListener('change', () => this.renderer?.setGhost(ghost.checked));
+    const sound = el('input', { type: 'checkbox', id: 'test-sound' });
+    sound.checked = hub.settings.display.sound;
+    sound.addEventListener('change', () => {
+      hub.updateSettings((s) => {
+        s.display.sound = sound.checked;
+      });
+      this.audio.setMuted(!sound.checked);
+      this.audio.unlock();
+      this.audio.play('start');
+      this.refocus();
+    });
     this.root = el(
       'section',
       { class: 'test', id: 'editor-test', hidden: true, 'aria-label': 'Тестовый запуск карты' },
@@ -98,6 +110,7 @@ export class TestRunner {
         button('Заново', () => this.restart()),
         button('Настройки управления…', () => this.settings.open()),
         el('label', { class: 'toolbar__check' }, ghost, ' Неактивные сегменты'),
+        el('label', { class: 'toolbar__check' }, sound, ' Звук'),
       ),
       this.banner,
       el('div', { class: 'test__stage' }, this.area),
