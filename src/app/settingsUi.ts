@@ -15,26 +15,28 @@ import {
   needsGamepadSetup,
 } from '../input/settings';
 import { h } from './dom';
+import { getLang, onLangChange, t, type MsgKey } from './i18n';
 import type { InputHub } from './hub';
 import { ShellPicker } from './shellPicker';
 
-const ACTION_LABELS: Record<Action, string> = {
-  left: 'Влево',
-  right: 'Вправо',
-  up: 'Вверх',
-  down: 'Вниз',
-  jump: 'Прыжок',
-  fire: 'Огонь',
-  start: 'Старт',
-  pause: 'Пауза',
-  confirm: 'Подтвердить (меню)',
-  back: 'Назад (меню)',
+const ACTION_KEYS: Record<Action, MsgKey> = {
+  left: 'act.left',
+  right: 'act.right',
+  up: 'act.up',
+  down: 'act.down',
+  jump: 'act.jump',
+  fire: 'act.fire',
+  start: 'act.start',
+  pause: 'act.pause',
+  confirm: 'act.confirm',
+  back: 'act.back',
 };
 
 type Capture = { device: 'keyboard' | 'gamepad'; action: Action };
 
 function describeList(sources: readonly string[]): string {
-  return sources.length === 0 ? 'не назначено' : sources.map(describeSource).join(' · ');
+  const lang = getLang();
+  return sources.length === 0 ? t('common.unset') : sources.map((source) => describeSource(source, lang)).join(' · ');
 }
 
 /** Раздел «Цвет по умолчанию» (только в игре, не в редакторе). Цвет текущей игры выбирается на самой странице. */
@@ -75,6 +77,8 @@ export class SettingsDialog {
       this.close();
     });
     window.addEventListener('keydown', this.onCaptureKey, true);
+    // Открытый диалог переписывается на лету, когда меняется язык (во время назначения клавиши — не трогаем).
+    onLangChange(() => this.refresh());
   }
 
   get isOpen(): boolean {
@@ -169,16 +173,16 @@ export class SettingsDialog {
     const pad = this.targetPad();
     const padBindings: Bindings | null = pad ? gamepadBindingsFor(settings, pad) : null;
 
-    const title = h('h2', { id: 'settings-title' }, 'Настройки');
+    const title = h('h2', { id: 'settings-title' }, t('set.title'));
     this.dialog.setAttribute('aria-labelledby', 'settings-title');
 
     const keyboard = h(
       'section',
       { class: 'settings__section' },
-      h('h3', {}, 'Клавиатура'),
-      h('p', { class: 'settings__note' }, 'Клавиша назначается по её положению на клавиатуре — раскладка не важна. Esc отменяет назначение.'),
+      h('h3', {}, t('set.kb.h')),
+      h('p', { class: 'settings__note' }, t('set.kb.note')),
       this.bindingsTable(settings.keyboard, 'keyboard'),
-      h('div', { class: 'settings__row' }, this.button('Сбросить клавиатуру', () => {
+      h('div', { class: 'settings__row' }, this.button(t('set.kb.reset'), () => {
         this.hub.updateSettings((s) => {
           s.keyboard = cloneBindings(DEFAULT_KEYBOARD_BINDINGS);
         });
@@ -186,11 +190,11 @@ export class SettingsDialog {
       })),
     );
 
-    const gamepad = h('section', { class: 'settings__section' }, h('h3', {}, 'Геймпад'), this.gamepadControls(pad));
+    const gamepad = h('section', { class: 'settings__section' }, h('h3', {}, t('set.pad.h')), this.gamepadControls(pad));
     if (pad && padBindings) {
       gamepad.append(
         this.bindingsTable(padBindings, 'gamepad'),
-        h('div', { class: 'settings__row' }, this.button('Сбросить геймпад', () => {
+        h('div', { class: 'settings__row' }, this.button(t('set.pad.reset'), () => {
           this.hub.updateSettings((s) => {
             delete s.gamepad.byId[pad.id];
             s.gamepad.stickThreshold = DEFAULT_STICK_THRESHOLD;
@@ -204,19 +208,19 @@ export class SettingsDialog {
       'p',
       { class: 'settings__note' },
       this.hub.settingsPersisted
-        ? 'Настройки сохраняются в этом браузере.'
-        : 'Хранилище браузера недоступно: настройки действуют только до перезагрузки страницы.',
+        ? t('set.stored')
+        : t('set.notStored'),
     );
 
     const actions = h(
       'div',
       { class: 'settings__row settings__row--end' },
-      this.button('Сбросить всё к стандартному', () => {
+      this.button(t('set.resetAll'), () => {
         this.hub.resetSettings();
         this.options.display?.onChange();
         this.render();
       }),
-      this.button('Закрыть', () => this.close(), 'btn--primary'),
+      this.button(t('common.close'), () => this.close(), 'btn--primary'),
     );
 
     const defaults = this.options.display ? this.defaultsSection(this.options.display) : null;
@@ -227,7 +231,7 @@ export class SettingsDialog {
   private defaultsSection(display: DisplayOptions): HTMLElement {
     const picker = new ShellPicker({
       id: 'settings-shell',
-      label: 'Цвет игрушки по умолчанию',
+      label: t('set.def.h'),
       value: this.hub.settings.display.shell,
       onPick: (shell) => {
         this.hub.updateSettings((s) => void (s.display.shell = shell));
@@ -237,8 +241,8 @@ export class SettingsDialog {
     return h(
       'section',
       { class: 'settings__section' },
-      h('h3', {}, 'Цвет игрушки по умолчанию'),
-      h('p', { class: 'settings__note' }, 'С него начинается каждая игра. Цвет текущей игры меняется переключателем справа от игрушки.'),
+      h('h3', {}, t('set.def.h')),
+      h('p', { class: 'settings__note' }, t('set.def.note')),
       picker.root,
     );
   }
@@ -248,7 +252,7 @@ export class SettingsDialog {
     const wrapper = h('div', { class: 'settings__pad' });
 
     const select = h('select', { id: 'settings-pad' });
-    select.append(h('option', { value: '' }, 'Автоматически (первое нажатое устройство)'));
+    select.append(h('option', { value: '' }, t('set.pad.auto')));
     for (const info of this.hub.listPads()) {
       select.append(h('option', { value: info.id }, `${info.id} [${info.index}]`));
     }
@@ -278,41 +282,41 @@ export class SettingsDialog {
     });
 
     wrapper.append(
-      h('label', { for: 'settings-pad' }, 'Устройство'),
+      h('label', { for: 'settings-pad' }, t('set.pad.device')),
       select,
-      h('label', { for: 'settings-threshold' }, 'Порог стика (мёртвая зона)'),
+      h('label', { for: 'settings-threshold' }, t('set.pad.threshold')),
       h('span', { class: 'settings__range' }, threshold, output),
     );
 
     if (!pad) {
-      wrapper.append(h('p', { class: 'settings__warn' }, 'Геймпад не обнаружен. Подключите его и нажмите любую кнопку — затем вернитесь сюда.'));
+      wrapper.append(h('p', { class: 'settings__warn' }, t('set.pad.none')));
     } else if (needsGamepadSetup(settings, pad)) {
       wrapper.append(
         h(
           'p',
           { class: 'settings__warn' },
-          `У «${pad.id}» нестандартный mapping («${pad.mapping || 'не указан'}»): автоматической раскладки нет. Назначьте кнопки вручную.`,
+          t('set.pad.nonstandard', { id: pad.id, mapping: pad.mapping || t('set.pad.mappingNone') }),
         ),
       );
     } else {
-      wrapper.append(h('p', { class: 'settings__note' }, `Настраивается: ${pad.id} (${pad.mapping || 'без mapping'}).`));
+      wrapper.append(h('p', { class: 'settings__note' }, t('set.pad.configuring', { id: pad.id, mapping: pad.mapping || t('set.pad.noMapping') })));
     }
     return wrapper;
   }
 
   private bindingsTable(bindings: Bindings, device: 'keyboard' | 'gamepad'): HTMLTableElement {
     const table = h('table', { class: 'settings__table' });
-    table.append(h('caption', { class: 'visually-hidden' }, device === 'keyboard' ? 'Привязки клавиатуры' : 'Привязки геймпада'));
+    table.append(h('caption', { class: 'visually-hidden' }, device === 'keyboard' ? t('set.table.kb') : t('set.table.pad')));
     const body = h('tbody');
     for (const action of ACTIONS) {
       const capturing = this.capture?.device === device && this.capture.action === action;
       const key = `${device === 'keyboard' ? 'kb' : 'pad'}:${action}`;
       const assign = this.button(
-        capturing ? (device === 'keyboard' ? 'Нажмите клавишу…' : 'Нажмите кнопку на геймпаде…') : 'Назначить',
+        capturing ? (device === 'keyboard' ? t('set.press.key') : t('set.press.pad')) : t('set.assign'),
         () => (capturing ? (this.endCapture(), this.render()) : device === 'keyboard' ? this.beginKeyboardCapture(action) : this.beginGamepadCapture(action)),
       );
       assign.dataset['key'] = key;
-      const clear = this.button('Очистить', () => {
+      const clear = this.button(t('set.clear'), () => {
         this.hub.updateSettings((settings) => {
           if (device === 'keyboard') {
             settings.keyboard[action] = [];
@@ -330,7 +334,7 @@ export class SettingsDialog {
         h(
           'tr',
           {},
-          h('th', { scope: 'row' }, ACTION_LABELS[action]),
+          h('th', { scope: 'row' }, t(ACTION_KEYS[action])),
           h('td', {}, describeList(bindings[action])),
           h('td', { class: 'settings__cell-actions' }, assign, clear),
         ),

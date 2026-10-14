@@ -53,7 +53,7 @@ export interface AudioPort {
 /** Реализация по умолчанию: ничего не воспроизводит (no-op), но помнит mute и громкость. */
 export class NullAudio implements AudioPort {
   muted = true;
-  volume = 0.5;
+  volume = 0.25;
   melodyKind: MelodyKind | null = null;
 
   setMuted(muted: boolean): void {

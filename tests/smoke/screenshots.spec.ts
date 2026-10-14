@@ -64,6 +64,33 @@ test('страница целиком: панели по бокам игрушк
   await page.screenshot({ path: `${dir}/toy-light.png` });
 });
 
+test('английский интерфейс и «сбой шлейфа»: экран рассыпается, пока держат шлейф', async ({ page }) => {
+  mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('./');
+  await page.waitForSelector('#game-area[data-phase="ready"]');
+  await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
+  await page.locator('#corner-lang').click();
+  await page.locator('#original-device summary').click();
+  await page.locator('#side-info').evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: `${dir}/toy-panels-en.png` });
+
+  await page.locator('#game-area').focus(); // фокус был на раскрытой справке: Enter должен идти игре
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#game-area[data-phase="playing"]');
+  await page.waitForSelector('#game-area[data-entry="off"]', { timeout: 6000 });
+  const band = await page.locator('.toy__band').boundingBox();
+  if (!band) throw new Error('Нет шлейфа');
+  await page.mouse.move(band.x + band.width / 2, band.y + band.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(() => Number(document.getElementById('game-area')?.dataset['glitch']) > 0.6, null, { timeout: 5000 });
+  const box = await page.locator('#stage').boundingBox();
+  if (!box) throw new Error('Нет игрушки');
+  await page.screenshot({ path: `${dir}/toy-glitch.png`, clip: { x: box.x - 10, y: Math.max(0, box.y - 10), width: box.width + 20, height: box.height * 0.5 } });
+  await page.mouse.up();
+});
+
 test('игрушка: четыре цвета корпуса', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1100, height: 1000 });

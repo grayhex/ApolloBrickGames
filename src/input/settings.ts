@@ -9,6 +9,7 @@ import {
   type Bindings,
 } from './bindings';
 import type { PadInfo } from './gamepad';
+import { DEFAULT_LANG, isLang, type Lang } from './lang';
 
 export const SETTINGS_KEY = 'crocodile-mario:settings:v1';
 export const SETTINGS_VERSION = 1;
@@ -23,7 +24,7 @@ export type Theme = (typeof THEMES)[number];
 export const MIN_STICK_THRESHOLD = 0.1;
 export const MAX_STICK_THRESHOLD = 0.9;
 export const DEFAULT_STICK_THRESHOLD = 0.5;
-export const DEFAULT_VOLUME = 0.5;
+export const DEFAULT_VOLUME = 0.25;
 
 export interface Settings {
   version: typeof SETTINGS_VERSION;
@@ -48,6 +49,8 @@ export interface Settings {
     compact: boolean;
     /** Фон страницы. */
     theme: Theme;
+    /** Язык интерфейса игрушки: настройки, справка и панели. */
+    lang: Lang;
   };
 }
 
@@ -61,7 +64,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, compact: false, theme: 'dark' },
+    display: { ghost: null, shell: 'blue', sound: true, volume: DEFAULT_VOLUME, compact: false, theme: 'dark', lang: DEFAULT_LANG },
   };
 }
 
@@ -114,6 +117,7 @@ export function sanitizeSettings(raw: unknown): Settings {
           : DEFAULT_VOLUME,
       compact: typeof display['compact'] === 'boolean' ? display['compact'] : false,
       theme: THEMES.find((theme) => theme === display['theme']) ?? 'dark',
+      lang: isLang(display['lang']) ? display['lang'] : DEFAULT_LANG,
     },
   };
 }

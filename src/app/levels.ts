@@ -1,5 +1,6 @@
 import type { ContentPack, LevelDef } from '../content/schema';
 import { makeTestPack } from '../editor/testPack';
+import { t } from './i18n';
 
 /** Сколько оригинальных уровней в режиме MARIO (по упаковке устройства: «MARIO(9)»). */
 export const ORIGINAL_LEVEL_COUNT = 9;
@@ -15,19 +16,17 @@ export interface OriginalSlot {
   number: number;
   /** null — уровень ещё не восстановлен. */
   levelId: string | null;
-  title: string;
 }
+
+/** Подсказка к плитке уровня на текущем языке. */
+export const slotTitle = (slot: OriginalSlot): string => (slot.levelId ? t('lv.open', { n: slot.number }) : t('lv.locked', { n: slot.number }));
 
 export function originalSlots(pack: ContentPack): OriginalSlot[] {
   return Array.from({ length: ORIGINAL_LEVEL_COUNT }, (_, index) => {
     const number = index + 1;
     const levelId = ORIGINAL_LEVELS[number];
     const present = levelId !== undefined && pack.levels.some((level) => level.id === levelId) ? levelId : null;
-    return {
-      number,
-      levelId: present,
-      title: present ? `Уровень ${number} — тестовый, по видео (оригинал ещё не восстановлен)` : `Уровень ${number} — ещё не восстановлен`,
-    };
+    return { number, levelId: present };
   });
 }
 

@@ -20,7 +20,7 @@ export const LOOKAHEAD_MS = 300;
  * в замороженном контексте и разом прозвучали бы по первому нажатию.
  */
 export const GESTURE_GRACE_MS = 400;
-const FALLBACK_VOLUME = 0.5;
+const FALLBACK_VOLUME = 0.25;
 
 // Минимальные структурные типы Web Audio: порт тестируется без браузера.
 export interface AudioParamLike {

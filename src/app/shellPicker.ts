@@ -1,13 +1,9 @@
 import { SHELLS, type Shell } from '../input/settings';
 import { h, svg } from './dom';
+import { t } from './i18n';
 
-/** Подписи цветов корпуса. */
-export const SHELL_LABELS: Record<Shell, string> = {
-  blue: 'синий',
-  red: 'красный',
-  yellow: 'жёлтый',
-  white: 'белый',
-};
+/** Подпись цвета корпуса на текущем языке. */
+export const shellLabel = (shell: Shell): string => t(`shell.${shell}`);
 
 let pickerSerial = 0;
 
@@ -91,9 +87,9 @@ export class ShellPicker {
     for (const shell of SHELLS) {
       const button = h(
         'button',
-        { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell, title: `Цвет: ${SHELL_LABELS[shell]}`, 'aria-label': SHELL_LABELS[shell] },
+        { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },
         miniConsole(shell, serial),
-        h('span', { class: 'shellpick__name' }, SHELL_LABELS[shell]),
+        h('span', { class: 'shellpick__name' }),
       );
       button.addEventListener('click', (event) => this.pick(shell, event.detail !== 0));
       button.addEventListener('keydown', (event) => this.onKey(event, shell));
@@ -101,6 +97,19 @@ export class ShellPicker {
       this.root.append(button);
     }
     this.set(options.value);
+    this.relabel(options.label);
+  }
+
+  /** Подписи на текущем языке (после смены языка); `label` — подпись всей группы. */
+  relabel(label?: string): void {
+    if (label !== undefined) this.root.setAttribute('aria-label', label);
+    for (const [shell, button] of this.buttons) {
+      const name = shellLabel(shell);
+      button.title = t('shell.title', { name });
+      button.setAttribute('aria-label', name);
+      const caption = button.querySelector('.shellpick__name');
+      if (caption) caption.textContent = name;
+    }
   }
 
   /** Показать выбранный цвет (без вызова onPick). */

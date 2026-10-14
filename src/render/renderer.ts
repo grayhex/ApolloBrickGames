@@ -4,6 +4,7 @@ import type { AssetStore } from './assets';
 import type { CameraPos } from './camera';
 import { NO_EFFECTS, type EffectsFrame } from './effects';
 import { drawText as drawBuiltinText, FONT_HEIGHT, textWidth } from './font';
+import { dropoutRects } from './glitch';
 import { computeLayout, type Layout } from './layout';
 
 export interface Sprites {
@@ -95,6 +96,26 @@ export class Renderer {
     ctx.setTransform(this.layout.scale, 0, 0, this.layout.scale, 0, 0);
     ctx.fillStyle = this.screen.colors.background;
     ctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
+  }
+
+  /**
+   * «Сбой шлейфа»: закрасить подложкой часть готовой картинки (0 — ничего, 1 — экран погас совсем). Вызывается после `render`;
+   * зерно `seed` меняют раз в несколько кадров, поэтому потерянные куски мерцают.
+   */
+  dropout(level: number, seed: number): void {
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx || level <= 0) return;
+    const rects = dropoutRects({
+      level,
+      seed,
+      width: this.logicalWidth,
+      height: this.logicalHeight,
+      tileWidth: this.screen.cell.width / 2,
+      tileHeight: this.screen.cell.height / 2,
+    });
+    ctx.setTransform(this.layout.scale, 0, 0, this.layout.scale, 0, 0);
+    ctx.fillStyle = this.screen.colors.background;
+    for (const r of rects) ctx.fillRect(r.x, r.y, r.w, r.h);
   }
 
   render(input: RenderInput): void {

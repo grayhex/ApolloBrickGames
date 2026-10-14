@@ -138,7 +138,7 @@ body {
   --shade: #c2beaa;
   --bezel-hi: #ebe8da;
   --bezel-lo: #c4bfaa;
-  --art: #dc8a22;
+  --art: #f0861a;
   --lcd-bg: #adb38c;
   --label: #efe6a6;
   --key: #dedcce;
@@ -227,8 +227,15 @@ body {
   pointer-events: none;
 }
 
+.lid__open,
 .lid__closed {
-  display: none;
+  /* Возврат к полному виду: вырез под шарнир открывается, пока нижняя половина разворачивается. */
+  transition: opacity calc(var(--morph, 0s) * 0.4) ease calc(var(--morph, 0s) * 0.2);
+}
+
+/* Закрытая крышка (без выреза под шарнир) проявляется, когда нижняя половина убирается. */
+.lid__closed {
+  opacity: 0;
 }
 
 .lid__lip {
@@ -274,50 +281,69 @@ body {
   padding: 5cqw 3.9cqw 2.4cqw;
 }
 
+/* Винты крышки: хромированные головки со следами износа — царапины, потемневший край, у каждого своя прорезь под своим углом. */
+.lid {
+  --wear-scuff: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40' fill='none'%3E %3Cpath d='M4 30L21 8' stroke='%23fff' stroke-opacity='.75' stroke-width='.9'/%3E %3Cpath d='M9 33L30 11' stroke='%23000' stroke-opacity='.35' stroke-width='.7'/%3E %3Cpath d='M12 7L36 22' stroke='%23fff' stroke-opacity='.55' stroke-width='.7'/%3E %3Cpath d='M6 18L19 33' stroke='%23000' stroke-opacity='.3' stroke-width='.6'/%3E %3Cpath d='M24 5L34 30' stroke='%23fff' stroke-opacity='.45' stroke-width='.6'/%3E %3Ccircle cx='28' cy='29' r='1.4' fill='%23000' fill-opacity='.35'/%3E %3Ccircle cx='11' cy='14' r='.9' fill='%23000' fill-opacity='.3'/%3E %3Ccircle cx='31' cy='13' r='.7' fill='%23fff' fill-opacity='.7'/%3E %3C/svg%3E");
+}
+
 .lid__screw {
+  --rot: 38deg;
+  --scuff-pos: 0 0;
   position: absolute;
   width: 4cqw;
   height: 4cqw;
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, #ffffff, #c4c4c4 52%, #7f7f7f);
+  background: var(--wear-scuff) var(--scuff-pos) / 100% 100% no-repeat,
+    radial-gradient(circle at 74% 80%, rgba(120, 84, 44, 0.42), transparent 55%),
+    radial-gradient(circle at 32% 28%, #f6f6f3, #c4c4c0 48%, #686865 100%);
   /* Головка в раззенковке: кольцо тени, светлая кромка и тень от головки. */
-  box-shadow: 0 0 0 0.4cqw rgba(0, 0, 0, 0.3), 0 0 0 0.75cqw rgba(255, 255, 255, 0.4), 0.2cqw 0.35cqw 0.5cqw 0.5cqw rgba(0, 0, 0, 0.3),
-    inset 0 0 0.5cqw rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 0.4cqw rgba(0, 0, 0, 0.34), 0 0 0 0.75cqw rgba(255, 255, 255, 0.36), 0.2cqw 0.35cqw 0.5cqw 0.5cqw rgba(0, 0, 0, 0.3),
+    inset 0 0 0.55cqw rgba(0, 0, 0, 0.55), inset 0.15cqw 0.2cqw 0.3cqw rgba(255, 255, 255, 0.5);
 }
 
 .lid__screw::before,
 .lid__screw::after {
   content: '';
   position: absolute;
-  inset: 44% 15%;
-  background: rgba(40, 40, 40, 0.6);
+  inset: 45% 14%;
+  background: linear-gradient(180deg, rgba(20, 20, 20, 0.78), rgba(55, 55, 52, 0.62));
   border-radius: 1px;
-  box-shadow: 0 0.12cqw 0 rgba(255, 255, 255, 0.5);
-  transform: rotate(38deg);
+  box-shadow: 0 0.12cqw 0 rgba(255, 255, 255, 0.45), inset 0 0 0.12cqw rgba(0, 0, 0, 0.6);
+  transform: rotate(var(--rot));
 }
 
 .lid__screw::after {
-  transform: rotate(128deg);
+  transform: rotate(calc(var(--rot) + 90deg));
 }
 
 .lid__screw--tl {
+  --rot: 24deg;
   top: 9cqw;
   left: 5cqw;
 }
 
+/* Правый верхний винт на фото темнее и с бронзовым налётом. */
 .lid__screw--tr {
+  --rot: 62deg;
+  --scuff-pos: 3% 5%;
   top: 8.4cqw;
   right: 4cqw;
+  filter: brightness(0.86) sepia(0.28);
 }
 
 .lid__screw--bl {
+  --rot: 8deg;
+  --scuff-pos: 8% -4%;
   bottom: 9cqw;
   left: 3.4cqw;
 }
 
 .lid__screw--br {
+  --rot: 76deg;
+  --scuff-pos: -6% 3%;
   bottom: 9cqw;
   right: 3.6cqw;
+  filter: brightness(0.92);
 }
 
 /* Прорезь со светодиодами: глубокий паз, на фото — тёмнее панели; светодиоды выступают куполами. */
@@ -420,11 +446,18 @@ body {
   height: auto;
   margin: 0 auto;
   stroke: var(--art);
-  stroke-width: 2.2;
+  stroke-width: 3;
+  /* Чёткий насыщенный рисунок: без размытия и полупрозрачности, штрих одной ширины на любом масштабе. */
+  shape-rendering: geometricPrecision;
 }
 
 .lid__art #art-figure {
-  stroke-width: 1.3;
+  stroke-width: 1.9;
+}
+
+.lid__art .art__fill {
+  fill: var(--art);
+  stroke: none;
 }
 
 /* Без корпуса (технические маршруты): просто окно с игрой. */
@@ -489,84 +522,118 @@ body {
   margin: -4.73cqw 14% -5.47cqw;
 }
 
-/* Втулки шарнира — цилиндры: блик по вертикали, светлая и тёмная кромки; шов между крышкой и корпусом и шов оси; внешний край скруглён. */
+/* Петля — простая, как на оригинале: по две цилиндрические втулки с каждой стороны, цвет корпуса, мягкий объём по вертикали, шов посередине. */
 .toy__knuckle {
   position: relative;
   flex: 0 0 25%;
-  height: 7cqw;
-  margin-top: 4.5cqw;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.22) 22%, rgba(255, 255, 255, 0.04) 55%, rgba(0, 0, 0, 0.28)),
-    linear-gradient(180deg, var(--rim-dark), var(--rim) 50%, var(--rim-hi));
-  border-radius: 4.6cqw 1.2cqw 1.2cqw 4.6cqw;
-  box-shadow: inset 0 0.4cqw 0.5cqw rgba(255, 255, 255, 0.35), inset 0 -0.55cqw 0.8cqw rgba(0, 0, 0, 0.3), 0 0.4cqw 0.6cqw rgba(0, 0, 0, 0.3);
+  height: 8.6cqw;
+  margin-top: 3cqw;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0, rgba(255, 255, 255, 0.16) 18%, rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0.1) 66%, rgba(0, 0, 0, 0.36) 100%),
+    linear-gradient(180deg, var(--rim-hi), var(--rim) 48%, var(--rim-dark));
+  border-radius: 3.2cqw 0.9cqw 0.9cqw 3.2cqw;
+  box-shadow: inset 0 0.35cqw 0.45cqw rgba(255, 255, 255, 0.34), inset 0 -0.6cqw 0.8cqw rgba(0, 0, 0, 0.32), 0 0.45cqw 0.7cqw rgba(0, 0, 0, 0.34);
 }
 
 .toy__knuckle:last-child {
-  border-radius: 1.2cqw 4.6cqw 4.6cqw 1.2cqw;
+  border-radius: 0.9cqw 3.2cqw 3.2cqw 0.9cqw;
 }
 
-/* Горизонтальный шов: ухо крышки сверху, ухо корпуса снизу. */
-.toy__knuckle::after {
-  content: '';
-  position: absolute;
-  top: 40%;
-  right: 3%;
-  left: 3%;
-  height: 0.4cqw;
-  background: rgba(0, 0, 0, 0.34);
-  box-shadow: 0 0.22cqw 0 rgba(255, 255, 255, 0.3);
-}
-
-/* Вертикальный шов: ось шарнира делит втулку на малую внешнюю и большую внутреннюю части. */
+/* Шов между двумя втулками одной стороны: тёмная щель и светлая кромка рядом. */
 .toy__knuckle::before {
   content: '';
   position: absolute;
-  top: 8%;
-  bottom: 8%;
-  left: 34%;
-  width: 0.35cqw;
-  background: rgba(0, 0, 0, 0.26);
-  box-shadow: 0.2cqw 0 0 rgba(255, 255, 255, 0.22);
+  top: 4%;
+  bottom: 4%;
+  left: 50%;
+  width: 0.5cqw;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.2));
+  box-shadow: 0.28cqw 0 0 rgba(255, 255, 255, 0.28);
 }
 
-.toy__knuckle:last-child::before {
-  right: 34%;
-  left: auto;
-  box-shadow: -0.2cqw 0 0 rgba(255, 255, 255, 0.22);
+/* Мелкие потёртости краски на краях втулок. */
+.toy__knuckle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 12% 78%, rgba(255, 255, 255, 0.28) 0 0.5cqw, transparent 0.65cqw),
+    radial-gradient(circle at 88% 22%, rgba(255, 255, 255, 0.2) 0 0.35cqw, transparent 0.5cqw),
+    radial-gradient(circle at 36% 90%, rgba(0, 0, 0, 0.2) 0 0.45cqw, transparent 0.6cqw);
+  pointer-events: none;
 }
 
-/* Проём шарнира: тёмная ниша под вырезом крышки, в ней чёрный шлейф с тонкими жилами; на красном корпусе жилы цветные (видны на фото). */
+/* Шлейф можно зажать мышью или пальцем — экран «теряет контакт» (шутка, см. app/cableGlitch.ts). */
+.toy__band {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.toy__band[data-held] {
+  cursor: grabbing;
+  filter: brightness(0.82);
+}
+
+/* Пока контакт потерян, светодиоды над экраном мигают. */
+@keyframes led-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.22;
+  }
+  55% {
+    opacity: 0.85;
+  }
+  78% {
+    opacity: 0.32;
+  }
+}
+
+.toy[data-glitch] .lid__leds .led {
+  animation: led-flicker 0.34s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toy[data-glitch] .lid__leds .led {
+    animation: none;
+  }
+}
+
+/* Чёрный шлейф между втулками: изношенная лента — трещины и складки, на краях выбелены потёртости. Верх — плоская пластина разъёма. */
 .toy__band {
   position: relative;
   flex: 1;
   align-self: flex-start;
-  height: 6.6cqw;
+  height: 8cqw;
   margin: 0 -0.3cqw;
-  background: linear-gradient(180deg, #151515, #050505 60%, #101010);
-  border-radius: 0 0 0.8cqw 0.8cqw;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='90' viewBox='0 0 240 90' fill='none'%3E %3Cpath d='M6 20C52 14 96 30 150 24S214 30 236 22' stroke='%23000' stroke-opacity='.85' stroke-width='2.2'/%3E %3Cpath d='M6 22C52 16 96 32 150 26S214 32 236 24' stroke='%23fff' stroke-opacity='.1' stroke-width='1'/%3E %3Cpath d='M28 54C74 44 112 66 160 56S214 60 238 50' stroke='%23000' stroke-opacity='.7' stroke-width='1.8'/%3E %3Cpath d='M28 56C74 46 112 68 160 58S214 62 238 52' stroke='%23fff' stroke-opacity='.12' stroke-width='.9'/%3E %3Cpath d='M96 8C104 30 92 52 108 86' stroke='%23fff' stroke-opacity='.08' stroke-width='3'/%3E %3Cpath d='M152 70C140 78 120 86 96 88' stroke='%239a9a98' stroke-opacity='.55' stroke-width='1.1'/%3E %3C/svg%3E") center / 100% 100% no-repeat,
+    linear-gradient(180deg, #060606, #1b1b1a 26%, #0c0c0b 60%, #040404);
+  border-radius: 0 0 0.9cqw 0.9cqw;
   box-shadow: inset 0 0.7cqw 1cqw rgba(0, 0, 0, 0.8), inset 0.4cqw 0 0.6cqw rgba(0, 0, 0, 0.5), inset -0.4cqw 0 0.6cqw rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
+/* Белые крапины стёртого покрытия — гуще у краёв шлейфа. */
 .toy__band::before {
   content: '';
   position: absolute;
-  inset: 30% 5% 0 5%;
-  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 0.28cqw, rgba(255, 255, 255, 0) 0.28cqw 1.7cqw);
-  border-radius: 0.6cqw 0.6cqw 0 0;
-}
-
-.toy[data-shell='red'] .toy__band::before {
-  background: repeating-linear-gradient(90deg, #d8782a 0 0.5cqw, #0a0a0a 0.5cqw 0.9cqw, #e5c63a 0.9cqw 1.4cqw, #0a0a0a 1.4cqw 1.9cqw, #5a5a5a 1.9cqw 2.3cqw, #0a0a0a 2.3cqw 2.7cqw);
-  opacity: 0.8;
+  inset: 22% 0 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='110'%3E %3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E %3CfeTurbulence type='fractalNoise' baseFrequency='0.13 0.2' numOctaves='4' seed='5'/%3E %3CfeColorMatrix type='matrix' values='0 0 0 0 0.93 0 0 0 0 0.93 0 0 0 0 0.9 0 0 0 30 -22.2'/%3E %3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  opacity: 0.9;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 26%, rgba(0, 0, 0, 0.12) 40%, rgba(0, 0, 0, 0.12) 60%, #000 74%, #000 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 26%, rgba(0, 0, 0, 0.12) 40%, rgba(0, 0, 0, 0.12) 60%, #000 74%, #000 100%);
 }
 
 .toy__band::after {
   content: '';
   position: absolute;
   inset: 0 0 auto;
-  height: 28%;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent);
+  height: 22%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.1)), linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07) 50%, transparent);
+  border-bottom: 0.22cqw solid rgba(255, 255, 255, 0.07);
 }
 
 .base {
@@ -788,18 +855,93 @@ body {
   filter: brightness(0.94) saturate(0.85);
 }
 
-/* Вид «только экран»: нижняя половина скрыта, крышка с экраном занимает окно целиком (ширину задаёт `.arena[data-compact]`). */
-.toy[data-compact] :is(.toy__hinge, .base) {
-  display: none;
+/* Вид «только экран»: нижняя половина скрыта, крышка с экраном занимает окно целиком (ширину задаёт `.arena[data-compact]`).
+   Переход плавный: арена меняет ширину игрушки (`--stage-w` зарегистрирована как длина, поэтому анимируется), нижняя половина
+   сворачивается по высоте, шарнир тает, вырез на крышке закрывается. Время — `--morph` (0 на загрузке, при смене размера окна и
+   при «уменьшении движения» в системе). */
+@property --stage-w {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 300px;
+}
+
+body[data-chrome='toy'] {
+  --morph: 0.6s;
+  --morph-ease: cubic-bezier(0.5, 0, 0.15, 1);
+}
+
+body[data-motion='off'] {
+  --morph: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-chrome='toy'] {
+    --morph: 0s;
+  }
+}
+
+.toy__lower {
+  display: grid;
+  grid-template-rows: 1fr;
+  /* Запас под нижний торец корпуса: у обёртки overflow: hidden, иначе тень кромки обрезалась бы. */
+  margin-bottom: -1.4cqw;
+  /* Разворачивается после того, как игрушка начала уменьшаться. */
+  transition: grid-template-rows calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25), visibility 0s;
+}
+
+.toy__lower-in {
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 1.4cqw;
+}
+
+/* Сворачивается сразу, а игрушка увеличивается следом (на высоте это не даёт ей на миг вылезти за окно). */
+.toy[data-compact] .toy__lower {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), visibility 0s linear calc(var(--morph, 0s) * 0.75);
+}
+
+.toy__hinge {
+  transition: height calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25),
+    margin-top calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25),
+    margin-bottom calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.25),
+    opacity calc(var(--morph, 0s) * 0.4) ease calc(var(--morph, 0s) * 0.4), visibility 0s;
+}
+
+.toy[data-compact] .toy__hinge {
+  height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: height calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), margin-top calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease),
+    margin-bottom calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), opacity calc(var(--morph, 0s) * 0.4) ease,
+    visibility 0s linear calc(var(--morph, 0s) * 0.75);
 }
 
 /* Без нижней половины вырез шарнира не нужен: крышка закрыта снизу. */
+.toy[data-compact] .lid__open,
+.toy[data-compact] .lid__closed {
+  transition: opacity calc(var(--morph, 0s) * 0.35) ease calc(var(--morph, 0s) * 0.4);
+}
+
 .toy[data-compact] .lid__open {
-  display: none;
+  opacity: 0;
 }
 
 .toy[data-compact] .lid__closed {
-  display: block;
+  opacity: 1;
+}
+
+body[data-chrome='toy'] .arena {
+  transition: --stage-w calc(var(--morph, 0s) * 0.9) var(--morph-ease, ease);
+}
+
+/* Увеличение до «только экран» стартует чуть позже сворачивания нижней половины. */
+body[data-chrome='toy'] .arena[data-compact] {
+  transition: --stage-w var(--morph, 0s) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.15);
 }
 
 .toy[data-compact] .lid__window {
@@ -1551,6 +1693,101 @@ body:not([data-chrome='toy']) .side {
   color: var(--text);
 }
 
+/* «Figure introduction» с упаковки: фигурки из тех же LCD-ячеек, что рисует игра, с подписями. */
+.figs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fig {
+  display: grid;
+  grid-template-rows: 40px auto;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 4px 6px;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.fig__box {
+  display: grid;
+  grid-template-columns: repeat(var(--fig-cols, 1), max-content);
+  align-content: center;
+  justify-content: center;
+  height: 40px;
+  color: var(--lcd-ink);
+  background: var(--lcd);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.14);
+  filter: var(--lcd-dim);
+}
+
+.spr--gap {
+  background: none;
+}
+
+/* Пуля — одна точка (на упаковке «BULLET» нарисована крошечной точкой). */
+.fig__dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin: auto;
+  background: var(--lcd-ink);
+  border-radius: 50%;
+}
+
+.fig__name {
+  font-size: 0.6rem;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.side__text--over {
+  margin: 2px 0 0;
+}
+
+/* Сведения об оригинальном устройстве: свёрнуты, пока не раскрыть. */
+.orig {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.orig__sum {
+  cursor: pointer;
+  font: 800 0.66rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.orig__sum:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.orig__p {
+  margin: 6px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.orig__p b {
+  color: var(--text);
+}
+
 .hazards {
   display: flex;
   flex-wrap: wrap;
@@ -1686,6 +1923,35 @@ body:not([data-chrome='toy']) .side {
 .corner__btn svg {
   width: 18px;
   height: 18px;
+}
+
+/* Переключатель языка: «RU / EN», активный язык ярче. */
+.corner__btn--lang {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: auto;
+  min-width: 52px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font: 800 0.66rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.lang__opt {
+  opacity: 0.48;
+  transition: opacity 120ms, color 120ms;
+}
+
+.corner__btn--lang[data-lang='ru'] .lang__opt[data-opt='ru'],
+.corner__btn--lang[data-lang='en'] .lang__opt[data-opt='en'] {
+  opacity: 1;
+  color: var(--text);
+}
+
+.lang__sep {
+  opacity: 0.35;
 }
 
 /* ── Чистая страница игрушки и технические страницы ───────────────────────── */
