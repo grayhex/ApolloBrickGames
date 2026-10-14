@@ -1,6 +1,5 @@
 import { h } from './dom';
-import { icon } from './icons';
-import { onLangChange, rich, t, type MsgKey } from './i18n';
+import { onLangChange, t, type MsgKey } from './i18n';
 import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
 
@@ -78,18 +77,13 @@ function keyRow(label: string, ...groups: string[][]): HTMLElement {
   );
 }
 
-/** Строка очков: фигурка, название и способы набрать очки (каждый — отдельной строкой «как — сколько»). */
-function scoreRow(fig: HTMLElement, name: string, ways: readonly (readonly [string, number])[]): HTMLElement {
+/** Строка очков: название и способы набрать очки (каждый — «как — сколько»); фигура видна выше, в «Фигурах и врагах». */
+function scoreRow(name: string, ways: readonly (readonly [string, number])[]): HTMLElement {
   return h(
     'li',
     { class: 'score__row' },
-    fig,
-    h(
-      'div',
-      { class: 'score__what' },
-      h('b', { class: 'score__name' }, name),
-      ...ways.map(([how, points]) => h('span', { class: 'score__way' }, h('span', {}, how), h('b', {}, `+${points}`))),
-    ),
+    h('b', { class: 'score__name' }, name),
+    h('span', { class: 'score__ways' }, ...ways.map(([how, points]) => h('span', { class: 'score__way' }, h('span', {}, how), h('b', {}, `+${points}`)))),
   );
 }
 
@@ -132,9 +126,8 @@ export class InfoPanel {
 
     const about = h(
       'section',
-      { class: 'side__sec', 'aria-labelledby': 'about-title' },
+      { class: 'side__sec side__sec--facts', 'aria-labelledby': 'about-title' },
       h('h3', { class: 'side__h', id: 'about-title' }, t('info.journey.h')),
-      h('p', { class: 'side__text' }, ...rich(t('info.journey.p'))),
       h(
         'ul',
         { class: 'facts', 'aria-label': t('info.facts.aria') },
@@ -159,9 +152,9 @@ export class InfoPanel {
         keyRow(t('info.keys.power'), [POWER_KEY]),
         keyRow(t('info.keys.sound'), [SOUND_KEY]),
       ),
-      h('p', { class: 'side__pad' }, icon('gamepad'), h('span', {}, t('info.pad'))),
     );
 
+    // Названия фигур — по упаковке, на английском на любом языке интерфейса.
     const figures = h(
       'section',
       { class: 'side__sec', 'aria-labelledby': 'figs-title' },
@@ -188,9 +181,9 @@ export class InfoPanel {
       h(
         'ul',
         { class: 'score' },
-        scoreRow(figure([['heart']]), t('info.fig.heart'), [[way.eat, 100]]),
-        scoreRow(figure([[B]]), t('info.fig.smallDevil'), [[way.trample, 200], [way.shoot, 20]]),
-        scoreRow(figure([[B, B], [B, B]]), t('info.fig.bigDevil'), [[way.shoot, 400]]),
+        scoreRow(t('info.fig.heart'), [[way.eat, 100]]),
+        scoreRow(t('info.fig.smallDevil'), [[way.trample, 200], [way.shoot, 20]]),
+        scoreRow(t('info.fig.bigDevil'), [[way.shoot, 400]]),
       ),
       h('p', { class: 'side__cap' }, t('info.lose.h')),
       h(
@@ -203,19 +196,6 @@ export class InfoPanel {
       h('p', { class: 'side__text side__text--over' }, t('info.over')),
     );
 
-    const original = h(
-      'details',
-      { class: 'orig', id: 'original-device' },
-      h('summary', { class: 'orig__sum' }, t('info.orig.h')),
-      ...(['info.orig.pick', 'info.orig.tetris', 'info.orig.shooting', 'info.orig.special', 'info.orig.cheat'] as const).map((key) =>
-        h('p', { class: 'orig__p' }, ...rich(t(key))),
-      ),
-    );
-
-    const note = h('p', { class: 'side__note' }, t('info.note'));
-
-    const open = (this.root.querySelector<HTMLDetailsElement>('#original-device')?.open ?? false) === true;
-    this.root.replaceChildren(head, about, controls, figures, score, original, note);
-    if (open) original.open = true;
+    this.root.replaceChildren(head, about, controls, figures, score);
   }
 }

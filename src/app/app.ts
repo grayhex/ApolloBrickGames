@@ -1,6 +1,7 @@
 import { screenSize, type ContentPack } from '../content/schema';
 import type { AudioPort } from '../audio/audio';
 import { WebAudioPort } from '../audio/beeper';
+import { fetchTrack } from '../audio/remaster';
 import { SoundDirector } from '../audio/director';
 import {
   actionBit,
@@ -23,25 +24,28 @@ import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { openIndexedDbStore, type DraftStore } from '../editor/drafts';
 import { loadUserLevels, type LibraryTarget, type UserLevel } from '../editor/library';
-import { browserStorage, needsGamepadSetup, THEMES, type Shell } from '../input/settings';
+import { browserStorage, needsGamepadSetup, THEMES, type Music, type Shell } from '../input/settings';
 import { LANGS } from '../input/lang';
 import { boundSources, keySource } from '../input/bindings';
 import { CableGlitch } from './cableGlitch';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
+import { CornerNav } from './cornerNav';
 import { HelpDialog } from './help';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
-import { originalPack, originalSlots, refAfterLevelStart, startingLevel, userPack, type LevelRef } from './levels';
+import { bundledLevels, originalPack, originalSlots, refAfterLevelStart, startingLevel, userPack, type LevelRef } from './levels';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { EntryScript } from './entry';
 import { GameSession } from './session';
 import { SettingsDialog } from './settingsUi';
+import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
+import { parseView, type View } from './view';
 import {
   controlsHint,
   deviceView,
@@ -92,6 +96,11 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     cornerSettings: byId<HTMLButtonElement>('corner-settings'),
     cornerHelp: byId<HTMLButtonElement>('corner-help'),
     cornerLang: byId<HTMLButtonElement>('corner-lang'),
+    cornerTheme: byId<HTMLButtonElement>('corner-theme'),
+    devices: byId<HTMLElement>('devices'),
+    lidFront: byId<HTMLElement>('lid-front'),
+    lidCover: byId<HTMLButtonElement>('lid-cover'),
+    lower: byId<HTMLElement>('lower'),
     help: byId<HTMLDialogElement>('help'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
@@ -152,6 +161,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // Контекст, игра, эффекты, сценарий входа и сессия пересоздаются при выборе другого уровня (см. launch).
   const params = new URLSearchParams(window.location.search);
+  // Вид игрушки: всегда начинается закрытой (не сохраняется); `?view=full|screen` и `?power=on` открывают сразу — для ссылок и тестов.
+  let view: View = route.lid ? parseView(params.get('view'), params.get('power') === 'on') : 'full';
   const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
   let ctx = createContext(start.pack);
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
@@ -178,6 +189,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // страницы или на игровой области клавиши работают без предварительного клика.
   const isKeyboardActive = (): boolean => {
     if (settingsDialog.isOpen || helpDialog.isOpen) return false;
+    if (view === 'closed') return false; // пока крышка закрыта, игре клавиши не принадлежат: Enter или пробел открывают игрушку
     const active = document.activeElement;
     return active === null || active === document.body || refs.gameArea.contains(active);
   };
@@ -208,7 +220,12 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   applyLangUi();
 
   // Звук: мелодия и эффекты, восстановленные по записи со звуком (src/audio); включается настройкой и жестом пользователя (политика браузеров).
-  const audio: AudioPort & { unlock(): void } = new WebAudioPort({ muted: !hub.settings.display.sound, volume: hub.settings.display.volume });
+  // Музыка «Ремастер» — готовая запись public/audio/remaster.m4a (грузится при первом выборе; нет файла — звучит оригинал).
+  const audio: AudioPort & { unlock(): void } = new WebAudioPort({
+    muted: !hub.settings.display.sound,
+    volume: hub.settings.display.volume,
+    remaster: fetchTrack(`${import.meta.env.BASE_URL}audio/remaster.m4a`),
+  });
   const unlockAudio = (): void => audio.unlock();
   window.addEventListener('keydown', unlockAudio);
   window.addEventListener('pointerdown', unlockAudio);
@@ -226,6 +243,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
           applyDisplay();
         }
       }
+      speedrun.onEvent(event, game.state.worldTick);
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);
       entry.onEvent(event);
@@ -338,22 +356,55 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     refs.chkSound.checked = display.sound;
     audio.setMuted(!display.sound);
     audio.setVolume(display.volume);
-    refs.toy.toggleAttribute('data-compact', display.compact);
-    refs.arena.toggleAttribute('data-compact', display.compact);
+    audio.setMusic(display.music);
     if (route.lid) applyTheme(display.theme);
+    corner?.setTheme(display.theme);
+    refs.gameArea.dataset['music'] = display.music;
     controls?.update({
       shell: currentShell,
       sound: display.sound,
       volume: display.volume,
+      music: display.music,
       ghost: renderer.hasGhostLayer ? ghostOn() : null,
-      compact: display.compact,
-      theme: display.theme,
+      view,
       level: currentLevel,
     });
   };
 
+  /**
+   * Вид игрушки: закрыта / полная / только экран. Атрибуты `data-closed` и `data-compact` ведут CSS-анимации (раскрытие крышки,
+   * сворачивание нижней половины); закрытая крышка — кнопка «Открыть игрушку», а экран и клавиши под ней недоступны.
+   */
+  const applyView = (): void => {
+    const closed = view === 'closed';
+    refs.toy.dataset['view'] = view;
+    refs.arena.dataset['view'] = view;
+    for (const element of [refs.toy, refs.arena]) {
+      element.toggleAttribute('data-closed', closed);
+      element.toggleAttribute('data-compact', view === 'screen');
+    }
+    refs.lidFront.inert = closed;
+    refs.lower.inert = closed;
+    refs.lidCover.inert = !closed;
+    refs.lidCover.tabIndex = closed ? 0 : -1;
+  };
+  const setView = (next: View): void => {
+    if (!route.lid || next === view) return;
+    view = next;
+    if (view === 'closed' && game.state.phase === 'playing') {
+      suspendReason = 'settings';
+      session.suspend(); // под закрытой крышкой игра на паузе
+    }
+    applyView();
+    applyDisplay();
+    if (view !== 'closed') refocusGame();
+  };
+
   // ── Выбор уровня: оригинальные 1–9 и карты из редактора ──────────────────
   const slots = originalSlots(pack);
+  const bundled = bundledLevels(pack);
+  // Спидран: порядок прохождения — оригинальные уровни пакета; забег начинается с того уровня, что запущен.
+  const speedrun = new Speedrun(slots.flatMap((slot) => (slot.levelId ? [slot.levelId] : [])), game.state.levelId);
   let currentLevel: LevelRef = start.ref;
   let userLevels: readonly UserLevel[] = [];
   const libraryTarget: LibraryTarget = {
@@ -387,12 +438,14 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (ref.kind === 'original') {
       const levelId = slots.find((slot) => slot.number === ref.number)?.levelId;
       if (levelId) source = originalPack(pack, levelId);
+    } else if (ref.kind === 'bundled') {
+      if (bundled.some((b) => b.levelId === ref.levelId)) source = originalPack(pack, ref.levelId);
     } else {
       const level = userLevels.find((user) => user.projectId === ref.projectId)?.level;
       if (level) source = userPack(pack, level);
     }
     if (!source) return false;
-    const original = ref.kind === 'original';
+    const original = ref.kind !== 'user'; // интро и сценарий входа — у уровней пакета (оригинальных и готовых); карта из редактора стартует сразу
     session.suspend();
     ctx = createContext(source);
     game = new Game(ctx, seed);
@@ -410,6 +463,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     hub.tracker.reset();
     stepper.reset();
     refs.statusContent.textContent = contentLine(source);
+    speedrun.reset(game.state.levelId);
     currentLevel = ref;
     applyDisplay();
     return true;
@@ -433,28 +487,35 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       audio.unlock();
       audio.play('confirm'); // услышать выбранный уровень (при выключенном звуке молчит)
     },
+    // Ремастера пока нет — переключатель сохраняется, а звучит та же мелодия (см. подсказку у кнопки).
+    setMusic: (music: Music) => {
+      hub.updateSettings((s) => {
+        s.display.music = music;
+      });
+      applyDisplay();
+    },
     toggleGhost: () => {
       hub.updateSettings((s) => {
         s.display.ghost = !ghostOn();
       });
       applyDisplay();
     },
-    toggleCompact: () => {
-      hub.updateSettings((s) => {
-        s.display.compact = !s.display.compact;
-      });
-      applyDisplay();
-    },
-    toggleTheme: () => {
-      hub.updateSettings((s) => {
-        s.display.theme = THEMES.find((theme) => theme !== s.display.theme) ?? 'dark';
-      });
-      applyDisplay();
-    },
+    setView,
     pickOriginal: (number) => void launch({ kind: 'original', number }),
+    pickBundled: (levelId) => void launch({ kind: 'bundled', levelId }),
     pickUser: (projectId) => void launch({ kind: 'user', projectId }),
   };
-  const controls = route.lid ? new ControlPanel(refs.sideCtl, { slots, actions: panelActions, onPointerUse: refocusGame }) : null;
+  const toggleTheme = (): void => {
+    hub.updateSettings((s) => {
+      s.display.theme = THEMES.find((theme) => theme !== s.display.theme) ?? 'dark';
+    });
+    applyDisplay();
+  };
+  const controls = route.lid
+    ? new ControlPanel(refs.sideCtl, { slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame })
+    : null;
+  // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
+  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, onPointerUse: refocusGame }) : null;
 
   // Шутка со шлейфом: пока шлейф между половинами держат курсором или пальцем, экран рассыпается и гаснет; отпустили — возвращается.
   const glitch = new CableGlitch();
@@ -496,6 +557,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     suspendReason = null;
     director.reset(); // явный рестарт — не возрождение после гибели: обрывает звучащую гибель и снова с фанфары
     session.restart();
+    speedrun.reset(game.state.levelId);
     refocusGame();
   };
   refs.btnRestart.addEventListener('click', restart);
@@ -530,6 +592,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setSound(refs.chkSound.checked);
     refocusGame();
   });
+  applyView();
   applyDisplay();
   void refreshUserLevels();
 
@@ -560,6 +623,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     director.reset();
     if (on) {
       session.restart();
+      speedrun.reset(game.state.levelId);
       hub.tracker.reset();
     } else {
       session.suspend();
@@ -588,6 +652,17 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   window.addEventListener('keyup', (event) => {
     const id = hotkeys[event.code];
     if (id) toy.hotkey(id, false);
+  });
+  // Закрытая игрушка: щелчок по крышке (или Enter / пробел) раскрывает её с анимацией.
+  refs.lidCover.addEventListener('click', () => setView('full'));
+  window.addEventListener('keydown', (event) => {
+    if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (event.code !== 'Enter' && event.code !== 'Space') return;
+    if (settingsDialog.isOpen || helpDialog.isOpen) return;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body && active !== refs.lidCover) return; // фокус в кнопке или поле — клавиша им и нужна
+    event.preventDefault();
+    setView('full');
   });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
   refs.cornerHelp.addEventListener('click', () => helpDialog.open());
@@ -624,7 +699,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
   // Выключенная игрушка в этом виде включается касанием экрана: кнопки ON/OFF на экране нет.
   refs.gameArea.addEventListener('pointerdown', () => {
-    if (!hub.settings.display.compact) return;
+    if (view !== 'screen') return;
     if (!powered) setPower(true);
     else if (game.state.phase !== 'playing') session.requestStart();
   });
@@ -687,6 +762,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('gamepad', gamepadStatus.kind);
     setData('context', session.context);
     setData('power', powered ? 'on' : 'off');
+    setData('musicSource', audio.musicSource); // чем звучит мелодия: original (пищалка) или remaster (запись)
     setData('entry', entry.pending(s.phase) ? 'on' : 'off');
     setData('cameraX', camera.x);
     setData('intro', fx.intro ? 'on' : 'off');
@@ -713,7 +789,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setText.keyboard(keyboardStatusText(keyboardActive));
     const setup = gamepadStatus.kind === 'active' && needsGamepadSetup(hub.settings, gamepadStatus.pad);
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
-    controls?.setDevices(deviceView(gamepadStatus, hub.lastDevice));
+    corner?.setDevices(deviceView(gamepadStatus, hub.lastDevice));
     setText.hint(controlsHint(hub.settings.keyboard, route.fireHint));
     setText.timer(timerText(s, timerUnitTicks(ctx.rules), ctx.rules.params.timerLimitTicks, ctx.rules.params.timerUnitTicks ? 'ед.' : 'с'));
 
@@ -785,6 +861,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     renderer.render(lastScene);
     applyGlitch(now);
     updateUi();
+    controls?.setRun(speedrun.view(game.state.worldTick));
   }
 
   refocusGame();

@@ -6,17 +6,17 @@ import { diagnose, diagnoseForTest, errorsOf, gameLevelJson, levelFromDoc } from
 import { fillRect, setCells } from '../../src/editor/grid';
 import { addMark, addObject, setStart, updateObject } from '../../src/editor/ops';
 import { makeTestPack } from '../../src/editor/testPack';
-import { levelOf } from '../helpers/content';
+import { levelOf, loadSandboxPack, SANDBOX_ID } from '../helpers/content';
 import { demoRoomDoc, env, freshDoc, pack } from './helpers';
 
 describe('диагностика: проверка общим валидатором игры с адресами проблем', () => {
-  it('шаблон и demo-room не содержат ошибок', () => {
+  it('шаблон и песочница не содержат ошибок', () => {
     expect(diagnose(freshDoc(), env)).toEqual([]);
     expect(errorsOf(diagnose(demoRoomDoc(), env))).toEqual([]);
   });
 
-  it('игровой JSON из документа совпадает с исходным уровнем demo-room и проходит общий валидатор', () => {
-    const level = levelOf(pack, 'demo-room');
+  it('игровой JSON из документа совпадает с исходным уровнем песочницы и проходит общий валидатор', () => {
+    const level = levelOf(loadSandboxPack(), SANDBOX_ID);
     const json = gameLevelJson(demoRoomDoc());
     expect(json).toEqual(levelToJson(level));
     expect(validateLevel(json, pack.assets, env.validation)).toEqual(level);

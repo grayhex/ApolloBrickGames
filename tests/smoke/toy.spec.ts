@@ -82,7 +82,7 @@ for (const size of [
   });
 }
 
-test('форма по фото: нижняя половина ≈ 1,55 ширины, втулки шарнира у краёв и проём ≈ 36 % ширины, у крышки заострённая верхняя кромка', async ({ page }) => {
+test('форма по фото: нижняя половина ≈ 1,55 ширины, втулки шарнира у краёв и проём ≈ 36 % ширины, у крышки гладкая верхняя кромка без выступа', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await ready(page);
   const m = await page.evaluate(() => {
@@ -92,7 +92,7 @@ test('форма по фото: нижняя половина ≈ 1,55 шири�
     const band = rect('.toy__band');
     const base = rect('#base');
     const lid = rect('#lid');
-    // Верхняя кромка корпуса крышки: у центра выше, чем у плеч (путь SVG: вершина около y = 3, плечи около y = 27 из 391).
+    // Верхняя кромка корпуса крышки — плавная дуга без выступа: у центра выше плеч лишь на пару единиц (путь SVG: вершина около y = 6, плечи около y = 10 из 391).
     const top = document.querySelector('.lid__body') as SVGPathElement;
     const length = top.getTotalLength();
     let apex = Infinity;
@@ -123,7 +123,8 @@ test('форма по фото: нижняя половина ≈ 1,55 шири�
   expect(m.knuckleWidth).toBeLessThan(0.2);
   expect(m.bandWidth).toBeGreaterThan(0.34);
   expect(m.bandWidth).toBeLessThan(0.38);
-  expect(m.shoulder - m.apex).toBeGreaterThan(15); // вершина заметно выше плеч: кромка не прямая
+  expect(m.shoulder - m.apex).toBeLessThan(8); // выступа по центру нет: кромка гладкая
+  expect(m.shoulder - m.apex).toBeGreaterThanOrEqual(0);
 });
 
 test('логотип: на синем и красном корпусе — белая печать, на жёлтом и белом — цветная', async ({ page }) => {
@@ -356,7 +357,7 @@ test('редактор — в уголке; технические страни�
   await expect(page.locator('#corner')).toBeHidden(); // на технической странице игрушки нет
 });
 
-test('«только экран»: нижняя половина скрывается, крышка с экраном показана крупно; выбор запоминается', async ({ page }) => {
+test('«только экран»: нижняя половина скрывается, крышка с экраном показана крупно; вид не запоминается', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await ready(page);
   const toy = page.locator('#toy');
@@ -368,14 +369,13 @@ test('«только экран»: нижняя половина скрывае�
     });
   const whole = await size();
   await expect(page.locator('#base')).toBeVisible();
-  await expect(page.locator('#tgl-compact')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#view-full')).toHaveAttribute('aria-pressed', 'true');
 
-  await page.locator('#tgl-compact').click();
+  await page.locator('#view-screen').click();
   await expect(toy).toHaveAttribute('data-compact', '');
   await expect(page.locator('#base')).toBeHidden();
   await expect(page.locator('.toy__hinge')).toBeHidden();
-  await expect(page.locator('#tgl-compact')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#tgl-compact')).toHaveAttribute('title', 'Показать всю игрушку');
+  await expect(page.locator('#view-screen')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#game-area')).toBeFocused(); // клавиатура осталась у игры
   // Холст подгоняется под окно LCD на следующем кадре (ResizeObserver), поэтому ждём, а не меряем сразу.
   await expect.poll(async () => (await size()).screenW).toBeGreaterThan(whole.screenW * 1.6); // экран заметно крупнее
@@ -396,21 +396,22 @@ test('«только экран»: нижняя половина скрывае�
   await expect.poll(heroX(page)).toBeGreaterThan(x0 + 1);
   await page.keyboard.up('ArrowRight');
 
-  // Выбор запоминается после перезагрузки; повторное нажатие возвращает игрушку целиком.
-  await page.reload();
-  await expect(toy).toHaveAttribute('data-compact', '');
-  await expect(page.locator('#base')).toBeHidden();
-  await page.locator('#tgl-compact').click();
+  // Возврат к полному виду — тот же размер, что был; после перезагрузки вид не запоминается (по умолчанию игрушка закрыта).
+  await page.locator('#view-full').click();
   await expect(toy).not.toHaveAttribute('data-compact', '');
   await expect(page.locator('#base')).toBeVisible();
-  await expect(page.locator('#tgl-compact')).toHaveAttribute('title', 'Только экран');
+  await expect(page.locator('#view-full')).toHaveAttribute('aria-pressed', 'true');
   const back = await size();
   expect(Math.abs(back.lidW - whole.lidW)).toBeLessThan(2);
+  await page.locator('#view-screen').click();
+  await page.goto('./');
+  await expect(toy).toHaveAttribute('data-view', 'closed');
+  await expect(toy).not.toHaveAttribute('data-compact', '');
 });
 
 test('«только экран»: касание экрана заменяет S./P. — старт и продолжение', async ({ page }) => {
   await ready(page);
-  await page.locator('#tgl-compact').click();
+  await page.locator('#view-screen').click();
   await page.locator('#game-area').click();
   await expect.poll(phase(page)).toBe('playing');
   await page.keyboard.press('Escape');

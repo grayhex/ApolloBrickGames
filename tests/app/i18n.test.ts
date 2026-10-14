@@ -23,7 +23,7 @@ describe('словари интерфейса', () => {
       expect(MESSAGES.en[key].trim(), `en ${key}`).not.toBe('');
     }
     // Перевод — настоящий: основные тексты на двух языках различаются.
-    for (const key of ['info.journey.h', 'help.title', 'set.title', 'ctl.title', 'info.note', 'tgl.compactOff'] as const) {
+    for (const key of ['info.journey.h', 'help.title', 'set.title', 'ctl.title', 'info.over', 'view.screen'] as const) {
       expect(MESSAGES.en[key]).not.toBe(MESSAGES.ru[key]);
     }
   });

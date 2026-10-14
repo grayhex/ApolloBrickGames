@@ -46,7 +46,7 @@ test('игрушка: интро, выход из туннеля, стрельб
   await page.keyboard.up('Space');
   await page.keyboard.up('KeyX');
 
-  await page.locator('#tgl-compact').click();
+  await page.locator('#view-screen').click();
   await page.waitForTimeout(250);
   await page.screenshot({ path: `${dir}/toy-compact.png` });
 });
@@ -59,7 +59,7 @@ test('страница целиком: панели по бокам игрушк
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   await page.screenshot({ path: `${dir}/toy-panels.png` });
   await page.locator('#shell-picker [data-shell="red"]').click();
-  await page.locator('#tgl-theme').click();
+  await page.locator('#corner-theme').click();
   await page.waitForTimeout(250);
   await page.screenshot({ path: `${dir}/toy-light.png` });
 });
@@ -71,12 +71,11 @@ test('английский интерфейс и «сбой шлейфа»: эк
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   await page.locator('#corner-lang').click();
-  await page.locator('#original-device summary').click();
-  await page.locator('#side-info').evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+  await page.locator('#run-toggle').click(); // спидран-HUD выезжает
   await page.waitForTimeout(200);
   await page.screenshot({ path: `${dir}/toy-panels-en.png` });
 
-  await page.locator('#game-area').focus(); // фокус был на раскрытой справке: Enter должен идти игре
+  await page.locator('#game-area').focus(); // фокус был на кнопке пульта: Enter должен идти игре
   await page.keyboard.press('Enter');
   await page.waitForSelector('#game-area[data-phase="playing"]');
   await page.waitForSelector('#game-area[data-entry="off"]', { timeout: 6000 });
@@ -89,6 +88,44 @@ test('английский интерфейс и «сбой шлейфа»: эк
   if (!box) throw new Error('Нет игрушки');
   await page.screenshot({ path: `${dir}/toy-glitch.png`, clip: { x: box.x - 10, y: Math.max(0, box.y - 10), width: box.width + 20, height: box.height * 0.5 } });
   await page.mouse.up();
+});
+
+test('закрытая игрушка с логотипом Apollo на крышке (четыре цвета)', async ({ page }) => {
+  mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  await page.waitForSelector('#toy[data-view="closed"]');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${dir}/toy-closed-page.png` });
+  for (const shell of ['blue', 'red', 'yellow', 'white']) {
+    await page.locator(`#shell-picker [data-shell="${shell}"]`).click();
+    await page.waitForTimeout(150);
+    await page.locator('#stage').screenshot({ path: `${dir}/toy-closed-${shell}.png` });
+  }
+});
+
+test('GAME OVER: бегущая надпись из блоков (три кадра подряд)', async ({ page }) => {
+  test.setTimeout(120_000);
+  mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1100, height: 1000 });
+  await page.goto('./?power=on');
+  await page.waitForSelector('#game-area[data-phase="ready"]');
+  await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
+  // Четыре раза: старт и бег вправо до первой пропасти.
+  for (let life = 0; life < 4; life++) {
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('#game-area[data-phase="playing"]');
+    await page.keyboard.down('ArrowRight');
+    await page.waitForFunction(() => document.getElementById('game-area')?.dataset['phase'] !== 'playing', null, { timeout: 20_000 });
+    await page.keyboard.up('ArrowRight');
+    if (life < 3) await page.waitForSelector('#game-area[data-phase="ready"]', { timeout: 10_000 });
+  }
+  await page.waitForSelector('#game-area[data-phase="gameOver"]', { timeout: 10_000 });
+  const window = page.locator('#lcd-window');
+  for (let i = 0; i < 3; i++) {
+    await page.waitForTimeout(i === 0 ? 1200 : 900);
+    await window.screenshot({ path: `${dir}/game-over-${i + 1}.png` });
+  }
 });
 
 test('игрушка: четыре цвета корпуса', async ({ page }) => {

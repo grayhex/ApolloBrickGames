@@ -139,15 +139,16 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, compact: false, theme: 'dark', lang: 'ru' });
+    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, volume: 0.25, compact: false, theme: 'dark', lang: 'ru' });
+    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, volume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, compact: false, theme: 'dark', lang: 'ru' });
+    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
-    expect(sanitizeSettings({ version: 1, display: { compact: true } }).display.compact).toBe(true);
-    expect(sanitizeSettings({ version: 1, display: { compact: 'да' } }).display.compact).toBe(false);
+    expect(sanitizeSettings({ version: 1, display: { music: 'remaster' } }).display.music).toBe('remaster');
+    expect(sanitizeSettings({ version: 1, display: { music: 'jazz' } }).display.music).toBe('original'); // неизвестная музыка — оригинал
+    expect('compact' in sanitizeSettings({ version: 1, display: { compact: true } }).display).toBe(false); // вид игрушки не сохраняется: всегда закрыта
     expect(sanitizeSettings({ version: 1, display: { volume: 0.8 } }).display.volume).toBe(0.8);
     expect(sanitizeSettings({ version: 1, display: { volume: 7 } }).display.volume).toBe(1); // за пределами — по границе
     expect(sanitizeSettings({ version: 1, display: { volume: -1 } }).display.volume).toBe(0);
@@ -160,8 +161,8 @@ describe('сохранение настроек', () => {
     expect(sanitizeSettings({ version: 1 }).display.volume).toBe(0.25); // громкость по умолчанию — 25 %
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white', sound: false, volume: 0.25, compact: true, theme: 'light', lang: 'en' };
+    settings.display = { ghost: true, shell: 'white', sound: false, volume: 0.25, music: 'remaster', theme: 'light', lang: 'en' };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, volume: 0.25, compact: true, theme: 'light', lang: 'en' });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, volume: 0.25, music: 'remaster', theme: 'light', lang: 'en' });
   });
 });

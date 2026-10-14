@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assemblePack } from '../../src/content/validate';
 import { createContext, Game, makeFrame, validationEnv, type GameEvent } from '../../src/core';
 import { GLYPH_NAMES } from '../../src/render/glyphs';
-import { demoRoomContext, levelOf, loadRawPack, loadRoomPack, roomContext } from '../helpers/content';
+import { levelOf, loadRawSandboxPack, loadRoomPack, roomContext, SANDBOX_ID, sandboxContext } from '../helpers/content';
 import { idle, run, type Segment } from '../helpers/script';
 
 /**
@@ -11,8 +11,8 @@ import { idle, run, type Segment } from '../helpers/script';
  */
 const FRAMES_PER_TICK = 1.5;
 
-/** По умолчанию — песочница demo-room (герой на полу, свободный воздух); roomContext() — тестовый уровень по видео. */
-function started(ctx = demoRoomContext()): Game {
+/** По умолчанию — песочница sandbox-room (герой на полу, свободный воздух); roomContext() — тестовый уровень по видео. */
+function started(ctx = sandboxContext()): Game {
   const game = new Game(ctx);
   game.step(makeFrame({ pressed: ['start'] }));
   return game;
@@ -97,7 +97,7 @@ describe('физика по видео: движение', () => {
   });
 
   it('при bottomEdge: pit тот же нижний ряд — провал (поведение по умолчанию сохранено)', () => {
-    const raw = loadRawPack('room');
+    const raw = loadRawSandboxPack();
     (raw.rules as { params: { bottomEdge?: string } }).params.bottomEdge = 'pit';
     const game = started(createContext(assemblePack(raw, validationEnv(undefined, GLYPH_NAMES))));
     run(game, idle(8));
@@ -116,10 +116,10 @@ describe('удар головой: событие bump и пробиваемый
     expect(bumps(list)).toHaveLength(1);
     expect(bumps(list)[0]).toMatchObject({ type: 'bump', x: 4, y: 3 });
 
-    const raw = loadRawPack('room');
+    const raw = loadRawSandboxPack();
     (raw.rules as { params: { jump: { table: number[] } } }).params.jump.table = [-1, -1, -1, -1, -1];
     const packed = assemblePack(raw, validationEnv(undefined, GLYPH_NAMES));
-    const tall = started(createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: 'demo-room' } }));
+    const tall = started(createContext({ ...packed, manifest: { ...packed.manifest, firstLevel: SANDBOX_ID } }));
     const top = run(tall, { press: ['jump'], ticks: 50 });
     expect(tall.state.hero.y).toBe(4);
     expect(bumps(top)).toHaveLength(0); // выше карты блока нет — эффекта нет

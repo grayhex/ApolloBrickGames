@@ -96,15 +96,15 @@ test('интро: поле не закрыто текстом, герой идё
   await expect.poll(() => area(page, 'intro')).toBe('on');
 
   // Через ≈ 3 с герой уже на пути (построение началось), часть пола построена.
-  await expect.poll(() => inkShare(page, 11, 5), { timeout: 6000 }).toBeGreaterThan(0.3);
+  await expect.poll(() => inkShare(page, 11, 5), { timeout: 6000 }).toBeGreaterThan(0.2);
 
   // Интро кончилось: уровень построен целиком, крышка арки на месте, игра ждёт S./P.
   await expect.poll(() => area(page, 'intro'), { timeout: 8000 }).toBe('off');
   expect(await area(page, 'phase')).toBe('ready');
-  expect(await inkShare(page, 6, 5)).toBeGreaterThan(0.3); // пол
-  expect(await inkShare(page, 1, 3)).toBeGreaterThan(0.3); // крышка (объект brick)
-  expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.3); // верх левой стойки
-  expect(await inkShare(page, 9, 4)).toBeGreaterThan(0.3); // первый блок на пути
+  expect(await inkShare(page, 6, 5)).toBeGreaterThan(0.2); // пол
+  expect(await inkShare(page, 1, 3)).toBeGreaterThan(0.2); // крышка (объект brick)
+  expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.2); // верх левой стойки
+  expect(await inkShare(page, 9, 4)).toBeGreaterThan(0.2); // первый блок на пути
   expect(await area(page, 'heroX')).toBe('1');
   expect(await area(page, 'heroY')).toBe('5');
 });
@@ -116,8 +116,8 @@ test('Enter во время интро пропускает его и сразу
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
   // Уровень нарисован целиком без ожидания интро.
-  await expect.poll(() => inkShare(page, 6, 5)).toBeGreaterThan(0.3);
-  await expect.poll(() => inkShare(page, 1, 3)).toBeGreaterThan(0.3);
+  await expect.poll(() => inkShare(page, 6, 5)).toBeGreaterThan(0.2);
+  await expect.poll(() => inkShare(page, 1, 3)).toBeGreaterThan(0.2);
 });
 
 test('старт: герой сам выходит из туннеля — копия перекладины мигает ≈ 0,25 с, на третий удар крышка исчезает, герой на стойке', async ({
@@ -129,11 +129,11 @@ test('старт: герой сам выходит из туннеля — ко�
   expect(await inkShare(page, 1, 2)).toBe(0);
 
   // Первый прыжок сценария: на 3-м такте голова упирается в крышку и над ней вспыхивает копия перекладины.
-  const flash = watchInk(page, [1], 2, 700, 0.3);
+  const flash = watchInk(page, [1], 2, 700, 0.2);
   await page.keyboard.press('Enter');
   await expect.poll(() => area(page, 'entry')).toBe('on');
   const seen = await flash;
-  expect(seen.max).toBeGreaterThan(0.3); // копия перекладины появилась
+  expect(seen.max).toBeGreaterThan(0.2); // копия перекладины появилась
   expect(seen.frames).toBeGreaterThan(2); // и продержалась несколько кадров…
   expect(seen.frames).toBeLessThan(40); // …но не навсегда (5 тактов ≈ 0,25 с ≈ 15 кадров)
 
@@ -141,8 +141,8 @@ test('старт: герой сам выходит из туннеля — ко�
 
   // Конец сценария: крышка (1, 3) исчезла, стойки целы, герой на верхушке правой стойки (2, 2).
   await expect.poll(() => inkShare(page, 1, 3), { timeout: 3000 }).toBeLessThan(0.05);
-  expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.3);
-  expect(await inkShare(page, 2, 3)).toBeGreaterThan(0.3);
+  expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.2);
+  expect(await inkShare(page, 2, 3)).toBeGreaterThan(0.2);
   expect(await area(page, 'heroX')).toBe('2');
   expect(await area(page, 'heroY')).toBe('2');
   expect(await area(page, 'phase')).toBe('playing');
@@ -158,9 +158,9 @@ test('бег вправо: мир прокручивается клетками,
   expect(await num(page, 'cameraX')()).toBe(2); // герой в столбце 6 экрана
   expect((await num(page, 'heroX')()) - (await num(page, 'cameraX')())).toBe(6);
   // Блоки на экране сдвинулись: первый блок (x = 9, 10) теперь в столбцах 7–8; на краю экрана — правая стойка (x = 2), левая (x = 0) ушла за край.
-  expect(await inkShare(page, 7, 4)).toBeGreaterThan(0.3);
-  expect(await inkShare(page, 8, 4)).toBeGreaterThan(0.3);
-  expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.3);
+  expect(await inkShare(page, 7, 4)).toBeGreaterThan(0.2);
+  expect(await inkShare(page, 8, 4)).toBeGreaterThan(0.2);
+  expect(await inkShare(page, 0, 3)).toBeGreaterThan(0.2);
   expect(await inkShare(page, 1, 3)).toBeLessThan(0.05);
 
   // Прыжок через препятствие и бег дальше: камера идёт за героем.

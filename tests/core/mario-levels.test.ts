@@ -93,6 +93,19 @@ describe('девять уровней MARIO: проходимость (поис�
     });
   }
 
+  it('custom-1: сгенерированный пользовательский уровень проходим — без врагов и с врагами; он не ведёт никуда дальше (последний в пакете)', () => {
+    const custom = pack.levels.find((l) => l.id === 'custom-1');
+    expect(custom).toBeDefined();
+    expect(custom?.transitions).toEqual([{ from: 'goal', to: null }]);
+    expect(custom?.hudLabel).toBe('U-01');
+    for (const enemies of [false, true]) {
+      const result = solveLevel(pack, 'custom-1', { enemies });
+      expect(result.solved).toBe(true);
+      expect(replaySolution(pack, 'custom-1', enemies, result.frames)).toBe(true);
+      expect(result.ticks).toBeLessThan(400 * 20);
+    }
+  });
+
   it('контроль: герой, который только бежит вправо, до финиша не доходит (стенки и провалы требуют прыжков)', () => {
     for (const n of NUMBERS) {
       const { game } = enteredGame(pack, `mario-${n}`, true);
