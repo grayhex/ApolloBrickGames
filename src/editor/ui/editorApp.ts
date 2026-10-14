@@ -1,4 +1,5 @@
 import { InputHub } from '../../app/hub';
+import { WebAudioPort } from '../../audio/beeper';
 import { loadContentPack } from '../../app/loadContent';
 import { browserGamepadProvider } from '../../input/gamepad';
 import { browserStorage } from '../../input/settings';
@@ -227,7 +228,10 @@ export async function startEditor(): Promise<void> {
     onGamepadStatus: (status) => runnerRef.current?.onGamepadStatus(status),
     onGamepadDisconnect: () => runnerRef.current?.onGamepadDisconnect(),
   });
-  const runner = new TestRunner(hub, settingsDialog);
+  const audio = new WebAudioPort({ muted: !hub.settings.display.sound });
+  window.addEventListener('keydown', () => audio.unlock());
+  window.addEventListener('pointerdown', () => audio.unlock());
+  const runner = new TestRunner(hub, settingsDialog, audio);
   runnerRef.current = runner;
   hub.attach();
   window.addEventListener('gamepadconnected', () => hub.poll());

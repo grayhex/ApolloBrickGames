@@ -35,6 +35,8 @@ export interface Settings {
     ghost: boolean | null;
     /** Цвет корпуса вокруг экрана. */
     shell: Shell;
+    /** Звук включён. */
+    sound: boolean;
   };
 }
 
@@ -48,7 +50,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, shell: 'blue' },
+    display: { ghost: null, shell: 'blue', sound: true },
   };
 }
 
@@ -94,6 +96,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     display: {
       ghost: typeof display['ghost'] === 'boolean' ? display['ghost'] : null,
       shell: SHELLS.find((shell) => shell === display['shell']) ?? 'blue',
+      sound: typeof display['sound'] === 'boolean' ? display['sound'] : true,
     },
   };
 }

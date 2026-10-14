@@ -139,15 +139,17 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue' });
+    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red' });
+    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue' });
+    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true });
+    expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
+    expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white' };
+    settings.display = { ghost: true, shell: 'white', sound: false };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white' });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false });
   });
 });

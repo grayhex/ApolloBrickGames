@@ -1,5 +1,6 @@
 import { screenSize } from '../content/schema';
-import { cueForEvent, NullAudio, type AudioPort } from '../audio/audio';
+import { cueForEvent, type AudioPort } from '../audio/audio';
+import { WebAudioPort } from '../audio/beeper';
 import {
   actionBit,
   actionsIn,
@@ -17,6 +18,7 @@ import { Renderer } from '../render/renderer';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { browserStorage, needsGamepadSetup, SHELLS } from '../input/settings';
 import { InputHub } from './hub';
+import { ledState, type LedState } from './leds';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { GameSession } from './session';
@@ -79,6 +81,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     debugToggle: byId<HTMLElement>('debug-toggle'),
     ghostToggle: byId<HTMLElement>('ghost-toggle'),
     chkGhost: byId<HTMLInputElement>('chk-ghost'),
+    chkSound: byId<HTMLInputElement>('chk-sound'),
     routeLink: byId<HTMLAnchorElement>('route-link'),
     btnPause: byId<HTMLButtonElement>('btn-pause'),
     btnRestart: byId<HTMLButtonElement>('btn-restart'),
@@ -120,7 +123,6 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || 1;
   const game = new Game(ctx, seed);
   const renderer = new Renderer(refs.canvas, pack.screen, assets);
-  const audio: AudioPort = new NullAudio();
   const { sprites } = pack.manifest;
   refs.rowTimer.hidden = ctx.rules.params.timerLimitTicks <= 0;
   refs.statusContent.textContent = `Контент: ${pack.manifest.title} (id ${pack.manifest.id}, v${pack.manifest.version}); правила ${pack.rules.id} v${pack.rules.version}; ${ctx.rules.params.tickRateHz} тактов/с — значения демо, не установленные параметры оригинала.`;
@@ -148,6 +150,12 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     },
     onGamepadDisconnect: () => suspend('gamepad'),
   });
+
+  // Звук: условные 1-битные сигналы; громкость включается настройкой и жестом пользователя (политика браузеров).
+  const audio: AudioPort & { unlock(): void } = new WebAudioPort({ muted: !hub.settings.display.sound });
+  const unlockAudio = (): void => audio.unlock();
+  window.addEventListener('keydown', unlockAudio);
+  window.addEventListener('pointerdown', unlockAudio);
 
   const stepper = new FixedStepper(1000 / ctx.rules.params.tickRateHz);
 
@@ -277,6 +285,34 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   refs.chkDebug.addEventListener('change', () => {
     refs.debug.hidden = !refs.chkDebug.checked;
   });
+  refs.chkSound.checked = hub.settings.display.sound;
+  refs.chkSound.addEventListener('change', () => {
+    hub.updateSettings((s) => {
+      s.display.sound = refs.chkSound.checked;
+    });
+    audio.setMuted(!refs.chkSound.checked);
+    audio.unlock();
+    audio.play('start'); // короткий сигнал-подтверждение (при выключении звука молчит)
+    refocusGame();
+  });
+
+  // Светодиоды: условная схема состояния (оригинальная логика не установлена), см. app/leds.ts.
+  const leds = {
+    red: refs.lid.querySelector<HTMLElement>('.led--red'),
+    yellow: refs.lid.querySelector<HTMLElement>('.led--yellow'),
+    green: refs.lid.querySelector<HTMLElement>('.led--green'),
+  };
+  let lastLeds = '';
+  const showLeds = (state: LedState): void => {
+    const key = `${+state.red}${+state.yellow}${+state.green}`;
+    if (key === lastLeds) return;
+    lastLeds = key;
+    for (const name of ['red', 'yellow', 'green'] as const) {
+      const on = state[name];
+      leds[name]?.classList.toggle('led--lit', on);
+      refs.lid.dataset[`led${name[0]?.toUpperCase()}${name.slice(1)}`] = on ? 'on' : 'off';
+    }
+  };
 
   const setText = {
     keyboard: cachedText(refs.statusKeyboard),
@@ -311,6 +347,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('projectiles', s.projectiles.length);
     setData('gamepad', gamepadStatus.kind);
     setData('context', session.context);
+    showLeds(ledState(s.phase, s.tick));
 
     const overlay = overlayView(s, suspendReason);
     refs.overlay.hidden = overlay === null;
