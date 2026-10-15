@@ -1,7 +1,7 @@
 import type { AudioCue, AudioPort, MelodyKind, MusicKind } from './audio';
 import { MelodyPlayer } from './melody';
 import { CUES, type Note } from './phrases';
-import { RemasterTrack, type TrackContextLike, type TrackFetcher } from './remaster';
+import { RemasterTrack, type TrackContextLike, type TrackFetcher, type TrackStatus } from './remaster';
 
 /**
  * Звук через Web Audio в духе пищалки игрушки: только прямоугольные волны, до двух голосов, никаких огибающих.
@@ -74,8 +74,8 @@ export interface WebAudioOptions {
   /** Громкость записи «ремастера» 0…1 (отдельный ползунок; пищалку не затрагивает). */
   musicVolume?: number;
   factory?: () => AudioContextLike | null;
-  /** Загрузчик записи «ремастера» (байты m4a); без него «Ремастер» недоступен и звучит оригинал. */
-  remaster?: TrackFetcher;
+  /** Загрузчик записи «ремастера» (байты m4a) или несколько по порядку (Opus, затем AAC); без него «Ремастер» недоступен и звучит оригинал. */
+  remaster?: TrackFetcher | readonly TrackFetcher[];
   /** Стенные часы, мс (по умолчанию `performance.now`); в тестах подменяются. */
   clock?: () => number;
 }
@@ -142,6 +142,11 @@ export class WebAudioPort implements AudioPort {
     this.prepareTrack();
     this.applySfxGain();
     this.syncMusicSource();
+  }
+
+  /** Состояние записи «ремастера»: `idle` — ещё не грузили, `loading`, `ready`, `failed` (нет файла, не декодируется или загрузчика нет). */
+  get remasterStatus(): TrackStatus {
+    return this.track?.status ?? 'failed';
   }
 
   get melodyKind(): MelodyKind | null {

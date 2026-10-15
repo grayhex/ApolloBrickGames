@@ -1,7 +1,7 @@
 import { screenSize, type ContentPack } from '../content/schema';
 import type { AudioPort } from '../audio/audio';
 import { WebAudioPort } from '../audio/beeper';
-import { fetchTrack } from '../audio/remaster';
+import { remasterSources } from '../audio/remaster';
 import { SoundDirector } from '../audio/director';
 import {
   actionBit,
@@ -228,7 +228,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     muted: !hub.settings.display.sound,
     volume: hub.settings.display.volume,
     musicVolume: musicVolumeOf(hub.settings.display),
-    remaster: fetchTrack(`${import.meta.env.BASE_URL}audio/remaster.m4a`),
+    // Opus в MP4 (лучше при том же размере) и запасная AAC; браузер, не играющий Opus (Safari старых версий), сразу берёт AAC.
+    remaster: remasterSources(import.meta.env.BASE_URL, (type) => document.createElement('audio').canPlayType(type)),
   });
   const unlockAudio = (): void => audio.unlock();
   window.addEventListener('keydown', unlockAudio);
@@ -497,10 +498,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     },
     // Нет записи — переключатель сохраняется, а звучит та же мелодия (см. подсказку у кнопки).
     setMusic: (music: Music) => {
+      const changed = hub.settings.display.music !== music;
       hub.updateSettings((s) => {
         s.display.music = music;
       });
       applyDisplay();
+      if (changed) {
+        audio.unlock();
+        audio.play('confirm'); // отклик на касание: пока игра не идёт, смена музыки на слух иначе незаметна (при выключенном звуке молчит)
+      }
     },
     toggleGhost: () => {
       hub.updateSettings((s) => {
@@ -789,6 +795,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setData('context', session.context);
     setData('power', powered ? 'on' : 'off');
     setData('musicSource', audio.musicSource); // чем звучит мелодия: original (пищалка) или remaster (запись)
+    setData('remaster', audio.remasterStatus); // запись «Ремастера»: idle, loading, ready или failed
+    controls?.setRemasterStatus(audio.remasterStatus);
     setData('entry', entry.pending(s.phase) ? 'on' : 'off');
     setData('cameraX', camera.x);
     setData('intro', fx.intro ? 'on' : 'off');

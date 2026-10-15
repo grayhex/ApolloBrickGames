@@ -1394,6 +1394,33 @@ body:not([data-chrome='toy']) .side {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 50%, transparent);
 }
 
+/* Статус записи на кнопке «Ремастер» (видно, только когда она выбрана): пока грузится — мерцает, не загрузилась — значок ⚠, иначе молча
+   звучал бы оригинал и казалось бы, что кнопка ничего не делает. Без движения (уменьшение движения) вместо мерцания — многоточие. */
+#music[data-remaster='loading'] [data-music='remaster'][aria-pressed='true'] {
+  animation: remaster-loading 1s ease-in-out infinite;
+}
+
+#music[data-remaster='failed'] [data-music='remaster'][aria-pressed='true']::after {
+  content: ' ⚠';
+  color: var(--warn);
+}
+
+@keyframes remaster-loading {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #music[data-remaster='loading'] [data-music='remaster'][aria-pressed='true'] {
+    animation: none;
+  }
+
+  #music[data-remaster='loading'] [data-music='remaster'][aria-pressed='true']::after {
+    content: ' …';
+  }
+}
+
 /* Выпадающий список пользовательских уровней: рамка, фон и шрифт — как у соседних элементов пульта (`.seg`, `.tgl`), стрелка своя,
    а открытый список (его рисует браузер) — в цветах панели, а не системного белого. */
 .pick {

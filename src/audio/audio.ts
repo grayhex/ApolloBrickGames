@@ -48,6 +48,8 @@ export interface AudioPort {
   setMusic(music: MusicKind): void;
   /** Чем звучит мелодия сейчас: `remaster` — играет запись, иначе — пищалка. */
   readonly musicSource: MusicKind;
+  /** Состояние записи «ремастера» (для подсказки на кнопке): ещё не грузили, грузится, готова, не загрузилась / не декодируется. */
+  readonly remasterStatus: 'idle' | 'loading' | 'ready' | 'failed';
   /** Эффект: один канал, более слабый не перебивает звучащий сильный. */
   play(cue: AudioCue): void;
   /** Запустить мелодию с начала (прежняя обрывается). Часы идут и при заглушённом звуке — светодиоды бегут в такт. */
@@ -72,6 +74,7 @@ export class NullAudio implements AudioPort {
   musicVolume = 0.25;
   melodyKind: MelodyKind | null = null;
   musicSource: MusicKind = 'original';
+  remasterStatus: 'idle' | 'loading' | 'ready' | 'failed' = 'idle';
   music: MusicKind = 'original';
 
   setMuted(muted: boolean): void {

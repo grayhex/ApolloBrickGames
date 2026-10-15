@@ -50,6 +50,9 @@ export interface ControlPanelOptions {
   onPointerUse(): void;
 }
 
+/** Состояние записи «Ремастера» (см. `AudioPort.remasterStatus`): по нему на кнопке видно, грузится ли запись и удалось ли её загрузить. */
+export type RemasterStatus = 'idle' | 'loading' | 'ready' | 'failed';
+
 const MUSICS: readonly { id: Music; label: MsgKey }[] = [
   { id: 'original', label: 'music.original' },
   { id: 'remaster', label: 'music.remaster' },
@@ -112,6 +115,8 @@ export class ControlPanel {
   /** Ползунки связаны (музыка «Оригинал»): их двигает один и тот же уровень. */
   private linked = true;
   private readonly musicButtons = new Map<Music, HTMLButtonElement>();
+  private musicRoot: HTMLElement | null = null;
+  private remasterStatus: RemasterStatus = 'idle';
   private readonly viewButtons = new Map<View, HTMLButtonElement>();
   private readonly tiles = new Map<number, HTMLButtonElement>();
   private readonly tiles2: { tile: HTMLButtonElement; slot: OriginalSlot }[] = [];
@@ -170,7 +175,8 @@ export class ControlPanel {
     this.volume = slider('volume', 'sound', 'vol.sound', actions.setVolume, () => this.musicVolume);
     this.musicVolume = slider('music-volume', 'music', 'vol.music', actions.setMusicVolume, () => this.volume);
 
-    const music = this.label(h('div', { class: 'seg', id: 'music', role: 'group' }), 'music.aria', 'aria-label');
+    const music = this.label(h('div', { class: 'seg', id: 'music', role: 'group', 'data-remaster': 'idle' }), 'music.aria', 'aria-label');
+    this.musicRoot = music;
     for (const { id, label } of MUSICS) {
       const button = h('button', { type: 'button', class: 'seg__btn', 'data-music': id, 'aria-pressed': 'false' });
       this.label(button, label);
@@ -307,12 +313,31 @@ export class ControlPanel {
     }
     for (const { tile, slot } of this.tiles2) tile.title = slotTitle(slot);
     this.picker.relabel(t('clr.h'));
+    this.titleRemaster();
     const sumHead = this.runBox.querySelector('.run__sum-h');
     if (sumHead) sumHead.textContent = t('run.total');
     if (this.lastView) this.update(this.lastView);
     this.setUserLevels(this.users, this.userNote);
     this.runSignature = '';
     if (this.lastRun) this.setRun(this.lastRun);
+  }
+
+  /**
+   * Статус записи «Ремастера» на кнопке: пока грузится — мерцает, не загрузилась или не декодируется (Opus в MP4 не везде играет) — значок ⚠
+   * и пояснение в подсказке; иначе молча звучал бы прежний оригинал, и казалось бы, что кнопка ничего не делает. Видно, только когда «Ремастер» выбран.
+   */
+  setRemasterStatus(status: RemasterStatus): void {
+    if (status === this.remasterStatus) return;
+    this.remasterStatus = status;
+    this.musicRoot?.setAttribute('data-remaster', status);
+    this.titleRemaster();
+  }
+
+  private titleRemaster(): void {
+    const button = this.musicButtons.get('remaster');
+    if (!button) return;
+    const key: MsgKey = this.remasterStatus === 'loading' ? 'music.remasterLoading' : this.remasterStatus === 'failed' ? 'music.remasterFailed' : 'music.remasterNote';
+    button.title = t(key);
   }
 
   private setIcon(holder: HTMLElement, name: IconName): void {

@@ -258,3 +258,83 @@ test('ползунки «Звук» и «Музыка»: под «Оригина
   expect(errors).toEqual([]);
 });
 
+test('Opus не декодируется (как в Safari) — запись берётся из запасного AAC: «Ремастер» всё равно звучит', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const urls: string[] = [];
+  await page.route('**/audio/remaster.m4a', (route) => {
+    urls.push('opus');
+    return route.fulfill({ status: 200, contentType: 'audio/mp4', body: Buffer.from('не декодируется') });
+  });
+  await page.route('**/audio/remaster-aac.m4a', (route) => {
+    urls.push('aac');
+    return route.fulfill({ status: 200, contentType: 'audio/mp4', body: wav(90) });
+  });
+  await startGame(page);
+  await page.locator('#music [data-music="remaster"]').click();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => area(page, 'phase')).toBe('playing');
+  await expect.poll(() => area(page, 'entry'), { timeout: 8000 }).toBe('off');
+  await expect.poll(() => area(page, 'musicSource'), { timeout: 8000 }).toBe('remaster');
+  expect(await area(page, 'remaster')).toBe('ready');
+  expect(urls).toEqual(['opus', 'aac']); // сначала основной, затем запасной
+  await expect(page.locator('#music')).toHaveAttribute('data-remaster', 'ready');
+  expect(errors).toEqual([]);
+});
+
+test('кнопка «Ремастер» показывает статус записи: пока грузится — пояснение, не загрузилась — значок ⚠ и подсказка', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/audio/remaster.m4a', async (route) => {
+    await gate; // запись «грузится», пока тест не отпустит
+    await route.fulfill({ status: 200, contentType: 'audio/mp4', body: Buffer.from('не декодируется') });
+  });
+  await page.route('**/audio/remaster-aac.m4a', (route) => route.fulfill({ status: 404, body: 'нет' }));
+  await startGame(page);
+  const button = page.locator('#music [data-music="remaster"]');
+  const mark = (): Promise<string> => button.evaluate((element) => getComputedStyle(element, '::after').content);
+  expect(await mark()).toBe('none'); // пока «Ремастер» не выбран, на кнопке ничего нет
+  await button.click();
+  await expect(page.locator('#music')).toHaveAttribute('data-remaster', 'loading');
+  await expect(button).toHaveAttribute('title', /загружается/);
+  expect(await mark()).toContain('…'); // в тестах «уменьшение движения»: вместо мерцания — многоточие
+  release();
+  await expect(page.locator('#music')).toHaveAttribute('data-remaster', 'failed'); // ни Opus, ни AAC
+  await expect(button).toHaveAttribute('title', /не загрузилась или не поддерживается/);
+  expect(await mark()).toContain('⚠');
+  expect(await area(page, 'musicSource')).toBe('original'); // звучит оригинал, выбор сохранён
+  expect(await area(page, 'music')).toBe('remaster');
+  // Выбрали «Оригинал» — предупреждения на «Ремастере» нет (оно только у выбранной кнопки).
+  await page.locator('#music [data-music="original"]').click();
+  expect(await mark()).toBe('none');
+  expect(errors).toEqual([]);
+});
+
+test('запасной файл public/audio/remaster-aac.m4a настоящий: отдаётся как MP4 и, если браузер умеет AAC, декодируется, когда основного нет', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const served: { type: string; size: number; head: string }[] = [];
+  page.on('response', async (response) => {
+    if (!response.url().endsWith('/audio/remaster-aac.m4a')) return;
+    const body = await response.body();
+    served.push({ type: response.headers()['content-type'] ?? '', size: body.length, head: body.subarray(4, 8).toString('latin1') });
+  });
+  await page.route('**/audio/remaster.m4a', (route) => route.fulfill({ status: 404, body: 'нет' }));
+  await startGame(page);
+  await page.locator('#music [data-music="remaster"]').click();
+  await expect.poll(() => served.length, { timeout: 8000 }).toBe(1); // основного нет — запасной запрошен
+  expect(served[0]?.head).toBe('ftyp'); // это MP4
+  expect(served[0]?.size).toBeGreaterThan(1_000_000);
+  expect(served[0]?.type).toMatch(/audio\/(mp4|x-m4a|aac)/);
+  // Chromium, который ставит Playwright, собран без AAC (как и открытые сборки): декодирование проверяем там, где оно возможно (Chrome, Edge, Firefox, Safari).
+  const aac = await page.evaluate(() => new Audio().canPlayType('audio/mp4; codecs="mp4a.40.2"'));
+  if (aac !== '') {
+    await page.keyboard.press('Enter');
+    await expect.poll(() => area(page, 'phase')).toBe('playing');
+    await expect.poll(() => area(page, 'entry'), { timeout: 8000 }).toBe('off');
+    await expect.poll(() => area(page, 'musicSource'), { timeout: 15000 }).toBe('remaster');
+  }
+  expect(errors).toEqual([]);
+});
