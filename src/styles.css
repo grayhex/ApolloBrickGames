@@ -2587,6 +2587,11 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   body[data-chrome='toy'] .brand { width: max-content; max-width: 100%; height: 42px; margin-bottom: 6px; }
   .toysw__item[aria-current='page'] .toysw__name { display: inline; }
 }
+/* Телефон: четыре игрушки с названием текущей не помещаются рядом с логотипом (на 360 px — с запасным шрифтом, шире Inter): остаются миниатюры, текущая — в рамке, имя — в aria-label. */
+@media (max-width: 430px) {
+  .toysw__item[aria-current='page'] .toysw__name { display: none; }
+  .toysw__item { padding: 0 8px; }
+}
 @media (max-width: 640px) {
   .corner { top: 10px; right: 10px; }
   .devs.chrome-dock { top: 10px; left: 10px; }

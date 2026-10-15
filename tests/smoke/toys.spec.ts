@@ -82,6 +82,22 @@ test.describe('шапка и переключатель', () => {
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
   });
 
+  for (const toy of ['mario', 'tank168']) {
+    test(`${toy}: на телефоне (320–390 px) шапка не даёт горизонтальной прокрутки даже с широким запасным шрифтом`, async ({ page }) => {
+      await page.goto(`./?toy=${toy}`);
+      await page.waitForSelector('.toysw__item');
+      // Шрифт CI-раннера (DejaVu Sans) шире локального: проверяем «худший» случай независимо от машины.
+      await page.addStyleTag({ content: "*{font-family:'DejaVu Sans', sans-serif !important}" });
+      for (const width of [320, 360, 390]) {
+        await page.setViewportSize({ width, height: 740 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth), `${toy} @${width}`).toBeLessThanOrEqual(width);
+        const sw = await page.locator('.toysw').boundingBox();
+        expect(sw!.x + sw!.width, `${toy} @${width}: переключатель в окне`).toBeLessThanOrEqual(width);
+        await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('aria-label', /.+/); // имя текущей остаётся доступным и без подписи
+      }
+    });
+  }
+
   test('технические страницы шапки не показывают', async ({ page }) => {
     await page.goto('./#/tech');
     await expect(page.locator('#brand')).toBeHidden();
