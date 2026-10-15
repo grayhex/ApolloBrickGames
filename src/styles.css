@@ -135,12 +135,12 @@ body[data-booting] .shell {
   container-type: inline-size;
   width: 100%;
   /* Игрушка целиком (крышка и нижняя половина ≈ 2,5 ширины) вписывается в окно по высоте. */
-  max-width: clamp(240px, calc((100dvh - 24px) / 2.6), 640px);
+  max-width: clamp(240px, calc((100dvh - 24px - var(--head-h, 0px)) / 2.6), 640px);
   margin: 0 auto;
 }
 
 /* Палитра корпуса по умолчанию (синий): у игрушки, панелей вокруг неё и кнопок-миниатюр; другие цвета — `[data-shell]` ниже. */
-:is(.toy, .arena, .shellpick__btn) {
+:is(.toy, .arena, .shellpick__btn, .toysw__item) {
   --rim: #2456c9;
   --rim-dark: #1a3fa0;
   /* Блик и тень пластика выводятся из цвета корпуса: объём одинаков у всех четырёх цветов. */
@@ -207,12 +207,14 @@ body[data-booting] .shell {
   --label: #f6e8c4;
 }
 
-/* Жёлтый корпус — по фотографиям владельца: жёлтый пластик, серо-белая панель экрана, голубоватые надписи. */
+/* Жёлтый корпус — по фотографиям владельца (Часы+99, фото при дневном и ламповом свете): тусклый кремово-жёлтый пластик, а не яркий лимонный;
+   серо-белая панель экрана, голубоватые надписи. */
 [data-shell='yellow'] {
-  --tone: #e8c526;
+  --tone: #d9c85c;
   --print: #d3392f;
-  --rim: #f3dc3f;
-  --rim-dark: #dcc02a;
+  --rim: #ebe093;
+  --rim-dark: #d8cc78;
+  --rim-lo: color-mix(in srgb, var(--rim-dark) 84%, #000);
   --face: #dedfe4;
   --face-2: #cbccd3;
   --shade: #c1c2ca;
@@ -968,7 +970,7 @@ body[data-chrome='toy'] .arena {
 
 /* Закрытая игрушка ниже открытой (нет крышки над шарниром): поэтому крупнее. */
 body[data-chrome='toy'] .arena[data-closed] {
-  --stage-w: clamp(260px, calc((100dvh - 24px) / 1.7), 700px);
+  --stage-w: clamp(260px, calc((100dvh - 24px - var(--head-h, 0px)) / 1.7), 700px);
 }
 
 /* Увеличение до «только экран» стартует чуть позже сворачивания нижней половины. */
@@ -1129,7 +1131,7 @@ body[data-chrome='toy'] .arena {
   --info-w: clamp(260px, 21vw, 340px);
   /* Минимальный просвет между панелью и игрушкой; остальное свободное место уходит в просвет, и панели прижимаются к краям окна. */
   --arena-gap: clamp(32px, 4vw, 64px);
-  --stage-w: clamp(240px, calc((100dvh - 24px) / 2.6), 640px);
+  --stage-w: clamp(240px, calc((100dvh - 24px - var(--head-h, 0px)) / 2.6), 640px);
   display: grid;
   grid-template-columns:
     var(--info-w)
@@ -1141,7 +1143,7 @@ body[data-chrome='toy'] .arena {
 }
 
 body[data-chrome='toy'] .arena[data-compact] {
-  --stage-w: clamp(300px, calc((100dvh - 24px) / 0.98), 1100px);
+  --stage-w: clamp(300px, calc((100dvh - 24px - var(--head-h, 0px)) / 0.98), 1100px);
 }
 
 body[data-chrome='toy'] .arena > .stage {
@@ -1580,7 +1582,7 @@ body:not([data-chrome='toy']) .side {
 /* Переключатель цвета: четыре миниатюрные консоли. Цвета берутся из палитры `[data-shell]`, как у настоящей игрушки. */
 .shellpick {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2142,11 +2144,32 @@ body:not([data-chrome='toy']) .side {
 @media (min-width: 900px) {
   body[data-chrome='toy'] .arena {
     /* Но не ниже целой игрушки при наименьшей ширине (240 px → 610 px высотой): в низком окне (телефон в альбомной, окно браузера ниже ≈ 640 px)
-       арена выше окна и страница прокручивается, а не обрезает игрушку без возможности до неё добраться. */
-    height: max(calc(100dvh - 24px), 614px);
-    grid-template-rows: minmax(0, 1fr); /* строка не растёт вместе с игрушкой: панели стоят на месте */
+       арена выше окна и страница прокручивается, а не обрезает игрушку без возможности до неё добраться (к 614 px добавляется шапка). */
+    height: max(calc(100dvh - 24px), calc(614px + var(--head-h, 0px)));
+    grid-template-rows: auto minmax(0, 1fr); /* строка игрушки не растёт вместе с ней: панели стоят на месте */
     overflow-y: clip;
     overflow-clip-margin: 28px; /* тень игрушки у края окна не обрезается */
+  }
+
+  /* Шапка и игрушка — в средней колонке (одна над другой), панели — по бокам на обе строки. */
+  body[data-chrome='toy'] .arena > .brand {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  body[data-chrome='toy'] .arena > .stage {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  body[data-chrome='toy'] .arena > .side--info {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  body[data-chrome='toy'] .arena > .side--ctl {
+    grid-column: 3;
+    grid-row: 1 / -1;
   }
 }
 
@@ -2157,7 +2180,7 @@ body:not([data-chrome='toy']) .side {
    `--toy-top` — отступ сверху (под угловым меню), `--toy-reserve` — запас снизу под панель браузера (iOS рисует плавающую поверх страницы). */
 @media (max-width: 899px) {
   body[data-chrome='toy'] .arena {
-    --toy-top: 12px;
+    --toy-top: calc(52px + var(--head-h, 0px));
     --toy-reserve: 90px;
     --toy-essential: 1.76;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2194,7 +2217,7 @@ body:not([data-chrome='toy']) .side {
 
 @media (max-width: 640px) {
   body[data-chrome='toy'] .arena {
-    --toy-top: 52px;
+    --toy-top: calc(52px + var(--head-h, 0px));
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -2298,22 +2321,301 @@ body:not([data-chrome='toy']) .corner {
   display: none;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 899px) {
   body[data-chrome='toy'] .shell {
-    padding-top: 52px;
+    padding-top: 52px; /* под угловым меню: шапка с переключателем идёт ниже него */
   }
+}
 
+@media (max-width: 640px) {
   .stage {
-    max-width: clamp(240px, calc((100dvh - 76px) / 2.6), 640px);
+    max-width: clamp(240px, calc((100dvh - 76px - var(--head-h, 0px)) / 2.6), 640px);
   }
 
   body[data-chrome='toy'] .arena {
-    --stage-w: clamp(240px, calc((100dvh - 76px) / 2.6), 640px);
+    --stage-w: clamp(240px, calc((100dvh - 76px - var(--head-h, 0px)) / 2.6), 640px);
   }
 
   body[data-chrome='toy'] .arena[data-compact] {
-    --stage-w: clamp(300px, calc((100dvh - 76px) / 0.98), 1100px);
+    --stage-w: clamp(300px, calc((100dvh - 76px - var(--head-h, 0px)) / 0.98), 1100px);
   }
+}
+
+/* ── Шапка: логотип Apollo и переключатель игрушек ────────────────────────────
+   По центру сверху: рукописная надпись Apollo (вектор из логотипа) и ряд из трёх ссылок — миниатюры закрытых игрушек с названиями.
+   Шапка — первая строка арены, но только в средней колонке: панели по бокам занимают обе строки и остаются во всю высоту окна. Её высота (с отступом) — `--head-h`:
+   она вычитается из высоты окна в расчётах размера игрушки. Правее по краю — угловое меню, поэтому на узком окне подписи остаются только у текущей игрушки. */
+.brand {
+  display: none;
+}
+
+body[data-chrome='toy'] {
+  --head-h: 48px;
+}
+
+body[data-chrome='toy'] .brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 22px;
+  height: 42px;
+  margin-bottom: 6px;
+  /* Шире средней колонки арены — не страшно: подписи сжимаются раньше, чем шапка дошла бы до панелей (см. ниже). */
+  width: max-content;
+  max-width: 100%;
+  justify-self: center;
+  grid-column: 1 / -1;
+  order: -1;
+}
+
+.brand__logo {
+  display: block;
+  height: 38px;
+  width: auto;
+  flex: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.32));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.toysw {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.toysw__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 13px 0 9px;
+  color: var(--muted);
+  font: 700 0.74rem/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+
+.toysw__item:hover {
+  color: var(--text);
+}
+
+.toysw__item[aria-current='page'] {
+  color: var(--text);
+  border-color: var(--hl);
+  background: color-mix(in srgb, var(--hl) 8%, var(--chip));
+  box-shadow: 0 0 0 1px var(--hl-line);
+}
+
+.toysw__item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toysw__icon {
+  width: 21px;
+  max-width: none;
+  height: auto;
+  flex: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.35));
+}
+
+.toysw__item:not([aria-current='page']) .toysw__icon {
+  filter: saturate(0.75) brightness(0.92) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.3));
+}
+
+@media (max-width: 1179px) {
+  .toysw__item:not([aria-current='page']) {
+    padding: 0 8px;
+  }
+
+  .toysw__item:not([aria-current='page']) .toysw__name {
+    display: none;
+  }
+}
+
+/* Узкое окно рядом с угловым меню (справа сверху): остаются одни миниатюры, текущая отмечена рамкой. */
+@media (min-width: 900px) and (max-width: 999px) {
+  .toysw__item {
+    padding: 0 8px;
+  }
+
+  .toysw__item .toysw__name {
+    display: none;
+  }
+
+  .brand__logo {
+    height: 30px;
+  }
+}
+
+@media (max-width: 460px) {
+  body[data-chrome='toy'] .brand {
+    gap: 4px 12px;
+  }
+
+  .brand__logo {
+    height: 30px;
+  }
+
+  .toysw__name {
+    font-size: 0.68rem;
+  }
+}
+
+/* ── «Часы+99» и «Морской бой»: своя аппаратная часть на том же корпусе ─────────
+   Форма и размеры те же, что у Crocodile Mario (крышка 400 × 391, нижняя половина 400 × 620); отличаются экран (портретная матрица 10 × 20 с боковой
+   панелью, тонкая рамка вместо широкой), оформление рамки вокруг него, светодиоды, подписи кнопок и наклейка на подбородке. Цвета — только те,
+   что подтверждены фото оригинала (см. `toys.ts`). */
+.toy[data-model] {
+  --deco: var(--rim);
+}
+
+.toy[data-model='clock99'][data-shell='yellow'] {
+  --deco: #d6c24f;
+}
+
+.toy[data-model='clock99'][data-shell='white'] {
+  --deco: #d3392f;
+}
+
+.toy[data-model] .lid__front {
+  aspect-ratio: 400 / 391;
+}
+
+.toy[data-model] .lid__face {
+  height: 100%;
+  align-content: center;
+  justify-items: center;
+  padding-block: 2cqw;
+}
+
+/* Окно LCD: портретное (матрица 10 × 20 и панель), рамка уже, чем у Mario; ширина — доля крышки, ячейки квадратные. */
+.toy[data-model] .lid__bezel {
+  width: 60cqw;
+  margin-bottom: 0;
+  padding: 0.5cqw;
+  border-width: 2cqw;
+}
+
+.toy[data-model] .lid__window {
+  width: 100%;
+}
+
+.toy[data-model] .lid__leds {
+  width: 36%;
+  height: 6.4cqw;
+  margin-bottom: 2.6cqw;
+}
+
+.toy[data-model] .lid__leds[hidden] {
+  display: none;
+}
+
+/* Оформление рамки. «Часы+99»: тонкая линия у края серой панели, по бокам от экрана — завитки и ромбик (на фото — цвета корпуса, у жёлтого — золотистые).
+   «Морской бой»: цветная линия вплотную вокруг экрана. */
+.lid__deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.toy[data-model='clock99'] .lid__deco {
+  border: 0.5cqw solid var(--deco);
+  border-radius: 1.2cqw;
+  inset: 2.6cqw;
+}
+
+.deco__side {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5cqw;
+  width: 13cqw;
+}
+
+.deco__side[data-side='l'] {
+  left: 0;
+}
+
+.deco__side[data-side='r'] {
+  right: 0;
+}
+
+.deco__flourish {
+  width: 3.6cqw;
+  height: 14.4cqw;
+  overflow: visible;
+  fill: none;
+  stroke: var(--deco);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.deco__side[data-side='r'] .deco__flourish {
+  transform: scaleX(-1);
+}
+
+.deco__gem {
+  width: 2cqw;
+  height: 2cqw;
+  border: 0.45cqw solid var(--deco);
+  transform: rotate(45deg);
+}
+
+.toy[data-model='seabattle'] .lid__bezel {
+  position: relative;
+  margin-top: 0.8cqw;
+}
+
+.toy[data-model='seabattle'] .lid__bezel::before {
+  content: '';
+  position: absolute;
+  inset: -2.6cqw;
+  border: 0.9cqw solid var(--deco);
+  border-radius: 0.8cqw;
+  pointer-events: none;
+}
+
+/* Подбородок: наклейка на всю ширину, чуть ниже ступеньки (как на фото). */
+.base__sticker {
+  position: absolute;
+  left: 9%;
+  top: 65.5%;
+  width: 82%;
+  height: auto;
+  filter: drop-shadow(0 0.35cqw 0.3cqw rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+  user-select: none;
+}
+
+.base__label[data-extra] {
+  pointer-events: none;
+}
+
+/* Левая панель у игрушек 2 и 3 пока пуста: место остаётся, чтобы игрушка стояла по центру, а сама панель не рисуется. */
+.side--info[data-empty] {
+  visibility: hidden;
+}
+
+/* Уровни у заглушки отключены: блок виден, но неактивен. */
+.side__sec[data-disabled='true'] {
+  opacity: 0.5;
+}
+
+.side__sec[data-disabled='true'] .pick {
+  cursor: not-allowed;
 }
 
 .game-area {

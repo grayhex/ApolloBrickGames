@@ -6,6 +6,7 @@ import { onLangChange, t, type MsgKey } from './i18n';
 import { sameLevel, slotTitle, type BundledLevel, type LevelRef, type OriginalSlot } from './levels';
 import { ShellPicker } from './shellPicker';
 import { formatRunTime, type RunView } from './speedrun';
+import type { ToyId } from './toys';
 import { VIEWS, type View } from './view';
 
 export interface ControlPanelActions {
@@ -48,6 +49,16 @@ export interface ControlPanelOptions {
   tickRateHz: number;
   /** Клик мышью или касанием: вернуть клавиатуру игре. С клавиатуры фокус остаётся на кнопке панели. */
   onPointerUse(): void;
+  /** Чья игрушка: от неё зависят наклейка на миниатюрах цвета и вид панели (по умолчанию Crocodile Mario). */
+  toy?: ToyId;
+  /** Какие цвета корпуса предлагать (подтверждённые фото оригинала); по умолчанию все четыре. */
+  shells?: readonly Shell[];
+  /** Уровни выключены (у игры-заглушки их нет): плитки заперты, список карт недоступен. */
+  levelsDisabled?: boolean;
+  /** Выбор музыки и её громкость; у игры без мелодии скрыты. По умолчанию есть. */
+  music?: boolean;
+  /** Спидран-HUD (время прохождения уровней); у игры без уровней скрыт. По умолчанию есть. */
+  speedrun?: boolean;
 }
 
 /** Состояние записи «Ремастера» (см. `AudioPort.remasterStatus`): по нему на кнопке видно, грузится ли запись и удалось ли её загрузить. */
@@ -188,13 +199,13 @@ export class ControlPanel {
       this.musicButtons.set(id, button);
       music.append(button);
     }
+    const withMusic = options.music !== false;
     const sound = h(
       'section',
       { class: 'side__sec side__sec--mini', id: 'blk-sound', 'aria-labelledby': 'snd-title' },
       this.label(h('h3', { class: 'side__h', id: 'snd-title' }), 'snd.h'),
       h('div', { class: 'snd' }, soundButton, this.volume.row),
-      h('div', { class: 'side__cap side__cap--row' }, this.label(h('span', {}), 'music.h'), music),
-      this.musicVolume.row,
+      ...(withMusic ? [h('div', { class: 'side__cap side__cap--row' }, this.label(h('span', {}), 'music.h'), music), this.musicVolume.row] : []),
     );
     this.soundBlock = sound;
 
@@ -202,7 +213,9 @@ export class ControlPanel {
     this.picker = new ShellPicker({
       id: 'shell-picker',
       label: t('clr.h'),
-      value: 'blue',
+      value: options.shells?.[0] ?? 'blue',
+      ...(options.shells ? { shells: options.shells } : {}),
+      ...(options.toy ? { toy: options.toy } : {}),
       onPick: (shell, byPointer) => {
         actions.pickShell(shell);
         if (byPointer) options.onPointerUse();
@@ -261,9 +274,10 @@ export class ControlPanel {
       else if (kind === 'user') actions.pickUser(this.userSelect.value.slice('user:'.length));
       options.onPointerUse();
     });
+    if (options.levelsDisabled) this.userSelect.disabled = true;
     const levels = h(
       'section',
-      { class: 'side__sec', id: 'blk-levels', 'aria-labelledby': 'lv-title' },
+      { class: 'side__sec', id: 'blk-levels', 'aria-labelledby': 'lv-title', ...(options.levelsDisabled ? { 'data-disabled': 'true' } : {}) },
       this.label(h('h3', { class: 'side__h', id: 'lv-title' }), 'lv.h'),
       this.label(h('p', { class: 'side__cap' }), 'lv.original'),
       grid,
@@ -293,7 +307,8 @@ export class ControlPanel {
     this.label(runPanel, 'run.aria', 'aria-label');
     this.runBox.append(this.runToggle, runPanel);
 
-    this.root.replaceChildren(top, sound, view, levels, this.runBox);
+    if (options.toy) this.root.dataset['toy'] = options.toy;
+    this.root.replaceChildren(top, sound, view, levels, ...(options.speedrun === false ? [] : [this.runBox]));
     this.setUserLevels([], null);
     this.relabel();
     onLangChange(() => this.relabel());

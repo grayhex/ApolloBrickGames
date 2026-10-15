@@ -1,6 +1,8 @@
 import './styles.css';
 import { startApp } from './app/app';
 import { parseRoute } from './app/routes';
+import { mountToySwitch } from './app/toySwitch';
+import { parseToy, TOYS } from './app/toys';
 import { startSheet } from './app/sheet';
 import { clearTheme } from './app/theme';
 
@@ -15,12 +17,21 @@ if (route !== 'room') clearTheme();
 // Смена маршрута — простая перезагрузка: у каждого маршрута свой пакет данных и свои обработчики.
 window.addEventListener('hashchange', () => window.location.reload());
 
+// Игрушка выбирается адресом `?toy=…`; шапка с логотипом и переключателем — только у страницы игрушки (комнаты).
+const toy = parseToy(window.location.search);
+if (route === 'room') {
+  const nav = document.getElementById('toy-switch');
+  if (nav) mountToySwitch(nav, toy);
+}
+
 const start =
   route === 'sheet'
     ? startSheet()
     : route === 'editor'
       ? import('./editor/ui/editorApp').then((module) => module.startEditor())
-      : startApp(route);
+      : route === 'room' && TOYS[toy].game === 'tetris'
+        ? import('./app/tetrisApp').then((module) => module.startTetrisApp(toy))
+        : startApp(route);
 
 start.catch((error: unknown) => {
   delete document.body.dataset['booting']; // страница показывается и при сбое запуска: виден блок ошибки
