@@ -419,6 +419,6 @@ test('контрольный лист ресурсов открывается: �
   }
   await expect(page.locator('.sheet__status--draft').first()).toBeVisible();
   await expect(page.locator('.sheet__scene')).toHaveCount(2);
-  await expect(page.locator('.sheet__asset')).toHaveCount(26); // весь атлас владельца, сердечко-снаряд, слово TIME (SVG по видео) и два кадра чертей (малый и клетка большого)
+  await expect(page.locator('.sheet__asset')).toHaveCount(25); // весь атлас владельца, сердечко-снаряд, слово TIME (SVG по видео) и кадр чёрта
   await expect(page.locator('.sheet__status--confirmed')).toHaveCount(0); // подтверждённых пока нет
 });

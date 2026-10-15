@@ -11,7 +11,7 @@
     "holdTicks": 5,
     "dissolveTicks": 13,
     "emptyTicks": 3,
-    "coverage": 0.85,
+    "coverage": 1,
     "stepTicks": 3,
     "routes": {
       "tunnel-run": [

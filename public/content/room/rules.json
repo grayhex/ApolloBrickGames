@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "room-rules",
   "status": "demo",
-  "version": 7,
+  "version": 8,
   "params": {
     "tickRateHz": 20,
     "move": { "repeatDelayTicks": 3, "repeatIntervalTicks": 3 },
@@ -18,7 +18,7 @@
     "secret": { "lives": 200 },
     "timerLimitTicks": 6160,
     "timerUnitTicks": 15.4,
-    "timerScope": "game",
+    "timerScope": "level",
     "deathDelayTicks": 52,
     "bottomEdge": "floor"
   }

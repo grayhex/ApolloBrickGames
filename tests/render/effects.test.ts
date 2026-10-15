@@ -97,6 +97,19 @@ describe('интро участка (наблюдение по видео)', () 
     expect(effects().introTicks('tunnel-run')).toBe(total);
   });
 
+  it('заливка полная: в паузе залиты все клетки поля без пробелов (по замечанию владельца), потом растворяются все', () => {
+    expect(intro.coverage).toBe(1);
+    const fx = effects();
+    const held = frameAt(fx, intro.blankTicks + intro.fillTicks).fill?.cells ?? [];
+    expect(held).toHaveLength(viewport.columns * viewport.rows);
+    expect(new Set(held.map((c) => `${c.x},${c.y}`)).size).toBe(viewport.columns * viewport.rows); // каждая клетка ровно один раз
+    // Во всех уровнях основного пакета заливка одна и та же: поле целиком.
+    for (const id of ['mario-1', 'mario-9', 'mario-3-boss']) {
+      const lvl = levelOf(pack, id);
+      expect(fx.frame(gameAt(intro.blankTicks + intro.fillTicks).state, lvl).fill?.cells ?? []).toHaveLength(viewport.columns * viewport.rows);
+    }
+  });
+
   it('пустой экран → заливка растёт → пауза → растворение → пустой экран', () => {
     const fx = effects();
     let t = 0;

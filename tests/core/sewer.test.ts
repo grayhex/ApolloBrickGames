@@ -6,7 +6,8 @@ import { contextFor, startedGame } from '../helpers/builders';
 /**
  * Колодец («sewer»): щель между двумя трубами, в которую можно провалиться. По видео геймплея (178–214 с) герой стоит на трубе, падает в щель
  * (в ней висит сердце) и оказывается в комнате — ровный пол и большой чёрт. Здесь — механика на маленьких уровнях: вход, возврат в клетку
- * правее колодца с прежним состоянием уровня, гибель в комнате, комната без стопки, проверка данных.
+ * правее колодца с прежним состоянием уровня, гибель в комнате, комната без стопки, проверка данных; победа в комнате (`victory`: чёрт уничтожен
+ * или сердца собраны) переносит героя в комнату выхода из тоннеля, а оттуда выход возвращает на уровень.
  */
 
 const W = 24;
@@ -185,5 +186,99 @@ describe('проверка данных', () => {
     const level = mainLevel();
     level.transitions = [{ from: 'well', to: 'нет-такой' }];
     expect(() => contextFor([level, roomLevel()])).toThrow(ContentError);
+  });
+});
+
+
+describe('победа в комнате и комната выхода из тоннеля', () => {
+  const watchRoom = (watch: 'patroller' | 'pickup', extra: object[]) => ({
+    id: 'room',
+    rows: roomRows(),
+    start: { x: 2, y: 0 },
+    objects: [{ id: 'victory', type: 'victory', x: 0, y: 0, w: 1, h: 1, params: { watch } }, ...extra],
+    transitions: [{ from: 'victory', to: 'tunnel-exit' }],
+  });
+  const exitRoom = {
+    id: 'tunnel-exit',
+    rows: roomRows(),
+    start: { x: 6, y: 4 },
+    objects: [{ id: 'exit', type: 'exit', x: 12, y: 0, w: 1, h: 5, params: {} }],
+  };
+  const devil = { id: 'boss', type: 'patroller', x: 9, y: 3, w: 2, h: 2, params: { hp: 2, score: 400, range: 0, stepTicks: 1000, stomp: 0 } };
+  const game2 = (watch: 'patroller' | 'pickup', roomExtra: object[]): Game =>
+    startedGame(
+      contextFor([mainLevel(), watchRoom(watch, roomExtra), exitRoom], (p) => {
+        p.timerLimitTicks = 0;
+      }),
+    );
+
+  it('чёрт уничтожен выстрелами — героя переносит в комнату выхода; уровень по-прежнему ждёт в стопке, а выход возвращает героя на него', () => {
+    const g = game2('patroller', [devil]);
+    intoRoom(g);
+    g.state.hero.x = 3;
+    g.state.hero.y = 4;
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 120 && g.state.levelId === 'room'; i++) events.push(...g.step(i % 7 === 0 ? makeFrame({ pressed: ['fire'], held: ['fire'] }) : NEUTRAL_FRAME));
+    expect(events.filter((e) => e.type === 'hit' && e.targetId === 'boss')).toHaveLength(2);
+    expect(events.find((e) => e.type === 'roomEntered' && e.levelId === 'tunnel-exit')).toMatchObject({ from: 'room' });
+    expect(events.some((e) => e.type === 'levelStarted' || e.type === 'levelCompleted')).toBe(false);
+    expect(g.state.levelId).toBe('tunnel-exit');
+    expect(g.state.score).toBe(500); // сердце в щели и чёрт
+    expect(g.state.hero).toMatchObject({ x: 6, y: 4 });
+    expect(g.state.stash).toMatchObject({ levelId: 'main', x: 10, y: 4 });
+    // Выход из комнаты выхода — на уровень.
+    const back: GameEvent[] = [];
+    for (let i = 0; i < 80 && g.state.levelId === 'tunnel-exit'; i++) back.push(...g.step(makeFrame({ held: ['right'] })));
+    expect(back.find((e) => e.type === 'roomLeft')).toMatchObject({ levelId: 'main', from: 'tunnel-exit' });
+    expect(g.state.levelId).toBe('main');
+    expect(g.state.hero).toMatchObject({ x: 10, y: 4 });
+    expect(g.state.stash).toBeNull();
+    expect(object(g, 'well').active).toBe(false);
+  });
+
+  it('все бонусные сердца собраны — перенос в комнату выхода; пока осталось хоть одно, героя никуда не переносит', () => {
+    const hearts = [heart('b1', 3, 4), heart('b2', 8, 4)];
+    const g = game2('pickup', hearts);
+    intoRoom(g);
+    g.state.hero.x = 2;
+    g.state.hero.y = 4;
+    for (let i = 0; i < 4; i++) g.step(makeFrame({ held: ['right'] })); // дошёл до первого сердца (столбец 3), второе дальше
+    expect(g.state.levelId).toBe('room');
+    expect(object(g, 'b1').active).toBe(false);
+    expect(object(g, 'b2').active).toBe(true);
+    expect(g.state.stash).not.toBeNull();
+    for (let i = 0; i < 40 && g.state.levelId === 'room'; i++) g.step(makeFrame({ held: ['right'] }));
+    expect(g.state.levelId).toBe('tunnel-exit');
+    expect(g.state.stash).not.toBeNull();
+    expect(g.state.score).toBe(300);
+  });
+
+  it('в комнате нет объектов, за которыми следит победа, — победа не наступает (комната не «выигрывается» сама)', () => {
+    const g = game2('pickup', []);
+    intoRoom(g);
+    tick(g, 100);
+    expect(g.state.levelId).toBe('room');
+  });
+
+  it('гибель в комнате выхода начинает уровень сначала', () => {
+    const g = game2('patroller', [devil]);
+    intoRoom(g);
+    g.state.objects.find((o) => o.id === 'boss')!.active = false;
+    tick(g, 3);
+    expect(g.state.levelId).toBe('tunnel-exit');
+    g.die('pit');
+    tick(g, g.ctx.rules.params.deathDelayTicks + 2);
+    expect(g.state.levelId).toBe('main');
+    expect(g.state.stash).toBeNull();
+    expect(object(g, 'well').active).toBe(true);
+    expect(object(g, 'h-well').active).toBe(true);
+  });
+
+  it('проверка данных: победа без перехода или без параметра «watch» отвергается', () => {
+    const noTransition = { ...watchRoom('pickup', [heart('b1', 3, 4)]), transitions: [] };
+    expect(() => contextFor([mainLevel(), noTransition, exitRoom])).toThrow(ContentError);
+    const noWatch = { ...watchRoom('pickup', [heart('b1', 3, 4)]) };
+    noWatch.objects = [{ id: 'victory', type: 'victory', x: 0, y: 0, w: 1, h: 1, params: {} }, heart('b1', 3, 4)];
+    expect(() => contextFor([mainLevel(), noWatch, exitRoom])).toThrow(ContentError);
   });
 });

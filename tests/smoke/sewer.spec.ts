@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Колодцы (видео геймплея 178–214 с): в уровнях 2–9 есть щель между двумя трубами с сердцем; провалившийся герой попадает в комнату — с большим
- * чёртом (нечётные уровни) или с бонусными сердцами (чётные) — и по выходу возвращается за правую трубу. Состояние — из data-* игровой области;
+ * Колодцы (видео геймплея 178–216 с): в уровнях 2–9 есть щель между двумя одиночными трубами с сердцем; провалившийся герой попадает в комнату —
+ * с большим чёртом (нечётные уровни) или с бонусными сердцами (чётные); после победы (чёрт уничтожен / сердца собраны) его переносит в комнату выхода
+ * из тоннеля, а оттуда правый край возвращает за правую трубу. Состояние — из data-* игровой области;
  * герой переносится к колодцу отладочным `window.__game` (страница с `?debug`): проход всего уровня до колодца в браузере — слишком долгий.
  */
 
@@ -53,7 +54,7 @@ async function dropIntoWell(page: Page, wellX: number): Promise<void> {
   }, wellX);
 }
 
-test('уровень 3: провалился в колодец — комната с большим чёртом; у правого края выход возвращает за правую трубу, колодец закрыт', async ({ page }) => {
+test('уровень 3: провалился в колодец — комната с большим чёртом; победа переносит в комнату выхода, правый край возвращает за правую трубу, колодец закрыт', async ({ page }) => {
   const well = await play(page, 3);
   expect(await area(page, 'level')).toBe('mario-3');
   await dropIntoWell(page, well.x);
@@ -64,13 +65,19 @@ test('уровень 3: провалился в колодец — комнат�
   const boss = await page.evaluate(() => (window as unknown as DebugWindow).__game.state.objects.find((o) => o.id === 'boss'));
   expect(boss).toMatchObject({ active: true });
 
-  // Чёрт далеко от выхода, герой у правого края — выход.
+  // Победа: чёрт уничтожен — героя переносит в комнату выхода из тоннеля.
   await page.evaluate(() => {
-    const game = (window as unknown as DebugWindow).__game;
-    const devil = game.state.objects.find((o) => o.id === 'boss');
-    if (devil) devil.x = 1;
-    game.state.hero.x = 10;
-    game.state.hero.y = 4;
+    const devil = (window as unknown as DebugWindow).__game.state.objects.find((o) => o.id === 'boss');
+    if (devil) devil.active = false;
+  });
+  await expect.poll(() => area(page, 'level')).toBe('sewer-exit');
+  expect(await area(page, 'cameraX')).toBe('0');
+  expect(await area(page, 'phase')).toBe('playing');
+  // Правый край — выход на уровень.
+  await page.evaluate(() => {
+    const hero = (window as unknown as DebugWindow).__game.state.hero;
+    hero.x = 10;
+    hero.y = 4;
   });
   await page.keyboard.down('ArrowRight');
   await expect.poll(() => area(page, 'level')).toBe('mario-3');
@@ -82,15 +89,20 @@ test('уровень 3: провалился в колодец — комнат�
   expect(closed).toBe(false);
 });
 
-test('уровень 2: колодец ведёт в комнату, заполненную бонусными сердцами; собранные сердца считаются в счёт', async ({ page }) => {
+test('уровень 2: колодец ведёт в комнату, заполненную бонусными сердцами; когда все собраны, переносит в комнату выхода из тоннеля', async ({ page }) => {
   const well = await play(page, 2);
   await dropIntoWell(page, well.x);
   await expect.poll(() => area(page, 'level')).toBe('mario-2-bonus');
   // Герой падает через ряды 1–4 по столбцу 2 и по дороге собирает сердца: +100 из щели колодца и ещё по сердцу на ряд.
   await expect.poll(async () => Number(await area(page, 'score'))).toBeGreaterThanOrEqual(300);
   const hearts = await page.evaluate(() => (window as unknown as DebugWindow).__game.state.objects.filter((o) => o.id.startsWith('h') && o.active).length);
-  expect(hearts).toBeLessThan(48);
-  expect(hearts).toBeGreaterThan(40);
+  expect(hearts).toBeLessThan(52);
+  expect(hearts).toBeGreaterThan(44);
+  // Остальные сердца собраны — переносит в комнату выхода.
+  await page.evaluate(() => {
+    for (const o of (window as unknown as DebugWindow).__game.state.objects) if (o.id.startsWith('h')) o.active = false;
+  });
+  await expect.poll(() => area(page, 'level')).toBe('sewer-exit');
 });
 
 test('гибель в комнате колодца: уровень начинается заново с начала, сердце в щели снова на месте, колодец открыт', async ({ page }) => {
@@ -113,7 +125,7 @@ test('гибель в комнате колодца: уровень начина
   expect(await area(page, 'lives')).toBe('3');
   const state = await page.evaluate(() => {
     const game = (window as unknown as DebugWindow).__game;
-    return { heart: game.state.objects.find((o) => o.x === game.level.def.objects.find((d) => d.type === 'sewer')?.x && o.y === 4)?.active, well: game.state.objects.find((o) => o.id === 'well1')?.active };
+    return { heart: game.state.objects.find((o) => o.x === game.level.def.objects.find((d) => d.type === 'sewer')?.x && o.y === 3)?.active, well: game.state.objects.find((o) => o.id === 'well1')?.active };
   });
   expect(state).toEqual({ heart: true, well: true });
 });

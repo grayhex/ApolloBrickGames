@@ -449,9 +449,9 @@ export function validateRuleSet(raw: unknown, env: ValidationEnv, source = 'rule
     else c.fail('$.params.timerUnitTicks', `ожидалось число от 1 до 10000 (тактов в единице таймера), получено ${JSON.stringify(unit)}`);
   }
   const timerScope = p['timerScope'];
-  if (timerScope === 'section' || timerScope === 'game') params.timerScope = timerScope;
+  if (timerScope === 'section' || timerScope === 'level' || timerScope === 'game') params.timerScope = timerScope;
   else if (timerScope !== undefined) {
-    c.fail('$.params.timerScope', `ожидалось «section» или «game», получено ${JSON.stringify(timerScope)}`);
+    c.fail('$.params.timerScope', `ожидалось «section», «level» или «game», получено ${JSON.stringify(timerScope)}`);
   }
   const bottomEdge = p['bottomEdge'];
   if (bottomEdge === 'pit' || bottomEdge === 'floor') params.bottomEdge = bottomEdge;

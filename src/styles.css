@@ -881,6 +881,17 @@ body[data-booting] .shell {
   initial-value: 300px;
 }
 
+/* Подсветка элементов пульта (обводка выбранного и наведённого, кольца, фокус) — всегда белая, какого бы цвета ни была игрушка.
+   На светлом фоне белая обводка сама не видна, поэтому снаружи неё идёт тонкий тёмный волосок `--hl-line` (на тёмном фоне его нет). */
+body[data-chrome='toy'] {
+  --hl: #fff;
+  --hl-line: transparent;
+}
+
+:root[data-theme='light'] body[data-chrome='toy'] {
+  --hl-line: rgba(32, 44, 32, 0.42);
+}
+
 body[data-chrome='toy'] {
   --morph: 0.6s;
   --morph-ease: cubic-bezier(0.5, 0, 0.15, 1);
@@ -1276,8 +1287,9 @@ body:not([data-chrome='toy']) .side {
 
 .dev[data-state='on'] {
   color: var(--text);
-  background: color-mix(in srgb, var(--tone, #4c82f0) 14%, var(--corner-bg));
-  border-color: color-mix(in srgb, var(--tone, #4c82f0) 55%, var(--corner-line));
+  background: color-mix(in srgb, var(--hl, #fff) 10%, var(--corner-bg));
+  border-color: var(--hl, #fff);
+  box-shadow: 0 0 0 1px var(--hl-line, transparent);
   opacity: 1;
 }
 
@@ -1342,7 +1354,8 @@ body:not([data-chrome='toy']) .side {
 
 .tgl:hover {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--tone) 40%, var(--line));
+  border-color: var(--hl);
+  box-shadow: 0 0 0 1px var(--hl-line);
 }
 
 .tgl:active {
@@ -1351,9 +1364,9 @@ body:not([data-chrome='toy']) .side {
 
 .tgl[aria-pressed='true'] {
   color: var(--text);
-  background: color-mix(in srgb, var(--tone) 11%, var(--chip));
-  border-color: color-mix(in srgb, var(--tone) 45%, var(--line));
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--tone) 60%, transparent);
+  background: color-mix(in srgb, var(--hl) 9%, var(--chip));
+  border-color: var(--hl);
+  box-shadow: inset 0 -2px 0 var(--hl), 0 0 0 1px var(--hl-line);
 }
 
 /* Мини-блок «Звук»: кнопка и громкость в одном ряду. */
@@ -1398,8 +1411,8 @@ body:not([data-chrome='toy']) .side {
 
 .seg__btn[aria-pressed='true'] {
   color: var(--text);
-  background: color-mix(in srgb, var(--tone) 22%, var(--panel, var(--chip)));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 50%, transparent);
+  background: color-mix(in srgb, var(--hl) 16%, var(--panel, var(--chip)));
+  box-shadow: inset 0 0 0 1px var(--hl), 0 0 0 1px var(--hl-line);
 }
 
 /* Статус записи на кнопке «Ремастер» (видно, только когда она выбрана): пока грузится — мерцает, не загрузилась — значок ⚠, иначе молча
@@ -1452,7 +1465,8 @@ body:not([data-chrome='toy']) .side {
 }
 
 .pick:hover {
-  border-color: color-mix(in srgb, var(--tone) 40%, var(--line));
+  border-color: var(--hl);
+  box-shadow: 0 0 0 1px var(--hl-line);
 }
 
 .pick:focus-visible {
@@ -1519,28 +1533,29 @@ body:not([data-chrome='toy']) .side {
 }
 
 .vol__range:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--tone) 70%, var(--text));
+  outline: 2px solid var(--hl);
   outline-offset: 3px;
+  box-shadow: 0 0 0 1px var(--hl-line);
   border-radius: 6px;
 }
 
 .vol__range::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
-  background: linear-gradient(to right, color-mix(in srgb, var(--tone) 70%, var(--muted)) var(--pct), var(--line) var(--pct));
+  background: linear-gradient(to right, color-mix(in srgb, var(--hl) 80%, var(--muted)) var(--pct), var(--line) var(--pct));
 }
 
 .vol__range::-moz-range-track {
   height: 4px;
   border-radius: 2px;
-  background: linear-gradient(to right, color-mix(in srgb, var(--tone) 70%, var(--muted)) var(--pct), var(--line) var(--pct));
+  background: linear-gradient(to right, color-mix(in srgb, var(--hl) 80%, var(--muted)) var(--pct), var(--line) var(--pct));
 }
 
 .vol__range::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   margin-top: -5px;
-  border: 2px solid color-mix(in srgb, var(--tone) 70%, var(--muted));
+  border: 2px solid var(--hl);
   border-radius: 50%;
   background: var(--text);
   -webkit-appearance: none;
@@ -1550,7 +1565,7 @@ body:not([data-chrome='toy']) .side {
 .vol__range::-moz-range-thumb {
   width: 10px;
   height: 10px;
-  border: 2px solid color-mix(in srgb, var(--tone) 70%, var(--muted));
+  border: 2px solid var(--hl);
   border-radius: 50%;
   background: var(--text);
 }
@@ -1593,8 +1608,9 @@ body:not([data-chrome='toy']) .side {
 
 .shellpick__btn[aria-checked='true'] {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--tone) 70%, var(--line));
-  background: color-mix(in srgb, var(--tone) 10%, var(--chip));
+  border-color: var(--hl);
+  background: color-mix(in srgb, var(--hl) 8%, var(--chip));
+  box-shadow: 0 0 0 1px var(--hl-line);
 }
 
 .mini {
@@ -1660,7 +1676,7 @@ body:not([data-chrome='toy']) .side {
 .lv[aria-current='true'] {
   color: var(--lcd);
   background: var(--lcd-ink);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tone) 65%, transparent);
+  box-shadow: 0 0 0 2px var(--hl), 0 0 0 3px var(--hl-line);
 }
 
 /* Спидран HUD: последний блок пульта, скрыт под переключателем; по щелчку выезжает (высота 0fr → 1fr). */
@@ -1691,7 +1707,8 @@ body:not([data-chrome='toy']) .side {
 .run__toggle:hover,
 .run[data-open='true'] .run__toggle {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--tone) 45%, var(--line));
+  border-color: var(--hl);
+  box-shadow: 0 0 0 1px var(--hl-line);
 }
 
 .run__toggle .icon {
@@ -1764,8 +1781,9 @@ body:not([data-chrome='toy']) .side {
 
 .run__row[data-state='current'] {
   color: var(--text);
-  background: color-mix(in srgb, var(--tone) 14%, var(--chip));
-  border-color: color-mix(in srgb, var(--tone) 55%, var(--line));
+  background: color-mix(in srgb, var(--hl) 10%, var(--chip));
+  border-color: var(--hl);
+  box-shadow: 0 0 0 1px var(--hl-line);
 }
 
 .run__row[data-state='done'] {
@@ -1801,7 +1819,7 @@ body:not([data-chrome='toy']) .side {
 }
 
 .run[data-finished='true'] .run__sum {
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tone) 70%, transparent);
+  box-shadow: inset 0 0 0 2px var(--hl), 0 0 0 1px var(--hl-line);
 }
 
 .run__progress {

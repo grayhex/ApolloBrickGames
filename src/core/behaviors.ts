@@ -15,6 +15,8 @@ export interface SimApi {
   enterRoom(objectId: string, returnAt: { x: number; y: number }): void;
   /** Выход из комнаты: вернуться в отложенный уровень (если комната запущена сама по себе — только событие). */
   leaveRoom(): void;
+  /** Комната → следующая комната (переход из `objectId`): текущий участок заменяется, отложенный уровень остаётся в стопке. */
+  changeRoom(objectId: string): void;
   addScore(points: number): void;
   emit(event: GameEventBody): void;
   /** Тайл непроходим, клетка за границей карты или занята твёрдым объектом. */
@@ -266,6 +268,34 @@ const exit: ObjectBehavior = {
   },
 };
 
+/**
+ * Победа в комнате («victory»): когда не осталось ни одного активного объекта типа `watch` (большой чёрт уничтожен — `patroller`; все бонусные
+ * сердца собраны — `pickup`), героя переносит в комнату, на которую указывает переход из этого объекта (комната выхода из тоннеля). Сам объект
+ * невидим и ничего не занимает. Если объектов типа `watch` в комнате нет вовсе, победа не наступает.
+ */
+const victoryParams: readonly ParamSpec[] = [];
+
+const victory: ObjectBehavior = {
+  label: 'Победа в комнате (всё убрано)',
+  params: victoryParams,
+  requiresTransition: true,
+  validateParams: (params, report) => {
+    const watch = params['watch'];
+    if (typeof watch !== 'string' || watch === '') report('«watch» — тип объектов, которые нужно убрать (например, «patroller» или «pickup»)');
+  },
+  update: (sim, state, def) => {
+    const watch = String(def.params['watch'] ?? '');
+    const defs = sim.level.def.objects;
+    let seen = false;
+    for (let i = 0; i < defs.length; i++) {
+      if (defs[i]?.type !== watch) continue;
+      seen = true;
+      if (sim.state.objects[i]?.active) return; // ещё остался
+    }
+    if (seen) sim.changeRoom(state.id);
+  },
+};
+
 /** Описание зарегистрированных типов — для палитры и инспектора редактора. */
 export function describeObjectTypes(
   behaviors: BehaviorRegistry,
@@ -279,4 +309,4 @@ export function describeObjectTypes(
 }
 
 /** Обработчики демо-профиля. Тип объекта в данных → поведение в коде. */
-export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick, pickup, sewer, exit };
+export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick, pickup, sewer, exit, victory };
