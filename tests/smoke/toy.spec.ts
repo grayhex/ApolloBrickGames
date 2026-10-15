@@ -133,6 +133,39 @@ for (const size of [
   });
 }
 
+/**
+ * Широкое, но низкое окно (телефон в альбомной от 900 px, окно браузера ниже ≈ 640 px): целая игрушка при наименьшей ширине (240 px) выше окна —
+ * страница прокручивается, и до верха (светодиоды, экран) и низа (кнопки, подбородок) можно добраться; арена не обрезает игрушку.
+ */
+for (const size of [
+  { width: 932, height: 430 },
+  { width: 1280, height: 600 },
+  { width: 1100, height: 500 },
+]) {
+  test(`низкое широкое окно ${size.width}×${size.height}: игрушка не обрезана, страница прокручивается до её верха и низа`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await ready(page);
+    const top = await page.evaluate(() => {
+      const toy = (document.getElementById('toy') as HTMLElement).getBoundingClientRect();
+      const lcd = (document.getElementById('lcd-window') as HTMLElement).getBoundingClientRect();
+      return { toyTop: toy.top, lcdTop: lcd.top, docH: document.documentElement.scrollHeight, vh: innerHeight };
+    });
+    expect(top.toyTop).toBeGreaterThanOrEqual(-1); // верх игрушки (светодиоды) не срезан
+    expect(top.lcdTop).toBeGreaterThanOrEqual(0);
+    expect(top.docH).toBeGreaterThan(top.vh); // игрушка выше окна — страница прокручивается
+    const bottom = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      return {
+        toyBottom: (document.getElementById('toy') as HTMLElement).getBoundingClientRect().bottom,
+        keysBottom: Math.max(...[...document.querySelectorAll('[data-key]')].map((k) => k.getBoundingClientRect().bottom)),
+        vh: innerHeight,
+      };
+    });
+    expect(bottom.toyBottom).toBeLessThanOrEqual(bottom.vh + 1); // низ игрушки достижим
+    expect(bottom.keysBottom).toBeLessThanOrEqual(bottom.vh);
+  });
+}
+
 test('форма по фото: нижняя половина ≈ 1,55 ширины, втулки шарнира у краёв и проём ≈ 36 % ширины, у крышки гладкая верхняя кромка без выступа', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await ready(page);
