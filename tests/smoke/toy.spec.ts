@@ -129,7 +129,8 @@ for (const size of [
     const fullHeight = lowest >= m.vh - 90 - 30;
     expect(fullWidth || fullHeight, `ширина игрушки ${m.toy.width} из ${m.vw}, низ кнопок ${lowest} из ${m.vh}`).toBe(true);
     // И заметно крупнее, чем когда игрушка целиком вписывалась в окно (ширина ≈ (высота − 24) / 2,6).
-    expect(m.toy.width).toBeGreaterThan(((m.vh - 24) / 2.6) * 1.15);
+    // Над игрушкой шапка с логотипом и переключателем (48 px): целиком в окне игрушка вписалась бы в оставшуюся высоту.
+    expect(m.toy.width).toBeGreaterThan(((m.vh - 24 - 48) / 2.6) * 1.15);
   });
 }
 

@@ -27,10 +27,10 @@ export function startPauseAction(phase: Phase): ActionMask {
   return phase === 'playing' ? PAUSE : START;
 }
 
-/** Какие кнопки корпуса подсвечены при такой маске удерживаемых действий (клавиатура, геймпад, мышь). */
-export function pressedKeys(down: ActionMask): Set<ToyKeyId> {
+/** Какие кнопки корпуса подсвечены при такой маске удерживаемых действий (клавиатура, геймпад, мышь). У игрушки с другой игрой действия кнопок свои. */
+export function pressedKeys(down: ActionMask, actions: Partial<Record<ToyKeyId, ActionMask>> = KEY_ACTIONS): Set<ToyKeyId> {
   const pressed = new Set<ToyKeyId>();
-  for (const [id, mask] of Object.entries(KEY_ACTIONS) as [ToyKeyId, ActionMask][]) {
+  for (const [id, mask] of Object.entries(actions) as [ToyKeyId, ActionMask][]) {
     if ((down & mask) !== 0) pressed.add(id);
   }
   if ((down & START_PAUSE_MASK) !== 0) pressed.add('sp');
@@ -43,6 +43,10 @@ export interface ToyHooks {
   powered(): boolean;
   onPower(): void;
   onSound(): void;
+  /** Действия кнопок вместо стандартных (`KEY_ACTIONS`): у игрушек с тетрисом FIRE, например, не стреляет. */
+  keyActions?: Partial<Record<ToyKeyId, ActionMask>>;
+  /** Нажатие кнопки без игрового действия, но со своим делом (RESET, TIME/GAME): `true` — обработано, действие не отправляется. */
+  onPress?(id: ToyKeyId): boolean;
 }
 
 /**
@@ -71,7 +75,7 @@ export class ToyPanel {
 
   /** Подсветить нажатые кнопки по маске удерживаемых действий трекера. */
   sync(down: ActionMask): void {
-    const wanted = pressedKeys(down);
+    const wanted = pressedKeys(down, this.hooks.keyActions);
     for (const id of this.extra.keys()) wanted.add(id);
     for (const [id, button] of this.buttons) {
       const on = wanted.has(id);
@@ -110,8 +114,8 @@ export class ToyPanel {
       this.extra.set(id, event.pointerId);
       if (id === 'onoff' || id === 'sound') {
         this.trigger(id);
-      } else if (this.hooks.powered()) {
-        const mask = id === 'sp' ? startPauseAction(this.hooks.phase()) : (KEY_ACTIONS[id] ?? 0);
+      } else if (this.hooks.onPress?.(id) !== true && this.hooks.powered()) {
+        const mask = id === 'sp' ? startPauseAction(this.hooks.phase()) : ((this.hooks.keyActions ?? KEY_ACTIONS)[id] ?? 0);
         if (mask !== 0) this.hub.screen.press(event.pointerId, mask);
       }
       this.sync(this.hub.tracker.down);

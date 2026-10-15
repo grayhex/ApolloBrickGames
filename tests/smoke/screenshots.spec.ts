@@ -185,3 +185,25 @@ test.describe('телефон: игрушка во всю ширину экра�
   });
 });
 
+
+test('три игрушки: шапка с переключателем, «Часы+99» и «Морской бой» (снимки для docs/toys.md)', async ({ page }) => {
+  mkdirSync(dir, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const open = async (query: string): Promise<void> => {
+    await page.goto(`./${query}`);
+    await page.waitForSelector('#game-area[data-phase="ready"]');
+    await page.waitForSelector('#game-area[data-boot="off"]', { state: 'attached' }).catch(() => undefined); // у Mario вспышки нет
+    await page.waitForTimeout(900);
+  };
+  await open('?toy=clock99&power=on&seed=7');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#game-area[data-phase="playing"]');
+  await page.keyboard.down('ArrowDown');
+  await page.waitForTimeout(500);
+  await page.keyboard.up('ArrowDown');
+  await page.screenshot({ path: `${dir}/toys-clock99.png` });
+  await open('?toy=seabattle&power=on&seed=7');
+  await page.screenshot({ path: `${dir}/toys-seabattle.png` });
+  await open('?toy=clock99');
+  await page.screenshot({ path: `${dir}/toys-closed.png` });
+});

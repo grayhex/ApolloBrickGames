@@ -3,6 +3,8 @@ import { describeSource, type Bindings } from '../input/bindings';
 import { h } from './dom';
 import { getLang, onLangChange, rich, t, type MsgKey } from './i18n';
 import type { InputHub } from './hub';
+import { keyLabel, type ToyModel } from './toys';
+import type { ToyKeyId } from './toy';
 
 export interface HelpRow {
   /** Кнопка на корпусе. */
@@ -44,6 +46,27 @@ export function helpRows(bindings: Bindings): HelpRow[] {
   ];
 }
 
+/** Таблица кнопок игрушки с тетрисом («Часы+99», «Морской бой»): подписи напечатаны на корпусе, действия — у заглушки. */
+export function toyHelpRows(model: ToyModel, bindings: Bindings): HelpRow[] {
+  const order: ToyKeyId[] = ['onoff', 'sp', 'sound', 'fire', 'left', 'right', 'up', 'down', 'jump'];
+  const keys: Record<ToyKeyId, string> = {
+    onoff: POWER_KEY,
+    sp: keysOf(bindings, 'start', 'pause'),
+    sound: SOUND_KEY,
+    fire: '—',
+    left: keysOf(bindings, 'left'),
+    right: keysOf(bindings, 'right'),
+    up: keysOf(bindings, 'up'),
+    down: keysOf(bindings, 'down'),
+    jump: keysOf(bindings, 'jump'),
+  };
+  const rows = order.flatMap((id): HelpRow[] => {
+    const what = model.keyWhat[id];
+    return what ? [{ button: keyLabel(model, id), what: t(what), keys: keys[id] }] : [];
+  });
+  return [...rows, { button: '⌨ / 🎮', what: t('help.t.drop'), keys: keysOf(bindings, 'fire') }];
+}
+
 export interface HelpDialogOptions {
   onOpen(): void;
   onClose(): void;
@@ -54,11 +77,14 @@ export class HelpDialog {
   private readonly dialog: HTMLDialogElement;
   private readonly hub: InputHub;
   private readonly options: HelpDialogOptions;
+  /** Игрушка с тетрисом: у справки свои кнопки и текст, раздела об оригинальном устройстве Crocodile Mario нет. */
+  private readonly toy: ToyModel | null;
 
-  constructor(dialog: HTMLDialogElement, hub: InputHub, options: HelpDialogOptions) {
+  constructor(dialog: HTMLDialogElement, hub: InputHub, options: HelpDialogOptions, toy: ToyModel | null = null) {
     this.dialog = dialog;
     this.hub = hub;
     this.options = options;
+    this.toy = toy !== null && toy.game === 'tetris' ? toy : null;
     dialog.addEventListener('close', () => this.options.onClose());
     // Esc: закрыть сразу и вернуть фокус игре в том же событии, а не после `close` (браузер сперва возвращает его на кнопку-опенер).
     dialog.addEventListener('cancel', (event) => {
@@ -93,7 +119,8 @@ export class HelpDialog {
     const table = h('table', { class: 'settings__table help__table' });
     table.append(h('caption', { class: 'visually-hidden' }, t('help.table')));
     const body = h('tbody');
-    for (const row of helpRows(this.hub.settings.keyboard)) {
+    const rows = this.toy ? toyHelpRows(this.toy, this.hub.settings.keyboard) : helpRows(this.hub.settings.keyboard);
+    for (const row of rows) {
       body.append(h('tr', {}, h('th', { scope: 'row' }, row.button), h('td', {}, row.what), h('td', { class: 'help__keys' }, row.keys)));
     }
     table.append(body);
@@ -103,18 +130,22 @@ export class HelpDialog {
 
     this.dialog.replaceChildren(
       h('h2', { id: 'help-title' }, t('help.title')),
-      h('section', { class: 'settings__section' }, h('h3', {}, t('help.how.h')), h('p', { class: 'help__text' }, ...rich(t('help.how.p')))),
+      h('section', { class: 'settings__section' }, h('h3', {}, t(this.toy ? 'help.t.how.h' : 'help.how.h')), h('p', { class: 'help__text' }, ...rich(t(this.toy ? 'help.t.how.p' : 'help.how.p')))),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.keys.h')), table),
-      h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t('help.pointer.p'))),
-      h(
-        'section',
-        { class: 'settings__section help__orig', id: 'original-device' },
-        h('h3', {}, t('help.orig.h')),
-        ...(['help.orig.pick', 'help.orig.tetris', 'help.orig.shooting', 'help.orig.special', 'help.orig.cheat'] as const).map((key) =>
-          h('p', { class: 'help__text help__text--orig' }, ...rich(t(key))),
-        ),
-      ),
-      h('section', { class: 'settings__section' }, h('h3', {}, t('help.about.h')), h('p', { class: 'help__text' }, t('help.about.p'))),
+      h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t(this.toy ? 'help.t.pointer.p' : 'help.pointer.p'))),
+      ...(this.toy
+        ? []
+        : [
+            h(
+              'section',
+              { class: 'settings__section help__orig', id: 'original-device' },
+              h('h3', {}, t('help.orig.h')),
+              ...(['help.orig.pick', 'help.orig.tetris', 'help.orig.shooting', 'help.orig.special', 'help.orig.cheat'] as const).map((key) =>
+                h('p', { class: 'help__text help__text--orig' }, ...rich(t(key))),
+              ),
+            ),
+          ]),
+      h('section', { class: 'settings__section' }, h('h3', {}, t('help.about.h')), h('p', { class: 'help__text' }, t(this.toy ? 'help.t.about.p' : 'help.about.p'))),
       h('div', { class: 'settings__row settings__row--end' }, close),
     );
   }

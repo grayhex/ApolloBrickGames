@@ -46,6 +46,10 @@
       </header>
 
       <div class="arena" id="arena" data-shell="blue" data-view="closed" data-closed>
+        <header class="brand" id="brand">
+          <img class="brand__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="Apollo" />
+          <nav class="toysw" id="toy-switch" aria-label="Игрушки Apollo"></nav>
+        </header>
       <aside class="side side--info" id="side-info" aria-labelledby="info-title"></aside>
 
       <section class="stage" id="stage" aria-label="Игрушка Crocodile Mario" data-i18n-attrs="aria-label=stage.label">
@@ -247,11 +251,11 @@
         <path id="arc-sound" d="M209 52 Q240 34 271 52" fill="none"/><text class="base__label"><textPath href="#arc-sound" startOffset="50%" text-anchor="middle">SOUND</textPath></text>
         <path id="arc-fire" d="M293 52 Q324 34 355 52" fill="none"/><text class="base__label"><textPath href="#arc-fire" startOffset="50%" text-anchor="middle">FIRE</textPath></text>
         <circle class="base__led" cx="60" cy="128" r="2.4"/>
-        <text class="base__label" x="110" y="137" text-anchor="middle">UP</text>
-        <text class="base__label" x="28" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 28 218)">LEFT</text>
-        <text class="base__label" x="192" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 192 218)">RIGHT</text>
-        <text class="base__label" x="110" y="306" text-anchor="middle">DOWN</text>
-        <text class="base__label" x="292" y="138" text-anchor="middle">JUMP</text>
+        <text class="base__label" data-lbl="up" x="110" y="137" text-anchor="middle">UP</text>
+        <text class="base__label" data-lbl="left" x="28" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 28 218)">LEFT</text>
+        <text class="base__label" data-lbl="right" x="192" y="218" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 192 218)">RIGHT</text>
+        <text class="base__label" data-lbl="down" x="110" y="306" text-anchor="middle">DOWN</text>
+        <text class="base__label" data-lbl="big" x="292" y="138" text-anchor="middle">JUMP</text>
         <g class="base__dimples">
         <circle cx="68" cy="74" r="27.5" fill="url(#dimple)"/>
         <circle class="base__rim-lo" cx="67.4" cy="73.1" r="27.5"/>

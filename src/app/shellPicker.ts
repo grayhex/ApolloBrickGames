@@ -1,6 +1,7 @@
 import { SHELLS, type Shell } from '../input/settings';
 import { h, svg } from './dom';
 import { t } from './i18n';
+import type { ToyId } from './toys';
 
 /** Подпись цвета корпуса на текущем языке. */
 export const shellLabel = (shell: Shell): string => t(`shell.${shell}`);
@@ -12,10 +13,15 @@ let pickerSerial = 0;
  * половине эмблема Apollo (красная шляпа, крокодил), на нижней — логотип «Crocodile Mario» с фигуркой. Цвет корпуса и
  * печати берётся из палитры `[data-shell]` (CSS-переменные), поэтому совпадает с настоящей игрушкой.
  */
-function miniConsole(shell: Shell, serial: number): SVGSVGElement {
+export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'): SVGSVGElement {
   const sheen = `sheen-${serial}-${shell}`;
   // Как на корпусе игрушки: на синем и красном — белая печать, на жёлтом и белом — красная.
   const logo = shell === 'blue' || shell === 'red' ? 'crocodile-mario-logo-white.png' : 'crocodile-mario-logo.png';
+  // На подбородке — то, что наклеено на игрушку: у «Часов+99» и «Морского боя» это цветная наклейка, у Mario — логотип.
+  const chin =
+    toy === 'mario'
+      ? svg('image', { href: `${import.meta.env.BASE_URL}brand/${logo}`, x: '5.5', y: '38.6', width: '33', height: '14.6', preserveAspectRatio: 'xMidYMid meet' })
+      : svg('image', { href: `${import.meta.env.BASE_URL}brand/sticker-${toy}.webp`, x: '5', y: '39.4', width: '34', height: '19', preserveAspectRatio: 'xMidYMid meet' });
   const root = svg('svg', { viewBox: '0 0 44 62', class: 'mini', 'aria-hidden': 'true', focusable: 'false' });
   root.append(
     svg(
@@ -47,15 +53,8 @@ function miniConsole(shell: Shell, serial: number): SVGSVGElement {
     svg('circle', { cx: '22.6', cy: '17.6', r: '.55', fill: '#2c2c2c' }),
     svg('path', { d: 'M16.4 19.6h2.4M17 20.5h1.8', fill: 'none', stroke: '#fff', 'stroke-width': '.5' }),
     svg('path', { d: 'M21.5 24.4Q26 22 31 24.8', fill: 'none', stroke: '#d63a30', 'stroke-width': '1.5', 'stroke-linecap': 'round' }),
-    // логотип на нижней половине
-    svg('image', {
-      href: `${import.meta.env.BASE_URL}brand/${logo}`,
-      x: '5.5',
-      y: '38.6',
-      width: '33',
-      height: '14.6',
-      preserveAspectRatio: 'xMidYMid meet',
-    }),
+    // логотип или наклейка на нижней половине
+    chin,
   );
   return root;
 }
@@ -63,6 +62,10 @@ function miniConsole(shell: Shell, serial: number): SVGSVGElement {
 export interface ShellPickerOptions {
   /** Идентификатор контейнера (для тестов и подписи). */
   id: string;
+  /** Какие цвета предлагать (у «Часов+99» и «Морского боя» — только подтверждённые фото); по умолчанию все четыре. */
+  shells?: readonly Shell[];
+  /** Чья наклейка на миниатюрах (по умолчанию Crocodile Mario). */
+  toy?: ToyId;
   /** Подпись группы для скринридеров. */
   label: string;
   value: Shell;
@@ -77,18 +80,21 @@ export class ShellPicker {
   readonly root: HTMLElement;
   private readonly buttons = new Map<Shell, HTMLButtonElement>();
   private readonly options: ShellPickerOptions;
+  private readonly shells: readonly Shell[];
   private value: Shell;
 
   constructor(options: ShellPickerOptions) {
     this.options = options;
     this.value = options.value;
+    this.shells = options.shells ?? SHELLS;
     const serial = ++pickerSerial;
     this.root = h('div', { class: 'shellpick', id: options.id, role: 'radiogroup', 'aria-label': options.label });
-    for (const shell of SHELLS) {
+    this.root.style.setProperty('--cols', String(this.shells.length));
+    for (const shell of this.shells) {
       const button = h(
         'button',
         { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },
-        miniConsole(shell, serial),
+        miniConsole(shell, serial, options.toy ?? 'mario'),
         h('span', { class: 'shellpick__name' }),
       );
       button.addEventListener('click', (event) => this.pick(shell, event.detail !== 0));
@@ -131,7 +137,7 @@ export class ShellPicker {
     const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
     if (step === 0) return;
     event.preventDefault();
-    const next = SHELLS[(SHELLS.indexOf(from) + step + SHELLS.length) % SHELLS.length];
+    const next = this.shells[(this.shells.indexOf(from) + step + this.shells.length) % this.shells.length];
     if (!next) return;
     this.pick(next, false);
     this.buttons.get(next)?.focus();
