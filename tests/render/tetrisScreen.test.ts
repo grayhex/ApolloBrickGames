@@ -130,3 +130,56 @@ describe('экран тетриса: рисунок ячейки', () => {
     expect(SCREEN_WIDTH).toBeGreaterThan((SCREEN_HEIGHT / FIELD_ROWS) * FIELD_COLUMNS);
   });
 });
+
+describe('экран тетриса: перерисовка только при видимых изменениях', () => {
+  it('пропускает одинаковые кадры, но замечает изменение той же матрицы и счёта', () => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel: 'sea', ink: '#000' });
+    screen.resize(264, 320, 1);
+    const frame = scene();
+    screen.render(frame);
+    calls.length = 0;
+    screen.render({ ...frame, tick: 1 });
+    expect(calls).toHaveLength(0);
+    frame.cells[0] = 1;
+    screen.render(frame);
+    expect(calls.some(c => c.name === 'strokeRect')).toBe(true);
+    calls.length = 0;
+    screen.render({ ...frame, score: 100 });
+    expect(calls.some(c => c.name === 'fillRect')).toBe(true);
+  });
+
+  it('перерисовывает после смены сегментов, размера, сбоя шлейфа и выключения', () => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel: 'sea', ink: '#000' });
+    screen.resize(264, 320, 1);
+    const frame = scene();
+    screen.render(frame);
+    for (const invalidate of [() => screen.setGhost(true), () => screen.resize(132, 160, 2), () => screen.dropout(.5, 1), () => screen.clear()]) {
+      invalidate();
+      calls.length = 0;
+      screen.render(frame);
+      expect(calls.some(c => c.name === 'strokeRect')).toBe(true);
+    }
+    screen.clear();
+    calls.length = 0;
+    screen.clear();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('сохраняет мигание сгорающих рядов и смену счёта на рекорд после конца игры', () => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel: 'sea', ink: '#000' });
+    screen.resize(264, 320, 1);
+    const clearing = scene({ cells: litCells({}), clearRows: [5], clearTimer: 24 });
+    screen.render(clearing);
+    calls.length = 0;
+    screen.render({ ...clearing, clearTimer: 23 });
+    expect(calls.some(c => c.name === 'clearRect')).toBe(true);
+    const over = scene({ phase: 'over', overFill: 20, tick: 0, score: 10, hiScore: 100 });
+    screen.render(over);
+    calls.length = 0;
+    screen.render({ ...over, tick: 90 });
+    expect(calls.some(c => c.name === 'fillRect')).toBe(true);
+  });
+});

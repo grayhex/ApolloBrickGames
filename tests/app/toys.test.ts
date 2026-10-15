@@ -40,10 +40,10 @@ describe('выбор игрушки', () => {
     expect(shellFor(TOYS.mario, 'white')).toBe('white');
   });
 
-  it('у заглушек тетриса уровней нет, левая панель пуста, светодиоды — только у «Часов+99»; у Mario всё как было', () => {
+  it('у заглушек тетриса уровней нет, слева справка, светодиоды — только у «Часов+99»; у Mario всё как было', () => {
     expect(TOYS.mario).toMatchObject({ game: 'mario', info: true, levels: true, leds: true });
-    expect(TOYS.clock99).toMatchObject({ game: 'tetris', info: false, levels: false, leds: true, glyph: 'star' });
-    expect(TOYS.seabattle).toMatchObject({ game: 'tetris', info: false, levels: false, leds: false, glyph: 'square' });
+    expect(TOYS.clock99).toMatchObject({ game: 'tetris', info: true, levels: false, leds: true, glyph: 'star' });
+    expect(TOYS.seabattle).toMatchObject({ game: 'tetris', info: true, levels: false, leds: false, glyph: 'square' });
   });
 });
 

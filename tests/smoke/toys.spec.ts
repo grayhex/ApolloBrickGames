@@ -124,10 +124,12 @@ test.describe('«Часы+99»', () => {
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
   });
 
-  test('левая панель пуста, справа — звук, вид, уровни выключены; музыки и спидрана нет', async ({ page }) => {
+  test('слева справка по тетрису, справа — звук, вид, уровни выключены; музыки и спидрана нет', async ({ page }) => {
     await open(page, 'clock99');
-    await expect(page.locator('#side-info')).toBeEmpty();
-    await expect(page.locator('#side-info')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#side-info')).toBeVisible();
+    await expect(page.locator('#side-info #rules-title')).toHaveText('Как играть');
+    await expect(page.locator('#side-info #keymap')).toContainText('Поворот');
+    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('src', /sticker-clock99/);
     await expect(page.locator('#tgl-sound')).toBeVisible();
     await expect(page.locator('#volume')).toBeVisible();
     await expect(page.locator('#music')).toHaveCount(0);
@@ -311,3 +313,37 @@ test('Crocodile Mario не изменился: свои подписи, лого
   expect(saturation).toBeLessThan(0.5);
   expect(saturation).toBeGreaterThan(0.2);
 });
+
+for (const toy of ['mario', 'clock99', 'seabattle']) {
+  test(`${toy}: общие меню, миниатюры и справка на двух языках`, async ({ page }) => {
+    await page.goto(`./?toy=${toy}&view=full`);
+    await expect(page.locator('body')).not.toHaveAttribute('data-booting');
+    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('alt', toy === 'mario' ? 'Crocodile Mario' : toy === 'clock99' ? 'Часы+99' : 'Морской бой');
+    await expect(page.locator('#shell-picker .shellpick__name')).toHaveCount(0);
+    await expect(page.locator('#view-state .view-mini')).toHaveCount(3);
+    await expect(page.locator('#view-full')).toHaveAccessibleName('Полная');
+    await expect(page.locator('#corner #tgl-ghost')).toBeVisible();
+    await page.locator('#tgl-ghost').click();
+    await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'false');
+    await page.locator('#corner-lang').click();
+    await expect(page.locator('#side-info #keys-title')).toHaveText('Controls');
+    if (toy !== 'mario') {
+      await expect(page.locator('#rules-title')).toHaveText('How to play');
+      await expect(page.locator('.tetris-rules li')).toHaveCount(4);
+      await expect(page.locator('#side-info')).toContainText('Hard drop');
+    }
+    // All three docks use the same surface, and left indicators do not overlap the right menu.
+    const docks = await page.locator('.chrome-dock').evaluateAll(nodes => nodes.map(n => {
+      const rect = n.getBoundingClientRect();
+      return { id: n.id, left: rect.left, right: rect.right, radius: getComputedStyle(n).borderRadius, animation: getComputedStyle(n).animationName };
+    }));
+    expect(new Set(docks.map(d => d.radius)).size).toBe(1);
+    expect(docks.find(d => d.id === 'devices')!.right).toBeLessThan(docks.find(d => d.id === 'corner')!.left);
+    expect(docks.every(d => d.animation === 'none')).toBe(true); // reducedMotion from the shared Playwright config
+    await page.setViewportSize({ width: 360, height: 800 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    const left = await page.locator('#devices').boundingBox();
+    const right = await page.locator('#corner').boundingBox();
+    expect(left!.x + left!.width).toBeLessThan(right!.x);
+  });
+}

@@ -5,6 +5,7 @@ import { icon, type IconName } from './icons';
 import { onLangChange, t, type MsgKey } from './i18n';
 import { sameLevel, slotTitle, type BundledLevel, type LevelRef, type OriginalSlot } from './levels';
 import { ShellPicker } from './shellPicker';
+import { miniView } from './viewMiniature';
 import { formatRunTime, type RunView } from './speedrun';
 import type { ToyId } from './toys';
 import { VIEWS, type View } from './view';
@@ -24,7 +25,7 @@ export interface ControlPanelActions {
   pickUser(projectId: string): void;
 }
 
-/** Всё, что панель показывает о странице. `ghost: null` — у экрана нет слоя неактивных сегментов. */
+/** Состояние звука, корпуса, вида и уровня в правой панели. */
 export interface ControlPanelView {
   shell: Shell;
   sound: boolean;
@@ -33,7 +34,6 @@ export interface ControlPanelView {
   /** Громкость музыки 0…1 (под «Оригинал» равна громкости звука: ползунки связаны). */
   musicVolume: number;
   music: Music;
-  ghost: boolean | null;
   view: View;
   /** Игрушка включена: пока игра идёт, «Свёрнута» недоступна — сначала выключить (ON/OFF). */
   powered: boolean;
@@ -112,8 +112,8 @@ class VolumeSlider {
 
 /**
  * Правая панель страницы («Пульт»): мини-блок «Звук» (вкл/выкл, громкость, музыка «Оригинал»/«Ремастер»), блок «Вид» (цвет игрушки,
- * состояние «свёрнута / полная / только экран», слой сегментов), уровни (оригинальные 1–9 плитками, пользовательские — выпадающим
- * списком) и выезжающий спидран-HUD. Индикатор устройства и смена фона живут в угловом меню (`CornerNav`). DOM строится один раз,
+ * пиктограммы «свёрнута / полная / только экран»), уровни (оригинальные 1–9 плитками, пользовательские — выпадающим
+ * списком) и выезжающий спидран-HUD. Индикаторы и системные настройки управляются `CornerNav`. DOM строится один раз,
  * дальше меняются только атрибуты и тексты, поэтому фокус и прокрутка при переключениях не сбиваются.
  */
 export class ControlPanel {
@@ -121,7 +121,6 @@ export class ControlPanel {
   private readonly options: ControlPanelOptions;
   private readonly picker: ShellPicker;
   private readonly soundToggle: { button: HTMLButtonElement; icon: HTMLElement; label: HTMLElement };
-  private readonly ghostToggle: HTMLButtonElement;
   private soundBlock: HTMLElement | null = null;
   /** Ползунки связаны (музыка «Оригинал»): их двигает один и тот же уровень. */
   private linked = true;
@@ -209,7 +208,7 @@ export class ControlPanel {
     );
     this.soundBlock = sound;
 
-    // ── Вид: цвет, состояние игрушки, сегменты ───────────────────────────
+    // ── Вид: цвет и состояние игрушки ───────────────────────────
     this.picker = new ShellPicker({
       id: 'shell-picker',
       label: t('clr.h'),
@@ -224,7 +223,8 @@ export class ControlPanel {
     const state = this.label(h('div', { class: 'seg seg--3', id: 'view-state', role: 'group' }), 'view.aria', 'aria-label');
     for (const view of VIEWS) {
       const button = h('button', { type: 'button', class: 'seg__btn', id: `view-${view}`, 'data-view': view, 'aria-pressed': 'false' });
-      this.label(button, VIEW_LABELS[view].label);
+      this.label(button, VIEW_LABELS[view].label, 'aria-label');
+      button.append(miniView(view, options.toy ?? 'mario'));
       this.label(button, VIEW_LABELS[view].title, 'title');
       button.addEventListener('click', (event) => {
         if (button.getAttribute('aria-disabled') !== 'true') actions.setView(view);
@@ -233,20 +233,14 @@ export class ControlPanel {
       this.viewButtons.set(view, button);
       state.append(button);
     }
-    const ghostIcon = h('span', { class: 'tgl__icon' }, icon('segments'));
-    this.ghostToggle = h('button', { type: 'button', class: 'tgl tgl--sm', id: 'tgl-ghost', 'data-tgl': 'ghost', 'aria-pressed': 'false' }, ghostIcon, this.label(h('span', { class: 'tgl__label' }), 'tgl.ghost'));
-    this.ghostToggle.addEventListener('click', (event) => {
-      actions.toggleGhost();
-      pointerUse(event);
-    });
     const view = h(
       'section',
       { class: 'side__sec', id: 'blk-view', 'aria-labelledby': 'view-title' },
       this.label(h('h3', { class: 'side__h', id: 'view-title' }), 'view.h'),
-      this.label(h('p', { class: 'side__cap' }), 'clr.h'),
       this.picker.root,
-      state,
-      this.ghostToggle,
+      h('div', { class: 'view-layout', id: 'layout-picker' },
+        this.label(h('h4', { class: 'side__cap view-layout__title', id: 'layout-title' }), 'view.aria'),
+        state),
     );
 
     // ── Уровни ───────────────────────────────────────────────────────────
@@ -391,9 +385,6 @@ export class ControlPanel {
       else button.removeAttribute('aria-disabled');
       button.title = t(blocked ? 'view.closedBlocked' : VIEW_LABELS[id].title);
     }
-    this.ghostToggle.hidden = view.ghost === null;
-    this.ghostToggle.setAttribute('aria-pressed', String(view.ghost === true));
-    this.ghostToggle.title = t(view.ghost ? 'tgl.ghostOn' : 'tgl.ghostOff');
 
     this.level = view.level;
     this.markLevel();

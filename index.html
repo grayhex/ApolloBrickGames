@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Crocodile Mario — браузерная версия электронной игрушки: кнопки, экран, светодиоды." />
+    <meta name="description" content="Три складные игрушки Apollo в браузере: Crocodile Mario, Часы+99 и Морской бой. Играйте с клавиатуры, геймпада или касанием." />
     <link rel="icon" href="data:," />
     <title>Crocodile Mario</title>
     <script>
@@ -19,12 +19,13 @@
   <body data-chrome="toy" data-motion="off" data-booting>
     <main class="shell">
       <h1 class="visually-hidden">Crocodile Mario</h1>
-      <nav class="corner" id="corner" aria-label="Сервис" data-i18n-attrs="aria-label=corner.nav">
-        <span class="devs" id="devices" role="status" aria-label="Устройство управления">
+        <span class="devs chrome-dock" id="devices" role="status" aria-label="Устройство управления">
           <span class="dev" data-device="keyboard" data-state="ready" title="Клавиатура"></span>
           <span class="dev" data-device="gamepad" data-state="ready" title="Геймпад" hidden></span>
           <span class="dev dev--pause" data-device="pause" data-state="off" title="Игра не на паузе"></span>
         </span>
+      <nav class="corner chrome-dock" id="corner" aria-label="Сервис" data-i18n-attrs="aria-label=corner.nav">
+        <button type="button" class="corner__btn" id="tgl-ghost" data-tgl="ghost" aria-pressed="false" aria-label="Сегменты"></button>
         <button type="button" class="corner__btn" id="corner-theme" data-theme="dark" aria-label="Светлый фон" title="Светлый фон"></button>
         <button type="button" class="corner__btn corner__btn--lang" id="corner-lang" data-lang="ru" aria-label="Язык интерфейса" title="Сменить язык на English">
           <span class="lang__opt" data-opt="ru">RU</span><span class="lang__sep" aria-hidden="true">/</span><span class="lang__opt" data-opt="en">EN</span>
@@ -48,7 +49,7 @@
       <div class="arena" id="arena" data-shell="blue" data-view="closed" data-closed>
         <header class="brand" id="brand">
           <img class="brand__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="Apollo" />
-          <nav class="toysw" id="toy-switch" aria-label="Игрушки Apollo"></nav>
+          <nav class="toysw chrome-dock" id="toy-switch" aria-label="Игрушки Apollo"></nav>
         </header>
       <aside class="side side--info" id="side-info" aria-labelledby="info-title"></aside>
 

@@ -62,14 +62,14 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(ctl.getByRole('heading', { name: 'Sound', exact: true })).toBeVisible();
   await expect(ctl.getByRole('heading', { name: 'View', exact: true })).toBeVisible();
   await expect(ctl.getByRole('heading', { name: 'Levels' })).toBeVisible();
-  await expect(page.locator('#view-screen')).toContainText('Screen only');
-  await expect(page.locator('#view-closed')).toContainText('Closed');
+  await expect(page.locator('#view-screen')).toHaveAccessibleName('Screen only');
+  await expect(page.locator('#view-closed')).toHaveAccessibleName('Closed');
   await expect(page.locator('#music [data-music="original"]')).toHaveText('Original');
   await expect(page.locator('#music [data-music="remaster"]')).toHaveText('Remaster');
   await expect(page.locator('#run-toggle')).toContainText('Speedrun HUD');
   await expect(page.locator('#user-level option').first()).toHaveText('Pick a level…');
   await expect(page.locator('#corner-theme')).toHaveAttribute('aria-label', 'Light theme');
-  await expect(page.locator('#shell-picker [data-shell="red"]')).toContainText('red');
+  await expect(page.locator('#shell-picker [data-shell="red"]')).toHaveAccessibleName('red');
   await expect(page.locator('#corner-settings')).toHaveAttribute('title', 'Settings');
   await expect(page.locator('#corner-help')).toHaveAttribute('aria-label', 'Help');
   await expect(page.locator('[data-key="up"]')).toHaveAttribute('aria-label', 'UP — jump');

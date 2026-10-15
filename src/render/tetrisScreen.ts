@@ -63,6 +63,9 @@ export class TetrisScreen {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly options: TetrisScreenOptions;
   private ghost = false;
+  private blank = false;
+  private signature = '';
+  private previousCells = new Uint8Array(0);
   private scale = 1;
   private offsetX = 0;
   private offsetY = 0;
@@ -81,6 +84,7 @@ export class TetrisScreen {
   }
 
   setGhost(on: boolean): void {
+    if (this.ghost !== on) this.signature = '';
     this.ghost = on;
   }
 
@@ -88,6 +92,8 @@ export class TetrisScreen {
   resize(width: number, height: number, dpr: number): void {
     const w = Math.max(1, Math.round(width * dpr));
     const h = Math.max(1, Math.round(height * dpr));
+    this.signature = '';
+    this.blank = false;
     this.canvas.width = w;
     this.canvas.height = h;
     this.canvas.style.width = `${width}px`;
@@ -98,12 +104,17 @@ export class TetrisScreen {
   }
 
   clear(): void {
+    this.signature = '';
+    if (this.blank) return;
+    this.blank = true;
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /** Шутка со шлейфом: куски экрана гаснут (`level` 0…1); зерно меняется — куски мерцают. */
   dropout(level: number, seed: number): void {
+    // The next frame must restore the undamaged image even if the game did not change.
+    this.signature = '';
     const ctx = this.ctx;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -120,6 +131,12 @@ export class TetrisScreen {
   }
 
   render(scene: TetrisScene): void {
+    // Compare visible state, not simulation ticks: an unmoved piece needs no repaint.
+    const blink = scene.clearTimer > 0 && Math.floor(scene.clearTimer / 4) % 2 === 1;
+    const hi = scene.phase === 'over' && scene.overFill >= FIELD_ROWS ? Math.floor(scene.tick / 90) % 2 : 0;
+    const signature = `${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}`;
+    if (signature === this.signature && scene.cells.length === this.previousCells.length &&
+      scene.cells.every((cell, i) => cell === this.previousCells[i])) return;
     const ctx = this.ctx;
     this.clear();
     ctx.setTransform(this.scale, 0, 0, this.scale, this.offsetX, this.offsetY);
@@ -130,6 +147,9 @@ export class TetrisScreen {
     ctx.fillRect(DIVIDER_X, 0, 1.4, SCREEN_HEIGHT);
     this.drawPanel(scene);
     ctx.globalAlpha = 1;
+    this.blank = false;
+    this.signature = signature;
+    this.previousCells = scene.cells.slice();
   }
 
   // ── Матрица ────────────────────────────────────────────────────────────

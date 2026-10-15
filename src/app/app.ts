@@ -370,6 +370,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     audio.setMusic(display.music);
     if (route.lid) applyTheme(display.theme);
     corner?.setTheme(display.theme);
+    corner?.setGhost(renderer.hasGhostLayer ? ghostOn() : null);
     refs.gameArea.dataset['music'] = display.music;
     controls?.update({
       shell: currentShell,
@@ -377,7 +378,6 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       volume: display.volume,
       musicVolume: musicVolumeOf(display),
       music: display.music,
-      ghost: renderer.hasGhostLayer ? ghostOn() : null,
       view,
       powered,
       level: currentLevel,
@@ -548,7 +548,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     ? new ControlPanel(refs.sideCtl, { slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame })
     : null;
   // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
-  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, onPointerUse: refocusGame }) : null;
+  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, onPointerUse: refocusGame }) : null;
 
   // Шутка со шлейфом: пока шлейф между половинами держат курсором или пальцем, экран рассыпается и гаснет; отпустили — возвращается.
   const glitch = new CableGlitch();
@@ -776,6 +776,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     overlayHint: cachedText(refs.overlayHint),
     debug: cachedText(refs.debugText),
     status: cachedText(refs.srStatus),
+    pause: cachedText(refs.btnPause),
+    warning: cachedText(refs.statusWarning),
   };
   /** Короткое состояние для скринридеров (на экране текста нет). */
   const statusLine = (phase: Phase): string =>
@@ -818,21 +820,23 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
     // Пока идёт интро участка, оверлей «Старт» не закрывает поле (Enter всё равно запускает игру).
     const overlay = fx.intro ? null : overlayView(s, suspendReason);
-    refs.overlay.hidden = overlay === null;
+    if (refs.overlay.hidden !== (overlay === null)) refs.overlay.hidden = overlay === null;
     if (overlay) {
       setText.overlayTitle(overlay.title);
       setText.overlayHint(overlay.hint);
-      refs.overlayAction.hidden = overlay.action === null;
+      if (refs.overlayAction.hidden !== (overlay.action === null)) refs.overlayAction.hidden = overlay.action === null;
       if (overlay.action !== null && refs.overlayAction.textContent !== overlay.action) {
         refs.overlayAction.textContent = overlay.action;
       }
     }
 
-    refs.btnPause.textContent = s.phase === 'paused' ? 'Продолжить' : 'Пауза';
-    refs.btnPause.disabled = s.phase !== 'playing' && s.phase !== 'paused';
+    setText.pause(s.phase === 'paused' ? 'Продолжить' : 'Пауза');
+    const pauseDisabled = s.phase !== 'playing' && s.phase !== 'paused';
+    if (refs.btnPause.disabled !== pauseDisabled) refs.btnPause.disabled = pauseDisabled;
 
     const keyboardActive = isKeyboardActive();
-    refs.focusHint.hidden = keyboardActive || settingsDialog.isOpen;
+    const hintHidden = keyboardActive || settingsDialog.isOpen;
+    if (refs.focusHint.hidden !== hintHidden) refs.focusHint.hidden = hintHidden;
     setText.keyboard(keyboardStatusText(keyboardActive));
     const setup = gamepadStatus.kind === 'active' && needsGamepadSetup(hub.settings, gamepadStatus.pad);
     setText.gamepad(gamepadStatusText(gamepadStatus, setup));
@@ -843,10 +847,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
     const warnings: string[] = [...assetWarnings];
     if (!hub.settingsPersisted) warnings.push('Настройки не сохраняются: хранилище браузера недоступно.');
-    refs.statusWarning.hidden = warnings.length === 0;
-    refs.statusWarning.textContent = warnings.join(' ');
+    if (refs.statusWarning.hidden !== (warnings.length === 0)) refs.statusWarning.hidden = warnings.length === 0;
+    setText.warning(warnings.join(' '));
 
-    refs.btnStep.disabled = s.phase !== 'paused';
+    if (refs.btnStep.disabled !== (s.phase !== 'paused')) refs.btnStep.disabled = s.phase !== 'paused';
     if (!refs.debug.hidden) {
       const { hero } = s;
       const last = session.lastFrame;

@@ -12,12 +12,13 @@ export interface CornerNavElements {
 
 export interface CornerNavActions {
   toggleTheme(): void;
+  toggleGhost(): void;
   /** Клик мышью или касанием: вернуть клавиатуру игре. */
   onPointerUse(): void;
 }
 
 /**
- * Системное меню в углу страницы: индикатор устройства управления (клавиатура и геймпад), индикатор паузы и кнопка смены фона. Они стоят рядом
+ * Общие системные настройки справа и индикаторы ввода и паузы слева. Сегменты и фон стоят рядом
  * с языком, настройками и справкой — разметка лежит в index.html, значки и подписи ставятся здесь и обновляются при смене языка.
  */
 export class CornerNav {
@@ -26,6 +27,8 @@ export class CornerNav {
   private paused = false;
   private lastDevice = '';
   private lastDeviceView: DeviceView | null = null;
+  private readonly ghost = document.getElementById('tgl-ghost');
+  private ghostOn: boolean | null = null;
   private theme: Theme = 'dark';
 
   constructor(elements: CornerNavElements, actions: CornerNavActions) {
@@ -40,6 +43,11 @@ export class CornerNav {
       actions.toggleTheme();
       if (event.detail !== 0) actions.onPointerUse();
     });
+    this.ghost?.replaceChildren(icon('segments'));
+    this.ghost?.addEventListener('click', (event) => {
+      actions.toggleGhost();
+      if (event.detail !== 0) actions.onPointerUse();
+    });
     this.relabel();
     onLangChange(() => this.relabel());
   }
@@ -49,7 +57,8 @@ export class CornerNav {
     const keyboard = this.devices.get('keyboard');
     if (keyboard) keyboard.title = t('dev.keyboard');
     this.setTheme(this.theme);
-    this.setPaused(this.paused);
+    this.setPaused(this.paused, true);
+    this.setGhost(this.ghostOn);
     if (this.lastDeviceView) {
       this.lastDevice = '';
       this.setDevices(this.lastDeviceView);
@@ -75,7 +84,8 @@ export class CornerNav {
   }
 
   /** Индикатор паузы рядом с клавиатурой: горит, пока игра на паузе (клавишей, кнопкой, при потере фокуса или под закрытой крышкой). */
-  setPaused(paused: boolean): void {
+  setPaused(paused: boolean, force = false): void {
+    if (!force && this.paused === paused) return;
     this.paused = paused;
     const element = this.devices.get('pause');
     if (!element) return;
@@ -83,6 +93,15 @@ export class CornerNav {
     element.dataset['state'] = paused ? 'on' : 'off';
     element.title = label;
     element.setAttribute('aria-label', label);
+  }
+
+  setGhost(on: boolean | null): void {
+    this.ghostOn = on;
+    if (!this.ghost) return;
+    this.ghost.hidden = on === null;
+    this.ghost.setAttribute('aria-pressed', String(on === true));
+    this.ghost.setAttribute('aria-label', t('tgl.ghost'));
+    this.ghost.title = t(on ? 'tgl.ghostOn' : 'tgl.ghostOff');
   }
 
   /** Значки «клавиатура / геймпад»: геймпад появляется при подключении; подсвечено то, чем играют сейчас. */

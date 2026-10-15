@@ -226,7 +226,7 @@ test('логотип: на синем и красном корпусе — бе�
 test('динамик: ровная симметричная решётка отверстий относительно оси корпуса', async ({ page }) => {
   await ready(page);
   const holes = await page.evaluate(() =>
-    [...document.querySelectorAll('.base__speaker circle')].map((c) => [Number(c.getAttribute('cx')), Number(c.getAttribute('cy')), Number(c.getAttribute('r'))]),
+    [...document.querySelectorAll('#toy .base__speaker circle')].map((c) => [Number(c.getAttribute('cx')), Number(c.getAttribute('cy')), Number(c.getAttribute('r'))]),
   );
   expect(holes.length).toBeGreaterThanOrEqual(40);
   expect(new Set(holes.map(([, , r]) => r)).size).toBe(1); // одинаковый размер
