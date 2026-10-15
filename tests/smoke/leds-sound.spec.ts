@@ -196,3 +196,21 @@ test('звук: переключатель «Звук» глушит, выбор
   await page.locator('[data-key="sound"]').click();
   await expect.poll(async () => (await beeps(page)).length).toBeGreaterThan(quiet);
 });
+
+test('выбор музыки откликается коротким сигналом, повторное нажатие на выбранную кнопку — нет', async ({ page }) => {
+  await fakeAudio(page);
+  await ready(page);
+  await page.keyboard.press('Shift'); // жест пользователя: «разбудить» звук
+  const count = async (): Promise<number> => (await beeps(page)).length;
+  const base = await count();
+  await page.locator('#music [data-music="remaster"]').click();
+  await expect.poll(count).toBeGreaterThan(base); // услышать, что касание дошло: игра не идёт, смена музыки иначе на слух незаметна
+  const afterRemaster = await count();
+  await page.waitForTimeout(400);
+  await page.locator('#music [data-music="remaster"]').click(); // уже выбрана — ничего не меняется
+  await page.waitForTimeout(300);
+  expect(await count()).toBe(afterRemaster);
+  await page.locator('#music [data-music="original"]').click();
+  await expect.poll(count).toBeGreaterThan(afterRemaster);
+});
+

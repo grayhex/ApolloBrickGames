@@ -34,14 +34,22 @@ export type MusicKind = 'original' | 'remaster';
 /** Порт аудио: ядро событий не знает, чем и как воспроизводится звук. */
 export interface AudioPort {
   readonly muted: boolean;
-  /** Громкость 0…1 (ползунок страницы). Заглушение — отдельно, `setMuted`. */
+  /** Громкость 0…1 (ползунок «Звук»): эффекты и мелодия-пищалка. Заглушение — отдельно, `setMuted`. */
   readonly volume: number;
+  /** Громкость записи «ремастера» 0…1 (ползунок «Музыка»); пищалку не затрагивает — у неё общая `volume`. */
+  readonly musicVolume: number;
   setMuted(muted: boolean): void;
   setVolume(volume: number): void;
-  /** Выбор музыки: «ремастер» подменяет мелодию (но не эффекты); нет записи — звучит оригинал. */
+  setMusicVolume(volume: number): void;
+  /**
+   * Выбор музыки: «ремастер» подменяет мелодию (но не эффекты, они при нём тише); нет записи — звучит оригинал.
+   * Идемпотентен (повторный вызов ничего не перезапускает); звучащая мелодия переключается на лету с того же места.
+   */
   setMusic(music: MusicKind): void;
   /** Чем звучит мелодия сейчас: `remaster` — играет запись, иначе — пищалка. */
   readonly musicSource: MusicKind;
+  /** Состояние записи «ремастера» (для подсказки на кнопке): ещё не грузили, грузится, готова, не загрузилась / не декодируется. */
+  readonly remasterStatus: 'idle' | 'loading' | 'ready' | 'failed';
   /** Эффект: один канал, более слабый не перебивает звучащий сильный. */
   play(cue: AudioCue): void;
   /** Запустить мелодию с начала (прежняя обрывается). Часы идут и при заглушённом звуке — светодиоды бегут в такт. */
@@ -63,8 +71,10 @@ export interface AudioPort {
 export class NullAudio implements AudioPort {
   muted = true;
   volume = 0.25;
+  musicVolume = 0.25;
   melodyKind: MelodyKind | null = null;
   musicSource: MusicKind = 'original';
+  remasterStatus: 'idle' | 'loading' | 'ready' | 'failed' = 'idle';
   music: MusicKind = 'original';
 
   setMuted(muted: boolean): void {
@@ -73,6 +83,10 @@ export class NullAudio implements AudioPort {
 
   setVolume(volume: number): void {
     this.volume = volume;
+  }
+
+  setMusicVolume(volume: number): void {
+    this.musicVolume = volume;
   }
 
   setMusic(music: MusicKind): void {

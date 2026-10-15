@@ -157,3 +157,20 @@ describe('проигрыватель мелодии', () => {
     expect(player.collect(10, 300)).toEqual([]);
   });
 });
+
+describe('проигрыватель мелодии: сколько звучит с запуска', () => {
+  it('elapsed считает время от запуска без пауз; у остановленного — 0', () => {
+    const player = new MelodyPlayer();
+    expect(player.elapsed(5000)).toBe(0);
+    player.start('start', 1000);
+    expect(player.elapsed(1000)).toBe(0);
+    expect(player.elapsed(4500)).toBe(3500);
+    player.pause(4500);
+    expect(player.elapsed(9000)).toBe(3500); // на паузе не идёт
+    player.resume(9000);
+    expect(player.elapsed(10000)).toBe(4500);
+    player.stop();
+    expect(player.elapsed(11000)).toBe(0);
+  });
+});
+

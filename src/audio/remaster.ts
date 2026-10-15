@@ -1,8 +1,9 @@
 /**
  * Музыка «Ремастер»: готовая запись (m4a / AAC, любой формат, который браузер умеет декодировать) вместо мелодии-пищалки.
- * Запись лежит в `public/audio/remaster.m4a`, грузится один раз при первом выборе «Ремастер», декодируется Web Audio и
+ * Запись лежит в `public/audio/remaster.m4a` (Opus) и `remaster-aac.m4a` (та же запись в AAC — запасной вариант для браузеров, которые Opus в MP4
+ * не декодируют, прежде всего Safari); грузится один раз при первом выборе «Ремастер», декодируется Web Audio и
  * играет по кругу, пока идёт игра; пауза держит позицию, остановка сбрасывает. Нет файла, он не декодируется или Web Audio
- * недоступен — тихо остаётся оригинальная мелодия. Эффекты (прыжок, выстрел и т. д.) остаются пищалкой поверх записи.
+ * недоступен — тихо остаётся оригинальная мелодия (а на кнопке «Ремастер» виден статус). Эффекты (прыжок, выстрел и т. д.) остаются пищалкой поверх записи.
  *
  * Минимальные структурные типы Web Audio: логика проверяется без браузера, как и в beeper.ts.
  */
@@ -65,6 +66,17 @@ export type TrackStatus = 'idle' | 'loading' | 'ready' | 'failed';
 /** Загрузчик байтов записи; `null` — файла нет. */
 export type TrackFetcher = () => Promise<ArrayBuffer | null>;
 
+/**
+ * Источники записи по порядку: Opus в MP4 (лучше при том же размере), затем AAC. Браузер, который Opus в MP4 не играет (`canPlay` вернул пустую
+ * строку — как Safari старых версий), начинает с AAC и не качает файл, который не сможет декодировать; если `canPlay` ошибся и декодирование
+ * всё равно не удалось, пробуется следующий источник. `base` — адрес каталога с файлами (с косой чертой на конце).
+ */
+export function remasterSources(base: string, canPlay: (type: string) => string): TrackFetcher[] {
+  const opus = fetchTrack(`${base}audio/remaster.m4a`);
+  const aac = fetchTrack(`${base}audio/remaster-aac.m4a`);
+  return canPlay('audio/mp4; codecs="opus"') === '' ? [aac, opus] : [opus, aac];
+}
+
 export class RemasterTrack {
   private state: TrackStatus = 'idle';
   private buffer: BufferLike | null = null;
@@ -76,10 +88,18 @@ export class RemasterTrack {
   private offset = 0;
   /** Время контекста (с), когда запущен текущий источник. */
   private startedAt = 0;
-  private readonly fetchData: TrackFetcher;
+  private readonly sources: readonly TrackFetcher[];
+  /** Номер источника, который удалось декодировать (-1 — пока никакой). */
+  private loadedFrom = -1;
 
-  constructor(fetchData: TrackFetcher) {
-    this.fetchData = fetchData;
+  /** Один источник или несколько по порядку: берётся первый, который и загрузился, и декодировался. */
+  constructor(sources: TrackFetcher | readonly TrackFetcher[]) {
+    this.sources = Array.isArray(sources) ? sources : [sources as TrackFetcher];
+  }
+
+  /** Номер источника, из которого играет запись (0 — основной, 1 — запасной); -1 — запись не загружена. */
+  get loadedSource(): number {
+    return this.loadedFrom;
   }
 
   get status(): TrackStatus {
@@ -110,18 +130,23 @@ export class RemasterTrack {
     const decode = context.decodeAudioData.bind(context);
     this.state = 'loading';
     this.loading = (async () => {
-      try {
-        const data = await this.fetchData();
-        if (!data || data.byteLength === 0) throw new Error('нет данных');
-        const buffer = await decode(data);
-        if (!(buffer.duration > 0)) throw new Error('пустая запись');
-        this.buffer = buffer;
-        this.loopLength = loopEndOf(buffer);
-        this.state = 'ready';
-      } catch {
-        this.buffer = null;
-        this.state = 'failed';
+      for (const [index, fetchData] of this.sources.entries()) {
+        try {
+          const data = await fetchData();
+          if (!data || data.byteLength === 0) throw new Error('нет данных');
+          const buffer = await decode(data);
+          if (!(buffer.duration > 0)) throw new Error('пустая запись');
+          this.buffer = buffer;
+          this.loopLength = loopEndOf(buffer);
+          this.loadedFrom = index;
+          this.state = 'ready';
+          return;
+        } catch {
+          // Этот источник не загрузился или не декодируется — пробуем следующий.
+        }
       }
+      this.buffer = null;
+      this.state = 'failed';
     })();
     return this.loading;
   }
@@ -160,6 +185,13 @@ export class RemasterTrack {
   stop(): void {
     this.halt();
     this.offset = 0;
+  }
+
+  /** Перемотка: звук обрывается, следующий запуск — с позиции `seconds` (по кругу записи). Запись не готова — с начала. */
+  seek(seconds: number): void {
+    this.halt();
+    const length = this.loopLength;
+    this.offset = length > 0 && Number.isFinite(seconds) ? ((seconds % length) + length) % length : 0;
   }
 
   private halt(): void {

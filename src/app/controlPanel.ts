@@ -11,8 +11,10 @@ import { VIEWS, type View } from './view';
 export interface ControlPanelActions {
   pickShell(shell: Shell): void;
   toggleSound(): void;
-  /** Громкость 0…1 от ползунка. `commit = false` — ползунок ещё тянут (звук меняется, сохранять рано); `true` — отпустили. */
+  /** Громкость звука 0…1 от ползунка. `commit = false` — ползунок ещё тянут (звук меняется, сохранять рано); `true` — отпустили. */
   setVolume(volume: number, commit: boolean): void;
+  /** То же для ползунка музыки; под «Оригинал» оба ползунка связаны — приложение двигает обе громкости вместе. */
+  setMusicVolume(volume: number, commit: boolean): void;
   setMusic(music: Music): void;
   toggleGhost(): void;
   setView(view: View): void;
@@ -25,11 +27,15 @@ export interface ControlPanelActions {
 export interface ControlPanelView {
   shell: Shell;
   sound: boolean;
-  /** Громкость 0…1. */
+  /** Громкость звука 0…1. */
   volume: number;
+  /** Громкость музыки 0…1 (под «Оригинал» равна громкости звука: ползунки связаны). */
+  musicVolume: number;
   music: Music;
   ghost: boolean | null;
   view: View;
+  /** Игрушка включена: пока игра идёт, «Свёрнута» недоступна — сначала выключить (ON/OFF). */
+  powered: boolean;
   level: LevelRef | null;
 }
 
@@ -44,6 +50,9 @@ export interface ControlPanelOptions {
   onPointerUse(): void;
 }
 
+/** Состояние записи «Ремастера» (см. `AudioPort.remasterStatus`): по нему на кнопке видно, грузится ли запись и удалось ли её загрузить. */
+export type RemasterStatus = 'idle' | 'loading' | 'ready' | 'failed';
+
 const MUSICS: readonly { id: Music; label: MsgKey }[] = [
   { id: 'original', label: 'music.original' },
   { id: 'remaster', label: 'music.remaster' },
@@ -54,6 +63,41 @@ const VIEW_LABELS: Record<View, { label: MsgKey; title: MsgKey }> = {
   full: { label: 'view.full', title: 'view.fullTitle' },
   screen: { label: 'view.screen', title: 'view.screenTitle' },
 };
+
+/** Ряд громкости: значок, ползунок 0…100 и подпись процента. Только разметка и показ значения — действия вешает панель. */
+class VolumeSlider {
+  readonly row: HTMLElement;
+  readonly range: HTMLInputElement;
+  readonly icon: HTMLElement;
+  private readonly output: HTMLOutputElement;
+
+  constructor(id: string, name: IconName) {
+    this.range = h('input', { type: 'range', class: 'vol__range', id, min: '0', max: '100', step: '5', value: '25' });
+    this.output = h('output', { class: 'vol__value', for: id }, '25%');
+    this.icon = h('span', { class: 'vol__icon' }, icon(name));
+    this.row = h('div', { class: 'vol', id: `${id}-row`, 'data-muted': 'false' }, this.icon, this.range, this.output);
+  }
+
+  /** Громкость 0…1 по положению ползунка. */
+  read(): number {
+    return Number(this.range.value) / 100;
+  }
+
+  /** Подпись и заливка ползунка (без побочных действий). */
+  show(volume: number): void {
+    const percent = Math.round(volume * 100);
+    this.output.textContent = `${percent}%`;
+    this.range.style.setProperty('--pct', `${percent}%`);
+    this.range.setAttribute('aria-valuetext', `${percent}%`);
+  }
+
+  /** Установить громкость; `move` — двигать ли сам ползунок (пока его тянут, он остаётся под рукой пользователя). */
+  set(volume: number, move: boolean): void {
+    const value = String(Math.round(volume * 100));
+    if (move || this.range.value !== value) this.range.value = value;
+    this.show(volume);
+  }
+}
 
 /**
  * Правая панель страницы («Пульт»): мини-блок «Звук» (вкл/выкл, громкость, музыка «Оригинал»/«Ремастер»), блок «Вид» (цвет игрушки,
@@ -67,23 +111,18 @@ export class ControlPanel {
   private readonly picker: ShellPicker;
   private readonly soundToggle: { button: HTMLButtonElement; icon: HTMLElement; label: HTMLElement };
   private readonly ghostToggle: HTMLButtonElement;
+  private soundBlock: HTMLElement | null = null;
+  /** Ползунки связаны (музыка «Оригинал»): их двигает один и тот же уровень. */
+  private linked = true;
   private readonly musicButtons = new Map<Music, HTMLButtonElement>();
+  private musicRoot: HTMLElement | null = null;
+  private remasterStatus: RemasterStatus = 'idle';
   private readonly viewButtons = new Map<View, HTMLButtonElement>();
   private readonly tiles = new Map<number, HTMLButtonElement>();
   private readonly tiles2: { tile: HTMLButtonElement; slot: OriginalSlot }[] = [];
   private readonly userSelect = h('select', { class: 'pick', id: 'user-level' });
-  private readonly volume = h('input', {
-    type: 'range',
-    class: 'vol__range',
-    id: 'volume',
-    min: '0',
-    max: '100',
-    step: '5',
-    value: '25',
-  });
-  private readonly volumeRow = h('div', { class: 'vol', id: 'volume-row', 'data-muted': 'false' });
-  private readonly volumeValue = h('output', { class: 'vol__value', for: 'volume' }, '25%');
-  private readonly volumeIcon = h('span', { class: 'vol__icon' }, icon('sound'));
+  private readonly volume: VolumeSlider;
+  private readonly musicVolume: VolumeSlider;
   private readonly runToggle = h('button', { type: 'button', class: 'run__toggle', id: 'run-toggle', 'aria-expanded': 'false', 'aria-controls': 'run-panel' });
   private readonly runBox = h('div', { class: 'run', id: 'run', 'data-open': 'false' });
   private readonly runRows = h('ol', { class: 'run__rows', id: 'run-rows' });
@@ -118,17 +157,26 @@ export class ControlPanel {
       pointerUse(event);
     });
     this.soundToggle = { button: soundButton, icon: soundIcon, label: soundLabel };
-    this.label(this.volume, 'vol.label', 'aria-label');
-    this.volume.addEventListener('input', () => {
-      this.showVolume(Number(this.volume.value) / 100);
-      actions.setVolume(Number(this.volume.value) / 100, false);
-    });
-    this.volume.addEventListener('change', () => actions.setVolume(Number(this.volume.value) / 100, true));
-    // Мышь и касание возвращают клавиатуру игре; со стрелок фокус остаётся на ползунке.
-    this.volume.addEventListener('pointerup', () => options.onPointerUse());
-    this.volumeRow.append(this.volumeIcon, this.volume, this.volumeValue);
+    // Два ползунка: «Звук» (эффекты) и «Музыка» (запись «Ремастера»). Под «Оригинал» они связаны — тянешь один, едет и другой.
+    const slider = (id: string, name: IconName, key: MsgKey, set: (volume: number, commit: boolean) => void, other: () => VolumeSlider): VolumeSlider => {
+      const control = new VolumeSlider(id, name);
+      this.label(control.range, key, 'aria-label');
+      control.range.addEventListener('input', () => {
+        const value = control.read();
+        control.show(value);
+        if (this.linked) other().set(value, true); // связанный ползунок едет следом сразу, а не после того, как отпустили
+        set(value, false);
+      });
+      control.range.addEventListener('change', () => set(control.read(), true));
+      // Мышь и касание возвращают клавиатуру игре; со стрелок фокус остаётся на ползунке.
+      control.range.addEventListener('pointerup', () => options.onPointerUse());
+      return control;
+    };
+    this.volume = slider('volume', 'sound', 'vol.sound', actions.setVolume, () => this.musicVolume);
+    this.musicVolume = slider('music-volume', 'music', 'vol.music', actions.setMusicVolume, () => this.volume);
 
-    const music = this.label(h('div', { class: 'seg', id: 'music', role: 'group' }), 'music.aria', 'aria-label');
+    const music = this.label(h('div', { class: 'seg', id: 'music', role: 'group', 'data-remaster': 'idle' }), 'music.aria', 'aria-label');
+    this.musicRoot = music;
     for (const { id, label } of MUSICS) {
       const button = h('button', { type: 'button', class: 'seg__btn', 'data-music': id, 'aria-pressed': 'false' });
       this.label(button, label);
@@ -144,9 +192,11 @@ export class ControlPanel {
       'section',
       { class: 'side__sec side__sec--mini', id: 'blk-sound', 'aria-labelledby': 'snd-title' },
       this.label(h('h3', { class: 'side__h', id: 'snd-title' }), 'snd.h'),
-      h('div', { class: 'snd' }, soundButton, this.volumeRow),
+      h('div', { class: 'snd' }, soundButton, this.volume.row),
       h('div', { class: 'side__cap side__cap--row' }, this.label(h('span', {}), 'music.h'), music),
+      this.musicVolume.row,
     );
+    this.soundBlock = sound;
 
     // ── Вид: цвет, состояние игрушки, сегменты ───────────────────────────
     this.picker = new ShellPicker({
@@ -164,14 +214,14 @@ export class ControlPanel {
       this.label(button, VIEW_LABELS[view].label);
       this.label(button, VIEW_LABELS[view].title, 'title');
       button.addEventListener('click', (event) => {
-        actions.setView(view);
+        if (button.getAttribute('aria-disabled') !== 'true') actions.setView(view);
         pointerUse(event);
       });
       this.viewButtons.set(view, button);
       state.append(button);
     }
     const ghostIcon = h('span', { class: 'tgl__icon' }, icon('segments'));
-    this.ghostToggle = h('button', { type: 'button', class: 'tgl', id: 'tgl-ghost', 'data-tgl': 'ghost', 'aria-pressed': 'false' }, ghostIcon, this.label(h('span', { class: 'tgl__label' }), 'tgl.ghost'));
+    this.ghostToggle = h('button', { type: 'button', class: 'tgl tgl--sm', id: 'tgl-ghost', 'data-tgl': 'ghost', 'aria-pressed': 'false' }, ghostIcon, this.label(h('span', { class: 'tgl__label' }), 'tgl.ghost'));
     this.ghostToggle.addEventListener('click', (event) => {
       actions.toggleGhost();
       pointerUse(event);
@@ -263,6 +313,7 @@ export class ControlPanel {
     }
     for (const { tile, slot } of this.tiles2) tile.title = slotTitle(slot);
     this.picker.relabel(t('clr.h'));
+    this.titleRemaster();
     const sumHead = this.runBox.querySelector('.run__sum-h');
     if (sumHead) sumHead.textContent = t('run.total');
     if (this.lastView) this.update(this.lastView);
@@ -271,18 +322,28 @@ export class ControlPanel {
     if (this.lastRun) this.setRun(this.lastRun);
   }
 
+  /**
+   * Статус записи «Ремастера» на кнопке: пока грузится — мерцает, не загрузилась или не декодируется (Opus в MP4 не везде играет) — значок ⚠
+   * и пояснение в подсказке; иначе молча звучал бы прежний оригинал, и казалось бы, что кнопка ничего не делает. Видно, только когда «Ремастер» выбран.
+   */
+  setRemasterStatus(status: RemasterStatus): void {
+    if (status === this.remasterStatus) return;
+    this.remasterStatus = status;
+    this.musicRoot?.setAttribute('data-remaster', status);
+    this.titleRemaster();
+  }
+
+  private titleRemaster(): void {
+    const button = this.musicButtons.get('remaster');
+    if (!button) return;
+    const key: MsgKey = this.remasterStatus === 'loading' ? 'music.remasterLoading' : this.remasterStatus === 'failed' ? 'music.remasterFailed' : 'music.remasterNote';
+    button.title = t(key);
+  }
+
   private setIcon(holder: HTMLElement, name: IconName): void {
     if (holder.dataset['icon'] === name) return;
     holder.dataset['icon'] = name;
     holder.replaceChildren(icon(name));
-  }
-
-  /** Подпись и заливка ползунка (без побочных действий). */
-  private showVolume(volume: number): void {
-    const percent = Math.round(volume * 100);
-    this.volumeValue.textContent = `${percent}%`;
-    this.volume.style.setProperty('--pct', `${percent}%`);
-    this.volume.setAttribute('aria-valuetext', `${percent}%`);
   }
 
   /** Состояние страницы изменилось: обновить кнопки, цвет и подсветку выбранного уровня. */
@@ -297,15 +358,24 @@ export class ControlPanel {
     sound.label.textContent = t('tgl.sound');
     this.setIcon(sound.icon, view.sound ? 'sound' : 'soundOff');
     // Пока ползунок тянут, значение не трогаем: его двигает сам пользователь.
-    if (document.activeElement !== this.volume || this.volume.value !== String(Math.round(view.volume * 100))) {
-      this.volume.value = String(Math.round(view.volume * 100));
-    }
-    this.showVolume(view.volume);
-    this.volumeRow.dataset['muted'] = String(!view.sound);
-    this.setIcon(this.volumeIcon, view.sound ? 'sound' : 'soundOff');
+    this.linked = view.music === 'original';
+    this.volume.set(view.volume, document.activeElement !== this.volume.range);
+    this.musicVolume.set(view.musicVolume, document.activeElement !== this.musicVolume.range);
+    for (const control of [this.volume, this.musicVolume]) control.row.dataset['muted'] = String(!view.sound);
+    this.setIcon(this.volume.icon, view.sound ? 'sound' : 'soundOff');
+    this.musicVolume.row.dataset['linked'] = String(this.linked);
+    this.musicVolume.row.title = this.linked ? t('vol.linked') : '';
+    if (this.soundBlock) this.soundBlock.dataset['linked'] = String(this.linked);
     for (const [id, button] of this.musicButtons) button.setAttribute('aria-pressed', String(view.music === id));
 
-    for (const [id, button] of this.viewButtons) button.setAttribute('aria-pressed', String(view.view === id));
+    for (const [id, button] of this.viewButtons) {
+      button.setAttribute('aria-pressed', String(view.view === id));
+      // Включённую игрушку не закрыть: кнопка «Свёрнута» недоступна и объясняет почему (aria-disabled — чтобы оставаться в порядке фокуса).
+      const blocked = id === 'closed' && view.powered && view.view !== 'closed';
+      if (blocked) button.setAttribute('aria-disabled', 'true');
+      else button.removeAttribute('aria-disabled');
+      button.title = t(blocked ? 'view.closedBlocked' : VIEW_LABELS[id].title);
+    }
     this.ghostToggle.hidden = view.ghost === null;
     this.ghostToggle.setAttribute('aria-pressed', String(view.ghost === true));
     this.ghostToggle.title = t(view.ghost ? 'tgl.ghostOn' : 'tgl.ghostOff');

@@ -203,6 +203,14 @@ export class MelodyPlayer {
     return this.pausedFlag ? this.base : this.base + (now - this.anchor);
   }
 
+  /**
+   * Сколько мелодия звучит с запуска (паузы не считаются), мс; для остановленного проигрывателя — 0.
+   * По нему запись «ремастера» находит «то же место», когда музыку переключают на лету.
+   */
+  elapsed(now: number): number {
+    return this.track ? this.position(now) : 0;
+  }
+
   /** Светодиод: 0…2; -1 — мелодия молчит, на паузе или закончилась. */
   led(now: number): number {
     if (!this.track || this.pausedFlag) return -1;
