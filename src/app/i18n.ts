@@ -15,10 +15,15 @@ export function setLang(lang: Lang): void {
   for (const listener of listeners) listener(lang);
 }
 
-/** Подписка на смену языка; возвращает функцию отписки. */
-export function onLangChange(listener: (lang: Lang) => void): () => void {
+/**
+ * Подписка на смену языка; возвращает функцию отписки. `signal` — отписка вместе с остальными обработчиками игрушки,
+ * когда на странице она меняется на другую (см. `host.ts`): панели прежней игрушки перерисовывать незачем.
+ */
+export function onLangChange(listener: (lang: Lang) => void, signal?: AbortSignal): () => void {
   listeners.add(listener);
-  return () => void listeners.delete(listener);
+  const off = (): void => void listeners.delete(listener);
+  signal?.addEventListener('abort', off, { once: true });
+  return off;
 }
 
 /** Текст по ключу на текущем языке; `{имя}` заменяется значением из `vars`. */

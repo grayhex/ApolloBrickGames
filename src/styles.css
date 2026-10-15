@@ -2574,7 +2574,8 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   clip-path: inset(1.2% round 13% / 24%);
 }
 @keyframes dock-arrive { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 1179px) {
+/* Четыре игрушки с названиями не помещаются рядом с угловыми панелями на окне уже ≈ 1340 px: остаются одни миниатюры. */
+@media (max-width: 1339px) {
   .toysw__item .toysw__name { display: none; }
   .toysw__item { padding: 0 10px; }
 }
@@ -2585,6 +2586,11 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   body[data-chrome='toy'] .arena { --toy-top: calc(52px + var(--head-h)); }
   body[data-chrome='toy'] .brand { width: max-content; max-width: 100%; height: 42px; margin-bottom: 6px; }
   .toysw__item[aria-current='page'] .toysw__name { display: inline; }
+}
+/* Телефон: четыре игрушки с названием текущей не помещаются рядом с логотипом (на 360 px — с запасным шрифтом, шире Inter): остаются миниатюры, текущая — в рамке, имя — в aria-label. */
+@media (max-width: 430px) {
+  .toysw__item[aria-current='page'] .toysw__name { display: none; }
+  .toysw__item { padding: 0 8px; }
 }
 @media (max-width: 640px) {
   .corner { top: 10px; right: 10px; }
@@ -2610,12 +2616,17 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   --deco: var(--rim);
 }
 
-.toy[data-model='clock99'][data-shell='yellow'] {
+.toy[data-deco='flourish'][data-shell='yellow'] {
   --deco: #d6c24f;
 }
 
-.toy[data-model='clock99'][data-shell='white'] {
+.toy[data-deco='flourish'][data-shell='white'] {
   --deco: #d3392f;
+}
+
+/* «168 в 1 танк»: на жёлтом корпусе надписи зелёные, на красном — светлые (по фото). */
+.toy[data-model='tank168'][data-shell='yellow'] {
+  --label: #2b8a4e;
 }
 
 .toy[data-model] .lid__front {
@@ -2659,7 +2670,7 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   pointer-events: none;
 }
 
-.toy[data-model='clock99'] .lid__deco {
+.toy[data-deco='flourish'] .lid__deco {
   border: 0.5cqw solid var(--deco);
   border-radius: 1.2cqw;
   inset: 2.6cqw;
@@ -2707,12 +2718,12 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   transform: rotate(45deg);
 }
 
-.toy[data-model='seabattle'] .lid__bezel {
+.toy[data-deco='frame'][data-model] .lid__bezel {
   position: relative;
   margin-top: 0.8cqw;
 }
 
-.toy[data-model='seabattle'] .lid__bezel::before {
+.toy[data-deco='frame'][data-model] .lid__bezel::before {
   content: '';
   position: absolute;
   inset: -2.6cqw;
@@ -3887,4 +3898,52 @@ body.route-editor--ready {
 /* Страница игры скрыта всегда, кроме блока ошибки: сбой запуска редактора виден. */
 body.route-editor .shell > :not(#fatal) {
   display: none;
+}
+
+/* Цвета корпуса: кнопок всегда четыре, а цвета, которых у этой игрушки нет на фото оригинала, недоступны. */
+.shellpick__btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.shellpick__btn[aria-disabled='true'] .mini {
+  filter: grayscale(0.85) brightness(0.9);
+}
+
+/* Игры на устройстве (справка): название с наклейки и состояние игры. */
+.games {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.games__row {
+  display: grid;
+  grid-template-columns: minmax(0, 11.5rem) minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.86rem;
+}
+
+.games__row:last-child {
+  border-bottom: 0;
+}
+
+.games__row[data-status='ready'] .games__name,
+.games__row[data-status='placeholder'] .games__name {
+  color: var(--accent);
+}
+
+.games__note {
+  color: var(--muted);
+}
+
+@media (max-width: 520px) {
+  .games__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

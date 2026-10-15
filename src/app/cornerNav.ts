@@ -31,7 +31,8 @@ export class CornerNav {
   private ghostOn: boolean | null = null;
   private theme: Theme = 'dark';
 
-  constructor(elements: CornerNavElements, actions: CornerNavActions) {
+  /** `signal` — обработчики снимаются, когда игрушка на странице меняется (кнопки угла остаются теми же элементами). */
+  constructor(elements: CornerNavElements, actions: CornerNavActions, signal?: AbortSignal) {
     this.elements = elements;
     for (const id of ['keyboard', 'gamepad', 'pause'] as const) {
       const element = elements.devices.querySelector<HTMLElement>(`[data-device="${id}"]`);
@@ -39,17 +40,25 @@ export class CornerNav {
       element.replaceChildren(icon(id satisfies IconName));
       this.devices.set(id, element);
     }
-    elements.theme.addEventListener('click', (event) => {
-      actions.toggleTheme();
-      if (event.detail !== 0) actions.onPointerUse();
-    });
+    elements.theme.addEventListener(
+      'click',
+      (event) => {
+        actions.toggleTheme();
+        if (event.detail !== 0) actions.onPointerUse();
+      },
+      { signal },
+    );
     this.ghost?.replaceChildren(icon('segments'));
-    this.ghost?.addEventListener('click', (event) => {
-      actions.toggleGhost();
-      if (event.detail !== 0) actions.onPointerUse();
-    });
+    this.ghost?.addEventListener(
+      'click',
+      (event) => {
+        actions.toggleGhost();
+        if (event.detail !== 0) actions.onPointerUse();
+      },
+      { signal },
+    );
     this.relabel();
-    onLangChange(() => this.relabel());
+    onLangChange(() => this.relabel(), signal);
   }
 
   private relabel(): void {

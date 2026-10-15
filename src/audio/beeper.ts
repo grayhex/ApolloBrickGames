@@ -65,6 +65,8 @@ export interface AudioContextLike extends TrackContextLike {
   createOscillator(): OscillatorLike;
   createGain(): GainLike;
   resume(): Promise<void>;
+  /** Освободить звуковое устройство (браузер ограничивает число контекстов на странице). Необязательно: у подставных контекстов в тестах его нет. */
+  close?(): Promise<void>;
 }
 
 export interface WebAudioOptions {
@@ -264,6 +266,18 @@ export class WebAudioPort implements AudioPort {
     this.track?.stop();
     this.trackMode = false;
     this.trackPaused = false;
+  }
+
+  /** Игрушка на странице меняется на другую: всё затихает, звуковое устройство освобождается. Порт после этого не используют. */
+  dispose(): void {
+    this.silence();
+    const context = this.context;
+    this.context = null;
+    this.master = null;
+    this.melodyBus = null;
+    this.sfxBus = null;
+    this.trackGain = null;
+    void context?.close?.().catch(() => {});
   }
 
   silence(): void {

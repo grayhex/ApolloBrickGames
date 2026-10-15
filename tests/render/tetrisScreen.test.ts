@@ -183,3 +183,29 @@ describe('экран тетриса: перерисовка только при 
     expect(calls.some(c => c.name === 'fillRect')).toBe(true);
   });
 });
+
+describe('значок игры в углу боковой панели', () => {
+  const draw = (panel: 'sea' | 'tank' | 'clock', phase: TetrisScene['phase']): { name: string; alpha: number }[] => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel, ink: '#000' });
+    screen.resize(264, 320, 1);
+    screen.setGhost(false);
+    screen.render(scene({ phase, sound: false }));
+    return calls;
+  };
+
+  it('«Морской бой» рисует чашку (блюдце — эллипс), «168 в 1 танк» — танк (гусеница — скруглённый прямоугольник); на экране ожидания они горят', () => {
+    const cup = draw('sea', 'ready');
+    const tank = draw('tank', 'ready');
+    expect(cup.filter((call) => call.name === 'ellipse' && call.alpha === 1)).toHaveLength(1);
+    expect(cup.filter((call) => call.name === 'roundRect')).toHaveLength(0);
+    expect(tank.filter((call) => call.name === 'roundRect' && call.alpha === 1).length).toBeGreaterThanOrEqual(2); // гусеница и башня
+    expect(tank.filter((call) => call.name === 'ellipse')).toHaveLength(0); // чашки нет
+  });
+
+  it('в игре значок гаснет (как чашка у оригинала), а у «Часов+99» значка внизу нет вовсе', () => {
+    expect(draw('tank', 'playing').filter((call) => call.name === 'roundRect')).toHaveLength(0);
+    expect(draw('sea', 'playing').filter((call) => call.name === 'ellipse')).toHaveLength(0);
+    expect(draw('clock', 'ready').filter((call) => call.name === 'roundRect')).toHaveLength(0);
+  });
+});

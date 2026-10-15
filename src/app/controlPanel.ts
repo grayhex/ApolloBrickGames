@@ -51,7 +51,7 @@ export interface ControlPanelOptions {
   onPointerUse(): void;
   /** Чья игрушка: от неё зависят наклейка на миниатюрах цвета и вид панели (по умолчанию Crocodile Mario). */
   toy?: ToyId;
-  /** Какие цвета корпуса предлагать (подтверждённые фото оригинала); по умолчанию все четыре. */
+  /** Какие цвета доступны игрушке (подтверждены фото оригинала); кнопок цвета всегда четыре, остальные недоступны. По умолчанию доступны все. */
   shells?: readonly Shell[];
   /** Уровни выключены (у игры-заглушки их нет): плитки заперты, список карт недоступен. */
   levelsDisabled?: boolean;
@@ -59,6 +59,8 @@ export interface ControlPanelOptions {
   music?: boolean;
   /** Спидран-HUD (время прохождения уровней); у игры без уровней скрыт. По умолчанию есть. */
   speedrun?: boolean;
+  /** Подписка на смену языка снимается вместе с остальными обработчиками игрушки. */
+  signal?: AbortSignal;
 }
 
 /** Состояние записи «Ремастера» (см. `AudioPort.remasterStatus`): по нему на кнопке видно, грузится ли запись и удалось ли её загрузить. */
@@ -301,11 +303,13 @@ export class ControlPanel {
     this.label(runPanel, 'run.aria', 'aria-label');
     this.runBox.append(this.runToggle, runPanel);
 
+    // Панель остаётся тем же элементом при смене игрушки на странице: признак игрушки ставится или снимается.
     if (options.toy) this.root.dataset['toy'] = options.toy;
+    else delete this.root.dataset['toy'];
     this.root.replaceChildren(top, sound, view, levels, ...(options.speedrun === false ? [] : [this.runBox]));
     this.setUserLevels([], null);
     this.relabel();
-    onLangChange(() => this.relabel());
+    onLangChange(() => this.relabel(), options.signal);
   }
 
   /** Запоминает элемент, чья подпись (текст или атрибут) берётся из словаря; возвращает его же. */

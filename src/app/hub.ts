@@ -99,6 +99,12 @@ export class InputHub {
     this.keyboard.attach();
   }
 
+  /** Снять клавиатуру со страницы (игрушка на странице меняется на другую). */
+  detach(): void {
+    this.keyboard.detach();
+    this.screen.releaseAll();
+  }
+
   /** Опрос устройств; вызывается каждый кадр отрисовки, в том числе на паузе. */
   poll(): void {
     this.gamepad.poll();

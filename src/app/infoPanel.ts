@@ -2,7 +2,7 @@ import { h } from './dom';
 import { onLangChange, t, type MsgKey } from './i18n';
 import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
-import { TOYS, type ToyId } from './toys';
+import { engineOf, TOYS, type ToyId } from './toys';
 
 /**
  * Спрайты LCD-ячеек — те самые, что рисует игра (public/graphics/lcd): на упаковке в разделе «Figure introduction»
@@ -100,12 +100,12 @@ export class InfoPanel {
   private readonly hub: InputHub;
   private readonly toy: ToyId;
 
-  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario') {
+  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal) {
     this.toy = toy;
     this.root = root;
     this.hub = hub;
     this.render();
-    onLangChange(() => this.render());
+    onLangChange(() => this.render(), signal);
   }
 
   render(): void {
@@ -130,7 +130,7 @@ export class InfoPanel {
       ),
     );
 
-    if (model.game === 'tetris') {
+    if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
       const section = (id: string, title: MsgKey, ...children: HTMLElement[]): HTMLElement => h('section',
         { class: 'side__sec', 'aria-labelledby': id }, h('h3', { class: 'side__h', id }, t(title)), ...children);
@@ -151,11 +151,12 @@ export class InfoPanel {
         ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) =>
           scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]]))),
         h('p', { class: 'side__text' }, t('info.t.bonus')));
-      const note = h('p', { class: 'side__text side__text--over' }, t(model.id === 'clock99' ? 'info.t.clock' : 'info.t.sea'));
+      const note = h('p', { class: 'side__text side__text--over' }, t(model.id === 'clock99' ? 'info.t.clock' : model.id === 'tank168' ? 'info.t.tank' : 'info.t.sea'));
       this.root.replaceChildren(head, section('about-title', 'info.t.title', facts), controls, rules, score, note);
       return;
     }
 
+    delete this.root.dataset['toy']; // панель мог занимать тетрис другой игрушки: здесь снова справка по упаковке Mario
     const about = h(
       'section',
       { class: 'side__sec side__sec--facts', 'aria-labelledby': 'about-title' },

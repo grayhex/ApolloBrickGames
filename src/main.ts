@@ -1,8 +1,8 @@
 import './styles.css';
 import { startApp } from './app/app';
+import { startHost } from './app/host';
 import { parseRoute } from './app/routes';
-import { mountToySwitch } from './app/toySwitch';
-import { parseToy, TOYS } from './app/toys';
+import { parseToy } from './app/toys';
 import { startSheet } from './app/sheet';
 import { clearTheme } from './app/theme';
 
@@ -17,20 +17,15 @@ if (route !== 'room') clearTheme();
 // Смена маршрута — простая перезагрузка: у каждого маршрута свой пакет данных и свои обработчики.
 window.addEventListener('hashchange', () => window.location.reload());
 
-// Игрушка выбирается адресом `?toy=…`; шапка с логотипом и переключателем — только у страницы игрушки (комнаты).
-const toy = parseToy(window.location.search);
-if (route === 'room') {
-  const nav = document.getElementById('toy-switch');
-  if (nav) mountToySwitch(nav, toy);
-}
-
-const start =
+// Страница игрушки (комната): хозяин страницы запускает игрушку из адреса `?toy=…` (без параметра — Crocodile Mario) и меняет игрушки на месте,
+// без перезагрузки (шапка с логотипом и переключателем — тоже его). Техническое демо запускается напрямую: оно одно и не переключается.
+const start: Promise<unknown> =
   route === 'sheet'
     ? startSheet()
     : route === 'editor'
       ? import('./editor/ui/editorApp').then((module) => module.startEditor())
-      : route === 'room' && TOYS[toy].game === 'tetris'
-        ? import('./app/tetrisApp').then((module) => module.startTetrisApp(toy))
+      : route === 'room'
+        ? startHost(parseToy(window.location.search))
         : startApp(route);
 
 start.catch((error: unknown) => {

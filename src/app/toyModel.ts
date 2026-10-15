@@ -37,7 +37,7 @@ function flourish(): SVGSVGElement {
 /** Рамка и орнамент на лицевой панели крышки. `Часы+99`: тонкая рамка у края панели, завитки и ромбик; `Морской бой`: линия вокруг экрана. */
 function deco(model: ToyModel): HTMLElement {
   const root = h('div', { class: 'lid__deco', 'aria-hidden': 'true' });
-  if (model.id === 'clock99') {
+  if (model.deco === 'flourish') {
     for (const side of ['l', 'r'] as const) {
       root.append(
         h('div', { class: 'deco__side', 'data-side': side }, flourish(), h('i', { class: 'deco__gem' }), flourish()),
@@ -60,6 +60,7 @@ export function applyToyModel(model: ToyModel, refs: ToyModelRefs): void {
   const { body, toy, arena, lid, base } = refs;
   body.dataset['toy'] = model.id;
   toy.dataset['model'] = model.id;
+  toy.dataset['deco'] = model.deco;
   arena.dataset['model'] = model.id;
   document.title = `${model.name} — Apollo`;
 

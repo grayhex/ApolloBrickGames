@@ -36,6 +36,7 @@ import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
 import { ledState, type LedState } from './leds';
 import { bundledLevels, originalPack, originalSlots, refAfterLevelStart, startingLevel, userPack, type LevelRef } from './levels';
+import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { GAME_ROUTES } from './routes';
 import { loadContentPack } from './loadContent';
 import { EntryScript } from './entry';
@@ -45,6 +46,7 @@ import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
+import { shellFor, TOYS } from './toys';
 import { parseView, type View } from './view';
 import {
   controlsHint,
@@ -82,8 +84,40 @@ function namesOf(mask: number): string {
   return names.length === 0 ? '—' : names.join(' ');
 }
 
-export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
+/** Ресурсы маршрута (пакет данных, картинки LCD) загружаются один раз: при смене игрушек на странице возврат к Crocodile Mario мгновенный. */
+const loadedRoutes = new Map<string, Promise<{ pack: ContentPack; assetsUrl: string; assets: AssetStore; assetWarnings: string[] }>>();
+
+function loadRoute(routeName: 'room' | 'tech'): Promise<{ pack: ContentPack; assetsUrl: string; assets: AssetStore; assetWarnings: string[] }> {
   const route = GAME_ROUTES[routeName];
+  const manifestUrl = new URL(`${import.meta.env.BASE_URL}${route.manifest}`, window.location.href).href;
+  let loading = loadedRoutes.get(manifestUrl);
+  if (!loading) {
+    loading = (async () => {
+      const { pack, assetsUrl } = await loadContentPack(manifestUrl, validationEnv(DEMO_BEHAVIORS, GLYPH_NAMES));
+      const assets = new AssetStore(pack.assets, assetsUrl, pack.screen.colors.ink);
+      const assetWarnings = await assets.load();
+      return { pack, assetsUrl, assets, assetWarnings };
+    })();
+    loadedRoutes.set(manifestUrl, loading);
+    // Сбой загрузки не кэшируется: следующий запуск попробует снова.
+    loading.catch(() => loadedRoutes.delete(manifestUrl));
+  }
+  return loading;
+}
+
+/** Заранее подгружает данные и картинки Crocodile Mario (пока играют в другую игрушку), чтобы переключение на него не ждало сеть. */
+export function preloadRoom(): Promise<void> {
+  return loadRoute('room').then(() => undefined);
+}
+
+/**
+ * Запуск Crocodile Mario (или технической демоверсии). Возвращает хэндл: `dispose()` снимает всё, что приложение навесило на страницу, а `carry()` отдаёт
+ * вид, цвет и питание — следующая игрушка продолжает с ними (см. `host.ts`). `carry` на входе — то же от прежней игрушки.
+ */
+export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Promise<AppHandle> {
+  const route = GAME_ROUTES[routeName];
+  const life = new Lifecycle();
+  const { signal } = life;
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
@@ -156,19 +190,16 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   refs.debugToggle.hidden = routeName !== 'tech' && !new URLSearchParams(window.location.search).has('debug');
 
   // ── Данные: статические JSON, проверка при загрузке ──────────────────────
-  const manifestUrl = new URL(`${import.meta.env.BASE_URL}${route.manifest}`, window.location.href).href;
-  const { pack, assetsUrl } = await loadContentPack(manifestUrl, validationEnv(DEMO_BEHAVIORS, GLYPH_NAMES));
-
-  const assets = new AssetStore(pack.assets, assetsUrl, pack.screen.colors.ink);
-  const assetWarnings = await assets.load();
+  const { pack, assets, assetWarnings } = await loadRoute(routeName);
   for (const warning of assetWarnings) console.warn(warning);
 
   // Контекст, игра, эффекты, сценарий входа и сессия пересоздаются при выборе другого уровня (см. launch).
   const params = new URLSearchParams(window.location.search);
   // Вид игрушки: всегда начинается закрытой (не сохраняется); `?view=full|screen` и `?power=on` открывают сразу — для ссылок и тестов.
-  let view: View = route.lid ? parseView(params.get('view'), params.get('power') === 'on') : 'full';
+  // Игрушка, на которую перешли с другой на странице, продолжает с тем же видом и питанием (`carryIn`).
+  let view: View = route.lid ? (carryIn?.view ?? parseView(params.get('view'), params.get('power') === 'on')) : 'full';
   // Питание (ON/OFF): игрушка при открытии страницы выключена; `?power=on` включает сразу. Технические страницы всегда включены.
-  let powered = !route.lid || params.get('power') === 'on';
+  let powered = !route.lid || (carryIn ? carryIn.powered : params.get('power') === 'on');
   if (powered && view === 'closed') view = 'full'; // включённая игрушка не бывает закрытой, даже по адресу `?view=closed&power=on`
   const start = startingLevel(pack, params.get('level')); // `?level=N` открывает уровень N (1–9) сразу
   let ctx = createContext(start.pack);
@@ -235,9 +266,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     // Opus в MP4 (лучше при том же размере) и запасная AAC; браузер, не играющий Opus (Safari старых версий), сразу берёт AAC.
     remaster: remasterSources(import.meta.env.BASE_URL, (type) => document.createElement('audio').canPlayType(type)),
   });
+  life.onDispose(() => audio.dispose?.());
   const unlockAudio = (): void => audio.unlock();
-  window.addEventListener('keydown', unlockAudio);
-  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio, { signal });
+  window.addEventListener('pointerdown', unlockAudio, { signal });
 
   const stepper = new FixedStepper(1000 / ctx.rules.params.tickRateHz);
 
@@ -294,6 +326,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   };
 
   const settingsDialog = new SettingsDialog(refs.settings, hub, {
+    signal,
     onOpen: openMenu,
     onClose: closeMenu,
     // В настройках игрушки — цвет по умолчанию: он же становится цветом текущей игры (у технических страниц своих настроек вида нет).
@@ -308,7 +341,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
         }
       : {}),
   });
-  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu });
+  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, TOYS.mario, signal);
 
   function refocusGame(): void {
     refs.gameArea.focus({ preventScroll: true });
@@ -341,11 +374,12 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) suspend('hidden');
     else void refreshUserLevels(); // карты могли измениться в редакторе в другой вкладке
-  });
-  window.addEventListener('blur', () => suspend('blur'));
-  window.addEventListener('gamepadconnected', () => hub.poll());
-  window.addEventListener('gamepaddisconnected', () => hub.poll());
+  }, { signal });
+  window.addEventListener('blur', () => suspend('blur'), { signal });
+  window.addEventListener('gamepadconnected', () => hub.poll(), { signal });
+  window.addEventListener('gamepaddisconnected', () => hub.poll(), { signal });
   hub.attach();
+  life.onDispose(() => hub.detach());
 
   // Окно LCD: пропорции берутся из профиля экрана, Canvas вписывается в него без растяжения.
   const logical = screenSize(pack.screen);
@@ -355,7 +389,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // Внешний вид: цвет корпуса текущей игры, слой неактивных сегментов, звук, вид экрана, фон страницы.
   // Источник правды — hub.settings.display; исключение — цвет: в настройках лежит цвет по умолчанию,
   // а выбор на странице действует только на текущую игру (до перезагрузки).
-  let currentShell: Shell = hub.settings.display.shell;
+  // Цвет текущей игры: при переходе с другой игрушки — тот же, если у Crocodile Mario он есть (все четыре есть), иначе из настроек.
+  let currentShell: Shell = carryIn ? shellFor(TOYS.mario, carryIn.shell) : hub.settings.display.shell;
   const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
   const applyDisplay = (): void => {
     const { display } = hub.settings;
@@ -430,8 +465,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     try {
       drafts ??= await openIndexedDbStore();
       userLevels = await loadUserLevels(drafts, libraryTarget);
+      if (life.disposed) return; // игрушку на странице уже сменили: общие элементы страницы принадлежат новой
       controls.setUserLevels(userLevels, null);
     } catch {
+      if (life.disposed) return;
       userLevels = [];
       controls.setUserLevels([], 'lv.noStorage');
     }
@@ -484,7 +521,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   }
 
   // ── Панели вокруг игрушки ────────────────────────────────────────────────
-  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub) : null;
+  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub, 'mario', signal) : null;
   const panelActions: ControlPanelActions = {
     pickShell: (shell) => {
       currentShell = shell;
@@ -545,10 +582,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     applyDisplay();
   };
   const controls = route.lid
-    ? new ControlPanel(refs.sideCtl, { slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame })
+    ? new ControlPanel(refs.sideCtl, { slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame, signal })
     : null;
   // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
-  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, onPointerUse: refocusGame }) : null;
+  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, onPointerUse: refocusGame }, signal) : null;
 
   // Шутка со шлейфом: пока шлейф между половинами держат курсором или пальцем, экран рассыпается и гаснет; отпустили — возвращается.
   const glitch = new CableGlitch();
@@ -573,19 +610,19 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       applyGlitch(performance.now());
     }
   };
-  new ResizeObserver(resize).observe(refs.lcdWindow);
-  window.addEventListener('resize', resize);
+  life.observe(refs.lcdWindow, resize);
+  window.addEventListener('resize', resize, { signal });
   resize();
 
   refs.overlayAction.addEventListener('click', () => {
     session.requestStart();
     refocusGame();
-  });
+  }, { signal });
   refs.btnPause.addEventListener('click', () => {
     if (game.state.phase === 'playing') session.requestPause();
     else if (game.state.phase === 'paused') session.requestStart();
     refocusGame();
-  });
+  }, { signal });
   const restart = (): void => {
     suspendReason = null;
     director.reset(); // явный рестарт — не возрождение после гибели: обрывает звучащую гибель и снова с фанфары
@@ -593,13 +630,13 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     speedrun.reset(game.state.levelId);
     refocusGame();
   };
-  refs.btnRestart.addEventListener('click', restart);
-  refs.btnDebugRestart.addEventListener('click', restart);
-  refs.btnSettings.addEventListener('click', () => settingsDialog.open());
+  refs.btnRestart.addEventListener('click', restart, { signal });
+  refs.btnDebugRestart.addEventListener('click', restart, { signal });
+  refs.btnSettings.addEventListener('click', () => settingsDialog.open(), { signal });
   refs.btnStep.addEventListener('click', () => {
     session.stepWhilePaused();
     refocusGame();
-  });
+  }, { signal });
   // Слой неактивных сегментов: значение по умолчанию задаёт профиль экрана, выбор пользователя сохраняется.
   refs.ghostToggle.hidden = !renderer.hasGhostLayer;
   refs.chkGhost.addEventListener('change', () => {
@@ -608,10 +645,10 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     });
     applyDisplay();
     refocusGame();
-  });
+  }, { signal });
   refs.chkDebug.addEventListener('change', () => {
     refs.debug.hidden = !refs.chkDebug.checked;
-  });
+  }, { signal });
   /** Включить или выключить звук (кнопка SOUND, флажок, настройки). */
   const setSound = (on: boolean): void => {
     hub.updateSettings((s) => {
@@ -624,7 +661,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   refs.chkSound.addEventListener('change', () => {
     setSound(refs.chkSound.checked);
     refocusGame();
-  });
+  }, { signal });
   applyView();
   applyDisplay();
   void refreshUserLevels();
@@ -638,6 +675,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   // финишный вид, а не промежуточный (открытая игрушка и пустые панели). Показывается со вторым кадром, потом включаются переходы.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
+      if (life.disposed) return;
       delete document.body.dataset['booting'];
       enableMotion();
       refocusGame();
@@ -647,8 +685,8 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   window.addEventListener('resize', () => {
     document.body.dataset['motion'] = 'off';
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(enableMotion, 200);
-  });
+    resizeTimer = life.timeout(enableMotion, 200);
+  }, { signal });
 
   // ── Питание и кнопки корпуса ─────────────────────────────────────────────
   // ON/OFF: выключенная игрушка — пустой экран и погасшие светодиоды; включение начинает всё с начала.
@@ -693,13 +731,13 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (!id || event.repeat) return;
     event.preventDefault();
     toy.hotkey(id, true);
-  });
+  }, { signal });
   window.addEventListener('keyup', (event) => {
     const id = hotkeys[event.code];
     if (id) toy.hotkey(id, false);
-  });
+  }, { signal });
   // Закрытая игрушка: щелчок по крышке (или Enter / пробел) раскрывает её с анимацией.
-  refs.lidCover.addEventListener('click', () => setView('full'));
+  refs.lidCover.addEventListener('click', () => setView('full'), { signal });
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
@@ -708,9 +746,9 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     if (active !== null && active !== document.body && active !== refs.lidCover) return; // фокус в кнопке или поле — клавиша им и нужна
     event.preventDefault();
     setView('full');
-  });
-  refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
-  refs.cornerHelp.addEventListener('click', () => helpDialog.open());
+  }, { signal });
+  refs.cornerSettings.addEventListener('click', () => settingsDialog.open(), { signal });
+  refs.cornerHelp.addEventListener('click', () => helpDialog.open(), { signal });
   // Шлейф можно «зажать»: см. CableGlitch. Захват указателя — чтобы отпускание засчиталось, где бы ни оказался курсор.
   const band = refs.toy.querySelector<HTMLElement>('.toy__band');
   if (band) {
@@ -724,13 +762,13 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
       band.setPointerCapture(event.pointerId);
       glitch.grab(performance.now());
       band.dataset['held'] = '';
-    });
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) band.addEventListener(type, letGo);
-    band.addEventListener('contextmenu', (event) => event.preventDefault());
-    window.addEventListener('blur', letGo);
+    }, { signal });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) band.addEventListener(type, letGo, { signal });
+    band.addEventListener('contextmenu', (event) => event.preventDefault(), { signal });
+    window.addEventListener('blur', letGo, { signal });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) letGo();
-    });
+    }, { signal });
   }
   refs.cornerLang.addEventListener('click', (event) => {
     const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length] ?? 'ru';
@@ -740,14 +778,14 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
     setLang(next); // панели и открытые диалоги перерисуются сами
     applyLangUi();
     if (event.detail !== 0) refocusGame(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на кнопке
-  });
+  }, { signal });
   // Без кнопок корпуса управлять пальцем нечем: в режиме «только экран» касание экрана — это S./P. (старт и продолжение).
   // Выключенная игрушка в этом виде включается касанием экрана: кнопки ON/OFF на экране нет.
   refs.gameArea.addEventListener('pointerdown', () => {
     if (view !== 'screen') return;
     if (!powered) setPower(true);
     else if (game.state.phase !== 'playing') session.requestStart();
-  });
+  }, { signal });
 
   // Светодиоды: наблюдение по видео — в игре горят все три; остальное условно, см. app/leds.ts. состояния (оригинальная логика не установлена), см. app/leds.ts.
   const leds = {
@@ -869,7 +907,6 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   }
 
   function frame(now: number): void {
-    requestAnimationFrame(frame);
     if (lastFrameTime !== null && now > lastFrameTime) fps = fps * 0.9 + (1000 / (now - lastFrameTime)) * 0.1;
     lastFrameTime = now;
 
@@ -917,5 +954,9 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   }
 
   refocusGame();
-  requestAnimationFrame(frame);
+  life.loop(frame);
+  return {
+    dispose: () => life.dispose(),
+    carry: () => ({ view, shell: currentShell, powered }),
+  };
 }

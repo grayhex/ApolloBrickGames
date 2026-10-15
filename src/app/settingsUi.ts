@@ -49,6 +49,8 @@ export interface SettingsDialogOptions {
   onOpen(): void;
   onClose(): void;
   display?: DisplayOptions;
+  /** Обработчики диалога (он остаётся тем же элементом страницы) снимаются, когда игрушка на странице меняется. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -67,18 +69,27 @@ export class SettingsDialog {
     this.dialog = dialog;
     this.hub = hub;
     this.options = options;
-    dialog.addEventListener('close', () => {
-      this.endCapture();
-      this.options.onClose();
-    });
+    const { signal } = options;
+    dialog.addEventListener(
+      'close',
+      () => {
+        this.endCapture();
+        this.options.onClose();
+      },
+      { signal },
+    );
     // Esc: закрыть сразу и вернуть фокус игре в том же событии, а не после `close` (браузер сперва возвращает его на кнопку-опенер).
-    dialog.addEventListener('cancel', (event) => {
-      event.preventDefault();
-      this.close();
-    });
-    window.addEventListener('keydown', this.onCaptureKey, true);
+    dialog.addEventListener(
+      'cancel',
+      (event) => {
+        event.preventDefault();
+        this.close();
+      },
+      { signal },
+    );
+    window.addEventListener('keydown', this.onCaptureKey, { capture: true, signal });
     // Открытый диалог переписывается на лету, когда меняется язык (во время назначения клавиши — не трогаем).
-    onLangChange(() => this.refresh());
+    onLangChange(() => this.refresh(), signal);
   }
 
   get isOpen(): boolean {

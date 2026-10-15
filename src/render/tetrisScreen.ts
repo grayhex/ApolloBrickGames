@@ -15,7 +15,8 @@ const PANEL_CX = 216; // середина боковой панели
 const DIVIDER_X = 162;
 
 export type TetrisGlyph = 'star' | 'square';
-export type TetrisPanel = 'clock' | 'sea';
+/** Боковая панель: у «Часов+99» значки режима сверху, у «Морского боя» чашка внизу, у «168 в 1 танк» танк внизу. */
+export type TetrisPanel = 'clock' | 'sea' | 'tank';
 
 export interface TetrisScreenOptions {
   glyph: TetrisGlyph;
@@ -195,7 +196,7 @@ export class TetrisScreen {
 
   // ── Боковая панель ─────────────────────────────────────────────────────
   private drawPanel(scene: TetrisScene): void {
-    const sea = this.options.panel === 'sea';
+    const sea = this.options.panel !== 'clock'; // раскладка «Морского боя»: без значков сверху, внизу значок игры
     const all = scene.allOn;
     const showHi = scene.phase === 'ready' || (scene.phase === 'over' && scene.overFill >= FIELD_ROWS && Math.floor(scene.tick / 90) % 2 === 1);
     const value = showHi ? scene.hiScore : scene.score;
@@ -235,7 +236,11 @@ export class TetrisScreen {
     this.text('LEVEL', PANEL_CX, speedLabel + 6 + 31 + 24 + 14, 9.5, 1, 'center');
 
     // «Морской бой»: чашка в углу панели — как у оригинала, виден при включении и на экране ожидания.
-    if (sea) this.cup(PANEL_CX, 296, all || scene.phase === 'ready' ? 1 : this.ghost ? GHOST_ALPHA : 0);
+    if (sea) {
+      const alpha = all || scene.phase === 'ready' ? 1 : this.ghost ? GHOST_ALPHA : 0;
+      if (this.options.panel === 'tank') this.tankIcon(PANEL_CX, 296, alpha);
+      else this.cup(PANEL_CX, 296, alpha);
+    }
   }
 
   private text(text: string, x: number, baseline: number, size: number, alpha: number, align: CanvasTextAlign): void {
@@ -302,6 +307,36 @@ export class TetrisScreen {
     ctx.lineTo(cx - 0.3, cy - 8);
     ctx.bezierCurveTo(cx + 2, cy - 6, cx + 6, cy - 5, cx + 5, cy - 0.5);
     ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Танк: корпус на гусенице, башня и ствол — значок игры «168 в 1 танк» в углу панели. */
+  private tankIcon(cx: number, cy: number, alpha: number): void {
+    if (alpha <= 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath(); // гусеница
+    ctx.roundRect(cx - 19, cy + 3, 38, 11, 5.5);
+    ctx.stroke();
+    for (const dx of [-12, -4, 4, 12]) {
+      ctx.beginPath(); // катки
+      ctx.arc(cx + dx, cy + 8.5, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath(); // корпус
+    ctx.moveTo(cx - 15, cy + 3);
+    ctx.lineTo(cx - 12, cy - 4);
+    ctx.lineTo(cx + 12, cy - 4);
+    ctx.lineTo(cx + 15, cy + 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath(); // башня
+    ctx.roundRect(cx - 7, cy - 10, 14, 7, 2.5);
+    ctx.fill();
+    ctx.fillRect(cx + 5, cy - 8.2, 17, 2.6); // ствол
     ctx.restore();
   }
 

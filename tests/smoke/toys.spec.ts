@@ -33,16 +33,16 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
-  test('по центру сверху — рукописный логотип Apollo, рядом переключатель из трёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
+  test('по центру сверху — рукописный логотип Apollo, рядом переключатель из четырёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
     const logo = page.locator('.brand__logo');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const items = page.locator('.toysw__item');
-    await expect(items).toHaveCount(3);
-    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой']);
-    await expect(items.locator('svg.toysw__icon')).toHaveCount(3); // миниатюры закрытых игрушек
+    await expect(items).toHaveCount(4);
+    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк']);
+    await expect(items.locator('svg.toysw__icon')).toHaveCount(4); // миниатюры закрытых игрушек
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
     // Шапка по центру игрушки (средняя колонка страницы) и над ней.
     const brand = await page.locator('#brand').boundingBox();
@@ -82,6 +82,22 @@ test.describe('шапка и переключатель', () => {
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
   });
 
+  for (const toy of ['mario', 'tank168']) {
+    test(`${toy}: на телефоне (320–390 px) шапка не даёт горизонтальной прокрутки даже с широким запасным шрифтом`, async ({ page }) => {
+      await page.goto(`./?toy=${toy}`);
+      await page.waitForSelector('.toysw__item');
+      // Шрифт CI-раннера (DejaVu Sans) шире локального: проверяем «худший» случай независимо от машины.
+      await page.addStyleTag({ content: "*{font-family:'DejaVu Sans', sans-serif !important}" });
+      for (const width of [320, 360, 390]) {
+        await page.setViewportSize({ width, height: 740 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth), `${toy} @${width}`).toBeLessThanOrEqual(width);
+        const sw = await page.locator('.toysw').boundingBox();
+        expect(sw!.x + sw!.width, `${toy} @${width}: переключатель в окне`).toBeLessThanOrEqual(width);
+        await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('aria-label', /.+/); // имя текущей остаётся доступным и без подписи
+      }
+    });
+  }
+
   test('технические страницы шапки не показывают', async ({ page }) => {
     await page.goto('./#/tech');
     await expect(page.locator('#brand')).toBeHidden();
@@ -116,11 +132,15 @@ test.describe('«Часы+99»', () => {
     await open(page, 'clock99');
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
     const picks = page.locator('#shell-picker .shellpick__btn');
-    await expect(picks).toHaveCount(3);
-    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['yellow', 'red', 'white']);
+    // Панель «Цвет» всегда из четырёх цветов; неподтверждённый (синий) — disabled и не переключает.
+    await expect(picks).toHaveCount(4);
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['blue', 'red', 'yellow', 'white']);
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-disabled') === 'true'))).toEqual([true, false, false, false]);
+    await picks.nth(0).click({ force: true });
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
     await picks.nth(1).click();
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
-    await picks.nth(2).click();
+    await picks.nth(3).click();
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
   });
 
@@ -261,8 +281,11 @@ test.describe('«Морской бой»', () => {
     const border = await page.locator('.lid__bezel').evaluate((el) => getComputedStyle(el, '::before').borderTopWidth);
     expect(parseFloat(border)).toBeGreaterThan(1);
     const picks = page.locator('#shell-picker .shellpick__btn');
-    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['red', 'blue']);
-    await picks.nth(0).click();
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['blue', 'red', 'yellow', 'white']);
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-disabled') === 'true'))).toEqual([false, false, true, true]);
+    await picks.nth(2).click({ force: true }); // жёлтого у «Морского боя» нет — остаётся синий
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
+    await picks.nth(1).click();
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
   });
 
@@ -314,11 +337,11 @@ test('Crocodile Mario не изменился: свои подписи, лого
   expect(saturation).toBeGreaterThan(0.2);
 });
 
-for (const toy of ['mario', 'clock99', 'seabattle']) {
+for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
   test(`${toy}: общие меню, миниатюры и справка на двух языках`, async ({ page }) => {
     await page.goto(`./?toy=${toy}&view=full`);
     await expect(page.locator('body')).not.toHaveAttribute('data-booting');
-    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('alt', toy === 'mario' ? 'Crocodile Mario' : toy === 'clock99' ? 'Часы+99' : 'Морской бой');
+    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('alt', ({ mario: 'Crocodile Mario', clock99: 'Часы+99', seabattle: 'Морской бой', tank168: '168 в 1 танк' } as Record<string, string>)[toy] ?? '');
     await expect(page.locator('#shell-picker .shellpick__name')).toHaveCount(0);
     await expect(page.locator('#view-state .view-mini')).toHaveCount(3);
     await expect(page.locator('#view-full')).toHaveAccessibleName('Полная');

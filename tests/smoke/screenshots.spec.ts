@@ -206,4 +206,7 @@ test('три игрушки: шапка с переключателем, «Ча�
   await page.screenshot({ path: `${dir}/toys-seabattle.png` });
   await open('?toy=clock99');
   await page.screenshot({ path: `${dir}/toys-closed.png` });
+  await open('?toy=tank168&power=on&seed=7');
+  await page.locator('#shell-picker [data-shell="yellow"]').click();
+  await page.screenshot({ path: `${dir}/toys-tank168.png` });
 });
