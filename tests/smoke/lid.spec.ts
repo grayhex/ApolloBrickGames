@@ -300,7 +300,10 @@ test.describe('раскрытие с анимацией', () => {
         // Нижняя кромка крышки в слое слота: высота − сдвиг вверх; она должна лежать ровно на нижней границе слота.
         return {
           gap: Math.abs(height + m.m42 - slot),
-          transforms: document.getAnimations().filter((a) => (a as CSSTransition).transitionProperty === 'transform').length,
+          // Menu hover transitions are independent; only the lid must have a single rotation transition.
+          transforms: document.getAnimations().filter((a) =>
+            (a.effect as KeyframeEffect | null)?.target === lid &&
+            (a as CSSTransition).transitionProperty === 'transform').length,
           slot,
           height,
         };

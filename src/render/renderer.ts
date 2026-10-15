@@ -49,6 +49,7 @@ export class Renderer {
   private readonly assets: AssetStore;
   private layout: Layout;
   private ghostEnabled: boolean;
+  private blank = false;
 
   constructor(canvas: HTMLCanvasElement, screen: ScreenProfile, assets: AssetStore) {
     this.canvas = canvas;
@@ -85,6 +86,7 @@ export class Renderer {
   }
 
   private applyLayout(): void {
+    this.blank = false;
     const { canvas, layout } = this;
     if (canvas.width !== layout.backingWidth) canvas.width = layout.backingWidth;
     if (canvas.height !== layout.backingHeight) canvas.height = layout.backingHeight;
@@ -94,11 +96,14 @@ export class Renderer {
 
   /** Выключенный экран: только подложка, без сегментов (питание игрушки выключено). */
   clear(): void {
+    if (this.blank) return;
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
-    ctx.setTransform(this.layout.scale, 0, 0, this.layout.scale, 0, 0);
+    // Fill backing pixels directly: fractional layout scales can leave a thin edge unpainted.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = this.screen.colors.background;
-    ctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.blank = true;
   }
 
   /**
@@ -122,6 +127,7 @@ export class Renderer {
   }
 
   render(input: RenderInput): void {
+    this.blank = false;
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
     const { screen, layout } = this;

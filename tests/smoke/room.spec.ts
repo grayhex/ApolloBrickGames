@@ -80,8 +80,8 @@ test('по умолчанию открывается уровень 1 (mario-1) 
   for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'тестовая комната', 'Таймер']) {
     expect(text, word).not.toContain(word);
   }
-  await expect(page.locator('#corner button, #corner a')).toHaveCount(5); // фон, язык, настройки, справка, редактор (плюс значок устройства ввода)
-  await expect(page.locator('#corner #devices')).toBeVisible();
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(6); // сегменты, фон, язык, настройки, справка, редактор
+  await expect(page.locator('#devices')).toBeVisible();
   await expect(page.locator('#corner-theme')).toBeVisible();
   await expect(page.locator('#corner-lang')).toBeVisible();
   await expect(page.locator('#corner-settings')).toBeVisible();

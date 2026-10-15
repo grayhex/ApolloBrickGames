@@ -18,6 +18,7 @@ import {
 import { CableGlitch } from './cableGlitch';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
+import { InfoPanel } from './infoPanel';
 import { HelpDialog } from './help';
 import { InputHub } from './hub';
 import { applyStatic, getLang, setLang, t } from './i18n';
@@ -90,7 +91,7 @@ function saveHi(toy: ToyId, value: number): void {
 
 /**
  * Игрушки «Часы+99» и «Морской бой»: та же раскладушка и та же оболочка (вид, питание, звук, пульт справа), но другая «аппаратура» —
- * см. `toyModel.ts` — и пока обычный тетрис вместо оригинальных игр (`src/tetris`, `render/tetrisScreen.ts`). Левая панель пуста, уровни
+ * см. `toyModel.ts` — и пока обычный тетрис вместо оригинальных игр (`src/tetris`, `render/tetrisScreen.ts`). Слева общая справка по тетрису, уровни
  * на пульте отключены, музыки нет (есть только эффекты). Оболочка повторяет `startApp` — общая часть вынесется, когда у игрушек появятся свои игры.
  */
 export async function startTetrisApp(toyId: ToyId): Promise<void> {
@@ -121,11 +122,8 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
 
   document.body.dataset['chrome'] = 'toy';
   applyToyModel(model, { body: document.body, toy: refs.toy, arena: refs.arena, lid: refs.lid, base: refs.base });
-  // Подпись окна игры на странице — своя у каждой игрушки; левая панель пока пуста (место остаётся, чтобы игрушка стояла по центру).
+  // Подпись окна и справка соответствуют выбранной игрушке.
   refs.stage.dataset['i18nAttrs'] = `aria-label=${model.stageLabel}`;
-  refs.sideInfo.removeAttribute('aria-labelledby');
-  refs.sideInfo.setAttribute('aria-hidden', 'true');
-  refs.sideInfo.dataset['empty'] = '';
 
   const params = new URLSearchParams(window.location.search);
   // Вид и питание — как у Crocodile Mario: игрушка начинается закрытой и выключенной; `?view=…` и `?power=on` открывают её сразу.
@@ -159,6 +157,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   });
 
   setLang(hub.settings.display.lang);
+  const infoPanel = new InfoPanel(refs.sideInfo, hub, model.id);
   const applyLangUi = (): void => {
     const lang = getLang();
     document.documentElement.lang = lang;
@@ -220,6 +219,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     audio.setVolume(display.volume);
     applyTheme(display.theme);
     corner.setTheme(display.theme);
+    corner.setGhost(ghostOn());
     refs.gameArea.dataset['music'] = 'none';
     controls.update({
       shell: currentShell,
@@ -227,7 +227,6 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
       volume: display.volume,
       musicVolume: musicVolumeOf(display),
       music: display.music,
-      ghost: ghostOn(),
       view,
       powered,
       level: null,
@@ -333,6 +332,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     onClose: closeMenu,
     display: {
       onChange: () => {
+        infoPanel.render();
         currentShell = shellFor(model, hub.settings.display.shell);
         applyDisplay();
       },
@@ -530,6 +530,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   const corner = new CornerNav(
     { devices: refs.devices, theme: refs.cornerTheme },
     {
+      toggleGhost: panelActions.toggleGhost,
       toggleTheme: () => {
         hub.updateSettings((s) => {
           s.display.theme = THEMES.find((theme) => theme !== s.display.theme) ?? 'dark';

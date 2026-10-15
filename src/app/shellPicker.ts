@@ -21,7 +21,7 @@ export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'):
   const chin =
     toy === 'mario'
       ? svg('image', { href: `${import.meta.env.BASE_URL}brand/${logo}`, x: '5.5', y: '38.6', width: '33', height: '14.6', preserveAspectRatio: 'xMidYMid meet' })
-      : svg('image', { href: `${import.meta.env.BASE_URL}brand/sticker-${toy}.webp`, x: '5', y: '39.4', width: '34', height: '19', preserveAspectRatio: 'xMidYMid meet' });
+      : svg('image', { class: `sticker--${toy}`, href: `${import.meta.env.BASE_URL}brand/sticker-${toy}.webp`, x: '5', y: '39.4', width: '34', height: '19', preserveAspectRatio: 'xMidYMid meet' });
   const root = svg('svg', { viewBox: '0 0 44 62', class: 'mini', 'aria-hidden': 'true', focusable: 'false' });
   root.append(
     svg(
@@ -73,7 +73,7 @@ export interface ShellPickerOptions {
 }
 
 /**
- * Переключатель цвета: четыре миниатюрные консоли — радиогруппа с подписями. Стрелки двигают выбор,
+ * Переключатель цвета: четыре миниатюрные консоли — радиогруппа с доступными названиями цветов. Стрелки двигают выбор,
  * Tab входит в группу одним остановом (выбранный цвет).
  */
 export class ShellPicker {
@@ -95,7 +95,6 @@ export class ShellPicker {
         'button',
         { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },
         miniConsole(shell, serial, options.toy ?? 'mario'),
-        h('span', { class: 'shellpick__name' }),
       );
       button.addEventListener('click', (event) => this.pick(shell, event.detail !== 0));
       button.addEventListener('keydown', (event) => this.onKey(event, shell));

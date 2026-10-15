@@ -1837,9 +1837,7 @@ body:not([data-chrome='toy']) .side {
 
 .about__sticker {
   padding: 9px 14px;
-  background: #e9e5d6;
-  border-radius: 14px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  background: transparent;
   filter: brightness(var(--sticker-light, 0.8)) saturate(0.85);
 }
 
@@ -2181,7 +2179,7 @@ body:not([data-chrome='toy']) .side {
 @media (max-width: 899px) {
   body[data-chrome='toy'] .arena {
     --toy-top: calc(52px + var(--head-h, 0px));
-    --toy-reserve: 90px;
+    --toy-reserve: 98px;
     --toy-essential: 1.76;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
@@ -2469,6 +2467,141 @@ body[data-chrome='toy'] .brand {
   }
 }
 
+/* Shared chrome: quiet floating docks, tactile controls and a single motion language. */
+.chrome-dock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  color: var(--corner-fg);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid var(--corner-line);
+  border-radius: 18px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 12%), inset 0 1px rgb(255 255 255 / 5%);
+}
+body:not([data-booting]) .chrome-dock {
+  animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both;
+}
+.corner { top: 12px; right: 12px; }
+.devs.chrome-dock { position: fixed; top: 12px; left: 12px; z-index: 20; }
+body:not([data-chrome='toy']) .devs.chrome-dock { display: none; }
+:is(.chrome-dock .corner__btn, .chrome-dock .dev) {
+  width: 34px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+.chrome-dock .corner__btn--lang { width: 66px; }
+.chrome-dock :is(.corner__btn, .toysw__item) {
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), background 180ms, color 180ms, border-color 180ms;
+}
+.chrome-dock :is(.corner__btn, .toysw__item):hover {
+  transform: translateY(-2px);
+  background: var(--chip);
+  color: var(--text);
+}
+.chrome-dock :is(.corner__btn, .toysw__item):active { transform: translateY(0) scale(.94); }
+.chrome-dock :is([aria-pressed='true'], .dev[data-state='on'], .toysw__item[aria-current='page']) {
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  color: var(--text);
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+.chrome-dock .dev--pause[data-state='on'] { color: var(--accent); }
+.chrome-dock .toysw__item { border-radius: 12px; }
+body[data-chrome='toy'] { --head-h: 60px; }
+body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
+.brand__logo { height: 32px; }
+.side--info, .side--ctl { margin-top: 48px; max-height: calc(100dvh - 100px); }
+.side--info, .side--ctl {
+  opacity: .55;
+  transition: opacity 240ms ease;
+}
+:is(.side--info, .side--ctl):is(:hover, :focus-within) { opacity: 1; }
+.side { border-radius: 22px; }
+.side__h::before { width: 5px; height: 5px; border-radius: 50%; }
+.shellpick__btn { padding: 8px; min-height: 64px; }
+.shellpick__btn .mini { max-width: 30px; }
+.view-layout { display: grid; gap: 9px; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line); }
+.view-layout__title { font-size: .64rem; letter-spacing: .06em; }
+#view-state { gap: 8px; padding: 0; border: 0; background: transparent; }
+#view-state .seg__btn {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 86px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--chip);
+  transition: transform 200ms, border-color 160ms, background 160ms;
+}
+#view-state .seg__btn[aria-pressed='true'] {
+  border-color: var(--hl);
+  background: color-mix(in srgb, var(--hl) 8%, var(--chip));
+  box-shadow: 0 0 0 1px var(--hl-line);
+}
+:is(#view-state .seg__btn, .shellpick__btn):not([aria-disabled='true']):hover { transform: translateY(-2px); }
+.view-mini { display: block; height: 76px; width: 100%; max-width: 76px; pointer-events: none; }
+.view-mini * { filter: none; transition: none; animation: none; }
+.view-mini [data-print='light'] { display: none; }
+:is([data-shell='blue'], [data-shell='red']) .view-mini [data-print='dark'] { display: none; }
+:is([data-shell='blue'], [data-shell='red']) .view-mini [data-print='light'] { display: inline; }
+:is([data-shell='yellow'], [data-shell='white']) .view-mini [data-print='dark'] { display: inline; }
+:is([data-shell='yellow'], [data-shell='white']) .view-mini [data-print='light'] { display: none; }
+.tetris-rules { display: grid; gap: 10px; padding-left: 18px; margin: 0; font-size: .76rem; line-height: 1.5; }
+.tetris-rules li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+.side--info[data-toy] .about__sticker { display: block; max-width: 180px; padding: 8px; margin-inline: auto; }
+.side--info[data-toy] { gap: 10px; }
+.side--info[data-toy] .score { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.side--info[data-toy] .score__row { gap: 4px; padding-inline: 6px; }
+.side--info[data-toy] .side__text { font-size: .72rem; }
+.side--info[data-toy] .tetris-rules { font-size: .74rem; line-height: 1.4; }
+/* Keep the reference panel clear of the indicators, including short desktop windows. */
+.side--info .keys__row { padding: 2px 0; }
+.side--info .kbd { padding: 2px 5px; }
+.side--info .fig { grid-template-rows: 28px auto; padding-block: 3px; }
+.side--info .fig__box { height: 28px; }
+.side--info:not([data-toy]) .about__sticker { max-width: 220px; }
+@media (max-height: 960px) { .side--info:not([data-toy]) .about__sticker { width: 40%; } }
+@media (max-height: 800px) {
+  .side--info .fig { grid-template-rows: 24px auto; }
+  .side--info .fig__box { height: 24px; }
+}
+/* Trim the stray white contour at the sticker edge, including its miniature in the switch. */
+.sticker--seabattle, img[src$='sticker-seabattle.webp'] {
+  clip-path: inset(1.2% round 13% / 24%);
+}
+@keyframes dock-arrive { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 1179px) {
+  .toysw__item .toysw__name { display: none; }
+  .toysw__item { padding: 0 10px; }
+}
+@media (max-width: 899px) {
+  .side--info, .side--ctl { max-height: none; margin-top: 0; }
+  body[data-chrome='toy'] { --head-h: 48px; }
+  body[data-chrome='toy'] .shell { padding-top: 64px; }
+  body[data-chrome='toy'] .arena { --toy-top: calc(52px + var(--head-h)); }
+  body[data-chrome='toy'] .brand { width: max-content; max-width: 100%; height: 42px; margin-bottom: 6px; }
+  .toysw__item[aria-current='page'] .toysw__name { display: inline; }
+}
+@media (max-width: 640px) {
+  .corner { top: 10px; right: 10px; }
+  .devs.chrome-dock { top: 10px; left: 10px; }
+  .chrome-dock { padding: 4px; gap: 3px; border-radius: 16px; }
+  :is(.chrome-dock .corner__btn, .chrome-dock .dev) { width: 32px; height: 36px; border-radius: 11px; }
+  .chrome-dock .corner__btn--lang { width: 52px; padding: 0 4px; }
+  .devs.chrome-dock .dev { width: 28px; }
+  .side--info[data-toy] .about__sticker { max-width: 240px; margin-inline: auto; }
+}
+@media (hover: none) { .side--info, .side--ctl { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) {
+  body:not([data-booting]) .chrome-dock { animation: none; }
+  .chrome-dock :is(.corner__btn, .toysw__item), .shellpick__btn, #view-state .seg__btn, .side--info, .side--ctl { transition: none; }
+  .chrome-dock :is(.corner__btn, .toysw__item):is(:hover, :active), :is(#view-state .seg__btn, .shellpick__btn):hover { transform: none; }
+}
+
 /* ── «Часы+99» и «Морской бой»: своя аппаратная часть на том же корпусе ─────────
    Форма и размеры те же, что у Crocodile Mario (крышка 400 × 391, нижняя половина 400 × 620); отличаются экран (портретная матрица 10 × 20 с боковой
    панелью, тонкая рамка вместо широкой), оформление рамки вокруг него, светодиоды, подписи кнопок и наклейка на подбородке. Цвета — только те,
@@ -2602,11 +2735,6 @@ body[data-chrome='toy'] .brand {
 
 .base__label[data-extra] {
   pointer-events: none;
-}
-
-/* Левая панель у игрушек 2 и 3 пока пуста: место остаётся, чтобы игрушка стояла по центру, а сама панель не рисуется. */
-.side--info[data-empty] {
-  visibility: hidden;
 }
 
 /* Уровни у заглушки отключены: блок виден, но неактивен. */

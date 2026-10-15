@@ -109,7 +109,7 @@ test('слева справка, справа пульт; панели отод�
   // Спидран — последний блок; индикатор устройства и фон переехали в угловое меню.
   expect(await ctl.evaluate((e) => (e.lastElementChild as HTMLElement).id)).toBe('run');
   await expect(ctl.locator('#devices, #tgl-theme, #open-editor')).toHaveCount(0);
-  await expect(page.locator('#corner #devices')).toBeVisible();
+  await expect(page.locator('#devices')).toBeVisible();
   await expect(page.locator('#corner #corner-theme')).toBeVisible();
 });
 
@@ -454,14 +454,16 @@ test('узкий экран: игрушка сверху во всю ширин�
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
 });
 
-test('кнопка «Сегменты» маленькая, как обычная кнопка, а не на всю ширину пульта', async ({ page }) => {
+test('сегменты — пиктограмма в системном меню рядом с фоном и языком', async ({ page }) => {
   await ready(page);
   const box = async (selector: string) => (await page.locator(selector).boundingBox()) ?? { width: 0, height: 0 };
   const ghost = await box('#tgl-ghost');
   const panel = await box('#side-ctl');
-  expect(ghost.height).toBeLessThanOrEqual(32);
+  expect(ghost.height).toBeLessThanOrEqual(40);
   expect(ghost.width).toBeLessThan(panel.width * 0.6);
-  await expect(page.locator('#tgl-ghost')).toContainText('Сегменты');
+  await expect(page.locator('#corner #tgl-ghost')).toHaveAccessibleName('Сегменты');
+  await expect(page.locator('#tgl-ghost svg')).toBeVisible();
+  await expect(page.locator('#side-ctl #tgl-ghost')).toHaveCount(0);
 });
 
 test('список пользовательских уровней оформлен как остальные элементы пульта, в обеих темах', async ({ page }) => {
@@ -495,7 +497,7 @@ test('список пользовательских уровней оформл�
   expect(light.group).not.toBe(dark.group);
 });
 
-test('индикатор паузы в угловом меню рядом с клавиатурой: горит, пока игра на паузе', async ({ page }) => {
+test('индикатор паузы слева рядом с клавиатурой: горит, пока игра на паузе', async ({ page }) => {
   await ready(page);
   const pause = page.locator('#devices [data-device="pause"]');
   const keyboard = page.locator('#devices [data-device="keyboard"]');
@@ -512,7 +514,7 @@ test('индикатор паузы в угловом меню рядом с к�
   await expect.poll(phase(page)).toBe('paused');
   await expect(pause).toHaveAttribute('data-state', 'on');
   await expect(pause).toHaveAttribute('title', 'Игра на паузе');
-  await expect(pause).toHaveCSS('background-color', 'rgb(185, 211, 122)'); // горит акцентным цветом, заметно на фоне остальных значков
+  await expect(pause).toHaveCSS('color', 'rgb(185, 211, 122)'); // акцентный значок в общем стиле меню
   await page.keyboard.press('Escape');
   await expect.poll(phase(page)).toBe('playing');
   await expect(pause).toHaveAttribute('data-state', 'off');

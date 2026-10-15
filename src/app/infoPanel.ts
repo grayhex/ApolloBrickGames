@@ -2,6 +2,7 @@ import { h } from './dom';
 import { onLangChange, t, type MsgKey } from './i18n';
 import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
+import { TOYS, type ToyId } from './toys';
 
 /**
  * Спрайты LCD-ячеек — те самые, что рисует игра (public/graphics/lcd): на упаковке в разделе «Figure introduction»
@@ -97,8 +98,10 @@ function scoreRow(name: string, ways: readonly (readonly [string, number])[]): H
 export class InfoPanel {
   private readonly root: HTMLElement;
   private readonly hub: InputHub;
+  private readonly toy: ToyId;
 
-  constructor(root: HTMLElement, hub: InputHub) {
+  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario') {
+    this.toy = toy;
     this.root = root;
     this.hub = hub;
     this.render();
@@ -109,6 +112,7 @@ export class InfoPanel {
     const { keyboard } = this.hub.settings;
     const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
 
+    const model = TOYS[this.toy];
     const head = h(
       'header',
       { class: 'side__top side__top--logo' },
@@ -117,14 +121,40 @@ export class InfoPanel {
         'div',
         { class: 'about__sticker' },
         h('img', {
-          class: 'about__logo',
-          src: `${import.meta.env.BASE_URL}brand/crocodile-mario-logo.png`,
+          class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
+          src: `${import.meta.env.BASE_URL}brand/${this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
           width: '1000',
           height: '443',
-          alt: 'Crocodile Mario',
+          alt: model.name,
         }),
       ),
     );
+
+    if (model.game === 'tetris') {
+      this.root.dataset['toy'] = model.id;
+      const section = (id: string, title: MsgKey, ...children: HTMLElement[]): HTMLElement => h('section',
+        { class: 'side__sec', 'aria-labelledby': id }, h('h3', { class: 'side__h', id }, t(title)), ...children);
+      const facts = h('ul', { class: 'facts' },
+        ...([['10×20', 'info.t.field'], ['7', 'info.t.pieces'], ['10', 'info.t.speed']] as const).map(([n, key]) =>
+          h('li', {}, h('b', {}, n), h('span', {}, t(key)))));
+      const controls = section('keys-title', 'info.controls.h', h('ul', { class: 'keys', id: 'keymap' },
+        keyRow(t('info.t.move'), keys('left'), keys('right')),
+        keyRow(t('info.t.rotate'), keys('jump', 'up')),
+        keyRow(t('info.t.down'), keys('down')),
+        keyRow(t('info.t.drop'), keys('fire')),
+        keyRow(t('info.keys.startPause'), keys('start', 'pause')),
+        keyRow(t('info.keys.power'), [POWER_KEY]),
+        keyRow(t('info.keys.sound'), [SOUND_KEY])));
+      const rules = section('rules-title', 'info.t.rules', h('ol', { class: 'tetris-rules' },
+        ...(['info.t.rule.place', 'info.t.rule.lines', 'info.t.rule.speed', 'info.t.rule.over'] as const).map(key => h('li', {}, t(key)))));
+      const score = section('score-title', 'info.score.h', h('ul', { class: 'score' },
+        ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) =>
+          scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]]))),
+        h('p', { class: 'side__text' }, t('info.t.bonus')));
+      const note = h('p', { class: 'side__text side__text--over' }, t(model.id === 'clock99' ? 'info.t.clock' : 'info.t.sea'));
+      this.root.replaceChildren(head, section('about-title', 'info.t.title', facts), controls, rules, score, note);
+      return;
+    }
 
     const about = h(
       'section',
