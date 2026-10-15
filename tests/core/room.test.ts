@@ -44,7 +44,7 @@ describe('основной пакет и песочница sandbox-room: дан
   const room = levelOf(pack, SANDBOX_ID) as LevelDef;
 
   it('в пакете страницы девять уровней MARIO (первый — стартовый) и тестовый уровень по видео; песочница sandbox-room — только в тестах, без переходов и объектов, с пометкой «не оригинальный уровень»', () => {
-    const ids = [...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `mario-${n}-${n % 2 === 1 ? 'boss' : 'bonus'}`), 'tunnel-run', 'custom-1']; // за девятью — комнаты колодцев
+    const ids = [...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `mario-${n}-${n % 2 === 1 ? 'boss' : 'bonus'}`), 'sewer-exit', 'tunnel-run', 'custom-1']; // за девятью — комнаты колодцев
     expect(loadRoomPack().levels.map((l) => l.id)).toEqual(ids);
     expect(pack.levels.map((l) => l.id)).toEqual([...ids, SANDBOX_ID]);
     expect(pack.manifest.firstLevel).toBe('mario-1');
@@ -70,14 +70,14 @@ describe('основной пакет и песочница sandbox-room: дан
     expect(solidCells).toBeLessThan(room.width * room.height * 0.35);
   });
 
-  it('правила: профиль помечен demo; таймер игры 400 единиц; стрельба есть (снаряд — сердечко); четыре жизни', () => {
+  it('правила: профиль помечен demo; таймер уровня 400 единиц; стрельба есть (снаряд — сердечко); четыре жизни', () => {
     expect(pack.rules.status).toBe('demo');
     expect(pack.rules.params.fire).not.toBeNull();
     expect(pack.manifest.sprites.projectile).toBe('cell.heart');
-    // Таймер по видео геймплея: 400 единиц по ≈ 0,77 с (15,4 такта), один на всю игру.
+    // Таймер: 400 единиц по ≈ 0,77 с (15,4 такта, по видео геймплея), на один уровень: заново на каждом новом уровне, гибель не сбрасывает.
     expect(pack.rules.params.timerLimitTicks).toBe(400 * 15.4);
     expect(pack.rules.params.timerUnitTicks).toBe(15.4);
-    expect(pack.rules.params.timerScope).toBe('game');
+    expect(pack.rules.params.timerScope).toBe('level');
     expect(pack.rules.params.lives).toBe(4); // по упаковке: после старта 4 жизни
     expect(pack.rules.params.jump.triggers).toEqual(['jump', 'up']); // по упаковке: UP — тоже прыжок вверх
   });

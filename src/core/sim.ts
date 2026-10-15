@@ -213,6 +213,21 @@ export class Game implements SimApi {
     this.emit({ type: 'roomEntered', levelId: roomId, from: parent.def.id });
   }
 
+  changeRoom(objectId: string): void {
+    const s = this.state;
+    const roomId = this.level.transitions.get(objectId);
+    if (!roomId) return;
+    const from = s.levelId;
+    const room = this.levelById(roomId);
+    s.levelId = roomId;
+    s.hero = this.newHero(room);
+    s.objects = this.newObjects(room);
+    s.projectiles = [];
+    s.inWell = false;
+    this.serial += 1;
+    this.emit({ type: 'roomEntered', levelId: roomId, from });
+  }
+
   leaveRoom(): void {
     const s = this.state;
     const stash = s.stash;
@@ -308,7 +323,7 @@ export class Game implements SimApi {
   }
 
   /** Загрузить участок: герой на старт, объекты и таймер заново; счёт и жизни остаются. */
-  private enterSection(levelId: string): void {
+  private enterSection(levelId: string, afterDeath = false): void {
     const level = this.levelById(levelId);
     const s = this.state;
     s.levelId = levelId;
@@ -316,7 +331,9 @@ export class Game implements SimApi {
     s.hero = this.newHero(level);
     s.objects = this.newObjects(level);
     s.projectiles = [];
-    if (this.ctx.rules.params.timerScope !== 'game') s.timerTicks = this.ctx.rules.params.timerLimitTicks;
+    // Таймер: участковый — заново всегда; уровневый — заново на новом уровне, но не после гибели; игровой — не сбрасывается.
+    const scope = this.ctx.rules.params.timerScope;
+    if (scope === undefined || scope === 'section' || (scope === 'level' && !afterDeath)) s.timerTicks = this.ctx.rules.params.timerLimitTicks;
     s.inWell = true;
     this.serial += 1;
     this.emit({ type: 'levelStarted', levelId });
@@ -332,7 +349,7 @@ export class Game implements SimApi {
   private afterDeath(): void {
     const s = this.state;
     if (s.lives > 0) {
-      this.enterSection(s.stash ? s.stash.levelId : s.levelId); // погиб в комнате — уровень с начала, как при любой гибели
+      this.enterSection(s.stash ? s.stash.levelId : s.levelId, true); // погиб в комнате — уровень с начала, как при любой гибели
       this.setPhase('ready');
     } else {
       this.setPhase('gameOver');
@@ -361,7 +378,7 @@ export class Game implements SimApi {
     if (params.timerLimitTicks > 0) {
       s.timerTicks -= 1;
       if (s.timerTicks <= 0) {
-        if (params.timerScope === 'game') s.lives = 1; // время игры вышло — игра окончена, а не потеря одной жизни
+        if (params.timerScope === 'game' || params.timerScope === 'level') s.lives = 1; // время вышло — игра окончена, а не потеря одной жизни
         this.die('time');
         return;
       }
@@ -552,6 +569,7 @@ export class Game implements SimApi {
   }
 
   private updateObjects(): void {
+    const serial = this.serial;
     const defs = this.level.def.objects;
     const objects = this.state.objects;
     for (let i = 0; i < objects.length; i++) {
@@ -559,6 +577,7 @@ export class Game implements SimApi {
       const def = defs[i];
       if (!state || !def || !state.active) continue;
       this.ctx.behaviors[def.type]?.update?.(this, state, def);
+      if (this.serial !== serial) return; // обработчик сменил участок или комнату: старый список объектов больше не актуален
     }
   }
 

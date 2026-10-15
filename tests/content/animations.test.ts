@@ -140,7 +140,7 @@ describe('загрузка пакета с анимациями и общими 
     expect(loaded.pack.animations?.id).toBe('room-animations');
     expect(loaded.pack.levels.map((l) => l.id)).toEqual([
       ...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`),
-      ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `mario-${n}-${n % 2 === 1 ? 'boss' : 'bonus'}`),
+      ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `mario-${n}-${n % 2 === 1 ? 'boss' : 'bonus'}`), 'sewer-exit',
       'tunnel-run',
       'custom-1',
     ]);

@@ -93,7 +93,7 @@ describe('девять уровней MARIO: пакет и формат', () => 
     expect(small(level(9))).toBeGreaterThanOrEqual(small(level(5)));
   });
 
-  it('колодцы: в уровнях 2–9 по одному; трубы 2 × 3 по бокам щели, в щели сердце, на дне вход в комнату (нечётные — босс, чётные — бонус); в первом уровне колодца нет', () => {
+  it('колодцы: в уровнях 2–9 по одному; две одиночные трубы (столбец в одну клетку, высота 4) по бокам щели в один столбец, в щели сердце, на дне вход в комнату; в первом уровне колодца нет', () => {
     expect(count(level(1), (o) => o.type === 'sewer')).toBe(0);
     for (const n of WELL_NUMBERS) {
       const def = level(n);
@@ -101,17 +101,19 @@ describe('девять уровней MARIO: пакет и формат', () => 
       expect(wells, `mario-${n}`).toHaveLength(1);
       const well = wells[0]!;
       expect(well).toMatchObject({ id: 'well1', y: 5, w: 1, h: 1 });
-      // Щель — пустой столбец (без пола); по бокам трубы шириной 2 и высотой 3 (ряды 3–5).
       const solid = (x: number, y: number): boolean => def.rows[y]?.[x] === '#';
+      // Щель — один пустой столбец (без пола); по бокам трубы шириной в одну клетку и высотой 4 (ряды 2–5), по видео и кадрам владельца.
       for (let y = 0; y < 6; y++) expect(solid(well.x, y), `щель (${well.x}, ${y})`).toBe(false);
-      for (const x of [well.x - 2, well.x - 1, well.x + 1, well.x + 2]) {
-        for (const y of [3, 4, 5]) expect(solid(x, y), `труба (${x}, ${y})`).toBe(true);
-        expect(solid(x, 2), `над трубой (${x}, 2)`).toBe(false);
+      for (const x of [well.x - 1, well.x + 1]) {
+        for (const y of [2, 3, 4, 5]) expect(solid(x, y), `труба (${x}, ${y})`).toBe(true);
+        for (const y of [0, 1]) expect(solid(x, y), `над трубой (${x}, ${y})`).toBe(false);
       }
-      // Сердце в щели; возврат — на пол за правой трубой.
-      expect(def.objects.some((o) => o.type === 'pickup' && o.x === well.x && o.y === 4)).toBe(true);
+      // Трубы одиночные: за ними (в столбцах x − 2 и x + 2) ничего выше пола нет.
+      for (const x of [well.x - 2, well.x + 2]) for (const y of [2, 3, 4]) expect(solid(x, y), `рядом с трубой (${x}, ${y})`).toBe(false);
+      // Сердце в щели на ряду 3; возврат — на пол за правой трубой.
+      expect(def.objects.some((o) => o.type === 'pickup' && o.x === well.x && o.y === 3)).toBe(true);
       const { returnX, returnY } = well.params as { returnX: number; returnY: number };
-      expect(returnX).toBeGreaterThan(well.x + 2);
+      expect(returnX).toBeGreaterThan(well.x + 1);
       expect(returnY).toBe(4);
       expect(solid(returnX, 5)).toBe(true);
       expect(solid(returnX, returnY)).toBe(false);
@@ -121,7 +123,7 @@ describe('девять уровней MARIO: пакет и формат', () => 
     }
   });
 
-  it('комнаты: 13 × 6, ровный пол, выход у правого края; босс — большой чёрт 2 × 2 (преследует героя, 4 попадания, +400), бонус — сердца в рядах 1–4', () => {
+  it('комнаты: 13 × 6, ровный пол, без выхода — кончаются победой (чёрт уничтожен / сердца собраны) и ведут в комнату выхода из тоннеля; чёрт — большой 2 × 2 без сердца в клетках', () => {
     for (const n of WELL_NUMBERS) {
       const def = room(n);
       expect(def.hudLabel).toBe(`1-0${n}`);
@@ -129,20 +131,43 @@ describe('девять уровней MARIO: пакет и формат', () => 
       expect(def.height).toBe(6);
       expect(def.rows[5]).toBe('#'.repeat(13));
       expect(def.rows.slice(0, 5).every((row) => row === '.'.repeat(13))).toBe(true);
-      expect(def.transitions).toEqual([]);
-      expect(def.objects[0]).toMatchObject({ id: 'exit', type: 'exit', x: 12 });
+      expect(def.objects.some((o) => o.type === 'exit')).toBe(false); // из комнаты не выйти просто так
+      expect(def.transitions).toEqual([{ from: 'victory', to: 'sewer-exit' }]);
+      const victory = def.objects.find((o) => o.id === 'victory');
+      expect(victory).toMatchObject({ type: 'victory' });
       if (n % 2 === 1) {
+        expect(victory?.params['watch']).toBe('patroller');
         expect(def.objects.filter((o) => o.type === 'patroller')).toEqual([
-          expect.objectContaining({ id: 'boss', w: 2, h: 2, asset: 'cell.devil_big', params: expect.objectContaining({ chase: 1, hp: 4, score: 400 }) }),
+          expect.objectContaining({ id: 'boss', w: 2, h: 2, asset: 'cell.devil', params: expect.objectContaining({ chase: 1, hp: 4, score: 400 }) }),
         ]);
         expect(def.objects.some((o) => o.type === 'pickup')).toBe(false);
       } else {
+        expect(victory?.params['watch']).toBe('pickup');
         expect(def.objects.some((o) => o.type === 'patroller')).toBe(false);
         const hearts = def.objects.filter((o) => o.type === 'pickup');
-        expect(hearts).toHaveLength(4 * 12); // поле 12 × 4: ряды 1–4, столбцы 0–11
-        expect(hearts.every((o) => o.y >= 1 && o.y <= 4 && o.x <= 11 && o.asset === 'cell.heart' && o.params['score'] === 100)).toBe(true);
+        expect(hearts).toHaveLength(4 * 13); // всё поле: ряды 1–4, все 13 столбцов
+        expect(hearts.every((o) => o.y >= 1 && o.y <= 4 && o.x <= 12 && o.asset === 'cell.heart' && o.params['score'] === 100)).toBe(true);
       }
     }
+  });
+
+  it('комната выхода из тоннеля: свисающие одиночные трубы (столбцы 1 и 3, ряды 0–3), сердце между ними, ступенька под ним, пол; правый край — выход', () => {
+    const def = pack.levels.find((l) => l.id === 'sewer-exit');
+    expect(def).toBeDefined();
+    if (!def) return;
+    expect(def.width).toBe(13);
+    expect(def.height).toBe(6);
+    const solid = (x: number, y: number): boolean => def.rows[y]?.[x] === '#';
+    for (const x of [1, 3]) for (let y = 0; y < 6; y++) expect(solid(x, y), `труба (${x}, ${y})`).toBe(y <= 3 || y === 5);
+    expect(solid(2, 4)).toBe(true); // ступенька под щелью
+    for (const y of [0, 1, 2, 3]) expect(solid(2, y), `щель (2, ${y})`).toBe(false);
+    expect(def.rows[5]).toBe('#'.repeat(13));
+    expect(def.start).toEqual({ x: 6, y: 4 });
+    expect(def.objects).toEqual([
+      expect.objectContaining({ id: 'exit', type: 'exit', x: 12 }),
+      expect.objectContaining({ id: 'heart', type: 'pickup', x: 2, y: 1 }),
+    ]);
+    expect(def.transitions).toEqual([]);
   });
 });
 
@@ -172,19 +197,11 @@ describe('девять уровней MARIO: проходимость (поис�
   for (const n of WELL_NUMBERS) {
     const id = roomName(n);
 
-    it(`${id}: из комнаты есть выход — с чертом/сердцами (без стрельбы) — и решение воспроизводится`, () => {
-      for (const enemies of [false, true]) {
-        const result = solveLevel(pack, id, { enemies, goal: 'room', maxNodes: 300_000 });
-        expect(result.solved, `${id} enemies=${enemies}`).toBe(true);
-        expect(replaySolution(pack, id, enemies, result.frames, 'room')).toBe(true);
-      }
-    });
-
-    it(`mario-${n}: провалившись в колодец, герой попадает в ${id}, а выйдя — возвращается за правую трубу на полу уровня`, () => {
+    it(`mario-${n}: колодец → ${id} → победа → комната выхода из тоннеля → правый край → возврат за правую трубу на полу уровня`, () => {
       const def = level(n);
       const well = def.objects.find((o) => o.type === 'sewer')!;
       const { returnX } = well.params as { returnX: number };
-      const { game } = enteredGame(pack, `mario-${n}`, false);
+      const { game } = enteredGame(pack, `mario-${n}`, true); // с врагами: в комнате босса чёрт должен быть (без него победа не наступает)
       game.state.hero.x = well.x;
       game.state.hero.y = 0;
       const events: GameEvent[] = [];
@@ -193,43 +210,86 @@ describe('девять уровней MARIO: проходимость (поис�
       expect(events.some((e) => e.type === 'levelCompleted')).toBe(false);
       expect(game.state.levelId).toBe(id);
       expect(game.state.score).toBe(100); // сердце в щели
-      // К самому выходу: комната пуста у правого края (чёрт — у правого верхнего угла, герой его проскакивает у пола).
-      game.state.hero.x = 11;
-      game.state.hero.y = 4;
-      if (game.state.objects.some((o) => o.id === 'boss')) {
-        const boss = game.state.objects.find((o) => o.id === 'boss')!;
-        boss.x = 3; // чёрт далеко слева: проверяем возврат, а не прохождение мимо него
+      // Пока победы нет (чёрт жив / сердца не собраны), из комнаты не выйти: правый край — просто стена.
+      const stay: GameEvent[] = [];
+      for (let i = 0; i < 6; i++) stay.push(...game.step(NEUTRAL_FRAME));
+      expect(stay.some((e) => e.type === 'roomEntered' || e.type === 'roomLeft')).toBe(false);
+      expect(game.state.levelId).toBe(id);
+      // Победа: чёрт уничтожен / все сердца собраны.
+      for (let i = 0; i < game.state.objects.length; i++) {
+        const o = game.state.objects[i]!;
+        if (o.id === 'boss' || o.id.startsWith('h')) o.active = false;
       }
+      const won: GameEvent[] = [];
+      for (let i = 0; i < 3 && game.state.levelId === id; i++) won.push(...game.step(NEUTRAL_FRAME));
+      expect(won.find((e) => e.type === 'roomEntered')).toMatchObject({ levelId: 'sewer-exit', from: id });
+      expect(game.state.levelId).toBe('sewer-exit');
+      expect(game.state.stash).toMatchObject({ levelId: `mario-${n}`, x: returnX, y: 4 }); // уровень по-прежнему ждёт
+      expect(game.state.hero).toMatchObject({ x: 6, y: 4 });
+      // К правому краю — выход: возврат на уровень.
       const back: GameEvent[] = [];
-      for (let i = 0; i < 40 && game.state.levelId === id; i++) back.push(...game.step(makeFrame({ held: ['right'] })));
-      expect(back.find((e) => e.type === 'roomLeft')).toMatchObject({ levelId: `mario-${n}`, from: id });
+      for (let i = 0; i < 80 && game.state.levelId === 'sewer-exit'; i++) back.push(...game.step(makeFrame({ held: ['right'] })));
+      expect(back.find((e) => e.type === 'roomLeft')).toMatchObject({ levelId: `mario-${n}`, from: 'sewer-exit' });
       expect(game.state.levelId).toBe(`mario-${n}`);
       expect(game.state.hero).toMatchObject({ x: returnX, y: 4 });
       expect(game.state.objects.find((o) => o.id === 'well1')?.active).toBe(false); // колодец закрыт
     });
   }
 
-  it('бонусная комната: все 48 сердец достижимы прыжками (+4800), выход после этого открыт', () => {
+  it('комната выхода из тоннеля: выход у правого края достижим, решение воспроизводится; сердце (+100) достаётся прыжком со ступеньки', () => {
+    const result = solveLevel(pack, 'sewer-exit', { enemies: false, goal: 'room', maxNodes: 200_000 });
+    expect(result.solved).toBe(true);
+    expect(replaySolution(pack, 'sewer-exit', false, result.frames, 'room')).toBe(true);
+    // Сердце: герой встаёт на ступеньку (столбец 2, ряд 3), прыжок вверх между трубами берёт сердце на ряду 1.
+    const { game } = enteredGame(pack, 'sewer-exit', false);
+    game.state.hero.x = 2;
+    game.state.hero.y = 3;
+    game.step(makeFrame({ pressed: ['jump'] }));
+    for (let i = 0; i < 30; i++) game.step(NEUTRAL_FRAME);
+    expect(game.state.score).toBe(100);
+    expect(game.state.objects.find((o) => o.id === 'heart')?.active).toBe(false);
+  });
+
+  it('бонусная комната: все 52 сердца достижимы прыжками (+5200); когда собрано последнее, героя переносит в комнату выхода из тоннеля', () => {
     for (const n of [2, 4, 6, 8]) {
       const { game } = enteredGame(pack, roomName(n), false);
       const jumpAt = (): void => {
         game.step(makeFrame({ pressed: ['jump'] }));
-        for (let i = 0; i < 40; i++) game.step(NEUTRAL_FRAME);
+        for (let i = 0; i < 40 && game.state.levelId === roomName(n); i++) game.step(NEUTRAL_FRAME);
       };
       for (let i = 0; i < 30; i++) game.step(NEUTRAL_FRAME); // падение с места старта на пол
       // Влево до столбца 0, затем по столбцу вправо с прыжком в каждом: прыжок вверх собирает все клетки столбца до верхнего ряда 1.
       while (game.state.hero.x > 0) game.step(makeFrame({ held: ['left'] }));
       game.step(NEUTRAL_FRAME);
-      for (let x = 0; x <= 11; x++) {
+      for (let x = 0; x <= 12 && game.state.levelId === roomName(n); x++) {
         jumpAt();
-        if (x < 11) {
+        if (x < 12 && game.state.levelId === roomName(n)) {
           game.step(makeFrame({ held: ['right'] }));
           game.step(NEUTRAL_FRAME);
         }
       }
-      expect(game.state.score, roomName(n)).toBe(4800);
-      expect(game.state.objects.filter((o) => o.id.startsWith('h') && o.active)).toHaveLength(0);
+      expect(game.state.score, roomName(n)).toBe(5200);
+      expect(game.state.levelId, roomName(n)).toBe('sewer-exit');
     }
+  });
+
+  it('комната босса: большого чёрта можно застрелить (4 попадания, +400) — после победы героя переносит в комнату выхода из тоннеля', () => {
+    const { game } = enteredGame(pack, 'mario-3-boss', true);
+    for (let i = 0; i < 30; i++) game.step(NEUTRAL_FRAME); // приземлился на пол
+    const boss = game.state.objects.find((o) => o.id === 'boss')!;
+    boss.x = 9;
+    boss.y = 3; // на уровне героя: клетки (9–10, 3–4)
+    boss.timer = -1_000_000; // стоит на месте: проверяем попадания, а не погоню
+    game.state.hero.x = 3;
+    game.state.hero.y = 4;
+    game.state.hero.facing = 1;
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 200 && game.state.levelId === 'mario-3-boss'; i++) {
+      events.push(...game.step(i % 8 === 0 ? makeFrame({ pressed: ['fire'], held: ['fire'] }) : NEUTRAL_FRAME));
+    }
+    expect(events.filter((e) => e.type === 'hit' && e.targetId === 'boss')).toHaveLength(4);
+    expect(game.state.score).toBe(400);
+    expect(game.state.levelId).toBe('sewer-exit');
   });
 
   it('custom-1: сгенерированный пользовательский уровень проходим — без врагов и с врагами; он не ведёт никуда дальше (последний в пакете)', () => {

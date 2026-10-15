@@ -5,8 +5,9 @@ import { enteredGame } from '../helpers/solver';
 import { loadRoomPack, marioContext } from '../helpers/content';
 
 /**
- * Таймер игры по видео геймплея: на HUD вместо подписи `TIME 397`, отсчёт от 400 по ≈ 0,77 с (15,4 такта) на единицу,
- * один на всю игру: гибель его не сбрасывает, пока герой не играет — он стоит; когда время вышло — игра окончена.
+ * Таймер по видео геймплея: на HUD вместо подписи `TIME 397`, отсчёт от 400 по ≈ 0,77 с (15,4 такта) на единицу.
+ * Область действия `level`: 400 — на один уровень: на новом уровне заново, гибель его не сбрасывает, пока герой не играет — он стоит;
+ * когда время вышло — игра окончена.
  */
 
 const pack = loadRoomPack();
@@ -74,14 +75,29 @@ describe('таймер: единицы и вид', () => {
     expect(units(game)).toBeNull();
   });
 
-  it('переход на следующий участок таймер не сбрасывает', () => {
+  it('переход на следующий уровень начинает таймер заново: 400 на один уровень, а не на всю игру', () => {
     const game = startedGame(marioContext(1));
     tick(game, 300);
-    const left = game.state.timerTicks;
+    expect(game.state.timerTicks).toBeLessThan(400 * 15.4);
     (game as unknown as { completeLevel(id: string): void }).completeLevel('goal');
     expect(game.state.levelId).toBe('mario-2');
-    expect(game.state.timerTicks).toBe(left);
-    expect(units(game)).toBe(Math.ceil(left / 15.4));
+    expect(game.state.timerTicks).toBe(400 * 15.4);
+    expect(units(game)).toBe(400);
+    tick(game, 31);
+    expect(units(game)).toBe(398);
+  });
+
+  it('вход в комнату колодца и возврат из неё таймер не сбрасывают: уровень тот же', () => {
+    const game = startedGame(marioContext(3));
+    tick(game, 200);
+    const left = game.state.timerTicks;
+    const well = game.level.def.objects.find((o) => o.type === 'sewer')!;
+    game.state.hero.x = well.x;
+    game.state.hero.y = 1;
+    tick(game, 60);
+    expect(game.state.levelId).toMatch(/^mario-3-/);
+    expect(game.state.timerTicks).toBeLessThan(left);
+    expect(game.state.timerTicks).toBeGreaterThan(left - 80);
   });
 });
 
@@ -128,5 +144,61 @@ describe('таймер: время вышло', () => {
     });
     const game = startedGame(ctx);
     expect(timerUnits(ctx.rules, game.state)).toBeNull();
+  });
+});
+
+describe('таймер: области действия', () => {
+  const twoLevels = (scope: 'section' | 'level' | 'game') =>
+    startedGame(
+      contextFor(
+        [
+          {
+            id: 'a',
+            rows: corridor(20, 4),
+            start: { x: 0, y: 2 },
+            objects: [{ id: 'goal', type: 'finish', x: 19, y: 2, w: 1, h: 1, asset: 'tile.block', params: { score: 0 } }],
+            transitions: [{ from: 'goal', to: 'b' }],
+          },
+          { id: 'b', rows: corridor(20, 4), start: { x: 0, y: 2 } },
+        ],
+        (p) => {
+          p.timerLimitTicks = 100;
+          p.timerScope = scope;
+        },
+      ),
+    );
+
+  it('level: гибель таймер не сбрасывает, новый уровень — сбрасывает, а когда время вышло, игра окончена', () => {
+    const game = twoLevels('level');
+    tick(game, 40);
+    game.die('pit');
+    tick(game, game.ctx.rules.params.deathDelayTicks + 2);
+    expect(game.state.timerTicks).toBe(60); // после гибели не сброшен
+    (game as unknown as { completeLevel(id: string): void }).completeLevel('goal');
+    expect(game.state.levelId).toBe('b');
+    expect(game.state.timerTicks).toBe(100); // новый уровень — заново
+    game.step(makeFrame({ pressed: ['start'] })); // после гибели игра ждёт S./P.
+    game.state.timerTicks = 1;
+    game.step(NEUTRAL_FRAME);
+    expect(game.state.lives).toBe(0);
+    expect(game.state.deathCause).toBe('time');
+  });
+
+  it('game: ни гибель, ни новый уровень таймер не сбрасывают', () => {
+    const game = twoLevels('game');
+    tick(game, 40);
+    (game as unknown as { completeLevel(id: string): void }).completeLevel('goal');
+    expect(game.state.timerTicks).toBe(60);
+  });
+
+  it('section: новый уровень и гибель начинают заново (прежнее поведение), время вышло — потеря одной жизни', () => {
+    const game = twoLevels('section');
+    tick(game, 40);
+    (game as unknown as { completeLevel(id: string): void }).completeLevel('goal');
+    expect(game.state.timerTicks).toBe(100);
+    game.state.timerTicks = 1;
+    game.step(NEUTRAL_FRAME);
+    expect(game.state.deathCause).toBe('time');
+    expect(game.state.lives).toBe(game.ctx.rules.params.lives - 1);
   });
 });

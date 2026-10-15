@@ -11,7 +11,7 @@
   lcd_heart.png — центральная область-сердце как снаряд на холсте клетки (и как сердце-предмет: один и тот же сегмент);
   lcd_devil.png — малый чёрт: включены только сегменты фона (верхний, три нижних), сегменты фигурки (шляпа, руки, сердце, ступни) погашены —
     «негатив» героя: тёмный блок с белым силуэтом (на видео геймплея малый чёрт — два тёмных пятна сверху, светлая полоса и тёмная полоса снизу);
-  lcd_devil_big.png — клетка большого чёрта 2 × 2: тот же фон и включено центральное сердце — «один чёрный глаз» в каждой клетке.
+  Большой чёрт 2 × 2 рисуется четырьмя такими же клетками `lcd_devil.png` (по замечанию владельца — без сердца внутри клеток).
 Остальные кадры атласа (цифры, пустая клетка, метка, значки) не трогаются. Чернила — RGB (48, 58, 48), прозрачность несёт форму.
 """
 import cv2
@@ -28,7 +28,6 @@ LIFE_SIZE = (36, 33)  # ширина и высота значка; верхни�
 ATLAS = 'public/graphics/lcd/lcd_atlas.png'
 HEART = 'public/graphics/lcd/lcd_heart.png'
 DEVIL = 'public/graphics/lcd/lcd_devil.png'
-DEVIL_BIG = 'public/graphics/lcd/lcd_devil_big.png'
 
 
 def frame(coverage):
@@ -82,7 +81,6 @@ def main():
     cv2.imwrite(HEART, frame(heart.astype(np.float32)))
     background = dark & (1 - figure)  # сегменты фона: блок без фигурки
     cv2.imwrite(DEVIL, frame(background.astype(np.float32)))
-    cv2.imwrite(DEVIL_BIG, frame(np.maximum(background, heart).astype(np.float32)))
     for name, f in frames.items():
         print(name, 'покрытие', round(float((f[..., 3] > 40).mean()), 3))
 
