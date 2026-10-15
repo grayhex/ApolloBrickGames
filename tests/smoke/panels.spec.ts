@@ -204,6 +204,7 @@ test('пульт: звук следует за SOUND, музыка, сегмен
 test('вид игрушки не запоминается: после перезагрузки она закрыта', async ({ page }) => {
   await page.goto('./?view=screen');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready'); // не уходить со страницы, пока грузится пакет: оборванный запрос — лишняя ошибка в консоли
   await page.goto('./');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
   await expect(page.locator('#view-closed')).toHaveAttribute('aria-pressed', 'true');
