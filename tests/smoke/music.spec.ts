@@ -74,10 +74,12 @@ test('«Ремастер»: запись из public/audio/remaster.m4a игра
   expect(errors).toEqual([]);
 });
 
-test('«Ремастер» без файла или с битым файлом: тихо звучит оригинальная мелодия', async ({ page }) => {
+test('«Ремастер» без файла или с битыми файлами (основным и запасным): тихо звучит оригинальная мелодия', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  // Запасной AAC настоящий и в браузере, который его декодирует, спас бы положение (см. тест про запасной файл), поэтому ломаем оба.
   await page.route('**/audio/remaster.m4a', (route) => route.fulfill({ status: 200, contentType: 'audio/mp4', body: Buffer.from('это не аудио') }));
+  await page.route('**/audio/remaster-aac.m4a', (route) => route.fulfill({ status: 200, contentType: 'audio/mp4', body: Buffer.from('и это не аудио') }));
   await startGame(page);
   await page.locator('#music [data-music="remaster"]').click();
   await page.keyboard.press('Enter');
