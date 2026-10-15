@@ -16,7 +16,7 @@
       } catch (e) {}
     </script>
   </head>
-  <body data-chrome="toy" data-motion="off">
+  <body data-chrome="toy" data-motion="off" data-booting>
     <main class="shell">
       <h1 class="visually-hidden">Crocodile Mario</h1>
       <nav class="corner" id="corner" aria-label="Сервис" data-i18n-attrs="aria-label=corner.nav">
@@ -45,12 +45,12 @@
         <p class="shell__sub" id="subtitle"></p>
       </header>
 
-      <div class="arena" id="arena" data-shell="blue">
+      <div class="arena" id="arena" data-shell="blue" data-view="closed" data-closed>
       <aside class="side side--info" id="side-info" aria-labelledby="info-title"></aside>
 
       <section class="stage" id="stage" aria-label="Игрушка Crocodile Mario" data-i18n-attrs="aria-label=stage.label">
         <p class="visually-hidden" id="sr-status" role="status"></p>
-        <div class="toy" id="toy" data-shell="blue" data-power="on">
+        <div class="toy" id="toy" data-shell="blue" data-power="off" data-view="closed" data-closed>
         <div class="toy__lidslot" id="lid-slot">
         <div class="lid" id="lid">
           <div class="lid__front" id="lid-front">
@@ -434,6 +434,26 @@
     <dialog class="settings" id="settings"></dialog>
     <dialog class="settings help" id="help"></dialog>
     <noscript>Для игры нужен JavaScript.</noscript>
+    <script>
+      // Начальный вид игрушки известен до загрузки данных. Статическая разметка — закрытая выключенная игрушка (так страница открывается обычно);
+      // `?view=full|screen` и `?power=on` (как в parseView и startApp) переключают её здесь же, до первой отрисовки, — без промежуточного вида.
+      (function () {
+        try {
+          var q = new URLSearchParams(location.search);
+          var on = q.get('power') === 'on';
+          var v = q.get('view');
+          if (v !== 'closed' && v !== 'full' && v !== 'screen') v = 'closed';
+          if (on && v === 'closed') v = 'full';
+          var parts = [document.getElementById('arena'), document.getElementById('toy')];
+          for (var i = 0; i < parts.length; i++) {
+            parts[i].dataset.view = v;
+            if (v !== 'closed') parts[i].removeAttribute('data-closed');
+            if (v === 'screen') parts[i].setAttribute('data-compact', '');
+          }
+          parts[1].dataset.power = on ? 'on' : 'off';
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -49,14 +49,14 @@ const B = 'block';
 const H = 'hero';
 
 /** «Figure introduction» с упаковки: фигуры, составленные из тех же ячеек (как их рисует упаковка), подписи — из словаря. */
-const FIGURES: readonly { name: MsgKey; picture: Picture | 'dot' }[] = [
+const FIGURES: readonly { name: MsgKey; picture: Picture }[] = [
   { name: 'info.fig.mario', picture: [[H]] },
-  { name: 'info.fig.heart', picture: [['heart']] },
+  // Пуля — не отдельная фигура: на экране LCD точки нет, выстрел — то же сердечко, центральный сегмент ячейки.
+  { name: 'info.fig.heartBullet', picture: [['heart']] },
   { name: 'info.fig.smallDevil', picture: [[B]] },
   { name: 'info.fig.bigDevil', picture: [[B, B], [B, B]] },
   { name: 'info.fig.missile', picture: [['allOn']] },
   { name: 'info.fig.dragon', picture: [[H, H, H]] },
-  { name: 'info.fig.bullet', picture: 'dot' },
   { name: 'info.fig.gate', picture: [[B, B], [B, B], [B, B]] },
   { name: 'info.fig.bridge', picture: [[B, B, B]] },
   { name: 'info.fig.sewer', picture: [[B, null, B], [B, null, B], [B, null, B]] },
@@ -166,7 +166,7 @@ export class InfoPanel {
           h(
             'li',
             { class: 'fig' },
-            picture === 'dot' ? h('span', { class: 'fig__box' }, h('i', { class: 'fig__dot', 'aria-hidden': 'true' })) : figure(picture, 'fig__box'),
+            figure(picture, 'fig__box'),
             h('span', { class: 'fig__name' }, t(name)),
           ),
         ),

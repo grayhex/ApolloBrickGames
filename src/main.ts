@@ -6,7 +6,10 @@ import { clearTheme } from './app/theme';
 
 const route = parseRoute(window.location.hash);
 // Вид страницы: игрушка (комната, клип) выставляет startApp; контрольный лист и редактор — технические страницы.
-if (route === 'sheet' || route === 'editor') document.body.dataset['chrome'] = 'tech';
+if (route === 'sheet' || route === 'editor') {
+  document.body.dataset['chrome'] = 'tech';
+  delete document.body.dataset['booting']; // у технических страниц нет раскладки игрушки, которую надо прятать до готовности
+}
 // Светлый фон — только у игрушки; технические страницы всегда тёмные (index.html ставит тему заранее, до загрузки данных).
 if (route !== 'room') clearTheme();
 // Смена маршрута — простая перезагрузка: у каждого маршрута свой пакет данных и свои обработчики.
@@ -20,6 +23,7 @@ const start =
       : startApp(route);
 
 start.catch((error: unknown) => {
+  delete document.body.dataset['booting']; // страница показывается и при сбое запуска: виден блок ошибки
   const box = document.getElementById('fatal');
   const text = document.getElementById('fatal-text');
   if (box && text) {

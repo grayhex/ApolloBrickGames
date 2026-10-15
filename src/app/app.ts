@@ -629,7 +629,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const enableMotion = (): void => {
     delete document.body.dataset['motion'];
   };
-  requestAnimationFrame(() => requestAnimationFrame(enableMotion));
+  // Страница прячется (`data-booting`, см. стиль), пока данные не загружены, панели не заполнены, а первый кадр не нарисован, — сразу видно
+  // финишный вид, а не промежуточный (открытая игрушка и пустые панели). Показывается со вторым кадром, потом включаются переходы.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      delete document.body.dataset['booting'];
+      enableMotion();
+      refocusGame();
+    }),
+  );
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener('resize', () => {
     document.body.dataset['motion'] = 'off';

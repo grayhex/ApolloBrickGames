@@ -75,6 +75,19 @@ body {
   white-space: nowrap;
 }
 
+/* До готовности страницы (данные загружены, панели заполнены, первый кадр нарисован) игра скрыта: иначе на секунду видна промежуточная
+   раскладка. Раскладка при этом считается, так что при показе ничего не сдвигается. Если запуск завис, через 4 с страница показывается сама. */
+body[data-booting] .shell {
+  visibility: hidden;
+  animation: boot-failsafe 0s 4s forwards;
+}
+
+@keyframes boot-failsafe {
+  to {
+    visibility: visible;
+  }
+}
+
 .shell {
   max-width: 960px;
   margin: 0 auto;
@@ -524,8 +537,10 @@ body {
   align-items: flex-start;
   justify-content: center;
   height: 11.5cqw;
-  /* Втулки стоят ближе к краям, посередине — проём (≈ 36 % ширины) на месте выреза крышки: так на фото всех четырёх корпусов. */
-  margin: -4.73cqw 14% -5.47cqw;
+  /* Втулки стоят ближе к краям, посередине — проём (≈ 36 % ширины) на месте выреза крышки: так на фото всех четырёх корпусов.
+     Геометрия шарнира не меняется ни в одном виде: он не растёт и не ездит, а только появляется и исчезает на своём месте. Высота в
+     потоке — ноль (нижняя поправка −6,77cqw = −(11,5 − 4,73)); недостающие 1,3cqw до верха нижней половины — её верхнее поле. */
+  margin: -4.73cqw 14% -6.77cqw;
 }
 
 /* Петля — простая, как на оригинале: по две цилиндрические втулки с каждой стороны, цвет корпуса, мягкий объём по вертикали, шов посередине. */
@@ -884,11 +899,14 @@ body[data-motion='off'] {
 .toy__lower {
   display: grid;
   grid-template-rows: 1fr;
+  /* Верх нижней половины — всегда на 1,3cqw ниже края крышки, как и шарнир: оба держатся за этот край и друг относительно друга не двигаются. */
+  margin-top: 1.3cqw;
   /* Запас под нижний торец корпуса: у обёртки overflow: hidden, иначе тень кромки обрезалась бы. */
   margin-bottom: -1.4cqw;
   /* Разворачивается, когда игрушка уже заметно уменьшилась: «только экран» → «полная» иначе на миг давало широкую и при этом высокую
      игрушку (ширина ещё крупная, нижняя половина уже раскрыта) — выше окна, с вертикальной прокруткой страницы и прыжком панелей. */
-  transition: grid-template-rows calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65), visibility 0s;
+  transition: grid-template-rows calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
+    margin-bottom calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65), visibility 0s;
 }
 
 .toy__lower-in {
@@ -900,27 +918,23 @@ body[data-motion='off'] {
 /* Сворачивается сразу, а игрушка увеличивается следом (на высоте это не даёт ей на миг вылезти за окно). */
 .toy[data-compact] .toy__lower {
   grid-template-rows: 0fr;
+  /* Зазор сверху (1,3cqw) без нижней половины не нужен: он уходит из высоты игрушки нижним полем, а не верхним — верх не сдвигается. */
+  margin-bottom: -2.7cqw;
   visibility: hidden;
-  transition: grid-template-rows calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), visibility 0s linear calc(var(--morph, 0s) * 0.75);
+  transition: grid-template-rows calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), margin-bottom calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease),
+    visibility 0s linear calc(var(--morph, 0s) * 0.75);
 }
 
+/* Шарнир (втулки и шлейф) стоит на месте и не двигается: при раскрытии нижней половины он появляется сразу в своём положении — в тот
+   миг, когда у неё начинает показываться верх, — а при сворачивании пропадает, когда от неё осталась лишь полоска. Ни роста, ни плавного проявления. */
 .toy__hinge {
-  transition: height calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
-    margin-top calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
-    margin-bottom calc(var(--morph, 0s) * 0.8) var(--morph-ease, ease) calc(var(--morph, 0s) * 0.65),
-    opacity calc(var(--morph, 0s) * 0.4) ease calc(var(--morph, 0s) * 0.7), visibility 0s;
+  transition: visibility 0s linear calc(var(--morph, 0s) * 0.65);
 }
 
 .toy[data-compact] .toy__hinge {
-  height: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-  opacity: 0;
-  overflow: hidden;
   visibility: hidden;
-  transition: height calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), margin-top calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease),
-    margin-bottom calc(var(--morph, 0s) * 0.75) var(--morph-ease, ease), opacity calc(var(--morph, 0s) * 0.4) ease,
-    visibility 0s linear calc(var(--morph, 0s) * 0.75);
+  /* Нижняя половина сворачивается по кривой `--morph-ease` за 0,75 `--morph` и к 0,6 уже почти исчезла (остаётся полоска под втулками). */
+  transition: visibility 0s linear calc(var(--morph, 0s) * 0.6);
 }
 
 /* Без нижней половины вырез шарнира не нужен: крышка закрыта снизу. */
@@ -1069,32 +1083,26 @@ body[data-chrome='toy'] {
 }
 
 .toy[data-closed] .toy__lidslot > .lid {
-  transform: translateY(-100%) rotateX(-180deg);
+  /* −95,7 %, а не −100 %: сложенная крышка лежит на 4,2cqw ниже линии шарнира, поэтому втулки выглядывают из-за её кромки так же, как на фото,
+     хотя стоят на корпусе всегда в одном месте (проценты, а не cqw: единицы размера меняются на ходу, и переход перезапускался бы). */
+  transform: translateY(-95.7%) rotateX(-180deg);
 }
 
 /* Закрытая (по фото): шарниры — две аккуратные разделённые втулки слева и справа, выглядывают из-за верхней кромки крышки;
    посередине ничего нет (шлейф уложен внутрь), кромка крышки ровная. */
-.toy__knuckle {
-  /* Втулки на месте всегда, как и в настоящей игрушке: поднимаются и опускаются вместе с крышкой (тот же ход времени), а не
-     появляются в конце. Пока крышка лежит на корпусе, она перекрывает их нижнюю часть, потом они выходят из-за неё. */
-  transition: margin-top var(--flip, 0s) var(--flip-ease, ease);
-}
+/* Втулки на корпусе стоят всегда в одном месте, как в настоящей игрушке, и не двигаются ни при раскрытии, ни при сворачивании: крышка
+   поворачивается вокруг них. Пока она лежит на корпусе, перекрывает нижнюю часть втулок, потом они выходят из-за неё. */
 
-.toy[data-closed] .toy__knuckle {
-  margin-top: -1.2cqw;
-}
-
-/* Шлейф лежит внутри, пока крышка закрыта. При раскрытии он проявляется, как только крышка прошла зону шарнира (ребром, `--flip-edge`),
-   а не после полной остановки; при закрытии гаснет раньше, чем крышка до него дойдёт. */
+/* Шлейф лежит внутри, пока крышка закрыта. Он стоит на месте и появляется (исчезает) сразу, а не плавно и не со сдвигом, — в тот миг, когда
+   крышка проходит зону шарнира ребром (`--flip-edge`): при раскрытии она уже поднялась над ним, при закрытии ещё не накрыла. */
 .toy__band {
-  transition: opacity calc(var(--flip, 0s) * 0.14) ease calc(var(--flip, 0s) * var(--flip-edge, 0.36));
+  transition: opacity 0s linear calc(var(--flip, 0s) * var(--flip-edge, 0.36));
 }
 
 .toy[data-closed] .toy__band {
   opacity: 0;
   cursor: default;
   pointer-events: none;
-  transition: opacity calc(var(--flip, 0s) * 0.3) ease;
 }
 
 /* ── Арена: слева справка, посередине игрушка, справа пульт ─────────────────
@@ -1998,16 +2006,6 @@ body:not([data-chrome='toy']) .side {
 
 .spr--gap {
   background: none;
-}
-
-/* Пуля — одна точка (на упаковке «BULLET» нарисована крошечной точкой). */
-.fig__dot {
-  display: block;
-  width: 5px;
-  height: 5px;
-  margin: auto;
-  background: var(--lcd-ink);
-  border-radius: 50%;
 }
 
 .fig__name {
