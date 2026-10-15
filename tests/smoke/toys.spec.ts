@@ -116,11 +116,15 @@ test.describe('«Часы+99»', () => {
     await open(page, 'clock99');
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
     const picks = page.locator('#shell-picker .shellpick__btn');
-    await expect(picks).toHaveCount(3);
-    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['yellow', 'red', 'white']);
+    // Панель «Цвет» всегда из четырёх цветов; неподтверждённый (синий) — disabled и не переключает.
+    await expect(picks).toHaveCount(4);
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['blue', 'red', 'yellow', 'white']);
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-disabled') === 'true'))).toEqual([true, false, false, false]);
+    await picks.nth(0).click({ force: true });
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
     await picks.nth(1).click();
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
-    await picks.nth(2).click();
+    await picks.nth(3).click();
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
   });
 
@@ -261,8 +265,11 @@ test.describe('«Морской бой»', () => {
     const border = await page.locator('.lid__bezel').evaluate((el) => getComputedStyle(el, '::before').borderTopWidth);
     expect(parseFloat(border)).toBeGreaterThan(1);
     const picks = page.locator('#shell-picker .shellpick__btn');
-    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['red', 'blue']);
-    await picks.nth(0).click();
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['blue', 'red', 'yellow', 'white']);
+    expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-disabled') === 'true'))).toEqual([false, false, true, true]);
+    await picks.nth(2).click({ force: true }); // жёлтого у «Морского боя» нет — остаётся синий
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
+    await picks.nth(1).click();
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
   });
 
