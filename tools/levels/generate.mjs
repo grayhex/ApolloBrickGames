@@ -3,14 +3,17 @@
  * Генератор девяти «оригинальных» уровней MARIO — ГЕЙМПЛЕЙНОЕ ПРИБЛИЖЕНИЕ, а не восстановление 1 в 1.
  *
  * Основа — разбор видео геймплея (docs/video-observations.md §9): у всех уровней одинаковый старт («яма» с крышкой и тремя ударами головой),
- * дальше — платформы над широкими провалами, колонны, лестницы, мелкие враги на площадках, большие парящие враги 2 × 2, сердца.
+ * дальше — платформы над широкими провалами, колонны, лестницы, простые враги (малые чёрти) на площадках, сердца и колодцы.
+ * Колодцы (уровни 2–9, видео 178–214 с): две трубы и щель между ними с сердцем; провалившийся герой оказывается в комнате — с большим чёртом
+ * 2 × 2 (нечётные уровни) или полностью заполненной бонусными сердцами (чётные) — и по выходу возвращается на уровень правее колодца.
+ * Большие враги живут только в комнатах-колодцах; летящих на героя «пуль» в уровнях нет.
  * Первые ≈ 120 столбцов уровня 1 повторяют измеренную цепочку платформ по видео (разброс ± 2 столбца); остальное — допущения по общей логике:
  * сложность растёт с номером уровня (длиннее, шире провалы, уже площадки, выше колонны, больше врагов).
  *
  * Кроме девяти — один «пользовательский» уровень custom-1 (тот же движок и те же секции, свой профиль и зерно): он стоит в выпадающем
  * списке пользовательских уровней в пульте рядом с картами из редактора и нужен, чтобы список не был пустым.
  *
- * Запуск: node tools/levels/generate.mjs  — перезаписывает public/content/room/levels/mario-1…9.json и custom-1.json, список уровней
+ * Запуск: node tools/levels/generate.mjs  — перезаписывает public/content/room/levels/mario-1…9.json, комнаты mario-N-boss/-bonus.json и custom-1.json, список уровней
  * в pack.json и сценарии интро/входа в animations.json. Результат детерминирован (зерно на уровень), готовые файлы лежат в репозитории.
  * Проходимость проверяет тест tests/core/mario-levels.test.ts: поиск в ширину по настоящему движку (враги отключены).
  */
@@ -47,6 +50,7 @@ class Level {
     this.objects = [];
     this.counts = {};
     this.marks = [];
+    this.transitions = []; // переходы колодцев: { from, to }
     this.spots = []; // места для сердец: { x, row (строка героя) }
   }
 
@@ -153,22 +157,30 @@ class Level {
       y: row,
       w: 1,
       h: 1,
-      asset: 'cell.object',
+      asset: 'cell.devil',
       params: { hp: 1, score: 20, range, stepTicks: 12, stomp: 200 },
     });
   }
 
-  bigEnemy(x, range) {
-    this.objects.push({
-      id: this.id_('b'),
-      type: 'patroller',
-      x,
-      y: 1,
-      w: 2,
-      h: 2,
-      asset: 'cell.object',
-      params: { hp: 4, score: 400, range, stepTicks: 12, chase: 1, minY: 0 },
-    });
+  /**
+   * Колодец (по видео 180–196 с): две трубы шириной 2 и высотой 3 (ряды 3–5) и щель между ними без пола; в щели висит сердце, на дне — вход в комнату
+   * `roomId`. Трубы — как колонны: на них надо залезть (подъём 2 клетки), с одной на другую — прыжок через щель; оступившийся проваливается.
+   * После выхода из комнаты герой стоит на полу сразу за правой трубой.
+   */
+  well(roomId) {
+    this.floor(5);
+    const left = this.x;
+    this.pillar(2, FLOOR - 2);
+    const gap = this.x;
+    this.col([]);
+    this.pillar(2, FLOOR - 2);
+    const after = this.x;
+    this.floor(3);
+    const id = this.id_('well');
+    this.objects.push({ id, type: 'sewer', x: gap, y: FLOOR, w: 1, h: 1, params: { returnX: after + 1, returnY: FLOOR - 1 } });
+    this.heart(gap, FLOOR - 1);
+    this.transitions.push({ from: id, to: roomId });
+    this.wellAt = { left, gap, after };
   }
 }
 
@@ -258,10 +270,6 @@ function sectionFlat(level) {
   level.floor(between(level.rnd, 7, 13));
 }
 
-function sectionBigFlat(level) {
-  level.floor(between(level.rnd, 14, 18)); // длинный ровный пол: под большого парящего врага
-}
-
 function sectionPit(level, p) {
   level.pit(between(level.rnd, 2, p.pitMax));
 }
@@ -307,7 +315,6 @@ function sectionGate(level) {
 
 const SECTIONS = {
   flat: sectionFlat,
-  bigFlat: sectionBigFlat,
   pit: sectionPit,
   chain: randomChain,
   pillars: sectionPillars,
@@ -328,7 +335,6 @@ function pickKind(level, p) {
   let best = entries[0][0];
   let bestScore = -Infinity;
   for (const [name, w] of entries) {
-    if (name === 'bigFlat' && (made.bigFlat ?? 0) >= p.bigMax) continue;
     if (name === level.lastKind && level.sameKind >= 2) continue;
     const score = (w / total) * done - (made[name] ?? 0) + level.rnd() * 0.9;
     if (score > bestScore) {
@@ -352,32 +358,32 @@ function fillSection(level, p) {
 /** Профиль сложности по номеру уровня (допущение: чем дальше, тем длиннее, шире провалы, уже площадки, выше колонны, больше врагов). */
 const PROFILES = [
   null,
-  { length: 170, maxRise: 2, rows: [4, 3], gapMax: 3, platLen: [5, 7], chainSteps: [2, 3], pitMax: 3, pillarExtra: 1, stairsMax: 2, smallN: 3, bigN: 0, bigRange: 3, bonusN: 2, enemyP: 0.35, bigMax: 0, restMax: 6, hearts: 10, weights: { flat: 4, chain: 5, pit: 2, pillars: 1 } },
-  { length: 184, maxRise: 2, rows: [4, 3], gapMax: 3, platLen: [5, 7], chainSteps: [2, 3], pitMax: 4, pillarExtra: 2, stairsMax: 2, smallN: 4, bigN: 0, bigRange: 3, bonusN: 2, enemyP: 0.45, bigMax: 0, restMax: 6, hearts: 11, weights: { flat: 3, chain: 4, pit: 2, pillars: 4, stairs: 1 } },
-  { length: 194, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 2, stairsMax: 3, smallN: 6, bigN: 0, bigRange: 3, bonusN: 3, enemyP: 0.5, bigMax: 0, restMax: 5, hearts: 12, weights: { flat: 3, chain: 4, pit: 2, pillars: 2, stairs: 4 } },
-  { length: 204, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 3, stairsMax: 3, smallN: 7, bigN: 2, bigRange: 3, bonusN: 3, enemyP: 0.5, bigMax: 2, restMax: 5, hearts: 12, weights: { flat: 3, bigFlat: 3, chain: 4, pit: 2, pillars: 3, stairs: 2, gate: 2 } },
-  { length: 214, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [4, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 8, bigN: 2, bigRange: 4, bonusN: 3, enemyP: 0.5, bigMax: 2, restMax: 5, hearts: 13, weights: { flat: 2, bigFlat: 1, chain: 7, pit: 2, pillars: 2, gate: 2 } },
-  { length: 224, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [2, 4], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 9, bigN: 3, bigRange: 4, bonusN: 3, enemyP: 0.55, bigMax: 2, restMax: 4, hearts: 13, weights: { flat: 2, bigFlat: 2, chain: 3, pit: 3, pillars: 3, pillarHop: 6, gate: 1, stairs: 1 } },
-  { length: 234, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [2, 4], chainSteps: [4, 6], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 10, bigN: 3, bigRange: 4, bonusN: 3, enemyP: 0.3, bigMax: 2, restMax: 4, hearts: 14, weights: { flat: 2, bigFlat: 2, chain: 9, pit: 3, pillarHop: 2, gate: 1 } },
-  { length: 246, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 11, bigN: 6, bigRange: 4, bonusN: 3, enemyP: 0.6, bigMax: 4, restMax: 4, hearts: 15, weights: { flat: 2, bigFlat: 2, chain: 5, pit: 3, pillars: 2, pillarHop: 3, gate: 2, stairs: 1 } },
-  { length: 256, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 12, bigN: 6, bigRange: 4, bonusN: 3, enemyP: 0.6, bigMax: 5, restMax: 4, hearts: 16, weights: { flat: 2, bigFlat: 2, chain: 5, pit: 3, pillars: 3, pillarHop: 3, gate: 2, stairs: 3 } },
+  { length: 170, maxRise: 2, rows: [4, 3], gapMax: 3, platLen: [5, 7], chainSteps: [2, 3], pitMax: 3, pillarExtra: 1, stairsMax: 2, smallN: 3, bonusN: 2, enemyP: 0.35, restMax: 6, hearts: 10, weights: { flat: 4, chain: 5, pit: 2, pillars: 1 } },
+  { length: 184, maxRise: 2, rows: [4, 3], gapMax: 3, platLen: [5, 7], chainSteps: [2, 3], pitMax: 4, pillarExtra: 2, stairsMax: 2, smallN: 4, bonusN: 2, enemyP: 0.45, restMax: 6, hearts: 11, weights: { flat: 3, chain: 4, pit: 2, pillars: 4, stairs: 1 } },
+  { length: 194, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 2, stairsMax: 3, smallN: 6, bonusN: 3, enemyP: 0.5, restMax: 5, hearts: 12, weights: { flat: 3, chain: 4, pit: 2, pillars: 2, stairs: 4 } },
+  { length: 204, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 3, stairsMax: 3, smallN: 8, bonusN: 3, enemyP: 0.5, restMax: 5, hearts: 12, weights: { flat: 3, chain: 4, pit: 2, pillars: 3, stairs: 2, gate: 2 } },
+  { length: 214, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [4, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 9, bonusN: 3, enemyP: 0.5, restMax: 5, hearts: 13, weights: { flat: 2, chain: 7, pit: 2, pillars: 2, gate: 2 } },
+  { length: 224, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [2, 4], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 10, bonusN: 3, enemyP: 0.55, restMax: 4, hearts: 13, weights: { flat: 2, chain: 3, pit: 3, pillars: 3, pillarHop: 6, gate: 1, stairs: 1 } },
+  { length: 234, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [2, 4], chainSteps: [4, 6], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 11, bonusN: 3, enemyP: 0.3, restMax: 4, hearts: 14, weights: { flat: 2, chain: 9, pit: 3, pillarHop: 2, gate: 1 } },
+  { length: 246, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 13, bonusN: 3, enemyP: 0.6, restMax: 4, hearts: 15, weights: { flat: 2, chain: 5, pit: 3, pillars: 2, pillarHop: 3, gate: 2, stairs: 1 } },
+  { length: 256, maxRise: 3, rows: [4, 3, 2], gapMax: 4, platLen: [3, 5], chainSteps: [3, 5], pitMax: 5, pillarExtra: 3, stairsMax: 3, smallN: 14, bonusN: 3, enemyP: 0.6, restMax: 4, hearts: 16, weights: { flat: 2, chain: 5, pit: 3, pillars: 3, pillarHop: 3, gate: 2, stairs: 3 } },
 ];
 
 /** Профиль пользовательского уровня custom-1: средняя сложность, всё понемногу (допущение по общей логике геймплея). */
-const CUSTOM_PROFILE = { length: 190, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 2, stairsMax: 3, smallN: 6, bigN: 2, bigRange: 3, bonusN: 3, enemyP: 0.5, bigMax: 2, restMax: 5, hearts: 12, weights: { flat: 3, bigFlat: 2, chain: 4, pit: 2, pillars: 2, pillarHop: 2, stairs: 2, gate: 1 } };
+const CUSTOM_PROFILE = { length: 190, maxRise: 2, rows: [4, 3, 2], gapMax: 4, platLen: [4, 6], chainSteps: [2, 4], pitMax: 4, pillarExtra: 2, stairsMax: 3, smallN: 8, bonusN: 3, enemyP: 0.5, restMax: 5, hearts: 12, weights: { flat: 3, chain: 4, pit: 2, pillars: 2, pillarHop: 2, stairs: 2, gate: 1 } };
 
 /** Короткая «подпись» уровня — что в нём нового (для примечания и документации). */
 const THEMES = [
   null,
   'начало: цепочки площадок над провалами по видео, мелкие враги, сердца',
-  'появляются колонны (до 2 клеток над полом) и провалы до 4 клеток',
-  'лестницы вверх и вниз, площадки в ряду 2, колонны',
-  'большие парящие враги 2 × 2 и створки, провалы шире',
-  'длинные цепочки площадок с подъёмом до 3 клеток',
-  'колонны как «камни» через провалы, плотные провалы и колонны',
-  'очень узкие площадки (2–4 клетки) над самыми длинными провалами',
-  'враги на узких площадках, больше больших врагов',
-  'всё вместе: лестницы, цепочки, колонны-«камни», пять больших врагов; самый длинный уровень',
+  'появляются колонны (до 2 клеток над полом) и провалы до 4 клеток; первый колодец с бонусной комнатой',
+  'лестницы вверх и вниз, площадки в ряду 2, колонны; колодец с большим чёртом',
+  'створки и колонны выше, провалы шире; колодец с бонусной комнатой',
+  'длинные цепочки площадок с подъёмом до 3 клеток; колодец с большим чёртом',
+  'колонны как «камни» через провалы, плотные провалы и колонны; колодец с бонусной комнатой',
+  'очень узкие площадки (2–4 клетки) над самыми длинными провалами; колодец с большим чёртом',
+  'много врагов на узких площадках; колодец с большим чёртом',
+  'всё вместе: лестницы, цепочки, колонны-«камни», больше всего врагов; самый длинный уровень; колодец с большим чёртом',
 ];
 
 
@@ -397,16 +403,13 @@ function standRow(level, x) {
  * Необязательные верхние площадки (ряд 3) над длинными ровными участками пола — на видео над полом висят площадки с сердцами.
  * Высота пола + площадки: герой на полу (строка 4) прыгает на площадку (строка 2): подъём 2 клетки.
  */
-/** Столбец лежит в зоне большого врага (его размах плюс запас): там нет верхних площадок и других врагов. */
-const inZone = (level, x) => (level.zones ?? []).some(([a, b]) => x >= a && x <= b);
-
 function addBonusPlatforms(level, p) {
   const total = level.cols.length;
   const taken = [];
   let x = 16;
   while (x < total - 22 && taken.length < p.bonusN) {
     let end = x;
-    while (end < total && plain(level, end, FLOOR) && !inZone(level, end)) end++;
+    while (end < total && plain(level, end, FLOOR)) end++;
     if (end - x >= 11) {
       const len = Math.min(5, end - x - 6);
       const at = x + 3 + Math.floor(level.rnd() * Math.max(1, end - x - len - 6));
@@ -444,7 +447,7 @@ function placeSmallEnemies(level, p) {
     for (const row of [FLOOR, 4, 3, 2]) {
       for (const range of [2, 1, 0]) {
         let ok = true;
-        for (let k = x - range - 1; k <= x + range + 1 && ok; k++) ok = plain(level, k, row) && !inZone(level, k);
+        for (let k = x - range - 1; k <= x + range + 1 && ok; k++) ok = plain(level, k, row);
         if (ok) {
           candidates.push({ x, row: row - 1, range, penalty: (2 - range) * 3 });
           break;
@@ -453,27 +456,6 @@ function placeSmallEnemies(level, p) {
     }
   }
   for (const c of spread(candidates, p.smallN, 16, total - 18, 9, level.rnd)) level.smallEnemy(c.x, c.row, c.range);
-}
-
-/** Большие парящие враги 2 × 2 (преследуют героя сверху) над ровным полом шириной в размах патруля плюс запас — там нет провалов и колонн: патруль ±3…4 клетки, прыжок на 3 клетки там попадает в врага. */
-function placeBigEnemies(level, p) {
-  const total = level.cols.length;
-  const range = p.bigRange;
-  const candidates = [];
-  for (let x = 20; x < total - 24; x++) {
-    let ok = true;
-    for (let k = x - range - 1; k <= x + range + 2 && ok; k++) {
-      const set = level.cols[k];
-      ok = plain(level, k, FLOOR) && !!set; // ровный пол без провалов и колонн: пикирующий чёрт не должен настигать героя в прыжке над пропастью
-    }
-    if (ok) candidates.push({ x });
-  }
-  const taken = level.objects.filter((o) => o.type === 'patroller').map((o) => o.x);
-  const free = candidates.filter((c) => taken.every((t) => Math.abs(t - c.x) > range + 4));
-  for (const c of spread(free, p.bigN, 24, total - 24, 12, level.rnd)) {
-    level.bigEnemy(c.x, range);
-    (level.zones ??= []).push([c.x - range - 1, c.x + range + 2]);
-  }
 }
 
 /** Сердца: по одному на равные участки уровня; верхние площадки, колонны и платформы цепочек — в первую очередь. */
@@ -508,6 +490,10 @@ function placeHearts(level, p) {
   level.heartCount = chosen.length;
 }
 
+/** Комната колодца уровня n: «boss» — большой чёрт 2 × 2 (нечётные уровни), «bonus» — бонусные сердца (чётные); у уровня 1 и custom-1 колодца нет. */
+const roomKind = (n) => (n % 2 === 1 ? 'boss' : 'bonus');
+const roomId = (n) => `mario-${n}-${roomKind(n)}`;
+
 /** n — номер уровня MARIO (1–9) или 'custom' — пользовательский уровень custom-1. */
 function buildLevel(n) {
   const custom = n === 'custom';
@@ -515,7 +501,6 @@ function buildLevel(n) {
   const level = custom
     ? new Level('custom-1', 'U-01', mulberry32(0x55534552))
     : new Level(`mario-${n}`, `1-0${n}`, mulberry32(0x4d41524f + n * 7919));
-  level.bigCount = 0;
   let measured = 0;
   if (n === 1) {
     measuredStart(level);
@@ -529,7 +514,12 @@ function buildLevel(n) {
     }
   }
   // Секции добавляются, пока влезают в бюджет длины (под финиш остаётся 15 столбцов); не влезшая секция откатывается.
+  const well = typeof n === 'number' && n >= 2 ? roomId(n) : null;
   for (let guard = 0; guard < 80 && level.x < p.length - 15 - 20; guard++) {
+    if (well && !level.wellAt && level.x >= p.length * 0.45) {
+      level.well(well); // колодец примерно посередине уровня
+      continue;
+    }
     const shot = level.snapshot();
     const kinds = { ...(level.kinds ?? {}) };
     const last = level.lastKind;
@@ -552,7 +542,6 @@ function buildLevel(n) {
   level.floor(5);
   level.objects.push({ id: 'goal', type: 'finish', x: finishX, y: FLOOR - 1, w: 1, h: 1, asset: 'cell.all_on', params: { score: 0 } });
 
-  placeBigEnemies(level, p); // первыми: им нужен ровный пол; их зоны остаются свободными от верхних площадок и других врагов
   addBonusPlatforms(level, p);
   placeSmallEnemies(level, p);
   placeHearts(level, p);
@@ -594,24 +583,90 @@ function toJson(n, { level, measured }, next) {
     rows,
     start: { x: 1, y: FLOOR },
     objects: level.objects,
-    transitions: [{ from: 'goal', to: next }],
+    transitions: [{ from: 'goal', to: next }, ...level.transitions],
     marks,
+  };
+}
+
+/**
+ * Комната колодца (ровный экран 13 × 6, камера не двигается): герой падает сверху слева; выход — правый край. В «boss» летает большой чёрт 2 × 2
+ * (преследует героя, пикирует — по видео 202–214 с; его можно застрелить, 4 попадания, +400); в «bonus» поле заполнено сердцами (ряды 1–4, по +100).
+ */
+function buildRoom(n) {
+  const kind = roomKind(n);
+  const width = 13;
+  const rows = Array.from({ length: ROWS }, (_, r) => (r === FLOOR ? '#' : '.').repeat(width));
+  const objects = [{ id: 'exit', type: 'exit', x: width - 1, y: 0, w: 1, h: FLOOR, params: {} }];
+  if (kind === 'boss') {
+    objects.push({
+      id: 'boss',
+      type: 'patroller',
+      x: 10,
+      y: 0,
+      w: 2,
+      h: 2,
+      asset: 'cell.devil_big',
+      params: { hp: 4, score: 400, range: 8, stepTicks: 12, chase: 1, minY: 0 },
+    });
+  } else {
+    for (let y = 1; y <= 4; y++) {
+      for (let x = 0; x < width - 1; x++) {
+        objects.push({ id: `h${y}-${x}`, type: 'pickup', x, y, w: 1, h: 1, asset: 'cell.heart', params: { score: 100 } });
+      }
+    }
+  }
+  const label = `1-0${n}`;
+  return {
+    schemaVersion: 1,
+    id: roomId(n),
+    status: 'demo',
+    hudLabel: label,
+    note:
+      kind === 'boss'
+        ? `Комната колодца уровня ${label}: ровный пол и большой чёрт 2 × 2 (видео геймплея 198–214 с, docs/video-observations.md §11). Выход — правый край. Допущение: что бывает в оригинале после комнаты и как её закончить, по видео не ясно.`
+        : `Комната колодца уровня ${label}: поле заполнено бонусными сердцами, которые можно просто собрать (по подсказке владельца вместо босса; в видео такой комнаты нет). Выход — правый край.`,
+    width,
+    height: ROWS,
+    legend: { '.': { collision: 'empty' }, '#': { collision: 'solid', asset: 'cell.obstacle' } },
+    rows,
+    start: { x: 2, y: 0 },
+    objects,
+    transitions: [],
+    marks: [
+      {
+        id: 'approximation',
+        x: 0,
+        y: 0,
+        w: width,
+        h: ROWS,
+        status: 'assumed',
+        note: kind === 'boss' ? 'Размеры комнаты и маршрут чёрта — по видео 198–214 с (ровный пол на весь экран, большой чёрт сверху справа); выход и награда — допущения.' : 'Заполнение сердцами — по подсказке владельца; число и очки — допущения.',
+        ref: 'video: 19b50e99-Apollo-Tetris-Crocodile (геймплей)',
+      },
+    ],
   };
 }
 
 function logLevel(json, objects) {
   const count = (type) => objects.filter((o) => o.type === type).length;
-  console.log(`${json.id}  ${json.hudLabel}  ширина ${json.width}  провалы ${count('hazard')}  враги ${objects.filter((o) => o.type === 'patroller' && o.w === 1).length}/${objects.filter((o) => o.type === 'patroller' && o.w === 2).length}  сердца ${count('pickup')}`);
+  console.log(`${json.id}  ${json.hudLabel}  ширина ${json.width}  провалы ${count('hazard')}  враги ${objects.filter((o) => o.type === 'patroller').length}  колодцы ${count('sewer')}  сердца ${count('pickup')}`);
 }
 
 function main() {
   const ids = [];
+  const roomIds = [];
   for (let n = 1; n <= 9; n++) {
     const built = buildLevel(n);
     const json = toJson(n, built, n < 9 ? `mario-${n + 1}` : null);
     writeFileSync(join(ROOM, 'levels', `mario-${n}.json`), JSON.stringify(json, null, 2) + '\n');
     ids.push(json.id);
     logLevel(json, built.level.objects);
+    if (n >= 2) {
+      const room = buildRoom(n);
+      writeFileSync(join(ROOM, 'levels', `${room.id}.json`), JSON.stringify(room, null, 2) + '\n');
+      roomIds.push(room.id);
+      console.log(`  → комната ${room.id} (${roomKind(n)}): объектов ${room.objects.length}`);
+    }
   }
   const customBuilt = buildLevel('custom');
   const customJson = toJson('custom', customBuilt, null);
@@ -621,8 +676,8 @@ function main() {
   // Пакет: девять уровней первыми, дальше прежние (тестовый «туннель» по видео), последним — пользовательский.
   const packPath = join(ROOM, 'pack.json');
   const pack = JSON.parse(readFileSync(packPath, 'utf8'));
-  const keep = pack.levels.filter((file) => !/levels\/(mario-\d|custom-\d)\.json$/.test(file));
-  pack.levels = [...ids.map((id) => `levels/${id}.json`), ...keep, 'levels/custom-1.json'];
+  const keep = pack.levels.filter((file) => !/levels\/(mario-\d(-boss|-bonus)?|custom-\d)\.json$/.test(file));
+  pack.levels = [...ids.map((id) => `levels/${id}.json`), ...roomIds.map((id) => `levels/${id}.json`), ...keep, 'levels/custom-1.json'];
   pack.firstLevel = 'mario-1';
   pack.title = 'Игрушка: девять уровней MARIO — геймплейное приближение (не оригинальные уровни)';
   writeFileSync(packPath, JSON.stringify(pack, null, 2) + '\n');

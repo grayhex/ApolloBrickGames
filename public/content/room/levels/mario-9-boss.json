@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "mario-9-boss",
+  "status": "demo",
+  "hudLabel": "1-09",
+  "note": "Комната колодца уровня 1-09: ровный пол и большой чёрт 2 × 2 (видео геймплея 198–214 с, docs/video-observations.md §11). Выход — правый край. Допущение: что бывает в оригинале после комнаты и как её закончить, по видео не ясно.",
+  "width": 13,
+  "height": 6,
+  "legend": {
+    ".": {
+      "collision": "empty"
+    },
+    "#": {
+      "collision": "solid",
+      "asset": "cell.obstacle"
+    }
+  },
+  "rows": [
+    ".............",
+    ".............",
+    ".............",
+    ".............",
+    ".............",
+    "#############"
+  ],
+  "start": {
+    "x": 2,
+    "y": 0
+  },
+  "objects": [
+    {
+      "id": "exit",
+      "type": "exit",
+      "x": 12,
+      "y": 0,
+      "w": 1,
+      "h": 5,
+      "params": {}
+    },
+    {
+      "id": "boss",
+      "type": "patroller",
+      "x": 10,
+      "y": 0,
+      "w": 2,
+      "h": 2,
+      "asset": "cell.devil_big",
+      "params": {
+        "hp": 4,
+        "score": 400,
+        "range": 8,
+        "stepTicks": 12,
+        "chase": 1,
+        "minY": 0
+      }
+    }
+  ],
+  "transitions": [],
+  "marks": [
+    {
+      "id": "approximation",
+      "x": 0,
+      "y": 0,
+      "w": 13,
+      "h": 6,
+      "status": "assumed",
+      "note": "Размеры комнаты и маршрут чёрта — по видео 198–214 с (ровный пол на весь экран, большой чёрт сверху справа); выход и награда — допущения.",
+      "ref": "video: 19b50e99-Apollo-Tetris-Crocodile (геймплей)"
+    }
+  ]
+}

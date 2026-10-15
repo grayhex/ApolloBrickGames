@@ -7,11 +7,13 @@ import type { InputHub } from './hub';
  * Спрайты LCD-ячеек — те самые, что рисует игра (public/graphics/lcd): на упаковке в разделе «Figure introduction»
  * фигурки нарисованы этими же ячейками, отдельных картинок «чертей» и «драконов» там нет. Координаты — из assets.json.
  */
-type SpriteName = 'hero' | 'heart' | 'block' | 'allOn';
+type SpriteName = 'hero' | 'heart' | 'block' | 'allOn' | 'devil' | 'devilBig';
 
 const SPRITES: Record<SpriteName, { file: string; x: number; y: number; w: number; h: number; sheet: [number, number] }> = {
   hero: { file: 'lcd_atlas.png', x: 4, y: 4, w: 128, h: 112, sheet: [1024, 256] },
   heart: { file: 'lcd_heart.png', x: 0, y: 0, w: 128, h: 112, sheet: [128, 112] },
+  devil: { file: 'lcd_devil.png', x: 0, y: 0, w: 128, h: 112, sheet: [128, 112] },
+  devilBig: { file: 'lcd_devil_big.png', x: 0, y: 0, w: 128, h: 112, sheet: [128, 112] },
   block: { file: 'lcd_atlas.png', x: 136, y: 4, w: 128, h: 112, sheet: [1024, 256] },
   allOn: { file: 'lcd_atlas.png', x: 268, y: 4, w: 128, h: 112, sheet: [1024, 256] },
 };
@@ -53,8 +55,9 @@ const FIGURES: readonly { name: MsgKey; picture: Picture }[] = [
   { name: 'info.fig.mario', picture: [[H]] },
   // Пуля — не отдельная фигура: на экране LCD точки нет, выстрел — то же сердечко, центральный сегмент ячейки.
   { name: 'info.fig.heartBullet', picture: [['heart']] },
-  { name: 'info.fig.smallDevil', picture: [[B]] },
-  { name: 'info.fig.bigDevil', picture: [[B, B], [B, B]] },
+  // Чёрти — те же ячейки, что и в игре: малый — «негатив» героя (сегменты фона), большой 2 × 2 — то же и центральное сердце в каждой клетке.
+  { name: 'info.fig.smallDevil', picture: [['devil']] },
+  { name: 'info.fig.bigDevil', picture: [['devilBig', 'devilBig'], ['devilBig', 'devilBig']] },
   { name: 'info.fig.missile', picture: [['allOn']] },
   { name: 'info.fig.dragon', picture: [[H, H, H]] },
   { name: 'info.fig.gate', picture: [[B, B], [B, B], [B, B]] },

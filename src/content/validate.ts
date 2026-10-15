@@ -616,6 +616,12 @@ export function validateLevel(
       transitions.push({ from, to: typeof to === 'string' ? to : null });
     });
   }
+  // Объекты, которым переход обязателен (колодец): без него в них нечего «проваливаться».
+  for (const obj of objects) {
+    if (env.objectTypes[obj.type]?.requiresTransition && !transitions.some((tr) => tr.from === obj.id && tr.to !== null)) {
+      c.fail('$.transitions', `для объекта «${obj.id}» (тип «${obj.type}») нужен переход в другой уровень`);
+    }
+  }
 
   // Исследовательские пометки (необязательны).
   const marks: LevelMark[] = [];

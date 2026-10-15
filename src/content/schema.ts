@@ -384,6 +384,8 @@ export interface ObjectTypeSpec {
   /** Описанные параметры; неописанные параметры не запрещены, но и не проверяются. */
   params?: readonly ParamSpec[];
   validateParams?: (params: Params, report: (message: string) => void) => void;
+  /** Объект этого типа без перехода (`transitions[].from` = его id) бессмыслен: проверка уровня это не пропускает (например, колодец). */
+  requiresTransition?: boolean;
 }
 
 export interface ValidationEnv {

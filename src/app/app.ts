@@ -139,7 +139,11 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // Вид страницы: игрушка (комната, клип) или техническая страница. `?debug` возвращает панели разработчика.
   document.body.dataset['chrome'] = route.lid ? 'toy' : 'tech';
-  if (new URLSearchParams(window.location.search).has('debug')) document.body.dataset['debug'] = '';
+  if (new URLSearchParams(window.location.search).has('debug')) {
+    document.body.dataset['debug'] = '';
+    // Отладка (`?debug`): текущая игра ядра доступна из консоли и тестов как `window.__game` (телепорт героя, проверка состояния) — продукт её не использует.
+    Object.defineProperty(window, '__game', { configurable: true, get: () => game });
+  }
   if (!route.lid) document.title = 'Crocodile Mario — движок (демо)';
 
   // Подписи маршрута ставятся до загрузки данных, чтобы страница не «мигала».
@@ -248,6 +252,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
           applyDisplay();
         }
       }
+      if (event.type === 'roomEntered' || event.type === 'roomLeft') snapCamera = true; // колодец: другой экран, камера сразу на героя
       speedrun.onEvent(event, game.state.worldTick);
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);

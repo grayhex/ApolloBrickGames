@@ -8,7 +8,10 @@
   cell.player — герой: только сегменты фигурки (тёмные области, целиком окружённые светлым контуром: шляпа, руки, сердце, ступни);
   cell.ghost — те же тёмные области блока с прозрачностью 8 % (выключенные сегменты);
   hud.life, hud.lives3 — значки жизни: та же фигурка, уменьшенная до 36 px по ширине (на фото оригинала жизни — три крошечных героя);
-  lcd_heart.png — центральная область-сердце как снаряд на холсте клетки.
+  lcd_heart.png — центральная область-сердце как снаряд на холсте клетки (и как сердце-предмет: один и тот же сегмент);
+  lcd_devil.png — малый чёрт: включены только сегменты фона (верхний, три нижних), сегменты фигурки (шляпа, руки, сердце, ступни) погашены —
+    «негатив» героя: тёмный блок с белым силуэтом (на видео геймплея малый чёрт — два тёмных пятна сверху, светлая полоса и тёмная полоса снизу);
+  lcd_devil_big.png — клетка большого чёрта 2 × 2: тот же фон и включено центральное сердце — «один чёрный глаз» в каждой клетке.
 Остальные кадры атласа (цифры, пустая клетка, метка, значки) не трогаются. Чернила — RGB (48, 58, 48), прозрачность несёт форму.
 """
 import cv2
@@ -24,6 +27,8 @@ LIFE = {'life': (796, 4, 48, 48, [4]), 'lives3': (848, 4, 136, 48, [4, 48, 92])}
 LIFE_SIZE = (36, 33)  # ширина и высота значка; верхний край — 4
 ATLAS = 'public/graphics/lcd/lcd_atlas.png'
 HEART = 'public/graphics/lcd/lcd_heart.png'
+DEVIL = 'public/graphics/lcd/lcd_devil.png'
+DEVIL_BIG = 'public/graphics/lcd/lcd_devil_big.png'
 
 
 def frame(coverage):
@@ -75,6 +80,9 @@ def main():
         atlas[y : y + h, x : x + w] = part
     cv2.imwrite(ATLAS, atlas)
     cv2.imwrite(HEART, frame(heart.astype(np.float32)))
+    background = dark & (1 - figure)  # сегменты фона: блок без фигурки
+    cv2.imwrite(DEVIL, frame(background.astype(np.float32)))
+    cv2.imwrite(DEVIL_BIG, frame(np.maximum(background, heart).astype(np.float32)))
     for name, f in frames.items():
         print(name, 'покрытие', round(float((f[..., 3] > 40).mean()), 3))
 
