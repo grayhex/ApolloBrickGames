@@ -62,7 +62,10 @@ export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'):
 export interface ShellPickerOptions {
   /** Идентификатор контейнера (для тестов и подписи). */
   id: string;
-  /** Какие цвета предлагать (у «Часов+99» и «Морского боя» — только подтверждённые фото); по умолчанию все четыре. */
+  /**
+   * Какие цвета доступны игрушке (подтверждены фото оригинала). Кнопок всегда четыре и в одном порядке — как у Crocodile Mario;
+   * остальные видны, но недоступны (`aria-disabled`). По умолчанию доступны все.
+   */
   shells?: readonly Shell[];
   /** Чья наклейка на миниатюрах (по умолчанию Crocodile Mario). */
   toy?: ToyId;
@@ -80,23 +83,26 @@ export class ShellPicker {
   readonly root: HTMLElement;
   private readonly buttons = new Map<Shell, HTMLButtonElement>();
   private readonly options: ShellPickerOptions;
-  private readonly shells: readonly Shell[];
+  /** Доступные игрушке цвета. */
+  private readonly enabled: readonly Shell[];
   private value: Shell;
 
   constructor(options: ShellPickerOptions) {
     this.options = options;
     this.value = options.value;
-    this.shells = options.shells ?? SHELLS;
+    this.enabled = options.shells ?? SHELLS;
     const serial = ++pickerSerial;
     this.root = h('div', { class: 'shellpick', id: options.id, role: 'radiogroup', 'aria-label': options.label });
-    this.root.style.setProperty('--cols', String(this.shells.length));
-    for (const shell of this.shells) {
+    for (const shell of SHELLS) {
       const button = h(
         'button',
         { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },
         miniConsole(shell, serial, options.toy ?? 'mario'),
       );
-      button.addEventListener('click', (event) => this.pick(shell, event.detail !== 0));
+      if (!this.enabled.includes(shell)) button.setAttribute('aria-disabled', 'true');
+      button.addEventListener('click', (event) => {
+        if (this.enabled.includes(shell)) this.pick(shell, event.detail !== 0);
+      });
       button.addEventListener('keydown', (event) => this.onKey(event, shell));
       this.buttons.set(shell, button);
       this.root.append(button);
@@ -110,8 +116,9 @@ export class ShellPicker {
     if (label !== undefined) this.root.setAttribute('aria-label', label);
     for (const [shell, button] of this.buttons) {
       const name = shellLabel(shell);
-      button.title = t('shell.title', { name });
-      button.setAttribute('aria-label', name);
+      const unavailable = !this.enabled.includes(shell);
+      button.title = t(unavailable ? 'clr.unavailable' : 'shell.title', { name });
+      button.setAttribute('aria-label', unavailable ? t('clr.unavailable', { name }) : name);
       const caption = button.querySelector('.shellpick__name');
       if (caption) caption.textContent = name;
     }
@@ -123,7 +130,7 @@ export class ShellPicker {
     for (const [id, button] of this.buttons) {
       const on = id === shell;
       button.setAttribute('aria-checked', String(on));
-      button.tabIndex = on ? 0 : -1;
+      button.tabIndex = on && this.enabled.includes(id) ? 0 : -1;
     }
   }
 
@@ -136,7 +143,9 @@ export class ShellPicker {
     const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
     if (step === 0) return;
     event.preventDefault();
-    const next = this.shells[(this.shells.indexOf(from) + step + this.shells.length) % this.shells.length];
+    // Стрелки обходят только доступные цвета.
+    const available = SHELLS.filter((shell) => this.enabled.includes(shell));
+    const next = available[(available.indexOf(from) + step + available.length) % available.length];
     if (!next) return;
     this.pick(next, false);
     this.buttons.get(next)?.focus();

@@ -105,7 +105,7 @@ test('слева справка, справа пульт; панели отод�
   expect(Number(await info.evaluate((e) => getComputedStyle(e).opacity))).toBeLessThan(0.8);
   await expect(info.locator('.kk, .kmap')).toHaveCount(0);
   const ctl = page.locator('#side-ctl');
-  for (const name of ['Звук', 'Вид', 'Уровни']) await expect(ctl.getByRole('heading', { name, exact: true })).toBeVisible();
+  for (const name of ['Звук', 'Цвет', 'Уровни']) await expect(ctl.getByRole('heading', { name, exact: true })).toBeVisible();
   // Спидран — последний блок; индикатор устройства и фон переехали в угловое меню.
   expect(await ctl.evaluate((e) => (e.lastElementChild as HTMLElement).id)).toBe('run');
   await expect(ctl.locator('#devices, #tgl-theme, #open-editor')).toHaveCount(0);

@@ -33,16 +33,16 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
-  test('по центру сверху — рукописный логотип Apollo, рядом переключатель из трёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
+  test('по центру сверху — рукописный логотип Apollo, рядом переключатель из четырёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
     const logo = page.locator('.brand__logo');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const items = page.locator('.toysw__item');
-    await expect(items).toHaveCount(3);
-    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой']);
-    await expect(items.locator('svg.toysw__icon')).toHaveCount(3); // миниатюры закрытых игрушек
+    await expect(items).toHaveCount(4);
+    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк']);
+    await expect(items.locator('svg.toysw__icon')).toHaveCount(4); // миниатюры закрытых игрушек
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
     // Шапка по центру игрушки (средняя колонка страницы) и над ней.
     const brand = await page.locator('#brand').boundingBox();
@@ -314,11 +314,11 @@ test('Crocodile Mario не изменился: свои подписи, лого
   expect(saturation).toBeGreaterThan(0.2);
 });
 
-for (const toy of ['mario', 'clock99', 'seabattle']) {
+for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
   test(`${toy}: общие меню, миниатюры и справка на двух языках`, async ({ page }) => {
     await page.goto(`./?toy=${toy}&view=full`);
     await expect(page.locator('body')).not.toHaveAttribute('data-booting');
-    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('alt', toy === 'mario' ? 'Crocodile Mario' : toy === 'clock99' ? 'Часы+99' : 'Морской бой');
+    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('alt', ({ mario: 'Crocodile Mario', clock99: 'Часы+99', seabattle: 'Морской бой', tank168: '168 в 1 танк' } as Record<string, string>)[toy] ?? '');
     await expect(page.locator('#shell-picker .shellpick__name')).toHaveCount(0);
     await expect(page.locator('#view-state .view-mini')).toHaveCount(3);
     await expect(page.locator('#view-full')).toHaveAccessibleName('Полная');

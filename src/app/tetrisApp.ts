@@ -21,6 +21,7 @@ import { CornerNav } from './cornerNav';
 import { InfoPanel } from './infoPanel';
 import { HelpDialog } from './help';
 import { InputHub } from './hub';
+import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import type { LedState } from './leds';
 import { ORIGINAL_LEVEL_COUNT, type OriginalSlot } from './levels';
@@ -29,7 +30,7 @@ import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
 import { applyToyModel, relabelKeys } from './toyModel';
 import { ToyPanel, type ToyKeyId } from './toy';
-import { shellFor, TOYS, type ToyId } from './toys';
+import { hasReset, shellFor, TOYS, type ToyId } from './toys';
 import { parseView, type View } from './view';
 import { deviceView } from './viewModel';
 
@@ -94,8 +95,10 @@ function saveHi(toy: ToyId, value: number): void {
  * см. `toyModel.ts` — и пока обычный тетрис вместо оригинальных игр (`src/tetris`, `render/tetrisScreen.ts`). Слева общая справка по тетрису, уровни
  * на пульте отключены, музыки нет (есть только эффекты). Оболочка повторяет `startApp` — общая часть вынесется, когда у игрушек появятся свои игры.
  */
-export async function startTetrisApp(toyId: ToyId): Promise<void> {
+export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<AppHandle> {
   const model = TOYS[toyId];
+  const life = new Lifecycle();
+  const { signal } = life;
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
@@ -127,8 +130,9 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
 
   const params = new URLSearchParams(window.location.search);
   // Вид и питание — как у Crocodile Mario: игрушка начинается закрытой и выключенной; `?view=…` и `?power=on` открывают её сразу.
-  let view: View = parseView(params.get('view'), params.get('power') === 'on');
-  let powered = params.get('power') === 'on';
+  // Игрушка, на которую перешли с другой на странице, продолжает с тем же видом, цветом и питанием (`carryIn`).
+  let view: View = carryIn?.view ?? parseView(params.get('view'), params.get('power') === 'on');
+  let powered = carryIn ? carryIn.powered : params.get('power') === 'on';
   if (powered && view === 'closed') view = 'full';
   let bootTicks = powered ? BOOT_TICKS : 0;
   let context: 'game' | 'menu' = 'game';
@@ -157,7 +161,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   });
 
   setLang(hub.settings.display.lang);
-  const infoPanel = new InfoPanel(refs.sideInfo, hub, model.id);
+  const infoPanel = new InfoPanel(refs.sideInfo, hub, model.id, signal);
   const applyLangUi = (): void => {
     const lang = getLang();
     document.documentElement.lang = lang;
@@ -174,16 +178,17 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     volume: hub.settings.display.volume,
     musicVolume: musicVolumeOf(hub.settings.display),
   });
+  life.onDispose(() => audio.dispose());
   const unlockAudio = (): void => audio.unlock();
-  window.addEventListener('keydown', unlockAudio);
-  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio, { signal });
+  window.addEventListener('pointerdown', unlockAudio, { signal });
 
   const stepper = new FixedStepper(1000 / TETRIS_TICK_HZ);
 
   // ── Экран ────────────────────────────────────────────────────────────
   refs.lid.style.setProperty('--lcd-aspect', `${SCREEN_WIDTH} / ${SCREEN_HEIGHT}`);
   refs.lid.style.setProperty('--lcd-bg', model.lcd.bg);
-  const screen = new TetrisScreen(refs.canvas, { glyph: model.glyph, panel: model.id === 'clock99' ? 'clock' : 'sea', ink: model.lcd.ink });
+  const screen = new TetrisScreen(refs.canvas, { glyph: model.glyph, panel: model.panel, ink: model.lcd.ink });
   let lastScene: TetrisScene | null = null;
   const glitch = new CableGlitch();
   let glitchLevel = 0;
@@ -203,12 +208,12 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
       applyGlitch(performance.now());
     }
   };
-  new ResizeObserver(resize).observe(refs.lcdWindow);
-  window.addEventListener('resize', resize);
+  life.observe(refs.lcdWindow, resize);
+  window.addEventListener('resize', resize, { signal });
   resize();
 
   // ── Внешний вид: цвет, сегменты, звук, вид, фон ─────────────────────────
-  let currentShell: Shell = shellFor(model, hub.settings.display.shell);
+  let currentShell: Shell = shellFor(model, carryIn?.shell ?? hub.settings.display.shell);
   const ghostOn = (): boolean => hub.settings.display.ghost ?? true;
   const applyDisplay = (): void => {
     const { display } = hub.settings;
@@ -328,6 +333,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   };
 
   const settingsDialog = new SettingsDialog(refs.settings, hub, {
+    signal,
     onOpen: openMenu,
     onClose: closeMenu,
     display: {
@@ -338,7 +344,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
       },
     },
   });
-  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, model);
+  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, model, signal);
 
   /** Навигация по настройкам с геймпада: вверх/вниз — фокус, подтвердить — нажатие, назад — закрыть. */
   function handleMenuInput(frame: InputFrame): void {
@@ -359,11 +365,12 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) suspend();
-  });
-  window.addEventListener('blur', suspend);
-  window.addEventListener('gamepadconnected', () => hub.poll());
-  window.addEventListener('gamepaddisconnected', () => hub.poll());
+  }, { signal });
+  window.addEventListener('blur', suspend, { signal });
+  window.addEventListener('gamepadconnected', () => hub.poll(), { signal });
+  window.addEventListener('gamepaddisconnected', () => hub.poll(), { signal });
   hub.attach();
+  life.onDispose(() => hub.detach());
 
   // ── Питание и кнопки корпуса ─────────────────────────────────────────
   const setSound = (on: boolean): void => {
@@ -410,7 +417,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     // TIME/GAME (часов в заглушке нет) ничего не делает, RESET начинает партию заново; игровых действий у них нет.
     onPress: (id) => {
       if (id !== 'fire') return false;
-      if (model.id === 'seabattle' && powered && bootTicks === 0) restartGame();
+      if (hasReset(model) && powered && bootTicks === 0) restartGame();
       return true;
     },
   });
@@ -425,12 +432,12 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     if (!id || event.repeat) return;
     event.preventDefault();
     toyPanel.hotkey(id, true);
-  });
+  }, { signal });
   window.addEventListener('keyup', (event) => {
     const id = hotkeys[event.code];
     if (id) toyPanel.hotkey(id, false);
-  });
-  refs.lidCover.addEventListener('click', () => setView('full'));
+  }, { signal });
+  refs.lidCover.addEventListener('click', () => setView('full'), { signal });
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
@@ -439,9 +446,9 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     if (active !== null && active !== document.body && active !== refs.lidCover) return;
     event.preventDefault();
     setView('full');
-  });
-  refs.cornerSettings.addEventListener('click', () => settingsDialog.open());
-  refs.cornerHelp.addEventListener('click', () => helpDialog.open());
+  }, { signal });
+  refs.cornerSettings.addEventListener('click', () => settingsDialog.open(), { signal });
+  refs.cornerHelp.addEventListener('click', () => helpDialog.open(), { signal });
   refs.cornerLang.addEventListener('click', (event) => {
     const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length] ?? 'ru';
     hub.updateSettings((s) => {
@@ -450,7 +457,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     setLang(next);
     applyLangUi();
     if (event.detail !== 0) refocusGame();
-  });
+  }, { signal });
   // Шлейф можно «зажать»: экран рассыпается и гаснет, пока его держат.
   const band = refs.toy.querySelector<HTMLElement>('.toy__band');
   if (band) {
@@ -464,13 +471,13 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
       band.setPointerCapture(event.pointerId);
       glitch.grab(performance.now());
       band.dataset['held'] = '';
-    });
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) band.addEventListener(type, letGo);
-    band.addEventListener('contextmenu', (event) => event.preventDefault());
-    window.addEventListener('blur', letGo);
+    }, { signal });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) band.addEventListener(type, letGo, { signal });
+    band.addEventListener('contextmenu', (event) => event.preventDefault(), { signal });
+    window.addEventListener('blur', letGo, { signal });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) letGo();
-    });
+    }, { signal });
   }
   // «Только экран»: кнопок корпуса нет, касание экрана включает игрушку и запускает или продолжает партию.
   refs.gameArea.addEventListener('pointerdown', () => {
@@ -478,7 +485,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     if (!powered) setPower(true);
     else if (game.phase === 'ready' || game.phase === 'over') emit(game.start());
     else if (game.phase === 'paused') emit(game.resume());
-  });
+  }, { signal });
 
   // ── Пульт справа и угловое меню ──────────────────────────────────────
   // Уровней у заглушки нет: девять плиток заперты, список карт недоступен, спидрана и музыки нет.
@@ -526,6 +533,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
     levelsDisabled: !model.levels,
     music: false,
     speedrun: false,
+    signal,
   });
   const corner = new CornerNav(
     { devices: refs.devices, theme: refs.cornerTheme },
@@ -539,6 +547,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
       },
       onPointerUse: refocusGame,
     },
+    signal,
   );
 
   // ── Светодиоды и данные для проверок ─────────────────────────────────
@@ -608,6 +617,7 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   };
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
+      if (life.disposed) return;
       delete document.body.dataset['booting'];
       enableMotion();
       refocusGame();
@@ -617,11 +627,10 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   window.addEventListener('resize', () => {
     document.body.dataset['motion'] = 'off';
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(enableMotion, 200);
-  });
+    resizeTimer = life.timeout(enableMotion, 200);
+  }, { signal });
 
   function frame(now: number): void {
-    requestAnimationFrame(frame);
     hub.poll();
     if (powered) stepper.advance(now, tick); // и пока открыты настройки: в такте ввод идёт в навигацию по диалогу
     toyPanel.sync(hub.tracker.down);
@@ -653,5 +662,9 @@ export async function startTetrisApp(toyId: ToyId): Promise<void> {
   }
 
   refocusGame();
-  requestAnimationFrame(frame);
+  life.loop(frame);
+  return {
+    dispose: () => life.dispose(),
+    carry: () => ({ view, shell: currentShell, powered }),
+  };
 }

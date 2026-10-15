@@ -60,7 +60,7 @@ test('RU/EN: кнопка в уголке переключает язык пан
   const ctl = page.locator('#side-ctl');
   await expect(ctl.getByRole('heading', { name: 'Control panel' })).toBeVisible();
   await expect(ctl.getByRole('heading', { name: 'Sound', exact: true })).toBeVisible();
-  await expect(ctl.getByRole('heading', { name: 'View', exact: true })).toBeVisible();
+  await expect(ctl.getByRole('heading', { name: 'Colour', exact: true })).toBeVisible();
   await expect(ctl.getByRole('heading', { name: 'Levels' })).toBeVisible();
   await expect(page.locator('#view-screen')).toHaveAccessibleName('Screen only');
   await expect(page.locator('#view-closed')).toHaveAccessibleName('Closed');

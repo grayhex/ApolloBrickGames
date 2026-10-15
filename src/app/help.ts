@@ -3,7 +3,8 @@ import { describeSource, type Bindings } from '../input/bindings';
 import { h } from './dom';
 import { getLang, onLangChange, rich, t, type MsgKey } from './i18n';
 import type { InputHub } from './hub';
-import { keyLabel, type ToyModel } from './toys';
+import { GAMES, type GameStatus } from '../games/catalog';
+import { engineOf, keyLabel, TOYS, type ToyModel } from './toys';
 import type { ToyKeyId } from './toy';
 
 export interface HelpRow {
@@ -46,6 +47,33 @@ export function helpRows(bindings: Bindings): HelpRow[] {
   ];
 }
 
+const STATUS_KEYS: Record<GameStatus, 'game.status.ready' | 'game.status.placeholder' | 'game.status.planned'> = {
+  ready: 'game.status.ready',
+  placeholder: 'game.status.placeholder',
+  planned: 'game.status.planned',
+};
+
+/** Раздел «Игры на устройстве»: набор игр консоли по наклейке или упаковке и состояние каждой. */
+export function gamesSection(model: ToyModel): HTMLElement {
+  const lang = getLang();
+  const rows = model.games.map((game) =>
+    h(
+      'li',
+      { class: 'games__row', 'data-game': game.id, 'data-status': game.status },
+      h('b', { class: 'games__name' }, game.variants ? `${game.label} (${game.variants})` : game.label),
+      h('span', { class: 'games__note' }, `${GAMES[game.id].names[lang]} — ${t(STATUS_KEYS[game.status])}`),
+    ),
+  );
+  return h(
+    'section',
+    { class: 'settings__section help__games', id: 'device-games' },
+    h('h3', {}, t('help.games.h')),
+    h('p', { class: 'help__text' }, t('help.games.p')),
+    h('ul', { class: 'games' }, ...rows),
+    ...(model.gamesCount ? [h('p', { class: 'help__text' }, t('help.games.count', { n: model.gamesCount }))] : []),
+  );
+}
+
 /** Таблица кнопок игрушки с тетрисом («Часы+99», «Морской бой»): подписи напечатаны на корпусе, действия — у заглушки. */
 export function toyHelpRows(model: ToyModel, bindings: Bindings): HelpRow[] {
   const order: ToyKeyId[] = ['onoff', 'sp', 'sound', 'fire', 'left', 'right', 'up', 'down', 'jump'];
@@ -77,24 +105,32 @@ export class HelpDialog {
   private readonly dialog: HTMLDialogElement;
   private readonly hub: InputHub;
   private readonly options: HelpDialogOptions;
+  /** Игрушка, о которой справка (по умолчанию Crocodile Mario). */
+  private readonly model: ToyModel;
   /** Игрушка с тетрисом: у справки свои кнопки и текст, раздела об оригинальном устройстве Crocodile Mario нет. */
   private readonly toy: ToyModel | null;
 
-  constructor(dialog: HTMLDialogElement, hub: InputHub, options: HelpDialogOptions, toy: ToyModel | null = null) {
+  /** `signal` — когда игрушка на странице меняется на другую, прежние обработчики снимаются (диалог остаётся тем же элементом страницы). */
+  constructor(dialog: HTMLDialogElement, hub: InputHub, options: HelpDialogOptions, model: ToyModel = TOYS.mario, signal?: AbortSignal) {
     this.dialog = dialog;
     this.hub = hub;
     this.options = options;
-    this.toy = toy !== null && toy.game === 'tetris' ? toy : null;
-    dialog.addEventListener('close', () => this.options.onClose());
+    this.model = model;
+    this.toy = engineOf(model) === 'tetris' ? model : null;
+    dialog.addEventListener('close', () => this.options.onClose(), { signal });
     // Esc: закрыть сразу и вернуть фокус игре в том же событии, а не после `close` (браузер сперва возвращает его на кнопку-опенер).
-    dialog.addEventListener('cancel', (event) => {
-      event.preventDefault();
-      this.close();
-    });
+    dialog.addEventListener(
+      'cancel',
+      (event) => {
+        event.preventDefault();
+        this.close();
+      },
+      { signal },
+    );
     // Открытая справка переписывается на лету, когда меняется язык.
     onLangChange(() => {
       if (this.dialog.open) this.render();
-    });
+    }, signal);
   }
 
   get isOpen(): boolean {
@@ -132,6 +168,7 @@ export class HelpDialog {
       h('h2', { id: 'help-title' }, t('help.title')),
       h('section', { class: 'settings__section' }, h('h3', {}, t(this.toy ? 'help.t.how.h' : 'help.how.h')), h('p', { class: 'help__text' }, ...rich(t(this.toy ? 'help.t.how.p' : 'help.how.p')))),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.keys.h')), table),
+      gamesSection(this.model),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t(this.toy ? 'help.t.pointer.p' : 'help.pointer.p'))),
       ...(this.toy
         ? []

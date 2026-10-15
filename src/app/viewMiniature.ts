@@ -124,7 +124,7 @@ export function miniView(view: View, toy: ToyId = 'mario'): SVGSVGElement {
       lid.append(art);
     } else {
       lid.append(svg('path', { d: 'M240 86V354M247 118h58M247 258h58M247 296h58', fill: 'none', stroke: model.lcd.ink, 'stroke-opacity': '.25', 'stroke-width': '3' }));
-      if (toy === 'clock99') for (const x of [55, 345]) lid.append(svg('path', { d: `M${x} 120q-9 16 0 32t0 32t0 32m0 40q-9 16 0 32t0 32`, fill: 'none', stroke: 'var(--rim)', 'stroke-width': '3' }));
+      if (model.deco === 'flourish') for (const x of [55, 345]) lid.append(svg('path', { d: `M${x} 120q-9 16 0 32t0 32t0 32m0 40q-9 16 0 32t0 32`, fill: 'none', stroke: 'var(--rim)', 'stroke-width': '3' }));
     }
     root.append(lid);
     if (view === 'full') {
