@@ -44,8 +44,9 @@ describe('основной пакет и песочница sandbox-room: дан
   const room = levelOf(pack, SANDBOX_ID) as LevelDef;
 
   it('в пакете страницы девять уровней MARIO (первый — стартовый) и тестовый уровень по видео; песочница sandbox-room — только в тестах, без переходов и объектов, с пометкой «не оригинальный уровень»', () => {
-    expect(loadRoomPack().levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'custom-1']);
-    expect(pack.levels.map((l) => l.id)).toEqual([...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), 'tunnel-run', 'custom-1', SANDBOX_ID]);
+    const ids = [...Array.from({ length: 9 }, (_, i) => `mario-${i + 1}`), ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `mario-${n}-${n % 2 === 1 ? 'boss' : 'bonus'}`), 'tunnel-run', 'custom-1']; // за девятью — комнаты колодцев
+    expect(loadRoomPack().levels.map((l) => l.id)).toEqual(ids);
+    expect(pack.levels.map((l) => l.id)).toEqual([...ids, SANDBOX_ID]);
     expect(pack.manifest.firstLevel).toBe('mario-1');
     expect(room.id).toBe(SANDBOX_ID);
     expect(room.status).toBe('demo');

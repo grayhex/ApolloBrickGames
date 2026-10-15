@@ -3,8 +3,9 @@
  * Обзорный снимок девяти уровней MARIO: каждый уровень — полоса из клеток (6 рядов × ширина), без графики игры.
  * Запуск: node tools/levels/overview.mjs  → docs/screenshots/levels-overview.png
  *
- * Цвета: тёмный — твёрдая клетка; светло-красный — провал (опасная область); розовый — сердце; оранжевый — малый враг и его размах;
- * красно-оранжевый — большой враг и размах; зелёный — финиш; синий — стартовая крышка. Пробиваемый блок-крышка и герой показаны синим.
+ * Цвета: тёмный — твёрдая клетка; светло-красный — провал (опасная область); розовый — сердце; оранжевый — малый чёрт и его размах;
+ * бирюзовый — вход в колодец (на дне щели между трубами; в щели сердце); зелёный — финиш; синий — стартовая крышка. Пробиваемый блок-крышка
+ * и герой показаны синим. Большие черти и бонусные сердца живут только в комнатах колодцев (mario-N-boss/-bonus) и на обзоре не показаны.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
@@ -22,8 +23,7 @@ const COLORS = {
   heart: [226, 90, 140],
   small: [240, 170, 70],
   smallRange: [250, 224, 176],
-  big: [214, 70, 40],
-  bigRange: [246, 200, 186],
+  well: [30, 160, 170],
   finish: [60, 160, 90],
   lid: [70, 110, 200],
   grid: [226, 228, 212],
@@ -48,12 +48,13 @@ levels.forEach((level, n) => {
     if (o.type === 'hazard') for (let x = o.x; x < o.x + o.w; x++) for (let y = o.y; y < o.y + o.h; y++) cell(n, x, y, COLORS.pit);
     if (o.type === 'patroller') {
       const r = o.params.range ?? 0;
-      cell(n, o.x - r, o.y, o.w === 2 ? COLORS.bigRange : COLORS.smallRange, o.w + 2 * r, o.h);
+      cell(n, o.x - r, o.y, COLORS.smallRange, o.w + 2 * r, o.h);
     }
   }
   for (let y = 0; y < level.height; y++) for (let x = 0; x < level.width; x++) if (level.rows[y][x] === '#') cell(n, x, y, COLORS.solid);
   for (const o of level.objects) {
-    if (o.type === 'patroller') cell(n, o.x, o.y, o.w === 2 ? COLORS.big : COLORS.small, o.w, o.h);
+    if (o.type === 'patroller') cell(n, o.x, o.y, COLORS.small, o.w, o.h);
+    else if (o.type === 'sewer') cell(n, o.x, o.y, COLORS.well);
     else if (o.type === 'pickup') cell(n, o.x, o.y, COLORS.heart);
     else if (o.type === 'finish') cell(n, o.x, o.y, COLORS.finish);
     else if (o.type === 'brick') cell(n, o.x, o.y, COLORS.lid);

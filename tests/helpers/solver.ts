@@ -27,6 +27,8 @@ export interface SolveOptions {
   enemies: boolean;
   /** Предел числа разобранных состояний. */
   maxNodes?: number;
+  /** Что считать целью: прохождение уровня (по умолчанию) или выход из комнаты-колодца (`exit`). */
+  goal?: 'level' | 'room';
 }
 
 export interface SolveResult {
@@ -84,7 +86,7 @@ function keyOf(s: GameState, fresh: number, enemies: boolean): string {
   for (const o of s.objects) {
     // Хрупкие и сменные объекты (крышка ямы, враги) меняются; сердца и опасные области на ход героя не влияют.
     if (o.id === 'lid') key += o.active ? 'L' : 'l';
-    else if (enemies && /^[eb]\d/.test(o.id) && Math.abs(o.x - h.x) <= NEAR_ENEMY) key += `|${o.id}:${o.x},${o.y},${o.dir},${o.timer}${o.active ? '' : 'x'}`;
+    else if (enemies && /^(?:[eb]\d|boss)/.test(o.id) && Math.abs(o.x - h.x) <= NEAR_ENEMY) key += `|${o.id}:${o.x},${o.y},${o.dir},${o.timer}${o.active ? '' : 'x'}`;
   }
   return key;
 }
@@ -111,8 +113,13 @@ export function enteredGame(pack: ContentPack, levelId: string, enemies: boolean
   return { game, ticks };
 }
 
+/** Событие — достижение цели: финиш уровня `levelId` или выход из комнаты. */
+function reached(event: { type: string; levelId?: string }, goal: 'level' | 'room', levelId: string): boolean {
+  return goal === 'room' ? event.type === 'roomLeft' : event.type === 'levelCompleted' && event.levelId === levelId;
+}
+
 export function solveLevel(pack: ContentPack, levelId: string, options: SolveOptions): SolveResult {
-  const { enemies, maxNodes = 600_000 } = options;
+  const { enemies, maxNodes = 600_000, goal = 'level' } = options;
   const { game, ticks: entryTicks } = enteredGame(pack, levelId, enemies);
   const width = pack.levels.find((l) => l.id === levelId)?.width ?? 0;
 
@@ -142,13 +149,14 @@ export function solveLevel(pack: ContentPack, levelId: string, options: SolveOpt
       const events = game.step(CHOICES[c] as InputFrame);
       const fresh = press ? 0 : Math.min(MIN_PRESS_GAP, node.fresh + 1);
       const next: Node = { state: game.state, parent: node, choice: c, depth: node.depth + 1, fresh };
-      if (events.some((e) => e.type === 'levelCompleted' && e.levelId === levelId)) {
+      if (events.some((e) => reached(e, goal, levelId))) {
         const frames: InputFrame[] = [];
         for (let n: Node | null = next; n && n.parent; n = n.parent) frames.push(CHOICES[n.choice] as InputFrame);
         frames.reverse();
         return { solved: true, frames, ticks: entryTicks + frames.length, expanded, bestX: width };
       }
       if (game.state.phase !== 'playing') continue; // гибель (яма, враг, опасная область) — ветка закрыта
+      if (game.state.levelId !== levelId) continue; // герой упал в колодец: это не прохождение уровня, ветка закрыта
       const key = keyOf(game.state, fresh, enemies);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -162,12 +170,19 @@ export function solveLevel(pack: ContentPack, levelId: string, options: SolveOpt
 }
 
 /** Проигрывает найденное решение заново с чистого старта и сообщает, дошёл ли герой до финиша. */
-export function replaySolution(pack: ContentPack, levelId: string, enemies: boolean, frames: readonly InputFrame[]): boolean {
+export function replaySolution(
+  pack: ContentPack,
+  levelId: string,
+  enemies: boolean,
+  frames: readonly InputFrame[],
+  goal: 'level' | 'room' = 'level',
+): boolean {
   const { game } = enteredGame(pack, levelId, enemies);
   for (const frame of frames) {
     const events = game.step(frame);
-    if (events.some((e) => e.type === 'levelCompleted' && e.levelId === levelId)) return true;
+    if (events.some((e) => reached(e, goal, levelId))) return true;
     if (game.state.phase !== 'playing') return false;
+    if (game.state.levelId !== levelId) return false; // решение не должно проходить через колодец
   }
   return false;
 }

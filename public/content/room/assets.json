@@ -516,6 +516,52 @@
         "anchor": "cell-center"
       }
     },
+    "cell.devil": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_devil.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "frames": 1,
+      "frameTicks": 1,
+      "fallbackGlyph": "patroller",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "Сегменты фона той же маски (tools/sprites/compose_atlas.py); видео геймплея, docs/video-observations.md §11",
+          "public/graphics/lcd/lcd_devil.png"
+        ],
+        "note": "Малый чёрт: включены только сегменты фона клетки, сегменты фигурки погашены — «негатив» героя (на видео геймплея два тёмных пятна сверху, светлая полоса, тёмная полоса снизу). Реконструкция по макрофото и видео; контуры приблизительные.",
+        "anchor": "cell-center"
+      }
+    },
+    "cell.devil_big": {
+      "kind": "image",
+      "src": "../../graphics/lcd/lcd_devil_big.png",
+      "frameWidth": 128,
+      "frameHeight": 112,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "frames": 1,
+      "frameTicks": 1,
+      "fallbackGlyph": "patroller",
+      "mirrorWhenLeft": false,
+      "provenance": {
+        "status": "draft",
+        "sources": [
+          "Сегменты фона и сердце той же маски (tools/sprites/compose_atlas.py); видео геймплея, docs/video-observations.md §11",
+          "public/graphics/lcd/lcd_devil_big.png"
+        ],
+        "note": "Клетка большого чёрта 2 × 2: тот же фон и включено центральное сердце — по одному чёрному «глазу» в каждой клетке (видео геймплея, 202–214 с). Реконструкция; контуры приблизительные.",
+        "anchor": "cell-center"
+      }
+    },
     "hud.time": {
       "kind": "image",
       "src": "../../graphics/lcd/hud_time.svg",

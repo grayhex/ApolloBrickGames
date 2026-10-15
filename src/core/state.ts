@@ -45,6 +45,17 @@ export interface StateMeta {
   contentVersion: number;
 }
 
+/**
+ * Отложенный уровень: герой упал в колодец (`sewer`) и сидит в комнате; пока он там, уровень, из которого он упал, ждёт — с теми же
+ * сердцами, врагами и блоками, что были. Выход из комнаты (`exit`) возвращает героя в клетку (`x`, `y`) этого уровня.
+ */
+export interface SectionStash {
+  levelId: string;
+  objects: ObjectState[];
+  x: number;
+  y: number;
+}
+
 /** Всё состояние симуляции — простые данные, сериализуется через JSON. */
 export interface GameState {
   stateVersion: 1;
@@ -61,6 +72,8 @@ export interface GameState {
   projectiles: ProjectileState[];
   nextProjectileId: number;
   objects: ObjectState[];
+  /** Уровень, отложенный на время визита в комнату-колодец (null — героя нет ни в какой комнате). */
+  stash: SectionStash | null;
   score: number;
   lives: number;
   timerTicks: number;
@@ -92,6 +105,10 @@ export type GameEventBody =
   | { type: 'bump'; x: number; y: number }
   | { type: 'death'; cause: DeathCause; x: number; y: number }
   | { type: 'levelCompleted'; levelId: string; next: string | null }
+  /** Герой упал в колодец и оказался в комнате `levelId` (из уровня `from`). Прохождение уровня при этом не засчитывается. */
+  | { type: 'roomEntered'; levelId: string; from: string }
+  /** Герой вышел из комнаты: `levelId` — уровень, в который он вернулся (пусто, если комната запущена сама по себе), `from` — комната. */
+  | { type: 'roomLeft'; levelId: string; from: string }
   | { type: 'gameOver' }
   | { type: 'gameCompleted' }
   /** Герой наступил сверху на врага (`targetId`): враг уничтожен, очки начислены. */

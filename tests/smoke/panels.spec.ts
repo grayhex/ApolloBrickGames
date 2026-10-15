@@ -89,11 +89,12 @@ test('слева справка, справа пульт; панели отод�
   }
   await expect(info.locator('.facts li')).toHaveCount(3);
   await expect(info.locator('.hazard')).toHaveCount(5); // река, чёрт, огненный дракон, ракета, железные ворота
-  // «Figure introduction» с упаковки: 12 фигур, нарисованных теми же LCD-ячейками, что и игра.
-  await expect(info.locator('#figures .fig')).toHaveCount(12);
+  // «Figure introduction» с упаковки: 11 фигур (Heart и Bullet — одна: выстрел рисуется тем же сердечком), нарисованных теми же LCD-ячейками, что и игра.
+  await expect(info.locator('#figures .fig')).toHaveCount(11);
+  await expect(info.locator('#figures .fig__dot')).toHaveCount(0);
   // Названия фигур — по-английски, как на упаковке, и при русском интерфейсе.
   await expect(info.locator('#figures .fig__name')).toHaveText([
-    'Mario', 'Heart', 'Small devil', 'Big devil', 'Missile', 'Fiery dragon', 'Bullet', 'Iron gate', 'Extension bridge', 'Sewer', 'Volcano', 'Tetris',
+    'Mario', 'Heart / Bullet', 'Small devil', 'Big devil', 'Missile', 'Fiery dragon', 'Iron gate', 'Extension bridge', 'Sewer', 'Volcano', 'Tetris',
   ]);
   await expect(info.locator('#figures .spr').first()).toBeVisible();
   await expect(info.locator('.score__row')).toHaveText([/Heart.*100/, /Small devil.*200.*20/, /Big devil.*400/]);
@@ -203,6 +204,7 @@ test('пульт: звук следует за SOUND, музыка, сегмен
 test('вид игрушки не запоминается: после перезагрузки она закрыта', async ({ page }) => {
   await page.goto('./?view=screen');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready'); // не уходить со страницы, пока грузится пакет: оборванный запрос — лишняя ошибка в консоли
   await page.goto('./');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
   await expect(page.locator('#view-closed')).toHaveAttribute('aria-pressed', 'true');

@@ -193,6 +193,67 @@ test('?view=closed и ?view=screen задают вид явно; включён�
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
 });
 
+test.describe('загрузка страницы', () => {
+  // Пока данные грузятся, страница спрятана; первый показанный кадр — сразу финишный вид, а не промежуточный (открытая игрушка,
+  // пустые панели, потом закрытая): раньше на секунду была видна полная игра.
+  for (const [query, view] of [
+    ['', 'closed'],
+    ['?view=screen&power=on', 'screen'],
+    ['?view=full', 'full'],
+  ] as const) {
+    test(`с первого показанного кадра виден финишный вид «${view}» (${query || 'по умолчанию'})`, async ({ page }) => {
+      await page.route('**/content/room/**', async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await route.continue();
+      });
+      await page.addInitScript(() => {
+        interface Row {
+          view: string | undefined;
+          closed: boolean;
+          infoKids: number;
+          ctlKids: number;
+        }
+        const shown: Row[] = [];
+        (window as unknown as { __shown: Row[] }).__shown = shown;
+        const sample = (): void => {
+          const shell = document.querySelector('.shell');
+          const toy = document.getElementById('toy');
+          if (shell && toy && getComputedStyle(shell).visibility !== 'hidden') {
+            shown.push({
+              view: toy.dataset['view'],
+              closed: toy.hasAttribute('data-closed'),
+              infoKids: document.getElementById('side-info')?.childElementCount ?? 0,
+              ctlKids: document.getElementById('side-ctl')?.childElementCount ?? 0,
+            });
+          }
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+      await page.goto(`./${query}`, { waitUntil: 'commit' });
+      await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
+      await page.waitForTimeout(300);
+      const shown = await page.evaluate(() => (window as unknown as { __shown: { view: string; closed: boolean; infoKids: number; ctlKids: number }[] }).__shown);
+      expect(shown.length).toBeGreaterThan(5);
+      for (const row of shown) {
+        expect(row.view).toBe(view);
+        expect(row.closed).toBe(view === 'closed');
+        expect(row.infoKids).toBeGreaterThan(0); // панели уже заполнены
+        expect(row.ctlKids).toBeGreaterThan(0);
+      }
+      await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
+    });
+  }
+
+  test('сбой запуска показывает страницу с блоком ошибки, а не пустой экран', async ({ page }) => {
+    await page.route('**/content/room/pack.json', (route) => route.fulfill({ status: 404, body: 'нет' }));
+    await page.goto('./');
+    await expect(page.locator('#fatal')).toBeVisible();
+    await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
+    (page as Page & { __errors?: string[] }).__errors?.splice(0); // ошибки загрузки здесь ожидаемы
+  });
+});
+
 test.describe('раскрытие с анимацией', () => {
   test.use({ reducedMotion: 'no-preference' });
 
@@ -250,7 +311,9 @@ test.describe('раскрытие с анимацией', () => {
       await page.waitForTimeout(55);
     }
     for (const p of pivots) {
-      expect(p.gap).toBeLessThan(3);
+      // Сложенная крышка лежит чуть ниже линии шарнира (на 4,3 % своей высоты, чтобы втулки выглядывали из-за её кромки, а стояли на месте):
+      // это расстояние сходит на нет к концу поворота; ось поворота не должна уходить дальше.
+      expect(p.gap).toBeLessThan(p.height * 0.045 + 3);
       expect(p.transforms).toBeLessThanOrEqual(1); // один переход, а не цепочка перезапусков
     }
     expect(pivots.some((p) => p.slot > 30 && p.slot < p.height - 30)).toBe(true); // проверены и промежуточные кадры
@@ -291,6 +354,66 @@ test.describe('раскрытие с анимацией', () => {
     }
     expect(back.some((v) => v > 20 && v < open.slot * 0.9)).toBe(true);
     await expect.poll(async () => (await frame()).slot, { timeout: 3000 }).toBeLessThan(4);
+  });
+
+  test('шарнир и шлейф не двигаются сами по себе: стоят на месте и появляются сразу, а не вырастают и не доезжают', async ({ page }) => {
+    await load(page);
+    interface Row {
+      knuckle: number;
+      band: number;
+      hinge: number;
+      opacity: number;
+      visibility: string;
+    }
+    // По кадрам перехода: положение втулки и шлейфа относительно верха нижней половины и высота шарнира — в долях ширины игрушки
+    // (она меняется по ходу перехода), прозрачность шлейфа и видимость шарнира.
+    const sample = (selector: string): Promise<Row[]> =>
+      page.evaluate(
+        (click) =>
+          new Promise<Row[]>((resolve) => {
+            const toy = document.getElementById('toy') as HTMLElement;
+            const base = document.getElementById('base') as HTMLElement;
+            const hinge = toy.querySelector('.toy__hinge') as HTMLElement;
+            const knuckle = toy.querySelector('.toy__knuckle') as HTMLElement;
+            const band = toy.querySelector('.toy__band') as HTMLElement;
+            const rows: Row[] = [];
+            const start = performance.now();
+            (document.querySelector(click) as HTMLElement).click();
+            const tick = (): void => {
+              const w = toy.getBoundingClientRect().width;
+              const baseTop = base.getBoundingClientRect().top;
+              rows.push({
+                knuckle: (knuckle.getBoundingClientRect().top - baseTop) / w,
+                band: (band.getBoundingClientRect().top - baseTop) / w,
+                hinge: hinge.getBoundingClientRect().height / w,
+                opacity: Number(getComputedStyle(band).opacity),
+                visibility: getComputedStyle(hinge).visibility,
+              });
+              if (performance.now() - start < 1900) requestAnimationFrame(tick);
+              else resolve(rows);
+            };
+            requestAnimationFrame(tick);
+          }),
+        selector,
+      );
+    const spread = (rows: Row[], key: 'knuckle' | 'band' | 'hinge'): number => Math.max(...rows.map((r) => r[key])) - Math.min(...rows.map((r) => r[key]));
+    for (const selector of ['#lid-cover', '#view-screen', '#view-full', '#view-closed']) {
+      const rows = await sample(selector);
+      expect(rows.length).toBeGreaterThan(20);
+      // Втулка, шлейф и сам шарнир не сдвигаются и не меняют размер относительно корпуса ни на кадр (допуск — округление).
+      expect(spread(rows, 'knuckle'), `втулка при ${selector}`).toBeLessThan(0.004);
+      expect(spread(rows, 'band'), `шлейф при ${selector}`).toBeLessThan(0.004);
+      expect(spread(rows, 'hinge'), `шарнир при ${selector}`).toBeLessThan(0.004);
+      // Шлейф не проявляется плавно: за переход он либо включается, либо выключается сразу.
+      for (const row of rows) expect([0, 1], `прозрачность шлейфа при ${selector}`).toContain(row.opacity);
+      // Видимость шарнира меняется не больше одного раза за переход.
+      let switches = 0;
+      rows.forEach((row, i) => {
+        if (i > 0 && row.visibility !== rows[i - 1]!.visibility) switches += 1;
+      });
+      expect(switches).toBeLessThanOrEqual(1);
+      await page.waitForTimeout(200);
+    }
   });
 
   test('при смене вида боковые панели стоят на месте, страница не прокручивается и не меняет ширину', async ({ page }) => {

@@ -6,6 +6,11 @@
       контактный лист: `число` кадров LCD, начиная с `от`, через `шаг` секунд (подписи времени)
   python3 gameplay_enemies.py timer out_dir от шаг число out.png
       полоса HUD (поле таймера TIME …) крупно: единицы таймера читаются глазами (методика §10 docs/video-observations.md)
+  python3 gameplay_enemies.py cells out_dir out.png время:столбец:ряд [время:столбец:ряд ...]
+      вырезки отдельных клеток LCD (8× растяжение контраста): как выглядят герой, сердце, малый и большой чёрт, блок (раздел 11 docs/video-observations.md);
+      столбцы 0–12, ряды 0–5, например: 207.3:5:4 (герой) 209.1:9:1 (клетка большого чёрта) 126.0:6:2 (малый чёрт) 209.1:6:5 (блок)
+  python3 gameplay_enemies.py spots out_dir от до
+      тёмные пятна 8–260 px и их положение внутри клетки (доли ширины и высоты) — по ним определяется, какой сегмент горит (центр клетки ≈ 0,5; 0,45)
   python3 gameplay_enemies.py big out_dir от до
       большой чёрт 2 × 2: левый верхний угол кластера (столбец, ряд) на экране по тёмным «глазам» клеток (чёрные пятна 10–150 px)
       и положение героя (столбец) — построчно, только когда что-то поменялось
@@ -121,6 +126,41 @@ def track_big(lcd, times, t0, t1):
             prev = state
 
 
+def cells_sheet(lcd, times, specs, out, scale=8):
+    """Вырезки клеток: окно клетки плюс 4 px вокруг; контраст растягивается по кадру целиком (чтобы бледные сегменты не терялись)."""
+    tiles = []
+    for spec in specs:
+        t, col, row = spec.split(':')
+        i = index_at(times, float(t))
+        x0, y0 = int(round(X0 + int(col) * PX - 4)), int(round(Y0 + int(row) * PY - 4))
+        img = lcd[i].astype(np.float32)
+        lo, hi = np.percentile(img, 1), np.percentile(img, 60)
+        crop = np.clip((img[max(0, y0):y0 + int(PY) + 8, max(0, x0):x0 + int(PX) + 8] - lo) / (hi - lo + 1e-6), 0, 1) * 255
+        tile = Image.fromarray(crop.astype(np.uint8)).resize((crop.shape[1] * scale, crop.shape[0] * scale), Image.LANCZOS)
+        ImageDraw.Draw(tile).text((4, 2), spec, fill=0)
+        tiles.append(tile)
+    width = sum(t.width for t in tiles) + 10 * len(tiles)
+    sheet = Image.new('L', (width, max(t.height for t in tiles)), 40)
+    x = 0
+    for tile in tiles:
+        sheet.paste(tile, (x, 0))
+        x += tile.width + 10
+    sheet.save(out)
+
+
+def spots(lcd, times, t0, t1):
+    """Пятна по кадрам: клетка и положение пятна внутри неё (доли). Центральное сердце — около (0,5; 0,45)."""
+    for i in range(int(np.searchsorted(times, t0)), int(np.searchsorted(times, t1))):
+        d = dark(lcd[i])
+        n, _, st, cen = cv2.connectedComponentsWithStats((d > 42).astype(np.uint8), 8)
+        found = []
+        for k in range(1, n):
+            if 8 <= st[k][4] <= 260 and 44 < cen[k][1] < 180:  # выше 44 px — строка HUD
+                col, row = (cen[k][0] - X0) / PX, (cen[k][1] - Y0) / PY
+                found.append('(%d,%d)@%.2f,%.2f' % (int(col), int(row), col % 1, row % 1))
+        print('%.1f %s' % (times[i], ' '.join(found)))
+
+
 def main():
     if len(sys.argv) < 4:
         print(__doc__)
@@ -136,6 +176,10 @@ def main():
         timer_strip(lcd, times, float(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
     elif command == 'big':
         track_big(lcd, times, float(sys.argv[3]), float(sys.argv[4]))
+    elif command == 'cells':
+        cells_sheet(lcd, times, sys.argv[4:], sys.argv[3])
+    elif command == 'spots':
+        spots(lcd, times, float(sys.argv[3]), float(sys.argv[4]))
     else:
         print(__doc__)
 

@@ -129,6 +129,7 @@ export class Game implements SimApi {
 
   static restore(ctx: GameContext, json: string): Game {
     const state = JSON.parse(json) as GameState;
+    state.stash ??= null; // сохранения до колодцев не знали о комнатах
     const { meta } = state;
     if (
       state.stateVersion !== 1 ||
@@ -193,6 +194,44 @@ export class Game implements SimApi {
     }
   }
 
+  enterRoom(objectId: string, returnAt: { x: number; y: number }): void {
+    const s = this.state;
+    const parent = this.level;
+    const roomId = parent.transitions.get(objectId);
+    if (!roomId || s.stash) return; // перехода нет или герой уже в комнате
+    const room = this.levelById(roomId);
+    const index = parent.def.objects.findIndex((o) => o.id === objectId);
+    const trigger = s.objects[index];
+    if (trigger) trigger.active = false; // колодец закрывается: повторно в него не упасть
+    s.stash = { levelId: parent.def.id, objects: s.objects, x: returnAt.x, y: returnAt.y };
+    s.levelId = roomId;
+    s.hero = this.newHero(room);
+    s.objects = this.newObjects(room);
+    s.projectiles = [];
+    s.inWell = false;
+    this.serial += 1;
+    this.emit({ type: 'roomEntered', levelId: roomId, from: parent.def.id });
+  }
+
+  leaveRoom(): void {
+    const s = this.state;
+    const stash = s.stash;
+    const roomId = s.levelId;
+    if (!stash) {
+      this.emit({ type: 'roomLeft', levelId: '', from: roomId });
+      return;
+    }
+    const parent = this.levelById(stash.levelId);
+    s.levelId = stash.levelId;
+    s.objects = stash.objects;
+    s.stash = null;
+    s.hero = { ...this.newHero(parent), x: stash.x, y: stash.y };
+    s.projectiles = [];
+    s.inWell = false;
+    this.serial += 1;
+    this.emit({ type: 'roomLeft', levelId: stash.levelId, from: roomId });
+  }
+
   isBlockedForObject(x: number, y: number): boolean {
     const level = this.level;
     if (x < 0 || y < 0 || x >= level.width || y >= level.height) return true;
@@ -222,6 +261,7 @@ export class Game implements SimApi {
       projectiles: [],
       nextProjectileId: 1,
       objects: this.newObjects(level),
+      stash: null,
       score: 0,
       lives: ctx.rules.params.lives,
       timerTicks: ctx.rules.params.timerLimitTicks,
@@ -272,6 +312,7 @@ export class Game implements SimApi {
     const level = this.levelById(levelId);
     const s = this.state;
     s.levelId = levelId;
+    s.stash = null;
     s.hero = this.newHero(level);
     s.objects = this.newObjects(level);
     s.projectiles = [];
@@ -291,7 +332,7 @@ export class Game implements SimApi {
   private afterDeath(): void {
     const s = this.state;
     if (s.lives > 0) {
-      this.enterSection(s.levelId);
+      this.enterSection(s.stash ? s.stash.levelId : s.levelId); // погиб в комнате — уровень с начала, как при любой гибели
       this.setPhase('ready');
     } else {
       this.setPhase('gameOver');

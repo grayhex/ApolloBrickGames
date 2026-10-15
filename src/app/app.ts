@@ -139,7 +139,11 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
 
   // Вид страницы: игрушка (комната, клип) или техническая страница. `?debug` возвращает панели разработчика.
   document.body.dataset['chrome'] = route.lid ? 'toy' : 'tech';
-  if (new URLSearchParams(window.location.search).has('debug')) document.body.dataset['debug'] = '';
+  if (new URLSearchParams(window.location.search).has('debug')) {
+    document.body.dataset['debug'] = '';
+    // Отладка (`?debug`): текущая игра ядра доступна из консоли и тестов как `window.__game` (телепорт героя, проверка состояния) — продукт её не использует.
+    Object.defineProperty(window, '__game', { configurable: true, get: () => game });
+  }
   if (!route.lid) document.title = 'Crocodile Mario — движок (демо)';
 
   // Подписи маршрута ставятся до загрузки данных, чтобы страница не «мигала».
@@ -248,6 +252,7 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
           applyDisplay();
         }
       }
+      if (event.type === 'roomEntered' || event.type === 'roomLeft') snapCamera = true; // колодец: другой экран, камера сразу на героя
       speedrun.onEvent(event, game.state.worldTick);
       const world = effectsWorld(ctx, game.state);
       if (world) effects.onEvent(event, world);
@@ -629,7 +634,15 @@ export async function startApp(routeName: 'room' | 'tech'): Promise<void> {
   const enableMotion = (): void => {
     delete document.body.dataset['motion'];
   };
-  requestAnimationFrame(() => requestAnimationFrame(enableMotion));
+  // Страница прячется (`data-booting`, см. стиль), пока данные не загружены, панели не заполнены, а первый кадр не нарисован, — сразу видно
+  // финишный вид, а не промежуточный (открытая игрушка и пустые панели). Показывается со вторым кадром, потом включаются переходы.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      delete document.body.dataset['booting'];
+      enableMotion();
+      refocusGame();
+    }),
+  );
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener('resize', () => {
     document.body.dataset['motion'] = 'off';

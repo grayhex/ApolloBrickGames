@@ -1,0 +1,630 @@
+{
+  "schemaVersion": 1,
+  "id": "mario-2-bonus",
+  "status": "demo",
+  "hudLabel": "1-02",
+  "note": "Комната колодца уровня 1-02: поле заполнено бонусными сердцами, которые можно просто собрать (по подсказке владельца вместо босса; в видео такой комнаты нет). Выход — правый край.",
+  "width": 13,
+  "height": 6,
+  "legend": {
+    ".": {
+      "collision": "empty"
+    },
+    "#": {
+      "collision": "solid",
+      "asset": "cell.obstacle"
+    }
+  },
+  "rows": [
+    ".............",
+    ".............",
+    ".............",
+    ".............",
+    ".............",
+    "#############"
+  ],
+  "start": {
+    "x": 2,
+    "y": 0
+  },
+  "objects": [
+    {
+      "id": "exit",
+      "type": "exit",
+      "x": 12,
+      "y": 0,
+      "w": 1,
+      "h": 5,
+      "params": {}
+    },
+    {
+      "id": "h1-0",
+      "type": "pickup",
+      "x": 0,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-1",
+      "type": "pickup",
+      "x": 1,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-2",
+      "type": "pickup",
+      "x": 2,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-3",
+      "type": "pickup",
+      "x": 3,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-4",
+      "type": "pickup",
+      "x": 4,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-5",
+      "type": "pickup",
+      "x": 5,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-6",
+      "type": "pickup",
+      "x": 6,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-7",
+      "type": "pickup",
+      "x": 7,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-8",
+      "type": "pickup",
+      "x": 8,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-9",
+      "type": "pickup",
+      "x": 9,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-10",
+      "type": "pickup",
+      "x": 10,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h1-11",
+      "type": "pickup",
+      "x": 11,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-0",
+      "type": "pickup",
+      "x": 0,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-1",
+      "type": "pickup",
+      "x": 1,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-2",
+      "type": "pickup",
+      "x": 2,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-3",
+      "type": "pickup",
+      "x": 3,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-4",
+      "type": "pickup",
+      "x": 4,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-5",
+      "type": "pickup",
+      "x": 5,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-6",
+      "type": "pickup",
+      "x": 6,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-7",
+      "type": "pickup",
+      "x": 7,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-8",
+      "type": "pickup",
+      "x": 8,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-9",
+      "type": "pickup",
+      "x": 9,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-10",
+      "type": "pickup",
+      "x": 10,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h2-11",
+      "type": "pickup",
+      "x": 11,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-0",
+      "type": "pickup",
+      "x": 0,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-1",
+      "type": "pickup",
+      "x": 1,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-2",
+      "type": "pickup",
+      "x": 2,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-3",
+      "type": "pickup",
+      "x": 3,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-4",
+      "type": "pickup",
+      "x": 4,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-5",
+      "type": "pickup",
+      "x": 5,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-6",
+      "type": "pickup",
+      "x": 6,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-7",
+      "type": "pickup",
+      "x": 7,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-8",
+      "type": "pickup",
+      "x": 8,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-9",
+      "type": "pickup",
+      "x": 9,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-10",
+      "type": "pickup",
+      "x": 10,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h3-11",
+      "type": "pickup",
+      "x": 11,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-0",
+      "type": "pickup",
+      "x": 0,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-1",
+      "type": "pickup",
+      "x": 1,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-2",
+      "type": "pickup",
+      "x": 2,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-3",
+      "type": "pickup",
+      "x": 3,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-4",
+      "type": "pickup",
+      "x": 4,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-5",
+      "type": "pickup",
+      "x": 5,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-6",
+      "type": "pickup",
+      "x": 6,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-7",
+      "type": "pickup",
+      "x": 7,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-8",
+      "type": "pickup",
+      "x": 8,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-9",
+      "type": "pickup",
+      "x": 9,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-10",
+      "type": "pickup",
+      "x": 10,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    },
+    {
+      "id": "h4-11",
+      "type": "pickup",
+      "x": 11,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "asset": "cell.heart",
+      "params": {
+        "score": 100
+      }
+    }
+  ],
+  "transitions": [],
+  "marks": [
+    {
+      "id": "approximation",
+      "x": 0,
+      "y": 0,
+      "w": 13,
+      "h": 6,
+      "status": "assumed",
+      "note": "Заполнение сердцами — по подсказке владельца; число и очки — допущения.",
+      "ref": "video: 19b50e99-Apollo-Tetris-Crocodile (геймплей)"
+    }
+  ]
+}

@@ -187,7 +187,7 @@ export class TestRunner {
       stepper,
       onEvents: (events: readonly GameEvent[]) => {
         for (const event of events) {
-          if (event.type === 'levelStarted') this.snapCamera = true;
+          if (event.type === 'levelStarted' || event.type === 'roomEntered' || event.type === 'roomLeft') this.snapCamera = true;
           const world = this.game ? effectsWorld(ctx, this.game.state) : null;
           if (world) effects.onEvent(event, world);
           director.onEvent(event);

@@ -2,7 +2,7 @@ import type { GameEvent } from '../core/state';
 
 /**
  * Эффекты (одиночные звуки поверх мелодии). Ноты и тайминги — phrases.ts; источник — запись игрушки со звуком
- * (docs/video-observations.md §8). `confirm`, `hit`, `blocked`, `levelCompleted`, `gameOver`, `secret` в записи не встретились — условные.
+ * (docs/video-observations.md §8). `confirm`, `hit`, `blocked`, `levelCompleted`, `gameOver`, `secret`, `stomp`, `roomIn`, `roomOut` в записи не встретились — условные.
  */
 export type AudioCue =
   | 'introStep'
@@ -19,7 +19,9 @@ export type AudioCue =
   | 'levelCompleted'
   | 'gameOver'
   | 'secret'
-  | 'stomp';
+  | 'stomp'
+  | 'roomIn'
+  | 'roomOut';
 
 /**
  * Мелодия — «фоновый» слой, который не прерывается эффектами:
@@ -156,6 +158,10 @@ export function cueForEvent(event: GameEvent, typeOf: (objectId: string) => stri
       return 'secret';
     case 'stomp':
       return 'stomp';
+    case 'roomEntered':
+      return 'roomIn';
+    case 'roomLeft':
+      return 'roomOut';
     default:
       return null;
   }

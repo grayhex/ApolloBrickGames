@@ -11,6 +11,10 @@ export interface SimApi {
   readonly level: LevelRuntime;
   die(cause: DeathCause): void;
   completeLevel(objectId: string): void;
+  /** Колодец: перейти в комнату, на которую указывает переход из `objectId`; выход вернёт героя в клетку `returnAt`. */
+  enterRoom(objectId: string, returnAt: { x: number; y: number }): void;
+  /** Выход из комнаты: вернуться в отложенный уровень (если комната запущена сама по себе — только событие). */
+  leaveRoom(): void;
   addScore(points: number): void;
   emit(event: GameEventBody): void;
   /** Тайл непроходим, клетка за границей карты или занята твёрдым объектом. */
@@ -235,6 +239,33 @@ const finish: ObjectBehavior = {
   },
 };
 
+/**
+ * Колодец («sewer», по упаковке): щель между двумя трубами, в которую можно провалиться. Герой, коснувшись триггера на дне щели, оказывается
+ * в комнате (уровень из перехода `from` = id колодца — большой чёрт или россыпь бонусных сердец) и после выхода возвращается на уровень
+ * в клетку (`returnX`, `returnY`) — как правило, правее колодца. Использованный колодец закрывается (повторно в него не упасть, сердца не набить).
+ */
+const sewerParams: readonly ParamSpec[] = [
+  { key: 'returnX', label: 'Столбец возвращения', min: 0, max: 100_000, default: 0 },
+  { key: 'returnY', label: 'Ряд возвращения', min: 0, max: 255, default: 0 },
+];
+
+const sewer: ObjectBehavior = {
+  label: 'Колодец (вход в комнату)',
+  params: sewerParams,
+  validateParams: validateBySpec(sewerParams),
+  requiresTransition: true,
+  heroTouch: (sim, state, def) => sim.enterRoom(state.id, { x: numberParam(def.params, 'returnX', def.x), y: numberParam(def.params, 'returnY', def.y) }),
+};
+
+/** Выход из комнаты-колодца: касание возвращает героя на уровень, откуда он упал. */
+const exit: ObjectBehavior = {
+  label: 'Выход из комнаты',
+  heroTouch: (sim, state) => {
+    if (!sim.state.stash) state.active = false; // комната сама по себе (проба, тест): сработать один раз, а не каждый такт
+    sim.leaveRoom();
+  },
+};
+
 /** Описание зарегистрированных типов — для палитры и инспектора редактора. */
 export function describeObjectTypes(
   behaviors: BehaviorRegistry,
@@ -248,4 +279,4 @@ export function describeObjectTypes(
 }
 
 /** Обработчики демо-профиля. Тип объекта в данных → поведение в коде. */
-export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick, pickup };
+export const DEMO_BEHAVIORS: BehaviorRegistry = { target, patroller, hazard, finish, brick, pickup, sewer, exit };
