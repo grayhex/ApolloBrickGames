@@ -66,6 +66,23 @@ test('ON/OFF показывает статус, включая клавиату�
   await expect(page.locator('#screen')).toBeHidden();
 });
 
+test('справка имеет доступное имя, настройки не предлагают неподдерживаемые цвета', async ({ page }) => {
+  await exhibit(page);
+  await expect(page.locator('#side-info')).toHaveAccessibleName('Alibaba Dance 99 in 1');
+  const saved = await page.evaluate(() => JSON.stringify(localStorage));
+  await page.locator('#corner-settings').click();
+  await expect(page.locator('#settings')).toBeVisible();
+  await expect(page.locator('#settings .settings__table')).toHaveCount(1);
+  await expect(page.locator('#settings-shell')).toHaveCount(0);
+  await expect(page.locator('#settings .shellpick')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#settings')).toBeHidden();
+  expect(await page.evaluate(() => JSON.stringify(localStorage))).toBe(saved);
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
+  await page.locator('#corner-lang').click();
+  await expect(page.locator('#side-info')).toHaveAccessibleName('Alibaba Dance 99 in 1');
+});
+
 test('на узких экранах оба семейства помещаются, кнопки Alibaba доступны без прокрутки', async ({ page }) => {
   for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 740 });

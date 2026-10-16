@@ -70,7 +70,6 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
       refresh();
       focus();
     },
-    display: { onChange: () => refresh() },
     signal,
   });
   const applyView = (): void => {
@@ -162,7 +161,7 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
       h(
         'section',
         { class: 'side__sec' },
-        h('h2', { class: 'side__h' }, model.name),
+        h('h2', { class: 'side__h', id: 'info-title' }, model.name),
         h('p', { class: 'alibaba-status' }, t('alibaba.unavailable')),
         h('p', { class: 'gtext' }, t('alibaba.description')),
       ),
