@@ -3,7 +3,7 @@ import { toyHelpRows } from '../../src/app/help';
 import { setLang } from '../../src/app/i18n';
 import { MESSAGES } from '../../src/app/messages';
 import { TOY_KEY_IDS } from '../../src/app/toy';
-import { DEFAULT_TOY, engineOf, hasReset, keyLabel, parseToy, shellFor, toyHref, TOY_IDS, TOYS } from '../../src/app/toys';
+import { DEFAULT_TOY, engineOf, gameKey, hasReset, keyLabel, parseToy, shellFor, toyHref, TOY_IDS, TOYS } from '../../src/app/toys';
 import { GAME_IDS, GAMES } from '../../src/games/catalog';
 import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindings';
 import { SHELLS } from '../../src/input/settings';
@@ -132,20 +132,35 @@ describe('набор игр у консоли', () => {
     expect(Object.keys(GAMES).sort()).toEqual([...GAME_IDS].sort());
   });
 
-  it('наборы по наклейкам: Mario — MARIO (9), TETRIS (99), SHOOTING (1); «Часы+99», «Морской бой» и «168 в 1 танк» — как напечатано', () => {
+  it('наборы: Mario — MARIO (9), TETRIS (99), SHOOTING (1) по упаковке; «Часы+99» — по наклейке; «Морской бой» A–F и «168 в 1 танк» 1–9 — по списку владельца', () => {
     const ids = (id: (typeof TOY_IDS)[number]): string[] => TOYS[id].games.map((game) => game.id);
     expect(TOYS.mario.games.map((game) => [game.label, game.variants])).toEqual([['MARIO', 9], ['TETRIS', 99], ['SHOOTING', 1]]);
     expect(ids('clock99')).toEqual(['clock', 'tetris', 'shooting', 'racing']);
-    expect(ids('seabattle')).toEqual(['sea-battle', 'tank', 'tetris', 'tennis', 'romeo-juliet']);
-    expect(ids('tank168')).toEqual(['tank', 'racing', 'tetris', 'frog', 'construction', 'shooting']);
-    expect(TOYS.tank168.games.find((game) => game.id === 'racing')?.label).toBe('ГОНКИ'); // у «Часов+99» то же — «автогонка»: название своё у каждой консоли
-    expect(TOYS.clock99.games.find((game) => game.id === 'racing')?.label).toBe('автогонка');
+    expect(ids('seabattle')).toEqual(['sea-battle', 'tank', 'romeo-juliet', 'tetris-big', 'tetris', 'arkanoid']);
+    expect(ids('tank168')).toEqual(['tank', 'frog', 'racing', 'racing-shooting', 'shooting-array', 'shooting-figures', 'construction', 'tetris', 'tetris-pentix']);
+    expect(TOYS.clock99.games.find((game) => game.id === 'racing')?.label).toBe('автогонка'); // название своё у каждой консоли
+    expect(TOYS.tank168.games.find((game) => game.id === 'tank')?.variants).toBe(5);
+    expect(TOYS.tank168.games.find((game) => game.id === 'tetris')?.variants).toBe(51);
   });
 
-  it('игры консолей пересекаются: тетрис — у всех, стрельба — у Mario, «Часов+99» и «168 в 1», гонки — у «Часов+99» и «168 в 1», танк — у «Морского боя» и «168 в 1»', () => {
+  it('игры отмечены цифрами (у «Морского боя» — буквами A–F): 1…9, A…F', () => {
+    expect(TOYS.tank168.games.map((_, index) => gameKey(TOYS.tank168, index)).join('')).toBe('123456789');
+    expect(TOYS.seabattle.games.map((_, index) => gameKey(TOYS.seabattle, index)).join('')).toBe('ABCDEF');
+    expect(TOYS.clock99.games.map((_, index) => gameKey(TOYS.clock99, index)).join('')).toBe('1234');
+    expect(TOYS.seabattle.games.findIndex((game) => game.id === 'tetris')).toBe(4); // обычный тетрис — режим E
+    expect(TOYS.tank168.games.findIndex((game) => game.id === 'tetris')).toBe(7); // тетрис — игра 8
+  });
+
+  it('3D-упаковка есть у Crocodile Mario (блистерная карточка по фото) и «168 в 1 танк» (коробка по развёртке); у остальных нет', () => {
+    expect(TOY_IDS.filter((id) => TOYS[id].pack)).toEqual(['mario', 'tank168']);
+    expect(TOYS.mario.pack).toBe('mario');
+    expect(TOYS.tank168.pack).toBe('tank168');
+  });
+
+  it('игры консолей пересекаются: тетрис — у всех, стрельба — у Mario и «Часов+99», гонки — у «Часов+99» и «168 в 1», танк — у «Морского боя» и «168 в 1»', () => {
     const owners = (game: (typeof GAME_IDS)[number]): string[] => TOY_IDS.filter((id) => TOYS[id].games.some((slot) => slot.id === game));
     expect(owners('tetris')).toEqual([...TOY_IDS]);
-    expect(owners('shooting')).toEqual(['mario', 'clock99', 'tank168']);
+    expect(owners('shooting')).toEqual(['mario', 'clock99']);
     expect(owners('racing')).toEqual(['clock99', 'tank168']);
     expect(owners('tank')).toEqual(['seabattle', 'tank168']);
   });
