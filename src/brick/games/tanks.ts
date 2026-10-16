@@ -49,9 +49,13 @@ export const KILLS_TO_NEXT_LEVEL = 25;
 export const PLAYER_BULLET_LIMIT = 4;
 /** Очков на добавочную жизнь (`getScoresToExtraLife()` донора). */
 export const SCORES_TO_EXTRA_LIFE = 500;
+/** Жизней в начале партии (`GameWithLives.init`: `setLives(4)`). */
+export const START_LIVES = 4;
+/** Очков за уничтоженный вражеский танк (`destroyEnemyTank`: `setScore(getScore() + 1)`). */
+export const POINTS_PER_KILL = 1;
 /** Скорость ИИ: период хода врагов на скорости 1 и 10, мс (`getSpeedOfFirstLevel` / `getSpeedOfTenthLevel`). */
-const SPEED_FIRST_MS = 1500;
-const SPEED_TENTH_MS = 350;
+export const SPEED_FIRST_MS = 1500;
+export const SPEED_TENTH_MS = 350;
 
 /** Шаг анимации донора `ANIMATION_DELAY` = 30 мс; от него считаются задержки танка игрока и полёт снарядов. */
 const ANIMATION_MS = 30;
@@ -94,7 +98,7 @@ export function tanksRules(donorType: number): TanksRules {
  * Какие 5 из 8 донорских вариантов выведены в меню. Допущение: владелец насчитал у устройства пять вариантов танков,
  * смысл каждого неизвестен; взяты варианты, охватывающие оба вида полей и оба края по числу врагов.
  */
-const DONOR_TYPES: readonly number[] = [1, 2, 4, 5, 8];
+export const DONOR_TYPES: readonly number[] = [1, 2, 4, 5, 8];
 
 const DONOR_NOTE =
   'Выбор пяти вариантов из восьми донорских — допущение: на устройстве их пять, смысл каждого неизвестен.';
@@ -170,7 +174,7 @@ export class TanksGame extends BrickBase {
   }
 
   protected reset(): void {
-    this.setLives(4);
+    this.setLives(START_LIVES);
     this.scoresToExtraLife = SCORES_TO_EXTRA_LIFE;
     this.enemyIndex = 0;
     this.loadNewLevel();
@@ -365,7 +369,7 @@ export class TanksGame extends BrickBase {
     this.killed++;
     this.onBoard--;
     this.emit({ type: 'explode' });
-    this.addScore(1);
+    this.addScore(POINTS_PER_KILL);
   }
 
   // ---------------------------------------------------------------- враги

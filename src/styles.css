@@ -4307,6 +4307,68 @@ body.route-editor .shell > :not(#fatal) {
   .boxbtn, .gtab { transition: none; }
 }
 
+/* ── Описание игры «по факту реализации» во вкладке (src/app/guidePanel.ts) ─────────────────────────── */
+.gpanel__goal { margin: 0; }
+.gfacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gfacts li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--lcd, #bbb) 22%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.gfacts b { font: 800 0.8rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
+.gfacts span { font: 600 0.62rem/1.25 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--muted); }
+.gsec { border-top: 1px solid var(--line); padding-top: 4px; }
+.gsec__sum {
+  cursor: pointer;
+  padding: 2px 0;
+  font: 800 0.64rem/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gsec__sum:hover { color: var(--text); }
+.gsec__sum:focus-visible { outline: 2px solid var(--tone, currentColor); outline-offset: 2px; border-radius: 4px; }
+.gsec[open] > .gsec__sum { color: var(--text); }
+.grules, .gassume, .gmodes { display: grid; gap: 4px; margin: 4px 0 2px; padding-left: 16px; font-size: 0.7rem; line-height: 1.38; }
+.grules li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+.gassume { list-style: '– '; opacity: 0.85; }
+.gmodes { list-style: none; padding-left: 0; font-size: 0.66rem; }
+.gmodes li { display: flex; gap: 6px; align-items: baseline; }
+.gmodes__n { flex: none; min-width: 1.4em; font: 800 0.62rem/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+.gctl { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin: 4px 0 2px; font-size: 0.68rem; line-height: 1.35; }
+.gctl dt { margin: 0; }
+.gctl dd { margin: 0; }
+.gscore { display: grid; gap: 3px; margin: 4px 0; padding: 0; list-style: none; font-size: 0.7rem; }
+.gscore li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 8px; background: var(--chip); border: 1px solid var(--line); border-radius: 7px; }
+.gscore b { font-variant-numeric: tabular-nums; }
+.gscheme { display: grid; justify-items: start; gap: 3px; margin: 6px 0 2px; }
+.gscheme__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 8px);
+  gap: 1px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--lcd, #bbb) 26%, transparent);
+  border-radius: 6px;
+}
+.gscheme__grid i { width: 8px; height: 8px; border-radius: 1px; background: color-mix(in srgb, var(--text) 9%, transparent); }
+.gscheme__grid i[data-v='#'] { background: var(--text); }
+.gscheme__grid i[data-v='*'] { background: var(--text); animation: gblink 0.9s steps(1) infinite; }
+.gscheme__cap { font-size: 0.64rem; line-height: 1.3; color: var(--muted); }
+@keyframes gblink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.18; } }
+@media (prefers-reduced-motion: reduce) { .gscheme__grid i[data-v='*'] { animation: none; opacity: 0.55; } }
+
+
 /* ── Кнопка 3D-упаковки: размер по высоте окна (панель Mario должна помещаться без прокрутки) ─────────── */
 .side--info { position: relative; }
 .boxbtn__label { display: none; }

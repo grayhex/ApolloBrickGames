@@ -50,24 +50,24 @@ const START_X = BRICK_COLS / 2 - 1;
 const BULLET_START_ROW = GUN_TOP_ROW + 1;
 const TOP_ROW = BRICK_ROWS - 1;
 /** Пуль в одной колонке одновременно (`boardHeight - gun.getHeight()`). */
-const MAX_BULLETS_PER_COLUMN = BRICK_ROWS - GUN_HEIGHT;
+export const MAX_BULLETS_PER_COLUMN = BRICK_ROWS - GUN_HEIGHT;
 /** Скорость нашествия (`getSpeedOfFirstLevel/TenthLevel`): шаг в мс на скорости 1 и 10; сверх 50 кирпичей шаг замедляется. */
-const SPEED_FIRST_MS = 300;
-const SPEED_TENTH_MS = 55;
-const SLOW_BRICKS = 50;
+export const SPEED_FIRST_MS = 300;
+export const SPEED_TENTH_MS = 55;
+export const SLOW_BRICKS = 50;
 /** Орудие (и кнопка «вниз/вверх») повторяют действие раз в `MOVEMENT_SPEED = round(30 * 1.5)` = 45 мс. */
 const MOVE_TICKS = msToTicks(45);
 /** Выстрел при зажатой кнопке: раз в `ANIMATION_DELAY * (2 ствола ? 6 : 3)` = 180 / 90 мс. */
-const FIRE_TICKS_ONE = msToTicks(90);
-const FIRE_TICKS_TWO = msToTicks(180);
+export const FIRE_TICKS_ONE = msToTicks(90);
+export const FIRE_TICKS_TWO = msToTicks(180);
 /** Полёт пуль: таймер раз в `ANIMATION_DELAY / (2 ствола ? 1 : 2)` = 30 / 15 мс. */
 const BULLET_TICKS_ONE = msToTicks(15);
 const BULLET_TICKS_TWO = msToTicks(30);
 /** «Мелодия» перед уровнем (`START_MUSIC_DURATION`) — сценка без ввода (упрощение: в доноре орудие за это время можно двигать). */
 const INTRO_TICKS = msToTicks(1500);
 /** Каждые столько очков — добавочная жизнь (`getScoresToExtraLife`). */
-const EXTRA_LIFE_SCORE = 1000;
-const START_LIVES = 4;
+export const EXTRA_LIFE_SCORE = 1000;
+export const START_LIVES = 4;
 
 // ---------------------------------------------------------------- варианты
 

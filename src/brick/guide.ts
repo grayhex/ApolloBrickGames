@@ -4,6 +4,7 @@
  * вынесены в отдельный список `assumptions` и должны быть короткими и честными. Названия и пометки вариантов берутся из `BrickGameDef.modes`.
  * Чистые данные без DOM: панель рисует схемы клетками, тексты берёт по языку интерфейса.
  */
+import { BRICK_TICK_HZ } from './types';
 
 /** Строка на двух языках интерфейса. */
 export interface GuideText {
@@ -13,6 +14,12 @@ export interface GuideText {
 
 /** Короткая запись строки на двух языках: `t('Цель', 'Goal')`. */
 export const gt = (ru: string, en: string): GuideText => ({ ru, en });
+
+/** Время в тактах как секунды для текста: «1,35 с» / «1.35 s» (запятая в русском тексте). */
+export function secondsText(ticks: number, digits = 2): GuideText {
+  const value = (ticks / BRICK_TICK_HZ).toFixed(digits);
+  return gt(`${value.replace('.', ',')} с`, `${value} s`);
+}
 
 /** Пределы длины текстов (знаков на язык): описание должно помещаться во вкладку левой панели. */
 export const GUIDE_LIMITS = {

@@ -39,19 +39,24 @@ const COLS = BRICK_COLS;
 const ROWS = BRICK_ROWS;
 
 /** Донорская пауза анимации (`ANIMATION_DELAY`), мс. */
-const ANIMATION_DELAY_MS = 30;
+export const ANIMATION_DELAY_MS = 30;
 /** Скорость мяча по формуле донора: 400 мс на шаг на скорости 1 и 80 мс на скорости 10 (`getSpeedOfFirstLevel/TenthLevel`). */
-const FIRST_LEVEL_MS = 400;
-const TENTH_LEVEL_MS = 80;
+export const FIRST_LEVEL_MS = 400;
+export const TENTH_LEVEL_MS = 80;
 /** Ожидание перед мячом после загрузки уровня: «стартовая мелодия» донора, 1500 мс (`START_MUSIC_DURATION`) = 90 тактов. */
-const INTRO_TICKS = msToTicks(1500);
+export const INTRO_TICKS = msToTicks(1500);
 /** Стена сдвигается раз в `getSpeedOfFirstLevel()` = 400 мс независимо от скорости игры. */
-const SHIFT_TICKS = msToTicks(FIRST_LEVEL_MS);
+export const SHIFT_TICKS = msToTicks(FIRST_LEVEL_MS);
 /** Удар по мячу кнопкой: повтор не чаще, чем раз в `ANIMATION_DELAY * 2` = 60 мс. */
-const KICK_TICKS = msToTicks(ANIMATION_DELAY_MS * 2);
+export const KICK_TICKS = msToTicks(ANIMATION_DELAY_MS * 2);
 /** Очки до добавочной жизни (`getScoresToExtraLife`). */
-const SCORES_TO_EXTRA_LIFE = 1000;
-const START_LIVES = 4;
+export const SCORES_TO_EXTRA_LIFE = 1000;
+export const START_LIVES = 4;
+/** Очков за выбитый кирпич (`breakBrick`: `setScore(getScore() + 1)`). */
+export const BRICK_SCORE = 1;
+/** Множитель шага мяча для платформы из одной клетки и его уменьшение на каждую следующую клетку (`slowestSpeed` и `speedStep` в `call()` донора): 1,2 … 0,6. */
+export const BALL_FACTOR_SLOWEST = 1.2;
+export const BALL_FACTOR_STEP = 0.2;
 /** Платформа и мяч в начале уровня: центр поля. */
 const START_X = COLS / 2 - 1;
 /** «Мяч готов к шагу»: после вступления первый шаг делается сразу (в доноре `elapsedTime` давно истёк). */
@@ -95,7 +100,8 @@ export function arkanoidVariant(mode: number): ArkanoidVariant {
   };
 }
 
-const MODE_COUNT = 32;
+/** Число вариантов: 32 первых типа донора. */
+export const MODE_COUNT = 32;
 
 function describeMode(index: number): BrickModeDef {
   const v = arkanoidVariant(index);
@@ -156,7 +162,7 @@ export class ArkanoidGame extends BrickBase {
     const span = PLATFORM_SPAN[this.variant.platformType] ?? { min: 0, max: 0 };
     this.platformMin = span.min;
     this.platformMax = span.max;
-    this.speedFactor = 1.2 - this.variant.platformType * 0.2;
+    this.speedFactor = BALL_FACTOR_SLOWEST - this.variant.platformType * BALL_FACTOR_STEP;
     // чем меньше платформа, тем медленнее она ездит: `MOVEMENT_SPEED` донора = 30 мс * (1,75 - тип * 0,25)
     const moveTicks = msToTicks(Math.round(ANIMATION_DELAY_MS * (1.75 - this.variant.platformType * 0.25)));
     this.moveRepeater = new Repeater(moveTicks, moveTicks);
@@ -350,7 +356,7 @@ export class ArkanoidGame extends BrickBase {
     if (!this.wall.breakBrick(x, y - this.bricksY)) return;
     this.emit({ type: 'hit' });
     this.insertWall();
-    this.addScore(1);
+    this.addScore(BRICK_SCORE);
   }
 
   /** Вставить стену в поле целиком (`insertCellsToBoard`): пустые клетки стены тоже стирают то, что лежало на её месте. */

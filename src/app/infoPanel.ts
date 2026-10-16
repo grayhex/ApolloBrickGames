@@ -1,9 +1,11 @@
 import { BRICK_GAMES } from '../brick/games';
+import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
 import { BoxDialog, BoxViewer } from './boxViewer';
 import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
 import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
+import { guideBlocks } from './guidePanel';
 import { getLang, onLangChange, t, type MsgKey } from './i18n';
 import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
@@ -401,17 +403,15 @@ export class InfoPanel {
     const brick = model.menu ? BRICK_GAMES[id] : undefined;
     const variants = brick ? (game.modes?.length ?? brick.modes.length) : game.variants;
     if (variants) meta.append(h('span', { class: 'chip', ...(brick ? { 'data-modes': '' } : {}) }, t('games.variants', { n: variants })));
-    const parts: HTMLElement[] = [
-      h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()])),
-      meta,
-      h('p', { class: 'side__text' }, t(guide.what)),
-    ];
+    const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()]));
+    const source = h('p', { class: 'side__text gpanel__src' }, h('b', {}, `${t('games.src.h')}: `), guide.sources.map((src) => t(SOURCE_KEYS[src])).join('; '));
+    // Игры, которые уже играют по правилам ядра, описаны «по факту реализации» (`src/brick/guides`); у остальных — общие сведения об игре.
+    const data = brick && game.status === 'ready' ? BRICK_GUIDES[id] : undefined;
+    if (data) return [head, meta, ...guideBlocks(data, brick, game.modes, getLang()), source];
+    const parts: HTMLElement[] = [head, meta, h('p', { class: 'side__text' }, t(guide.what))];
     if (guide.how) parts.push(h('p', { class: 'side__text' }, t(guide.how)));
     if (id === 'tetris' && !model.menu) parts.push(...this.tetrisDetails());
-    parts.push(
-      h('p', { class: 'side__text gpanel__open' }, h('b', {}, `${t('games.open.h')}: `), t(guide.open)),
-      h('p', { class: 'side__text gpanel__src' }, h('b', {}, `${t('games.src.h')}: `), guide.sources.map((source) => t(SOURCE_KEYS[source])).join('; ')),
-    );
+    parts.push(h('p', { class: 'side__text gpanel__open' }, h('b', {}, `${t('games.open.h')}: `), t(guide.open)), source);
     return parts;
   }
 

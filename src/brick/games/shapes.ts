@@ -27,21 +27,21 @@ import { TOP_ROW } from './gun/space';
 // ---------------------------------------------------------------- допущения (скорость и очки)
 
 /** Допущение: шаг спуска фигур в мс на скорости 1 и 10. */
-const DESCENT_FIRST_MS = 800;
-const DESCENT_TENTH_MS = 300;
+export const DESCENT_FIRST_MS = 800;
+export const DESCENT_TENTH_MS = 300;
 /** Допущение: новая фигура появляется каждые столько шагов спуска или сразу на ближайшем шаге, если поле расчищено. */
-const SPAWN_EVERY = 5;
+export const SPAWN_EVERY = 5;
 /** Допущение: на уровне стартует `ceil(уровень / 4)` фигур, но не больше трёх. */
-const START_FIGURES_PER_LEVEL = 4;
-const START_FIGURES_MAX = 3;
+export const START_FIGURES_PER_LEVEL = 4;
+export const START_FIGURES_MAX = 3;
 /** Допущение: очков на следующую скорость и на добавочную жизнь (в доноре — 500 и 10000 для стены). */
-const SPEED_STEP_SCORE = 100;
-const EXTRA_LIFE_SCORE = 2000;
+export const SPEED_STEP_SCORE = 100;
+export const EXTRA_LIFE_SCORE = 2000;
 /** Очки: клетка, уничтоженная или добавленная пулей (`removeCell` / `addCell` донора), и клетка исчезнувшего прямоугольника (допущение). */
-const CELL_POINTS = 1;
-const RECTANGLE_CELL_POINTS = 2;
+export const CELL_POINTS = 1;
+export const RECTANGLE_CELL_POINTS = 2;
 /** Допущение: достроенный прямоугольник мигает 0,4 с и исчезает. */
-const VANISH_TICKS = msToTicks(400);
+export const VANISH_TICKS = msToTicks(400);
 
 // ---------------------------------------------------------------- варианты
 

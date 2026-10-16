@@ -25,14 +25,14 @@ import { TOP_ROW } from './gun/space';
 // ---------------------------------------------------------------- донорские числа
 
 /** Шаг стены в мс на скорости 1 и 10 (`getSpeedOfFirstLevel/TenthLevel` в создающем режиме); у двух пушек шаг вдвое длиннее. */
-const DROP_FIRST_MS = 4500;
-const DROP_TENTH_MS = 2500;
+export const DROP_FIRST_MS = 4500;
+export const DROP_TENTH_MS = 2500;
 /** Очков на следующую скорость (`SCORE_TO_NEXT_LEVEL`) и на добавочную жизнь (`getScoresToExtraLife`). */
-const SPEED_STEP_SCORE = 500;
-const EXTRA_LIFE_SCORE = 10000;
+export const SPEED_STEP_SCORE = 500;
+export const EXTRA_LIFE_SCORE = 10000;
 /** Очки: клетка (`addCell`) и убранный ряд (`removeFullLines`). */
-const CELL_POINTS = 1;
-const LINE_POINTS = 10;
+export const CELL_POINTS = 1;
+export const LINE_POINTS = 10;
 /** Между рядами при загрузке уровня — `MOVEMENT_SPEED` = 45 мс. */
 const LINE_STEP_TICKS = MOVE_TICKS;
 /** Шаг стирания ряда от пушки к краям (`animatedClearLine`: `sleep(ANIMATION_DELAY * 2)`) = 60 мс. */

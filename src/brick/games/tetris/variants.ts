@@ -90,9 +90,13 @@ export function variantOf(letter: string, type: number): TetrisVariant {
   };
 }
 
-/** Донорская надбавка к времени падения в миллисекундах: +50 за смену фигур (K, L, O, P) и ещё +50 у любого Pentix (`getSpeedOfFirstLevel`). */
+/** Надбавка к времени падения в миллисекундах: +50 за смену фигур (K, L, O, P) и ещё +50 у любого Pentix (`getSpeedOfFirstLevel`/`getSpeedOfTenthLevel`). */
+export const MORPH_EXTRA_MS = 50;
+export const PENTIX_EXTRA_MS = 50;
+
+/** Донорская надбавка к времени падения в миллисекундах (см. `MORPH_EXTRA_MS`, `PENTIX_EXTRA_MS`). */
 export function speedPenaltyMs(variant: TetrisVariant): number {
-  return (variant.morph ? 50 : 0) + (variant.pool === 'pentix' ? 50 : 0);
+  return (variant.morph ? MORPH_EXTRA_MS : 0) + (variant.pool === 'pentix' ? PENTIX_EXTRA_MS : 0);
 }
 
 // ------------------------------------------------------------------ описания для меню

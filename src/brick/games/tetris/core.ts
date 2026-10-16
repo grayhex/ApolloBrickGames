@@ -65,6 +65,9 @@ export const SOFT_DROP_TICKS = msToTicks(30);
 export const CLEAR_STEP_TICKS = msToTicks(60);
 export const FLOW_STEP_TICKS = msToTicks(60);
 export const GARBAGE_PAUSE_TICKS = msToTicks(120);
+/** Сторона квадрата, который стирает супербомба (`EXPLODE_SIZE` в `Game.kaboom` донора); нечётное число. */
+export const BLAST_SIZE = 5;
+const BLAST_RADIUS = (BLAST_SIZE - 1) / 2;
 
 const MIDDLE_X = BRICK_COLS / 2 - 1;
 const idx = (x: number, y: number): number => y * BRICK_COLS + x;
@@ -481,11 +484,13 @@ export abstract class TetrisCore extends BrickBase {
     }
   }
 
-  /** Взрыв стирает квадрат 5 × 5 (эпицентр сдвигается внутрь поля, как в `Game.kaboom`). */
+  /** Взрыв стирает квадрат `BLAST_SIZE` × `BLAST_SIZE` (5 × 5; эпицентр сдвигается внутрь поля, как в `Game.kaboom`). */
   private blast(cx: number, cy: number): void {
-    const x = clamp(cx, 2, BRICK_COLS - 3);
-    const y = clamp(cy, 2, BRICK_ROWS - 3);
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) this.board[idx(x + dx, y + dy)] = 0;
+    const x = clamp(cx, BLAST_RADIUS, BRICK_COLS - 1 - BLAST_RADIUS);
+    const y = clamp(cy, BLAST_RADIUS, BRICK_ROWS - 1 - BLAST_RADIUS);
+    for (let dy = -BLAST_RADIUS; dy <= BLAST_RADIUS; dy++) {
+      for (let dx = -BLAST_RADIUS; dx <= BLAST_RADIUS; dx++) this.board[idx(x + dx, y + dy)] = 0;
+    }
   }
 
   /**
