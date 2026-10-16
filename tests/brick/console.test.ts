@@ -1,3 +1,4 @@
+import { LIBRARY_IDS } from '../../src/games/library';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -100,15 +101,16 @@ describe('рисунок меню по фотографии экрана', () =>
     expect(field).not.toEqual(menuField('1', 1, 'arkanoid'));
   });
 
-  it('у каждой игры есть иллюстрация 10 × 5, и все они различаются', () => {
+  it('у каждой игры есть иллюстрация 10 × 5; исходные игры имеют разные картинки', () => {
     const ids = Object.keys(ILLUSTRATIONS);
-    expect(ids.length).toBe(14);
+    expect(ids.length).toBe(14 + LIBRARY_IDS.length);
     for (const id of ids) {
       const art = ILLUSTRATIONS[id] ?? [];
       expect(art.length).toBe(5);
       for (const row of art) expect(row.length).toBe(BRICK_COLS);
     }
-    expect(new Set(ids.map((id) => (ILLUSTRATIONS[id] ?? []).join('/'))).size).toBe(ids.length);
+    const originals = ids.filter((id) => !(LIBRARY_IDS as readonly string[]).includes(id));
+    expect(new Set(originals.map((id) => (ILLUSTRATIONS[id] ?? []).join('/'))).size).toBe(originals.length);
   });
 
   it('все цифры 0..9 рисуются, поле 10 × 20', () => {

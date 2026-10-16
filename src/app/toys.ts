@@ -202,7 +202,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
       { id: 'tetris', label: 'Тетрис', variants: 20, modes: Array.from({ length: 20 }, (_, index) => index), status: 'ready' },
       { id: 'arkanoid', label: 'Арканоид', variants: 32, status: 'ready' },
     ],
-    defaultGame: 'tank',
+    defaultGame: 'sea-battle',
     menu: true,
     gameKeys: 'letters',
     glyph: 'square',
@@ -301,7 +301,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
 
 /** Отметка игры в меню устройства: номер или буква по порядку (`1`…`9`, `A`…`F`). */
 export function gameKey(model: ToyModel, index: number): string {
-  return model.gameKeys === 'letters' ? String.fromCharCode(65 + index) : String(index + 1);
+  return model.gameKeys === 'letters' && index < 26 ? String.fromCharCode(65 + index) : String(index + 1);
 }
 
 /** Оболочка, в которой играет игрушка: оригинальный Mario или оболочка «тетрисных» игрушек (тетрис-заглушка и консоли с меню игр). */
@@ -354,4 +354,10 @@ export function keyLabel(model: ToyModel, id: ToyKeyId): string {
       return round ? (round.bottom ? `${round.top}/${round.bottom}` : round.top) : id.toUpperCase();
     }
   }
+}
+
+/** A published default is used for a new visitor; a player's explicit saved choice takes precedence. */
+export function initialShell(model: ToyModel, preferred: Shell): Shell {
+  try { if (window.localStorage.getItem('crocodile-mario:settings:v1') !== null) return shellFor(model, preferred); } catch { /* storage disabled */ }
+  return model.defaultShell;
 }

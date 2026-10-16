@@ -274,10 +274,11 @@ test.describe('«Часы+99»', () => {
 });
 
 test.describe('«Морской бой»', () => {
-  test('аппаратная часть: подписи, без светодиодов, линия цвета корпуса вокруг экрана; цвет из настроек (синий) у «Морского боя» бывает', async ({ page }) => {
+  test('аппаратная часть: подписи, без светодиодов, линия цвета корпуса вокруг экрана; сохранённый синий цвет имеет приоритет над общим', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('crocodile-mario:settings:v1', JSON.stringify({ version: 1, display: { shell: 'blue' } })));
     await open(page, 'seabattle');
     await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
-    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue'); // цвет по умолчанию из настроек — синий, у «Морского боя» он есть
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue'); // сохранённый выбор игрока важнее опубликованного основного цвета
     const labels = await page.locator('.base__art text').allTextContents();
     for (const text of ['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'UP/MODE', 'LEFT/LEVEL', 'RIGHT/SPEED', 'DOWN', 'ROTATE']) expect(labels, text).toContain(text);
     expect(labels).not.toContain('SOUND');

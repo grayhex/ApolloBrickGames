@@ -1,3 +1,4 @@
+import { LIBRARY_IDS } from '../../src/games/library';
 import { describe, expect, it } from 'vitest';
 import { toyHelpRows } from '../../src/app/help';
 import { setLang } from '../../src/app/i18n';
@@ -52,7 +53,7 @@ describe('выбор игрушки', () => {
     expect(TOYS.mario).toMatchObject({ defaultGame: 'mario', menu: false, info: true, levels: true, leds: true });
     expect(TOYS.clock99).toMatchObject({ defaultGame: 'tetris', menu: true, info: true, levels: false, leds: true, glyph: 'star', panel: 'clock', deco: 'flourish' });
     // «Морской бой» и «168 в 1 танк» — консоли с меню игр: первая восстановленная игра — танки.
-    expect(TOYS.seabattle).toMatchObject({ defaultGame: 'tank', menu: true, info: true, levels: false, leds: false, glyph: 'square', panel: 'sea', deco: 'frame' });
+    expect(TOYS.seabattle).toMatchObject({ defaultGame: 'sea-battle', menu: true, info: true, levels: false, leds: false, glyph: 'square', panel: 'sea', deco: 'frame' });
     // «168 в 1 танк»: точка в прямоугольнике, как у «Морского боя», а рамка с завитками и светодиоды — как у «Часов+99»; в углу панели чашка паузы.
     expect(TOYS.tank168).toMatchObject({ defaultGame: 'tank', menu: true, info: true, levels: false, leds: true, glyph: 'square', panel: 'tank', deco: 'flourish', gamesCount: 168 });
     expect(engineOf(TOYS.mario)).toBe('mario');
@@ -190,7 +191,7 @@ describe('набор игр у консоли', () => {
 
   it('запускаются Mario (настоящая), тетрис-заглушка «Часов+99» и игры ядра «кирпичных» (по донору); остальные ещё не восстановлены', () => {
     const engines = GAME_IDS.filter((id) => GAMES[id].engine !== null);
-    expect(engines).toEqual(['mario', 'tetris', 'tetris-big', 'tetris-pentix', 'shooting', 'shooting-array', 'shooting-figures', 'racing', 'racing-shooting', 'tank', 'arkanoid', 'romeo-juliet', 'sea-battle', 'frog', 'construction']);
+    expect(engines).toEqual([...LIBRARY_IDS, 'mario', 'tetris', 'tetris-big', 'tetris-pentix', 'shooting', 'shooting-array', 'shooting-figures', 'racing', 'racing-shooting', 'tank', 'arkanoid', 'romeo-juliet', 'sea-battle', 'frog', 'construction']);
     expect(GAMES.mario.engine).toBe('mario');
     for (const id of engines.filter((game) => game !== 'mario')) expect(GAMES[id].engine, id).toBe('brick');
     for (const id of TOY_IDS) {

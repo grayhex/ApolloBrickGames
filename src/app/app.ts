@@ -46,7 +46,7 @@ import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
-import { shellFor, TOYS } from './toys';
+import { initialShell, shellFor, TOYS } from './toys';
 import { parseView, type View } from './view';
 import {
   controlsHint,
@@ -335,7 +335,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
       ? {
           display: {
             onChange: () => {
-              currentShell = hub.settings.display.shell;
+              currentShell = shellFor(TOYS.mario, hub.settings.display.shell);
               applyDisplay();
             },
           },
@@ -392,7 +392,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   // Источник правды — hub.settings.display; исключение — цвет: в настройках лежит цвет по умолчанию,
   // а выбор на странице действует только на текущую игру (до перезагрузки).
   // Цвет текущей игры: при переходе с другой игрушки — тот же, если у Crocodile Mario он есть (все четыре есть), иначе из настроек.
-  let currentShell: Shell = carryIn ? shellFor(TOYS.mario, carryIn.shell) : hub.settings.display.shell;
+  let currentShell: Shell = carryIn ? shellFor(TOYS.mario, carryIn.shell) : initialShell(TOYS.mario, hub.settings.display.shell);
   const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
   const applyDisplay = (): void => {
     const { display } = hub.settings;
@@ -527,7 +527,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub, 'mario', signal, { dialog: refs.boxDialog, onOpen: () => openMenu(), onClose: () => closeMenu(), onPointerUse: () => refocusGame() }) : null;
   const panelActions: ControlPanelActions = {
     pickShell: (shell) => {
-      currentShell = shell;
+      currentShell = shellFor(TOYS.mario, shell);
       applyDisplay();
     },
     toggleSound: () => setSound(!hub.settings.display.sound),
@@ -585,7 +585,9 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     applyDisplay();
   };
   const controls = route.lid
-    ? new ControlPanel(refs.sideCtl, { slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame, signal })
+    ? new ControlPanel(refs.sideCtl, {
+      shells: TOYS.mario.shells, slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame, signal,
+    })
     : null;
   // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
   const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, onPointerUse: refocusGame }, signal) : null;

@@ -1,3 +1,4 @@
+import { LIBRARY_IDS, type LibraryId } from '../games/library';
 import type { GameId } from '../games/catalog';
 import type { MsgKey } from './messages';
 
@@ -6,7 +7,7 @@ import type { MsgKey } from './messages';
  * Это справка, а не правила: сами игры восстанавливаются отдельно, а сведения здесь — наблюдения владельца, наклейки и упаковки и описания близких
  * Brick Game (открытый симулятор, обзоры других моделей). Совпадение названий не означает совпадения прошивки, поэтому «не установлено» названо прямо.
  */
-export type GameSource = 'owner' | 'donor' | 'sticker';
+export type GameSource = 'owner' | 'donor' | 'sticker' | 'wiki';
 
 export interface GameGuide {
   /** Что за игра — одна-две фразы. */
@@ -20,6 +21,7 @@ export interface GameGuide {
 }
 
 export const GAME_GUIDE: Record<GameId, GameGuide> = {
+  ...Object.fromEntries(LIBRARY_IDS.map((id): [LibraryId, GameGuide] => [id, { what:'game.library.what', open:'game.library.open', sources:['wiki'] }])) as Record<LibraryId, GameGuide>,
   mario: { what: 'game.mario.what', open: 'game.mario.open', sources: ['sticker'] },
   clock: { what: 'game.clock.what', open: 'game.clock.open', sources: ['sticker'] },
   tetris: { what: 'game.tetris.what', open: 'game.tetris.open', sources: ['owner'] },
@@ -38,7 +40,8 @@ export const GAME_GUIDE: Record<GameId, GameGuide> = {
   construction: { what: 'game.construction.what', how: 'game.construction.how', open: 'game.construction.open', sources: ['owner', 'donor'] },
 };
 
-export const SOURCE_KEYS: Record<GameSource, 'games.src.owner' | 'games.src.donor' | 'games.src.sticker'> = {
+export const SOURCE_KEYS: Record<GameSource, 'games.src.owner' | 'games.src.donor' | 'games.src.sticker' | 'games.src.wiki'> = {
+  wiki: 'games.src.wiki',
   owner: 'games.src.owner',
   donor: 'games.src.donor',
   sticker: 'games.src.sticker',
