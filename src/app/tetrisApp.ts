@@ -1,3 +1,4 @@
+import { BrickAudio } from '../audio/brick';
 import { actionBit, maskOf, type InputFrame, type Phase } from '../core';
 import { WebAudioPort } from '../audio/beeper';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
@@ -23,7 +24,7 @@ import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
 import { applyToyModel, relabelKeys } from './toyModel';
 import { ToyPanel, type ToyKeyId } from './toy';
-import { hasReset, shellFor, TOYS, type ToyId } from './toys';
+import { shellFor, TOYS, type ToyId } from './toys';
 import { parseView, type View } from './view';
 import { deviceView } from './viewModel';
 
@@ -74,9 +75,8 @@ function saveHi(key: string, value: number): void {
 
 /**
  * Игрушки «Часы+99», «Морской бой» и «168 в 1 танк»: та же раскладушка и та же оболочка (вид, питание, звук, пульт справа), но другая «аппаратура» —
- * см. `toyModel.ts`. «Часы+99» пока играют в обычный тетрис (`src/tetris`); «Морской бой» и «168 в 1 танк» — консоли с меню игр (`src/brick`, правила донора,
- * `docs/brick-games.md`). Что именно играет, скрывает «кабинет» (`cabinet.ts`); экран один — `render/tetrisScreen.ts`. Уровни на пульте отключены, музыки нет
- * (есть только эффекты). Оболочка повторяет `startApp` — общая часть вынесется позже.
+ * см. `toyModel.ts`. Все три игрушки — консоли с меню игр (`src/brick`, правила донора,
+ * `docs/brick-games.md`). Что именно играет, скрывает «кабинет» (`cabinet.ts`); экран один — `render/tetrisScreen.ts`. Уровни Mario на пульте отключены; у Brick Game свои эффекты и короткие музыкальные сигналы. Оболочка повторяет `startApp` — общая часть вынесется позже.
  */
 export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<AppHandle> {
   const model = TOYS[toyId];
@@ -168,8 +168,9 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     volume: hub.settings.display.volume,
     musicVolume: musicVolumeOf(hub.settings.display),
   });
-  life.onDispose(() => audio.dispose());
-  const unlockAudio = (): void => audio.unlock();
+  const brickAudio = new BrickAudio();
+  life.onDispose(() => { audio.dispose(); brickAudio.dispose(); });
+  const unlockAudio = (): void => { audio.unlock(); brickAudio.unlock(); };
   window.addEventListener('keydown', unlockAudio, { signal });
   window.addEventListener('pointerdown', unlockAudio, { signal });
 
@@ -212,6 +213,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     screen.setGhost(ghostOn());
     audio.setMuted(!display.sound);
     audio.setVolume(display.volume);
+    brickAudio.setMuted(!display.sound);
+    brickAudio.setVolume(display.volume);
     applyTheme(display.theme);
     corner.setTheme(display.theme);
     corner.setGhost(ghostOn());
@@ -266,8 +269,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   const emit = (events: readonly CabinetEvent[]): void => {
     for (const event of events) {
-      const cue = cabinetCue(cabinet, event);
-      if (cue) audio.play(cue);
+      if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu);
+      else { const cue = cabinetCue(cabinet, event); if (cue) audio.play(cue); }
     }
     if (events.length > 0) persistHi();
   };
@@ -380,6 +383,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     refs.toy.dataset['power'] = on ? 'on' : 'off';
     applyDisplay();
     audio.silence();
+    brickAudio.silence();
     hub.tracker.reset();
     if (on) {
       cabinet.restart();
@@ -392,6 +396,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const restartGame = (): void => {
     persistHi();
+    brickAudio.silence();
     cabinet.restart();
     hub.tracker.reset();
     stepper.reset();
@@ -404,10 +409,10 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     onPower: () => setPower(!powered),
     onSound: () => setSound(!hub.settings.display.sound),
     keyActions: TETRIS_KEY_ACTIONS,
-    // TIME/GAME (часов в заглушке нет) ничего не делает, RESET начинает партию заново (у консоли с меню — возвращает в меню); игровых действий у них нет.
+    // TIME/GAME и RESET возвращают в меню; игровых действий у этих кнопок нет.
     onPress: (id) => {
       if (id !== 'fire') return false;
-      if (hasReset(model) && powered && bootTicks === 0) restartGame();
+      if (model.menu && powered && bootTicks === 0) restartGame();
       return true;
     },
   });

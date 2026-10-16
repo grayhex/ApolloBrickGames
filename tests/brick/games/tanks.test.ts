@@ -59,7 +59,7 @@ import {
   type Tank,
 } from '../../../src/brick/games/tanks/geometry';
 import { TANK_LEVELS, obstacleCells, presetObstacles, randomObstacles } from '../../../src/brick/games/tanks/levels';
-import { conformance, expectValid, frameHash } from '../conformance';
+import { conformance, expectValid } from '../conformance';
 
 // ------------------------------------------------------------------ помощники
 
@@ -376,7 +376,7 @@ describe('танки: маски, поворот и перевод в систе
 describe('танки: время донора в тактах', () => {
   it('паузы кнопок, полёт снаряда и стартовая мелодия', () => {
     expect(MOVE_TICKS).toBe(5); // 90 мс
-    expect(ROTATE_TICKS).toBe(22); // 360 мс
+    expect(ROTATE_TICKS).toBe(5); // 90 мс округлены до 5 тактов
     expect(FIRE_TICKS).toBe(14); // 240 мс
     expect(BULLET_TICKS).toBe(7); // 120 мс
     expect(START_TICKS).toBe(90); // 1500 мс
@@ -387,19 +387,23 @@ describe('танки: время донора в тактах', () => {
     expect(genuineTicks(10, 1500, 350)).toBe(21);
   });
 
-  it('во время стартовой мелодии ввод не принимается; потом танк слушается', () => {
-    const game = new TanksGame({ seed: 3 });
-    game.start();
-    const before = frameHash(game);
-    for (let i = 0; i < START_TICKS - 1; i++) {
-      game.step(hold('left', 'fire'));
-      expect(game['player']).toEqual(PLAYER_START);
+  it('во время вступления движение принимается сразу, враги и огонь ждут', () => {
+    const game = new TanksGame({ seed: 3 }); game.start();
+    game.step(makeBrickInput(['left']));
+    expect(game['player'].dir).toBe(LEFT);
+    for (let i = 1; i < START_TICKS; i++) {
+      expect(types(game.step(hold('left', 'fire')))).not.toContain('shot');
       expect(game['enemies'].every((tank) => tank === null)).toBe(true);
     }
-    expect(frameHash(game).split(':')[0]).toBe(before.split(':')[0]);
-    game.step(NEUTRAL_BRICK_INPUT); // последний такт мелодии
-    game.step(hold('left'));
-    expect(game['player'].dir).toBe(LEFT);
+    expect(game['player'].x).toBeLessThan(PLAYER_START.x);
+  });
+  it('быстрый повторный тап не теряется в задержке предыдущего нажатия', () => {
+    const game = newGame(); arrange(game, {});
+    game.step(makeBrickInput(['left']));
+    const before = game['player'].x;
+    game.step(NEUTRAL_BRICK_INPUT);
+    game.step(makeBrickInput(['left']));
+    expect(game['player'].x).toBe(before - 1);
   });
 });
 
@@ -554,14 +558,14 @@ describe('танки: стрельба и попадания', () => {
     expect(shotTicks.length).toBeGreaterThan(PLAYER_BULLET_LIMIT);
   });
 
-  it('стрелять и двигаться одновременно нельзя: пока срабатывает стрелка, огня нет; шаг вперёд откладывает выстрел', () => {
+  it('движение не задерживает выстрел; таймер ограничивает только повторный огонь', () => {
     const game = newGame();
     arrange(game, {});
     const events = game.step(hold('up', 'fire')); // танк смотрит вверх — шаг вперёд
     expect(game['player'].y).toBe(8);
-    expect(types(events)).not.toContain('shot');
+    expect(types(events)).toContain('shot');
     for (let t = 1; t < FIRE_TICKS; t++) {
-      // стрелка «вверх» срабатывает каждые MOVE_TICKS, а огонь после каждого шага снова ждёт FIRE_TICKS
+      // Ограничение частоты пушки сохраняется во время движения.
       expect(types(game.step(hold('up', 'fire')))).not.toContain('shot');
     }
   });
@@ -569,9 +573,9 @@ describe('танки: стрельба и попадания', () => {
   it('поворот не откладывает выстрел: зажав стрелку и огонь, танк поворачивается и сразу стреляет', () => {
     const game = newGame();
     arrange(game, {});
-    game.step(hold('right', 'fire'));
+    expect(types(game.step(hold('right', 'fire')))).toContain('shot');
     expect(game['player'].dir).toBe(RIGHT);
-    expect(types(game.step(hold('right', 'fire')))).toContain('shot'); // пока стрелка на паузе, огонь свободен
+    expect(types(game.step(hold('right', 'fire')))).not.toContain('shot');
     expect(game['playerBullets'].some((bullet) => bullet?.dir === RIGHT)).toBe(true);
   });
 

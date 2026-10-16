@@ -368,10 +368,10 @@ describe('описание «Танков»: числа записаны ров�
     expect(rolled(10)).not.toContain(20);
   });
 
-  it('время: 0,08 с шаг, 0,37 с после поворота, 0,23 с между выстрелами, 0,12 с на клетку снаряда, 1,5 с стартовая пауза', () => {
-    expect([5, 22, 14, 7, 90].map(secondsOf)).toEqual([0.08, 0.37, 0.23, 0.12, 1.5]);
+  it('время: 0,08 с шаг, 0,08 с после поворота, 0,23 с между выстрелами, 0,12 с на клетку снаряда, 1,5 с стартовая пауза', () => {
+    expect([5, 5, 14, 7, 90].map(secondsOf)).toEqual([0.08, 0.08, 0.23, 0.12, 1.5]);
 
-    // шаг и поворот: поворот на месте, первый шаг через 22 такта, дальше шаг каждые 5 тактов
+    // шаг и поворот: поворот на месте, первый шаг через 5 тактов, дальше шаг каждые 5 тактов
     const walker = newGame();
     arrange(walker, {});
     const steps: number[] = [];
@@ -384,7 +384,7 @@ describe('описание «Танков»: числа записаны ров�
       }
     }
     expect(walker['player'].dir).toBe(LEFT);
-    expect(steps.slice(0, 3)).toEqual([23, 28, 33]);
+    expect(steps.slice(0, 3)).toEqual([6, 11, 16]);
 
     // огонь: выстрелы через 14 тактов, снаряд — клетка за 7 тактов, в полёте не больше четырёх
     const gunner = newGame();
@@ -409,22 +409,22 @@ describe('описание «Танков»: числа записаны ров�
     expect(flyer['playerBullets'][0]).toEqual({ x: 4, y: 11, dir: UP });
   });
 
-  it('шаг вперёд откладывает следующий выстрел на 0,23 с (14 тактов)', () => {
+  it('после шага выстрел принимается следующим тактом', () => {
     const game = newGame();
     arrange(game, {});
     game.step(hold('up')); // шаг вперёд на такте 1
     expect(game['player'].y).toBe(8);
     const shots: number[] = [];
     for (let t = 2; t <= 40; t++) if (types(game.step(hold('fire'))).includes('shot')) shots.push(t);
-    expect(shots[0]).toBe(15);
+    expect(shots[0]).toBe(2);
   });
 
-  it('стартовая пауза 1,5 с (90 тактов): ввод не принимается, врагов нет; после неё танк слушается', () => {
+  it('стартовая пауза 1,5 с (90 тактов): движение работает, врагов и огня нет', () => {
     const game = new TanksGame({ seed: 3 });
     game.start();
     for (let i = 0; i < 89; i++) {
       game.step(hold('left', 'fire'));
-      expect(game['player']).toEqual(START);
+      expect(game['player'].dir).toBe(LEFT);
       expect(liveEnemies(game).length).toBe(0);
       expect(game['playerBullets'].every((bullet) => bullet === null)).toBe(true);
     }
@@ -442,7 +442,7 @@ describe('описание «Танков»: числа записаны ров�
     run(game, 72); // очистка поля
     for (let i = 0; i < 89; i++) {
       game.step(hold('left'));
-      expect(game['player']).toEqual(START);
+      expect(game['player'].dir).toBe(LEFT);
       expect(liveEnemies(game).length).toBe(0);
     }
   });
@@ -507,7 +507,7 @@ describe('описание «Танков»: правила подтвержде
       arrange(game, { player: { x: 4, y: 7, dir: dir === 0 ? 1 : 0 } });
       game.step(hold(key));
       expect(game['player'], key).toEqual({ x: 4, y: 7, dir });
-      run(game, 22, hold(key)); // пауза после поворота — 22 такта, затем шаг
+      run(game, 5, hold(key)); // пауза после поворота — 5 тактов, затем шаг
       const dx = [0, 1, 0, -1][dir] ?? 0;
       const dy = [1, 0, -1, 0][dir] ?? 0;
       expect(game['player'], key).toEqual({ x: 4 + dx, y: 7 + dy, dir });

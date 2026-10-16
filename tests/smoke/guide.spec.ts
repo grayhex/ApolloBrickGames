@@ -41,14 +41,10 @@ test.describe('вкладки игр', () => {
     await expect(selected(page)).toHaveText('1');
     await expect(page.locator('#side-info .gtab[data-playing]')).toHaveText('1');
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Танки');
-    await expect(page.locator('#gpanel .chip').first()).toHaveText('есть (приближённо)');
-    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 5');
-    await expect(page.locator('#gpanel .chip')).toHaveCount(2); // число вариантов — одним значком
     await expect(page.locator('#side-info #keymap')).toContainText('ROTATE'); // управление — кнопки консоли с меню
     // Тетрис (8) — 51 вариант; правил и очков заглушки у консоли с меню нет.
     await tabs(page).nth(7).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Тетрис');
-    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 51');
     await expect(page.locator('#gpanel #rules-title')).toHaveCount(0);
   });
 
@@ -57,29 +53,14 @@ test.describe('вкладки игр', () => {
     await tabs(page).nth(4).click();
     await expect(selected(page)).toHaveText('5');
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Стрельба по массиву и точкам');
-    await expect(page.locator('#gpanel .chip').first()).toHaveText('есть (приближённо)');
-    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 16');
     // Описание «по факту реализации» (src/brick/guides): цель, факты, правила (раскрыты), остальное — под заголовками.
-    await expect(page.locator('#gpanel')).toContainText('отделяются'); // про отделяющиеся точки-враги
-    await expect(page.locator('#gpanel .gpanel__goal')).toContainText('Цель');
-    await expect(page.locator('#gpanel .gfacts li')).toHaveCount(4);
-    await expect(page.locator('#gpanel .gsec')).toHaveCount(6); // правила, кнопки, очки, схемы, варианты, допущения
-    await expect(page.locator('#gpanel .gsec[open]')).toHaveCount(1);
-    await expect(page.locator('#gpanel .gsec[data-sec="rules"] li').first()).toBeVisible();
-    await page.locator('#gpanel .gsec[data-sec="controls"] summary').click();
-    await expect(page.locator('#gpanel .gsec[data-sec="controls"] .kbd').first()).toBeVisible();
-    await expect(page.locator('#gpanel .gsec[data-sec="controls"]')).toContainText('ROTATE');
-    await page.locator('#gpanel .gsec[data-sec="schemes"] summary').click();
+    await expect(page.locator('#gpanel .grules li')).toHaveCount(3); // про отделяющиеся точки-враги
+    await expect(page.locator('#gpanel .gpanel__goal')).not.toBeEmpty();
     await expect(page.locator('#gpanel .gscheme').first()).toBeVisible();
-    await page.locator('#gpanel .gsec[data-sec="modes"] summary').click();
-    await expect(page.locator('#gpanel .gmodes li')).toHaveCount(16); // вариантов столько же, сколько в меню консоли
-    await expect(page.locator('#gpanel .gpanel__src')).toContainText('Источник');
-    await expect(page.locator('#gpanel .gpanel__src')).toContainText('не прошивка Apollo');
     await expect(page.locator('#gpanel .gpanel__open')).toHaveCount(0); // общих «не установлено» у описанных игр нет: допущения — в своём разделе
     await expect(page.locator('#gpanel #rules-title')).toHaveCount(0); // правил тетриса здесь нет
     await tabs(page).nth(0).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Танки');
-    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 5');
     // Роль и связи для скринридеров.
     await expect(page.locator('#side-info [role="tablist"]')).toHaveCount(1);
     await expect(page.locator('#gpanel')).toHaveAttribute('role', 'tabpanel');
@@ -116,22 +97,19 @@ test.describe('вкладки игр', () => {
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Морской бой');
     await tabs(page).nth(4).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Тетрис');
-    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 20'); // у «Морского боя» — по списку владельца
     await tabs(page).nth(5).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Арканоид');
-    await expect(page.locator('.games__note')).toContainText('теннис'); // оговорка про «теннис» — над вкладками, у всей консоли
     await tabs(page).nth(2).click();
-    await expect(page.locator('#gpanel')).toContainText('лесенку');
+    await expect(page.locator('#gpanel')).toContainText('лестницу');
     await expect(page.locator('[data-box-open]')).toHaveCount(0);
   });
 
-  test('«Часы+99»: четыре игры по наклейке, открыт тетрис (2); в примечании сказано, что список уточняется', async ({ page }) => {
+  test('«Часы+99»: десять игр, открыт тетрис (1)', async ({ page }) => {
     await open(page, 'toy=clock99');
-    await expect(tabs(page)).toHaveText(['1', '2', '3', '4']);
-    await expect(selected(page)).toHaveText('2');
-    await expect(page.locator('#side-info .games__note')).toContainText('уточняется');
+    await expect(tabs(page)).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
+    await expect(selected(page)).toHaveText('1');
     await tabs(page).nth(0).click();
-    await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Часы');
+    await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Тетрис');
     await expect(page.locator('[data-box-open]')).toHaveCount(0);
   });
 
@@ -158,8 +136,7 @@ test.describe('вкладки игр', () => {
     await page.locator('#corner-lang').click();
     await expect(selected(page)).toHaveText('6');
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Shooting: shapes');
-    await expect(page.locator('#gpanel .gpanel__goal')).toContainText('Goal');
-    await expect(page.locator('#gpanel .gsec[data-sec="rules"] summary')).toHaveText('Rules');
+    await expect(page.locator('#gpanel .gpanel__goal')).not.toBeEmpty();
     await expect(page.locator('#side-info [role="tablist"]')).toHaveAttribute('aria-label', 'Console games');
     await expect(page.locator('[data-box-open]')).toHaveAttribute('aria-label', 'Examine the box in 3D');
   });
@@ -372,4 +349,34 @@ test.describe('3D-коробка Crocodile Mario: вывод выключен', 
     await expect.poll(phase(page)).toBe('ready');
     await expect(page.locator('#side-info [data-box-open="tank168"]')).toBeVisible();
   });
+});
+
+test('подробная справка содержит варианты и допущения, левая панель — краткие правила и схемы', async ({ page }) => {
+  await open(page, 'toy=seabattle');
+  await expect(page.locator('#gpanel .gsec, #gpanel .chip')).toHaveCount(0);
+  await expect(page.locator('#gpanel .gscheme')).toBeVisible();
+  await expect(page.locator('#gpanel .grules li')).toHaveCount(3);
+  await page.locator('#corner-help').click();
+  const help = page.locator('#help');
+  await expect(help).toBeVisible();
+  const sea = help.locator('.help__game[data-game="sea-battle"]');
+  await sea.locator(':scope > summary').click();
+  await expect(sea).toContainText('Поочерёдные выстрелы');
+  const tanks = help.locator('.help__game[data-game="tank"]');
+  await tanks.locator(':scope > summary').click();
+  await tanks.locator('[data-sec="modes"] summary').click();
+  await expect(tanks.locator('.gmodes li')).toHaveCount(2);
+  await expect(help).toContainText('MIT');
+  await page.keyboard.press('Escape');
+  await expect(help).not.toBeVisible();
+});
+test('фигуры Mario сохраняют квадратные рамки в невысоком окне', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 800 });
+  await page.goto('./?view=full');
+  await expect(page.locator('#side-info .fig__box')).toHaveCount(11);
+  const sizes = await page.locator('#side-info .fig__box').evaluateAll((els) => els.map((el) => {
+    const r = el.getBoundingClientRect(); return [r.width, r.height];
+  }));
+  expect(sizes.length).toBeGreaterThan(5);
+  for (const [w, h] of sizes) expect(Math.abs(w! - h!)).toBeLessThan(1);
 });

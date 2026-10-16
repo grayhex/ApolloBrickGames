@@ -25,7 +25,7 @@ export const GAME_GUIDE: Record<GameId, GameGuide> = {
   tetris: { what: 'game.tetris.what', open: 'game.tetris.open', sources: ['owner'] },
   'tetris-big': { what: 'game.tetris-big.what', open: 'game.tetris-big.open', sources: ['owner'] },
   'tetris-pentix': { what: 'game.tetris-pentix.what', how: 'game.tetris-pentix.how', open: 'game.tetris-pentix.open', sources: ['owner', 'donor'] },
-  shooting: { what: 'game.shooting.what', open: 'game.shooting.open', sources: ['sticker'] },
+  shooting: { what: 'game.shooting.what', open: 'game.shooting.open', sources: ['sticker', 'donor'] },
   'shooting-array': { what: 'game.shooting-array.what', how: 'game.shooting-array.how', open: 'game.shooting-array.open', sources: ['owner', 'donor'] },
   'shooting-figures': { what: 'game.shooting-figures.what', how: 'game.shooting-figures.how', open: 'game.shooting-figures.open', sources: ['owner', 'donor'] },
   racing: { what: 'game.racing.what', how: 'game.racing.how', open: 'game.racing.open', sources: ['owner', 'donor'] },
@@ -33,7 +33,7 @@ export const GAME_GUIDE: Record<GameId, GameGuide> = {
   tank: { what: 'game.tank.what', how: 'game.tank.how', open: 'game.tank.open', sources: ['owner', 'donor'] },
   arkanoid: { what: 'game.arkanoid.what', open: 'game.arkanoid.open', sources: ['owner', 'sticker'] },
   'romeo-juliet': { what: 'game.romeo-juliet.what', open: 'game.romeo-juliet.open', sources: ['owner'] },
-  'sea-battle': { what: 'game.sea-battle.what', open: 'game.sea-battle.open', sources: ['sticker'] },
+  'sea-battle': { what: 'game.sea-battle.what', open: 'game.sea-battle.open', sources: ['owner', 'sticker'] },
   frog: { what: 'game.frog.what', how: 'game.frog.how', open: 'game.frog.open', sources: ['owner', 'donor'] },
   construction: { what: 'game.construction.what', how: 'game.construction.how', open: 'game.construction.open', sources: ['owner', 'donor'] },
 };

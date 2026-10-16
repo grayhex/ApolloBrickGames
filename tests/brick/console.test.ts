@@ -93,9 +93,16 @@ describe('рисунок меню по фотографии экрана', () =>
     expect(lit(field, [6, 7, 8], [18])).toBe(true);
   });
 
+  it('двузначный пункт 10 занимает обе половины экрана', () => {
+    const field = menuField('10', 1, 'arkanoid');
+    expect(field.slice(0, 70).some((v, i) => i % 10 < 5 && v !== 0)).toBe(true);
+    expect(field.slice(0, 70).some((v, i) => i % 10 >= 5 && v !== 0)).toBe(true);
+    expect(field).not.toEqual(menuField('1', 1, 'arkanoid'));
+  });
+
   it('у каждой игры есть иллюстрация 10 × 5, и все они различаются', () => {
     const ids = Object.keys(ILLUSTRATIONS);
-    expect(ids.length).toBe(13);
+    expect(ids.length).toBe(14);
     for (const id of ids) {
       const art = ILLUSTRATIONS[id] ?? [];
       expect(art.length).toBe(5);

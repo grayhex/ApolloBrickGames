@@ -3,6 +3,7 @@
  * Каждое описание лежит в своём файле рядом и строится по коду игры (числа берутся из экспортируемых констант игры); сюда они только собраны.
  * «Тетрис с большими фигурами» («Морской бой», D) и «Тетрис Pentix» («168 в 1 танк», 9) — одна игра ядра, описание общее.
  */
+import { SEA_GUIDE, ROMEO_GUIDE } from './approximations';
 import type { GameGuideData } from '../guide';
 import { ARKANOID_GUIDE } from './arkanoid';
 import { CONSTRUCTION_GUIDE } from './construction';
@@ -29,6 +30,9 @@ export {
 };
 
 export const BRICK_GUIDES: Readonly<Record<string, GameGuideData>> = {
+  'sea-battle': SEA_GUIDE,
+  'romeo-juliet': ROMEO_GUIDE,
+  shooting: INVADERS_GUIDE,
   tank: TANKS_GUIDE,
   frog: FROGGER_GUIDE,
   racing: RACING_GUIDE,

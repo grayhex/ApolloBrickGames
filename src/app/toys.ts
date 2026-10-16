@@ -6,8 +6,7 @@ import type { ToyKeyId } from './toy';
 
 /**
  * Четыре складные игрушки Apollo: на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
- * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» пока играют в обычный тетрис (заглушка — оригинальные игры
- * будут восстановлены позже). Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
+ * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» используют общий BrickConsole с меню игр. Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
  * цвет и вид (свёрнута / полная / только экран) сохраняются, страница не перезагружается (см. `host.ts`).
  */
 export const TOY_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
@@ -50,7 +49,7 @@ export interface ToyModel {
   defaultShell: Shell;
   /** Набор игр консоли по наклейке или упаковке (порядок — как напечатано). Игры конкретной консоли настраиваются отдельно (позже — в «админке»). */
   games: readonly ToyGame[];
-  /** Игра, которая запускается сейчас: у Mario своя, у остальных тетрис-заглушка. Всегда входит в `games`. */
+  /** Игра, которая запускается сейчас: у Mario своя, у остальных игра из общего Brick Game. Всегда входит в `games`. */
   defaultGame: GameId;
   /** Сколько игр заявлено на наклейке в целом («168 в 1»), если больше названных. */
   gamesCount?: number;
@@ -135,13 +134,20 @@ export const TOYS: Record<ToyId, ToyModel> = {
     defaultShell: 'yellow',
     // Наклейка: «часы+99» — тетрис, стрельба, автогонка (и часы, по названию и кнопке TIME/GAME).
     games: [
-      { id: 'clock', label: 'часы', status: 'planned' },
-      { id: 'tetris', label: 'тетрис', status: 'placeholder' },
-      { id: 'shooting', label: 'стрельба', status: 'planned' },
-      { id: 'racing', label: 'автогонка', status: 'planned' },
+      { id: 'tetris', label: 'тетрис', status: 'ready' },
+      { id: 'racing', label: 'автогонка', status: 'ready' },
+      { id: 'shooting', label: 'стрельба', status: 'ready' },
+      // Дополнительная подборка проекта, не заявленный набор оригинальной прошивки.
+      { id: 'tank', label: 'Танки', status: 'ready' },
+      { id: 'frog', label: 'Лягушка', status: 'ready' },
+      { id: 'racing-shooting', label: 'Гонки со стрельбой', status: 'ready' },
+      { id: 'shooting-figures', label: 'Стрельба по фигурам', status: 'ready' },
+      { id: 'construction', label: 'Строитель', status: 'ready' },
+      { id: 'tetris-pentix', label: 'Pentix', status: 'ready' },
+      { id: 'arkanoid', label: 'Арканоид', status: 'ready' },
     ],
     defaultGame: 'tetris',
-    menu: false,
+    menu: true,
     gameKeys: 'digits',
     glyph: 'star',
     panel: 'clock',
@@ -169,13 +175,13 @@ export const TOYS: Record<ToyId, ToyModel> = {
     keyWhat: {
       onoff: 'help.row.onoff',
       sound: 'help.row.sound',
-      fire: 'help.row.timeGame',
+      fire: 'help.row.menu',
       sp: 'help.row.sp',
-      left: 'help.t.left',
-      right: 'help.t.right',
-      up: 'help.t.rotate',
-      down: 'help.t.down',
-      jump: 'help.t.rotate',
+      left: 'help.m.left',
+      right: 'help.m.right',
+      up: 'help.m.up',
+      down: 'help.m.down',
+      jump: 'help.m.rotate',
     },
   },
   // «Морской бой»: красный и синий корпуса; точка в прямоугольнике; без светодиодов; линия вокруг экрана цвета корпуса.
@@ -185,11 +191,11 @@ export const TOYS: Record<ToyId, ToyModel> = {
     shells: ['red', 'blue'],
     defaultShell: 'red',
     // Режимы A–F — по списку владельца. На наклейке напечатаны «танк, тетрис, теннис, Ромео и Джульетта»: «теннис», видимо, и есть арканоид (F) — не подтверждено.
-    // Танки, оба тетриса и арканоид играют по правилам донора (`src/brick`), «Морской бой» и «Ромео и Джульетта» ещё не восстановлены.
+    // Танки, оба тетриса и арканоид играют по правилам донора (`src/brick`), «Морской бой» и «Ромео и Джульетта» — по уточнениям владельца с явно отмеченными допущениями.
     games: [
-      { id: 'sea-battle', label: 'Морской бой', status: 'planned' },
+      { id: 'sea-battle', label: 'Морской бой', status: 'ready' },
       { id: 'tank', label: 'Танки', variants: 2, modes: [0, 1], status: 'ready' },
-      { id: 'romeo-juliet', label: 'Ромео и Джульетта (постройка лесенки)', status: 'planned' },
+      { id: 'romeo-juliet', label: 'Ромео и Джульетта (постройка лесенки)', status: 'ready' },
       // Заявлено 20 режимов; у игры ядра (Pentix) их тоже 20 — сочетания классов донора Q…X (часть — допущение, см. `docs/brick/tetris.md`).
       { id: 'tetris-big', label: 'Тетрис с большими фигурами', variants: 20, status: 'ready' },
       // Заявлено 20 режимов, у игры ядра их 51: показываются первые 20 (какие именно режимы у устройства — допущение).

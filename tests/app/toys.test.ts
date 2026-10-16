@@ -50,7 +50,7 @@ describe('выбор игрушки', () => {
 
   it('у тетрис-заглушки и консолей с меню уровней на пульте нет, слева справка, светодиоды — у всех, кроме «Морского боя»; у Mario всё как было', () => {
     expect(TOYS.mario).toMatchObject({ defaultGame: 'mario', menu: false, info: true, levels: true, leds: true });
-    expect(TOYS.clock99).toMatchObject({ defaultGame: 'tetris', menu: false, info: true, levels: false, leds: true, glyph: 'star', panel: 'clock', deco: 'flourish' });
+    expect(TOYS.clock99).toMatchObject({ defaultGame: 'tetris', menu: true, info: true, levels: false, leds: true, glyph: 'star', panel: 'clock', deco: 'flourish' });
     // «Морской бой» и «168 в 1 танк» — консоли с меню игр: первая восстановленная игра — танки.
     expect(TOYS.seabattle).toMatchObject({ defaultGame: 'tank', menu: true, info: true, levels: false, leds: false, glyph: 'square', panel: 'sea', deco: 'frame' });
     // «168 в 1 танк»: точка в прямоугольнике, как у «Морского боя», а рамка с завитками и светодиоды — как у «Часов+99»; в углу панели чашка паузы.
@@ -138,7 +138,7 @@ describe('набор игр у консоли', () => {
   it('наборы: Mario — MARIO (9), TETRIS (99), SHOOTING (1) по упаковке; «Часы+99» — по наклейке; «Морской бой» A–F и «168 в 1 танк» 1–9 — по списку владельца', () => {
     const ids = (id: (typeof TOY_IDS)[number]): string[] => TOYS[id].games.map((game) => game.id);
     expect(TOYS.mario.games.map((game) => [game.label, game.variants])).toEqual([['MARIO', 9], ['TETRIS', 99], ['SHOOTING', 1]]);
-    expect(ids('clock99')).toEqual(['clock', 'tetris', 'shooting', 'racing']);
+    expect(ids('clock99')).toEqual(['tetris', 'racing', 'shooting', 'tank', 'frog', 'racing-shooting', 'shooting-figures', 'construction', 'tetris-pentix', 'arkanoid']);
     expect(ids('seabattle')).toEqual(['sea-battle', 'tank', 'romeo-juliet', 'tetris-big', 'tetris', 'arkanoid']);
     expect(ids('tank168')).toEqual(['tank', 'frog', 'racing', 'racing-shooting', 'shooting-array', 'shooting-figures', 'construction', 'tetris', 'tetris-pentix']);
     expect(TOYS.clock99.games.find((game) => game.id === 'racing')?.label).toBe('автогонка'); // название своё у каждой консоли
@@ -149,7 +149,7 @@ describe('набор игр у консоли', () => {
   it('игры отмечены цифрами (у «Морского боя» — буквами A–F): 1…9, A…F', () => {
     expect(TOYS.tank168.games.map((_, index) => gameKey(TOYS.tank168, index)).join('')).toBe('123456789');
     expect(TOYS.seabattle.games.map((_, index) => gameKey(TOYS.seabattle, index)).join('')).toBe('ABCDEF');
-    expect(TOYS.clock99.games.map((_, index) => gameKey(TOYS.clock99, index)).join('')).toBe('1234');
+    expect(TOYS.clock99.games.map((_, index) => gameKey(TOYS.clock99, index)).join('')).toBe('12345678910');
     expect(TOYS.seabattle.games.findIndex((game) => game.id === 'tetris')).toBe(4); // обычный тетрис — режим E
     expect(TOYS.tank168.games.findIndex((game) => game.id === 'tetris')).toBe(7); // тетрис — игра 8
   });
@@ -163,7 +163,7 @@ describe('набор игр у консоли', () => {
       ['arkanoid', 32],
     ]);
     expect(TOYS.seabattle.games.find((game) => game.id === 'tank')?.modes).toEqual([0, 1]);
-    expect(TOYS.seabattle.games.filter((game) => game.status === 'planned').map((game) => game.id)).toEqual(['sea-battle', 'romeo-juliet']);
+    expect(TOYS.seabattle.games.filter((game) => game.status === 'planned').map((game) => game.id)).toEqual([]);
     expect(TOYS.tank168.games.every((game) => game.status === 'ready')).toBe(true);
   });
 
@@ -185,17 +185,17 @@ describe('набор игр у консоли', () => {
     expect(owners('tetris')).toEqual([...TOY_IDS]);
     expect(owners('shooting')).toEqual(['mario', 'clock99']);
     expect(owners('racing')).toEqual(['clock99', 'tank168']);
-    expect(owners('tank')).toEqual(['seabattle', 'tank168']);
+    expect(owners('tank')).toEqual(['clock99', 'seabattle', 'tank168']);
   });
 
   it('запускаются Mario (настоящая), тетрис-заглушка «Часов+99» и игры ядра «кирпичных» (по донору); остальные ещё не восстановлены', () => {
     const engines = GAME_IDS.filter((id) => GAMES[id].engine !== null);
-    expect(engines).toEqual(['mario', 'tetris', 'tetris-big', 'tetris-pentix', 'shooting-array', 'shooting-figures', 'racing', 'racing-shooting', 'tank', 'arkanoid', 'frog', 'construction']);
+    expect(engines).toEqual(['mario', 'tetris', 'tetris-big', 'tetris-pentix', 'shooting', 'shooting-array', 'shooting-figures', 'racing', 'racing-shooting', 'tank', 'arkanoid', 'romeo-juliet', 'sea-battle', 'frog', 'construction']);
     expect(GAMES.mario.engine).toBe('mario');
     for (const id of engines.filter((game) => game !== 'mario')) expect(GAMES[id].engine, id).toBe('brick');
     for (const id of TOY_IDS) {
       const slot = TOYS[id].games.find((game) => game.id === TOYS[id].defaultGame);
-      expect(slot?.status, id).toBe(id === 'clock99' ? 'placeholder' : 'ready');
+      expect(slot?.status, id).toBe('ready');
       // Всё, у чего нет движка, помечено «ещё не восстановлена» (или заглушкой, если играет тетрис).
       for (const game of TOYS[id].games) {
         if (GAMES[game.id].engine === null) expect(game.status, `${id}:${game.id}`).toBe('planned');
