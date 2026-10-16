@@ -117,8 +117,8 @@ export class RoadGame extends LibraryGame {
   }
 }
 
-/** Нижняя строка, до которой доходит строй в игре с ответным огнём: ниже — пушка. */
-const TALKING_LOWEST_ROW = 17;
+/** Нижняя строка, до которой доходит строй в игре с ответным огнём. Пуля игрока рождается в строке 17 и проверяется после сдвига вверх, поэтому строй останавливается строкой выше: иначе его нижний ряд нельзя было бы подстрелить. */
+const TALKING_LOWEST_ROW = 16;
 
 export class ShooterGame extends LibraryGame {
   readonly id: 'honeybee' | 'space-invaders' | 'ufo-raiders' | 'dual-shooting' | 'talking-shooting' | 'tetris-shooting' | 'meteor-fighter';

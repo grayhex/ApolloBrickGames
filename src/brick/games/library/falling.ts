@@ -20,14 +20,31 @@ export class FlickerTetrisGame extends TetrisCore {
   }
 }
 
+/**
+ * Силуэт Quarth: прямоугольник, у которого колонки обрезаны снизу. `heights[i]` — высота колонки `x + i` (клетки от `top` вниз); выстрел прилипает под колонку,
+ * поэтому полный прямоугольник получается добавлением клеток под короткими колонками (всего `Σ(max − высота)` выстрелов). Задачи собственные — набор из десяти уровней.
+ */
+export interface QuarthPiece { x: number; top: number; heights: readonly number[] }
+export const QUARTH_LEVELS: readonly (readonly QuarthPiece[])[] = [
+  [{ x: 3, top: 2, heights: [3, 2, 3, 3] }],
+  [{ x: 2, top: 2, heights: [3, 2, 3, 2, 3] }],
+  [{ x: 3, top: 2, heights: [4, 3, 2, 1] }],
+  [{ x: 1, top: 2, heights: [2, 1, 2] }, { x: 6, top: 5, heights: [3, 2, 3] }],
+  [{ x: 1, top: 2, heights: [2, 3, 3, 2, 2, 3] }],
+  [{ x: 2, top: 1, heights: [3, 3, 3, 2, 3] }, { x: 3, top: 7, heights: [2, 1, 2, 2] }],
+  [{ x: 1, top: 2, heights: [4, 3, 4, 2, 4, 3, 4] }],
+  [{ x: 0, top: 1, heights: [2, 1, 2] }, { x: 4, top: 1, heights: [3, 1, 3, 2] }, { x: 2, top: 7, heights: [2, 2, 1, 2, 2] }],
+  [{ x: 2, top: 1, heights: [5, 4, 3, 2, 3, 4] }],
+  [{ x: 0, top: 1, heights: [3, 2, 3, 1, 3] }, { x: 6, top: 1, heights: [2, 1, 2, 2] }, { x: 1, top: 8, heights: [3, 3, 2, 3, 1, 3, 3] }],
+];
 export class QuarthGame extends LibraryGame {
   readonly id = 'quarth'; board = new Uint8Array(200); x = 4; private timer = 0; private cooldown = 0;
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
   protected reset(): void { this.setLives(4); this.setup(); }
   private setup(): void {
     this.board.fill(0); this.timer = this.cooldown = 0; this.repeat.reset();
-    // Each separate silhouette has one notch; completing its bounding rectangle removes it.
-    for (let y = 2; y <= 4; y++) for (let x = 2; x <= 5; x++) if (!(x === 3 && y === 4)) this.board[y * 10 + x] = 1;
+    // Уровень выбирает силуэт; после десятого они повторяются. Каждый силуэт — прямоугольник с обрезанными снизу колонками (см. QUARTH_LEVELS).
+    for (const piece of QUARTH_LEVELS[(this.level - 1) % QUARTH_LEVELS.length]!) piece.heights.forEach((height, i) => { for (let dy = 0; dy < height; dy++) this.board[(piece.top + dy) * 10 + piece.x + i] = 1; });
   }
   protected update(input: BrickInput): void {
     this.x = this.horizontal(input, this.x); if (this.cooldown) this.cooldown--;

@@ -1,5 +1,6 @@
 import { LibraryGame, action, DX, DY, put } from './common';
 import type { BrickGameOptions, BrickInput } from '../../types';
+import { SOKOBAN_LEVELS } from './sokobanLevels';
 
 export function toggleLights(board: Uint8Array, x: number, y: number): void {
   for (const [dx, dy] of [[0, 0], [0, -1], [1, 0], [0, 1], [-1, 0]]) {
@@ -30,12 +31,18 @@ export class SokobanGame extends LibraryGame {
   private history: { player: number; crates: number[] }[] = [];
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
   protected reset(): void { this.repeat.reset(); this.setup(); }
+  /** Задача уровня `level` из десяти собственных (`sokobanLevels.ts`, с проверенными решениями); после десятой они повторяются. Карта стоит по центру, с четвёртой строки. */
   private setup(): void {
     this.walls.clear(); this.crates.clear(); this.goals.clear(); this.history = [];
-    const count = 1 + Math.min(2, Math.floor((this.level - 1) / 3));
-    for (let y = 4; y <= 12; y++) for (let x = 1; x <= 8; x++) if (y === 4 || y === 12 || x === 1 || x === 8) this.walls.add(y * 10 + x);
-    for (let i = 0; i < count; i++) { this.crates.add(83 + i * 2); this.goals.add(53 + i * 2); }
-    this.player = 103;
+    const rows = SOKOBAN_LEVELS[(this.level - 1) % SOKOBAN_LEVELS.length]!.map;
+    const ox = Math.floor((10 - Math.max(...rows.map((r) => r.length))) / 2);
+    rows.forEach((row, y) => [...row].forEach((ch, x) => {
+      const p = (4 + y) * 10 + ox + x;
+      if (ch === '#') this.walls.add(p);
+      if (ch === '$' || ch === '*') this.crates.add(p);
+      if (ch === '.' || ch === '*' || ch === '+') this.goals.add(p);
+      if (ch === '@' || ch === '+') this.player = p;
+    }));
   }
   protected update(input: BrickInput): void {
     if (input.pressed.has('fire')) { this.setup(); return; }
