@@ -118,7 +118,8 @@ test.describe('«168 в 1 танк»', () => {
     await ready(page, '?toy=tank168&power=on');
     await expect(page.locator('#side-info .about__logo')).toHaveAttribute('src', /sticker-tank168/);
     await expect(page.locator('#side-info #keymap')).toContainText('Поворот');
-    await expect(page.locator('#side-info')).toContainText('танк');
+    await expect(page.locator('#side-info')).toContainText('Игры на устройстве'); // набор игр консоли — вкладками
+    await expect(page.locator('#side-info')).toContainText('заявлено 168');
   });
 });
 
@@ -269,7 +270,7 @@ test.describe('переключение игрушек на месте', () => {
     await switchTo(page, 'seabattle');
     await page.locator('#corner-help').click();
     await expect(page.locator('#help')).toBeVisible();
-    await expect(page.locator('#help .games__row')).toHaveCount(5); // набор «Морского боя», а не «Часов+99»
+    await expect(page.locator('#help .games__row')).toHaveCount(6); // набор «Морского боя» (режимы A–F), а не «Часов+99»
     await expect(page.locator('#help .help__table th').first()).toHaveText('ON/OFF');
     await page.keyboard.press('Escape');
     await expect(page.locator('#help')).toBeHidden();

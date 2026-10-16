@@ -4082,6 +4082,10 @@ body.route-editor .shell > :not(#fatal) {
 
 .box-dialog {
   width: min(560px, calc(100vw - 24px));
+}
+
+/* display: grid только у открытого диалога: иначе он перебивает скрытие закрытого и занимает место на странице. */
+.box-dialog[open] {
   display: grid;
   gap: 10px;
 }
