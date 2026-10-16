@@ -1,28 +1,24 @@
 import {
-  BOX,
-  FACE_NAMES,
-  HOME_VIEW,
   MAX_ZOOM,
   MIN_ZOOM,
-  PRESET_VIEWS,
   clamp,
   clampPitch,
-  faceDim,
   fitScale,
+  normalDim,
   shortestDelta,
   wrapAngle,
   type BoxView,
-  type PresetName,
 } from './boxMath';
 import { h } from './dom';
 import { onLangChange, t } from './i18n';
+import type { PackModel } from './packs';
 
 /**
- * 3D-модель упаковки «168 в 1 танк»: шесть граней-картинок (вырезаны из развёртки упаковки, `public/brand/box-tank168`) на CSS-преобразованиях
- * `preserve-3d`, без библиотек и WebGL. Вращение — мышью или пальцем (с инерцией), стрелками; колесо и «+/−» — масштаб; освещение пересчитывается
+ * 3D-модель упаковки: грани-картинки (вырезаны из присланных фото упаковки, `public/brand/<каталог модели>`) на CSS-преобразованиях
+ * `preserve-3d`, без библиотек и WebGL; модели («коробка» «168 в 1 танк», блистерная карточка Crocodile Mario) описаны в `packs.ts`. Вращение — мышью или пальцем (с инерцией), стрелками; колесо и «+/−» — масштаб; освещение пересчитывается
  * при каждом повороте (тёмный слой на грани), поэтому гранёность видна и на плоских картинках. Углы и яркость — в `boxMath.ts`.
  */
-const faceUrl = (face: string): string => `${import.meta.env.BASE_URL}brand/box-tank168/${face}.webp`;
+const faceUrl = (model: PackModel, file: string): string => `${import.meta.env.BASE_URL}brand/${model.dir}/${file}`;
 
 const prefersReducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -36,6 +32,8 @@ const KEY_ZOOM = 1.15;
 const SPIN_DEG_PER_S = 38;
 
 export interface BoxViewerOptions {
+  /** Какую упаковку показывать. */
+  model: PackModel;
   /** Вращается пальцем, мышью и клавишами (в диалоге); миниатюра в панели — нет. */
   interactive: boolean;
   /** Колесо и «+/−» меняют масштаб. */
@@ -50,6 +48,7 @@ export class BoxViewer {
   readonly element: HTMLElement;
   private readonly faces = new Map<string, HTMLElement>();
   private readonly observer: ResizeObserver | null;
+  private readonly model: PackModel;
   private readonly interactive: boolean;
   private readonly signal: AbortSignal | undefined;
   private readonly onAbort = (): void => this.dispose();
@@ -67,28 +66,30 @@ export class BoxViewer {
   private lastMove = 0;
 
   constructor(options: BoxViewerOptions) {
+    this.model = options.model;
     this.interactive = options.interactive;
     this.zoomable = options.zoomable ?? false;
-    const view = options.view ?? HOME_VIEW;
+    const view = options.view ?? this.model.home;
     this.yaw = view.yaw;
     this.pitch = view.pitch;
     this.zoomValue = options.zoom ?? 1;
 
     const scene = h('div', { class: 'box3d__scene' });
-    for (const name of FACE_NAMES) {
-      const face = h('i', { class: `box3d__face box3d__face--${name}`, 'data-face': name });
-      face.style.backgroundImage = `url("${faceUrl(name)}")`;
-      this.faces.set(name, face);
+    for (const { id, image } of this.model.faces) {
+      const face = h('i', { class: `box3d__face box3d__face--${id}`, 'data-face': id });
+      if (image) face.style.backgroundImage = `url("${faceUrl(this.model, image)}")`;
+      this.faces.set(id, face);
       scene.append(face);
     }
-    this.element = h('div', { class: `box3d${this.interactive ? ' box3d--live' : ''}`, 'data-box3d': this.interactive ? 'live' : 'thumb' }, scene);
-    this.element.style.setProperty('--bw', `${BOX.w}px`);
-    this.element.style.setProperty('--bh', `${BOX.h}px`);
-    this.element.style.setProperty('--bd', `${BOX.d}px`);
+    this.element = h(
+      'div',
+      { class: `box3d${this.interactive ? ' box3d--live' : ''}`, 'data-box3d': this.interactive ? 'live' : 'thumb', 'data-pack': this.model.id },
+      scene,
+    );
     if (this.interactive) {
       this.element.tabIndex = 0;
       this.element.setAttribute('role', 'img');
-      this.element.setAttribute('aria-label', t('box.aria'));
+      this.element.setAttribute('aria-label', t(this.model.text.aria));
       this.bindInput(options.signal);
     } else {
       this.element.setAttribute('aria-hidden', 'true');
@@ -129,13 +130,14 @@ export class BoxViewer {
     this.schedule();
   }
 
-  goToPreset(name: PresetName): void {
-    this.goTo(PRESET_VIEWS[name]);
+  goToPreset(name: string): void {
+    const preset = this.model.presets.find((item) => item.name === name);
+    if (preset) this.goTo(preset.view);
   }
 
   reset(): void {
     this.setZoom(1);
-    this.goTo(HOME_VIEW);
+    this.goTo(this.model.home);
   }
 
   setZoom(zoom: number): void {
@@ -153,7 +155,7 @@ export class BoxViewer {
       this.spinAt = performance.now();
       this.schedule();
     } else {
-      this.goTo(HOME_VIEW, 600);
+      this.goTo(this.model.home, 600);
     }
   }
 
@@ -169,14 +171,16 @@ export class BoxViewer {
     const view = this.currentView;
     this.element.style.setProperty('--ry', `${this.yaw.toFixed(2)}deg`);
     this.element.style.setProperty('--rx', `${this.pitch.toFixed(2)}deg`);
-    for (const [name, face] of this.faces) face.style.setProperty('--dim', String(faceDim(name as (typeof FACE_NAMES)[number], view)));
+    for (const { id, normal, lit } of this.model.faces) {
+      if (lit !== false) this.faces.get(id)?.style.setProperty('--dim', String(normalDim(normal, view)));
+    }
     this.element.dataset['yaw'] = String(Math.round(this.yaw));
     this.element.dataset['pitch'] = String(Math.round(this.pitch));
   }
 
   private fit(): void {
     const { clientWidth, clientHeight } = this.element;
-    const scale = fitScale(clientWidth, clientHeight, this.zoomValue);
+    const scale = fitScale(clientWidth, clientHeight, this.zoomValue, this.model.size);
     this.element.style.setProperty('--s', scale.toFixed(4));
     this.element.dataset['zoom'] = this.zoomValue.toFixed(2);
   }
@@ -325,14 +329,6 @@ export class BoxViewer {
   }
 }
 
-/** Что делают кнопки диалога: подписи берутся из словаря. */
-const PRESET_BUTTONS: readonly { name: PresetName; label: 'box.view.front' | 'box.view.back' | 'box.view.side' | 'box.view.top' }[] = [
-  { name: 'front', label: 'box.view.front' },
-  { name: 'back', label: 'box.view.back' },
-  { name: 'side', label: 'box.view.side' },
-  { name: 'top', label: 'box.view.top' },
-];
-
 export interface BoxDialogHooks {
   onOpen(): void;
   onClose(): void;
@@ -340,16 +336,19 @@ export interface BoxDialogHooks {
 
 /** Диалог «Рассмотреть коробку»: крупная модель, кнопки видов, подсказка. Пока он открыт, игра стоит на паузе (как у справки). */
 export class BoxDialog {
+  private readonly model: PackModel;
   private viewer: BoxViewer | null = null;
-  private view: BoxView = HOME_VIEW;
+  private view: BoxView;
   private zoom = 1;
 
   private readonly dialog: HTMLDialogElement;
   private readonly hooks: BoxDialogHooks;
 
-  constructor(dialog: HTMLDialogElement, hooks: BoxDialogHooks, signal?: AbortSignal) {
+  constructor(dialog: HTMLDialogElement, model: PackModel, hooks: BoxDialogHooks, signal?: AbortSignal) {
     this.dialog = dialog;
     this.hooks = hooks;
+    this.model = model;
+    this.view = model.home;
     dialog.addEventListener('close', () => this.hooks.onClose(), { signal });
     dialog.addEventListener(
       'cancel',
@@ -371,7 +370,7 @@ export class BoxDialog {
   open(): void {
     if (this.dialog.open) return;
     this.hooks.onOpen();
-    this.view = HOME_VIEW;
+    this.view = this.model.home;
     this.zoom = 1;
     this.render();
     this.dialog.showModal();
@@ -392,10 +391,12 @@ export class BoxDialog {
       this.zoom = this.viewer.zoom;
       this.viewer.dispose();
     }
-    const viewer = new BoxViewer({ interactive: true, zoomable: true, view: this.view, zoom: this.zoom });
+    const model = this.model;
+    const viewer = new BoxViewer({ model, interactive: true, zoomable: true, view: this.view, zoom: this.zoom });
     this.viewer = viewer;
     this.dialog.setAttribute('aria-labelledby', 'box-title');
-    const buttons = PRESET_BUTTONS.map(({ name, label }) => {
+    this.dialog.dataset['pack'] = model.id;
+    const buttons = model.presets.map(({ name, label }) => {
       const button = h('button', { type: 'button', class: 'btn box__view', 'data-view': name }, t(label));
       button.addEventListener('click', () => viewer.goToPreset(name));
       return button;
@@ -405,11 +406,11 @@ export class BoxDialog {
     const close = h('button', { type: 'button', class: 'btn btn--primary' }, t('common.close'));
     close.addEventListener('click', () => this.close());
     this.dialog.replaceChildren(
-      h('h2', { id: 'box-title' }, t('box.title')),
+      h('h2', { id: 'box-title' }, t(model.text.title)),
       h('div', { class: 'box__stage' }, viewer.element),
       h('p', { class: 'help__text box__hint' }, t('box.hint')),
       h('div', { class: 'box__views', role: 'group', 'aria-label': t('box.views') }, ...buttons, reset),
-      h('p', { class: 'help__text box__credit' }, t('box.credit')),
+      h('p', { class: 'help__text box__credit' }, t(model.text.credit)),
       h('div', { class: 'settings__row settings__row--end' }, close),
     );
   }

@@ -151,8 +151,10 @@ describe('набор игр у консоли', () => {
     expect(TOYS.tank168.games.findIndex((game) => game.id === 'tetris')).toBe(7); // тетрис — игра 8
   });
 
-  it('3D-модель коробки есть только у «168 в 1 танк» (по присланной развёртке упаковки)', () => {
-    expect(TOY_IDS.filter((id) => TOYS[id].box)).toEqual(['tank168']);
+  it('3D-упаковка есть у Crocodile Mario (блистерная карточка по фото) и «168 в 1 танк» (коробка по развёртке); у остальных нет', () => {
+    expect(TOY_IDS.filter((id) => TOYS[id].pack)).toEqual(['mario', 'tank168']);
+    expect(TOYS.mario.pack).toBe('mario');
+    expect(TOYS.tank168.pack).toBe('tank168');
   });
 
   it('игры консолей пересекаются: тетрис — у всех, стрельба — у Mario и «Часов+99», гонки — у «Часов+99» и «168 в 1», танк — у «Морского боя» и «168 в 1»', () => {

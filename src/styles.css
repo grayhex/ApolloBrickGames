@@ -3978,20 +3978,22 @@ body.route-editor .shell > :not(#fatal) {
   left: 50%;
   top: 50%;
   display: block;
-  background: #1c3f8f no-repeat center / 100% 100%;
+  background: no-repeat center / 100% 100%;
   backface-visibility: hidden;
-  /* Лёгкая «скруглённость» рёбер: тень по краю грани, чтобы стыки читались. */
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.32);
+  /* Освещение (boxMath.normalDim): грань темнеет фильтром — он повторяет форму картинки, у карточки с прозрачными углами тоже. */
+  filter: brightness(calc(1 - var(--dim, 0)));
 }
 
-/* Освещение: тёмный слой поверх грани, непрозрачность считается при каждом повороте (boxMath.faceDim). */
-.box3d__face::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: #000;
-  opacity: var(--dim, 0);
-  pointer-events: none;
+/* Коробка «168 в 1 танк»: размеры граней и лёгкая «скруглённость» рёбер — тень по краю грани, чтобы стыки читались. */
+.box3d[data-pack='tank168'] {
+  --bw: 525px;
+  --bh: 750px;
+  --bd: 122px;
+}
+
+.box3d[data-pack='tank168'] .box3d__face {
+  background-color: #1c3f8f;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.32);
 }
 
 .box3d__face--front,
@@ -4023,6 +4025,122 @@ body.route-editor .shell > :not(#fatal) {
 
 .box3d__face--top { transform: rotateX(90deg) translateZ(calc(var(--bh) / 2)); }
 .box3d__face--bottom { transform: rotateX(-90deg) translateZ(calc(var(--bh) / 2)); }
+
+/* Блистерная карточка Crocodile Mario: картон 660 × 1053 (по фото упаковки), игрушка и прозрачный пластик над ним. Размеры в условных пикселях сцены;
+   лицевые плоскости игрушки и блистера чуть уменьшены (на 1/(1 − z/2400)), чтобы при взгляде прямо они совпадали с рисунком на карточке. */
+.box3d[data-pack='mario'] {
+  --cw: 660px;
+  --ch: 1053px;
+  --ct: 6px;
+  --tx: 12px;
+  --ty: 137px;
+  --tw: 301px;
+  --th: 506px;
+  --td: 58px;
+  --bx: 19px;
+  --by: 128px;
+  --bwid: 353px;
+  --bhei: 555px;
+  --bz: 78px;
+}
+
+.box3d__face--card-front,
+.box3d__face--card-back {
+  width: var(--cw);
+  height: var(--ch);
+  margin: calc(var(--ch) / -2) 0 0 calc(var(--cw) / -2);
+}
+
+.box3d__face--card-front { transform: translateZ(calc(var(--ct) / 2)); }
+.box3d__face--card-back { transform: rotateY(180deg) translateZ(calc(var(--ct) / 2)); }
+
+/* Торцы картона: короче карточки на скруглённые углы. */
+.box3d__face--edge-left,
+.box3d__face--edge-right {
+  width: var(--ct);
+  height: calc(var(--ch) - 90px);
+  margin: calc((var(--ch) - 90px) / -2) 0 0 calc(var(--ct) / -2);
+  background: linear-gradient(90deg, #b9ad8c, #ddd3b8 50%, #b3a784);
+}
+
+.box3d__face--edge-top,
+.box3d__face--edge-bottom {
+  width: calc(var(--cw) - 90px);
+  height: var(--ct);
+  margin: calc(var(--ct) / -2) 0 0 calc((var(--cw) - 90px) / -2);
+  background: linear-gradient(#b9ad8c, #ddd3b8 50%, #b3a784);
+}
+
+.box3d__face--edge-left { transform: rotateY(-90deg) translateZ(calc(var(--cw) / 2 - 3px)); }
+.box3d__face--edge-right { transform: rotateY(90deg) translateZ(calc(var(--cw) / 2 - 3px)); }
+.box3d__face--edge-top { transform: rotateX(90deg) translateZ(calc(var(--ch) / 2 - 3px)); }
+.box3d__face--edge-bottom { transform: rotateX(-90deg) translateZ(calc(var(--ch) / 2 - 3px)); }
+
+/* Игрушка: лицевая сторона — фото, стенки — жёлтый пластик. */
+.box3d__face--toy-front {
+  width: var(--tw);
+  height: var(--th);
+  margin: calc(var(--th) / -2) 0 0 calc(var(--tw) / -2);
+  transform: translate3d(var(--tx), var(--ty), calc(var(--ct) / 2 + var(--td)));
+}
+
+.box3d__face--toy-left,
+.box3d__face--toy-right {
+  width: var(--td);
+  height: calc(var(--th) - 80px);
+  margin: calc((var(--th) - 80px) / -2) 0 0 calc(var(--td) / -2);
+  background: linear-gradient(90deg, #cdbc2a, #ecdd3e 60%, #d7c730);
+}
+
+.box3d__face--toy-top,
+.box3d__face--toy-bottom {
+  width: calc(var(--tw) - 80px);
+  height: var(--td);
+  margin: calc(var(--td) / -2) 0 0 calc((var(--tw) - 80px) / -2);
+  background: linear-gradient(#cdbc2a, #ecdd3e 60%, #d7c730);
+}
+
+.box3d__face--toy-left { transform: translate3d(calc(var(--tx) - var(--tw) / 2), var(--ty), calc(var(--ct) / 2 + var(--td) / 2)) rotateY(-90deg); }
+.box3d__face--toy-right { transform: translate3d(calc(var(--tx) + var(--tw) / 2), var(--ty), calc(var(--ct) / 2 + var(--td) / 2)) rotateY(90deg); }
+.box3d__face--toy-top { transform: translate3d(var(--tx), calc(var(--ty) - var(--th) / 2), calc(var(--ct) / 2 + var(--td) / 2)) rotateX(90deg); }
+.box3d__face--toy-bottom { transform: translate3d(var(--tx), calc(var(--ty) + var(--th) / 2), calc(var(--ct) / 2 + var(--td) / 2)) rotateX(-90deg); }
+
+/* Прозрачный блистер: светлые полупрозрачные стенки и блик на лицевой плоскости. */
+.box3d__face--bubble-front {
+  width: var(--bwid);
+  height: var(--bhei);
+  margin: calc(var(--bhei) / -2) 0 0 calc(var(--bwid) / -2);
+  transform: translate3d(var(--bx), var(--by), calc(var(--ct) / 2 + var(--bz)));
+  border-radius: 80px;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.03) 32%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.12) 86%);
+}
+
+.box3d__face--bubble-left,
+.box3d__face--bubble-right {
+  width: var(--bz);
+  height: calc(var(--bhei) - 150px);
+  margin: calc((var(--bhei) - 150px) / -2) 0 0 calc(var(--bz) / -2);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06));
+}
+
+.box3d__face--bubble-top,
+.box3d__face--bubble-bottom {
+  width: calc(var(--bwid) - 150px);
+  height: var(--bz);
+  margin: calc(var(--bz) / -2) 0 0 calc((var(--bwid) - 150px) / -2);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06));
+}
+
+.box3d__face--bubble-left { transform: translate3d(calc(var(--bx) - var(--bwid) / 2), var(--by), calc(var(--ct) / 2 + var(--bz) / 2)) rotateY(-90deg); }
+.box3d__face--bubble-right { transform: translate3d(calc(var(--bx) + var(--bwid) / 2), var(--by), calc(var(--ct) / 2 + var(--bz) / 2)) rotateY(90deg); }
+.box3d__face--bubble-top { transform: translate3d(var(--bx), calc(var(--by) - var(--bhei) / 2), calc(var(--ct) / 2 + var(--bz) / 2)) rotateX(90deg); }
+.box3d__face--bubble-bottom { transform: translate3d(var(--bx), calc(var(--by) + var(--bhei) / 2), calc(var(--ct) / 2 + var(--bz) / 2)) rotateX(-90deg); }
 
 .box3d--live {
   cursor: grab;
@@ -4224,4 +4342,54 @@ body.route-editor .shell > :not(#fatal) {
 
 @media (prefers-reduced-motion: reduce) {
   .boxbtn, .gtab { transition: none; }
+}
+
+/* ── Кнопка 3D-упаковки: размер по высоте окна (панель Mario должна помещаться без прокрутки) ─────────── */
+.side--info { position: relative; }
+.boxbtn__label { display: none; }
+
+/* У Mario миниатюра лежит поверх правого края шапки и места не занимает: логотип остаётся ровно по центру панели, а справка без прокрутки.
+   Высокие окна — крупнее и логотип поуже, чтобы они не перекрывались. */
+.side--info:not([data-toy]) .side__top--box { display: block; }
+.side--info:not([data-toy]) .boxbtn { position: absolute; top: 10px; right: 12px; z-index: 1; width: 84px; height: 108px; }
+.side--info:not([data-toy]) .side__top--box .about__sticker { max-width: 150px; }
+
+@media (max-height: 960px) {
+  .boxbtn { width: 64px; height: 84px; }
+  .side--info:not([data-toy]) .boxbtn { width: 64px; height: 84px; }
+}
+
+/* Невысокие окна (до 880 px; на 1536 × 864 справка Mario и без кнопки не помещалась на 10 px): чуть плотнее промежутки между блоками. */
+@media (max-height: 880px) {
+  .side--info:not([data-toy]) { gap: 6px; }
+  .side--info:not([data-toy]) .side__sec { gap: 4px; padding-top: 6px; }
+}
+
+/* Низкие окна (до 800 px): логотипа и фактов нет — вместо миниатюры строка-«пилюля» с мини-коробкой и подписью; остальное сжато ещё плотнее. */
+@media (max-height: 800px) {
+  .side--info:not([data-toy]) { padding-block: 8px; }
+  .side--info:not([data-toy]) .fig { grid-template-rows: 22px auto; }
+  .side--info:not([data-toy]) .fig__box { height: 22px; }
+
+  .side--info:not([data-toy]) .boxbtn {
+    position: relative;
+    top: auto;
+    right: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 34px;
+    padding: 0 10px 0 6px;
+    border-radius: 12px;
+  }
+
+  .side--info:not([data-toy]) .boxbtn .box3d { flex: none; width: 26px; height: 30px; }
+  .side--info:not([data-toy]) .boxbtn__cap { display: none; }
+  .side--info:not([data-toy]) .boxbtn__label {
+    display: block;
+    font: 700 0.7rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
 }

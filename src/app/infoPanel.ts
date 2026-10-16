@@ -1,5 +1,6 @@
 import { GAMES, type GameId } from '../games/catalog';
 import { BoxDialog, BoxViewer } from './boxViewer';
+import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
 import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
 import { getLang, onLangChange, t, type MsgKey } from './i18n';
@@ -98,7 +99,7 @@ function scoreRow(name: string, ways: readonly (readonly [string, number])[]): H
  * управления. Клавиши берутся из текущих привязок — после переназначения в настройках список обновляется (`render`);
  * язык меняется на лету. Панель намеренно тусклая и без картинок кнопок корпуса, чтобы не читаться как часть игрушки.
  */
-/** 3D-коробка рядом с наклейкой: диалог страницы и то, что делать игре, пока он открыт (пауза, как у справки). */
+/** 3D-упаковка рядом с наклейкой: диалог страницы и то, что делать игре, пока он открыт (пауза, как у справки). */
 export interface InfoPanelBox {
   dialog: HTMLDialogElement;
   onOpen(): void;
@@ -116,7 +117,8 @@ export class InfoPanel {
   private readonly hub: InputHub;
   private readonly toy: ToyId;
   private readonly signal: AbortSignal | undefined;
-  /** Диалог 3D-коробки (только у игрушки с коробкой). */
+  /** Модель упаковки игрушки (если есть) и диалог, где её можно рассмотреть. */
+  private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
   /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
   private thumb: BoxViewer | null = null;
@@ -129,7 +131,9 @@ export class InfoPanel {
     this.hub = hub;
     this.signal = signal;
     this.selected = TOYS[toy].defaultGame;
-    this.boxDialog = box && TOYS[toy].box ? new BoxDialog(box.dialog, { onOpen: box.onOpen, onClose: box.onClose }, signal) : null;
+    const packId = TOYS[toy].pack;
+    this.pack = packId ? PACKS[packId] : null;
+    this.boxDialog = box && this.pack ? new BoxDialog(box.dialog, this.pack, { onOpen: box.onOpen, onClose: box.onClose }, signal) : null;
     this.render();
     onLangChange(() => this.render(), signal);
   }
@@ -266,19 +270,21 @@ export class InfoPanel {
     this.root.replaceChildren(head, about, controls, figures, score);
   }
 
-  /** Миниатюра 3D-коробки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) коробка медленно поворачивается. */
+  /** Миниатюра 3D-упаковки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) упаковка медленно поворачивается. */
   private boxButton(): HTMLElement | null {
     const dialog = this.boxDialog;
+    const pack = this.pack;
     this.thumb?.dispose();
     this.thumb = null;
-    if (!dialog) return null;
-    const thumb = new BoxViewer({ interactive: false, signal: this.signal });
+    if (!dialog || !pack) return null;
+    const thumb = new BoxViewer({ model: pack, interactive: false, signal: this.signal });
     this.thumb = thumb;
     const button = h(
       'button',
-      { type: 'button', class: 'boxbtn', 'data-box-open': '', 'aria-label': t('box.open'), title: t('box.open') },
+      { type: 'button', class: 'boxbtn', 'data-box-open': pack.id, 'aria-label': t(pack.text.open), title: t(pack.text.open) },
       thumb.element,
       h('span', { class: 'boxbtn__cap', 'aria-hidden': 'true' }, t('box.cap')),
+      h('span', { class: 'boxbtn__label', 'aria-hidden': 'true' }, t(pack.text.short)),
     );
     const options = { signal: this.signal };
     button.addEventListener('click', () => dialog.open(), options);

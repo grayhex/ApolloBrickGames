@@ -1,6 +1,7 @@
 import { GAMES, type GameEngine, type GameId, type GameStatus } from '../games/catalog';
 import { SHELLS, type Shell } from '../input/settings';
 import type { MsgKey } from './messages';
+import type { PackId } from './packs';
 import type { ToyKeyId } from './toy';
 
 /**
@@ -63,8 +64,8 @@ export interface ToyModel {
   leds: boolean;
   /** Левая панель: у Mario «Figure introduction» по упаковке, у остальных справка по тетрису. */
   info: boolean;
-  /** Есть ли рядом с наклейкой 3D-модель упаковки (у «168 в 1 танк» — по присланной развёртке). */
-  box: boolean;
+  /** 3D-модель упаковки рядом с наклейкой: у «168 в 1 танк» — коробка по присланной развёртке, у Crocodile Mario — блистерная карточка по фото; у остальных нет. */
+  pack: PackId | null;
   /** Уровни на пульте справа (у заглушек выключены). */
   levels: boolean;
   /** Цвета LCD: фон окна и «чернила» включённых сегментов (по фото оригинала). */
@@ -109,7 +110,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     deco: 'frame',
     leds: true,
     info: true,
-    box: false,
+    pack: 'mario',
     levels: true,
     lcd: { bg: '#adb38c', ink: '#303a30' },
     stageLabel: 'stage.label',
@@ -136,7 +137,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     deco: 'flourish',
     leds: true,
     info: true,
-    box: false,
+    pack: null,
     levels: false,
     lcd: { bg: '#b8bbb3', ink: '#222a33' },
     stageLabel: 'stage.label.clock99',
@@ -188,7 +189,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     deco: 'frame',
     leds: false,
     info: true,
-    box: false,
+    pack: null,
     levels: false,
     lcd: { bg: '#c0c4a9', ink: '#252921' },
     stageLabel: 'stage.label.seabattle',
@@ -245,7 +246,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     deco: 'flourish',
     leds: true,
     info: true,
-    box: true,
+    pack: 'tank168',
     levels: false,
     lcd: { bg: '#c3c8c6', ink: '#232a34' },
     stageLabel: 'stage.label.tank168',

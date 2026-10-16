@@ -62,9 +62,11 @@ export const clamp = (value: number, min: number, max: number): number => Math.m
 
 export const clampPitch = (pitch: number): number => clamp(pitch, -MAX_PITCH, MAX_PITCH);
 
-/** Нормаль грани после поворота `rotateX(pitch) rotateY(yaw)` (матрицы из спецификации CSS Transforms). */
-export function rotatedNormal(face: FaceName, view: BoxView): [number, number, number] {
-  const [x, y, z] = NORMALS[face];
+export type Vec3 = readonly [number, number, number];
+
+/** Нормаль после поворота `rotateX(pitch) rotateY(yaw)` (матрицы из спецификации CSS Transforms). */
+export function rotatedVector(normal: Vec3, view: BoxView): [number, number, number] {
+  const [x, y, z] = normal;
   const cy = Math.cos(rad(view.yaw));
   const sy = Math.sin(rad(view.yaw));
   const x1 = cy * x + sy * z;
@@ -74,13 +76,23 @@ export function rotatedNormal(face: FaceName, view: BoxView): [number, number, n
   return [x1, cx * y - sx * z1, sx * y + cx * z1];
 }
 
-/** Обращена ли грань к зрителю (камера смотрит вдоль −z). */
+/** Нормаль грани коробки после поворота. */
+export function rotatedNormal(face: FaceName, view: BoxView): [number, number, number] {
+  return rotatedVector(NORMALS[face], view);
+}
+
+/** Обращена ли поверхность с нормалью `normal` к зрителю (камера смотрит вдоль −z). */
+export function normalFacing(normal: Vec3, view: BoxView): boolean {
+  return rotatedVector(normal, view)[2] > 1e-6;
+}
+
+/** Обращена ли грань к зрителю. */
 export function isFacing(face: FaceName, view: BoxView): boolean {
-  return rotatedNormal(face, view)[2] > 1e-6;
+  return normalFacing(NORMALS[face], view);
 }
 
 /** Куда падает свет: сверху-слева-спереди (x вправо, y вниз, z на зрителя). */
-const LIGHT: readonly [number, number, number] = (() => {
+const LIGHT: Vec3 = (() => {
   const v = [-0.45, -0.55, 0.7] as const;
   const length = Math.hypot(...v);
   return [v[0] / length, v[1] / length, v[2] / length] as const;
@@ -88,20 +100,30 @@ const LIGHT: readonly [number, number, number] = (() => {
 
 const AMBIENT = 0.5;
 
-/** Яркость грани 0…1: фон плюс косинус угла к свету; грань к свету спиной остаётся в тени, но не чёрной. */
-export function faceBrightness(face: FaceName, view: BoxView): number {
-  const n = rotatedNormal(face, view);
+/** Яркость поверхности с нормалью `normal` 0…1: фон плюс косинус угла к свету; повёрнутая к свету спиной остаётся в тени, но не чёрной. */
+export function normalBrightness(normal: Vec3, view: BoxView): number {
+  const n = rotatedVector(normal, view);
   const lit = Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]);
   return AMBIENT + (1 - AMBIENT) * lit;
 }
 
-/** Непрозрачность чёрного слоя поверх грани: чем темнее грань, тем плотнее (светлейшая — 0). */
-export function faceDim(face: FaceName, view: BoxView): number {
-  return Number(((1 - faceBrightness(face, view)) * 0.85).toFixed(3));
+/** Непрозрачность чёрного слоя поверх поверхности: чем темнее, тем плотнее (светлейшая — 0). */
+export function normalDim(normal: Vec3, view: BoxView): number {
+  return Number(((1 - normalBrightness(normal, view)) * 0.85).toFixed(3));
 }
 
-/** Масштаб, при котором коробка (с запасом на вращение) помещается в область `width × height`. */
-export function fitScale(width: number, height: number, zoom = 1): number {
+/** Яркость грани коробки. */
+export function faceBrightness(face: FaceName, view: BoxView): number {
+  return normalBrightness(NORMALS[face], view);
+}
+
+/** Тёмный слой грани коробки. */
+export function faceDim(face: FaceName, view: BoxView): number {
+  return normalDim(NORMALS[face], view);
+}
+
+/** Масштаб, при котором модель с лицом `w × h` (с запасом на вращение) помещается в область `width × height`. */
+export function fitScale(width: number, height: number, zoom = 1, size: { w: number; h: number } = BOX): number {
   if (!(width > 0) || !(height > 0)) return 0;
-  return Math.min(width / (BOX.w * 1.12), height / (BOX.h * 1.12)) * clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+  return Math.min(width / (size.w * 1.12), height / (size.h * 1.12)) * clamp(zoom, MIN_ZOOM, MAX_ZOOM);
 }
