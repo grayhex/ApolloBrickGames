@@ -59,12 +59,14 @@ export class SokobanGame extends LibraryGame {
 export const PEG_HOLES = Array.from({ length: 49 }, (_, p) => p).filter((p) => (p % 7 >= 2 && p % 7 <= 4) || (Math.floor(p / 7) >= 2 && Math.floor(p / 7) <= 4));
 export class SolitaireGame extends LibraryGame {
   readonly id = 'peg-solitaire'; pegs = new Set<number>(); cursor = 24; selected: number | null = null;
+  /** Счёт на начало текущей задачи: повтор возвращает его, поэтому «прыжок → повтор» не копит очки. Рекорд не уменьшается — он хранит лучшую попытку. */
+  private checkpoint = 0;
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
-  protected reset(): void { this.pegs = new Set(PEG_HOLES.filter((p) => p !== 24)); this.cursor = 24; this.selected = null; this.repeat.reset(); }
+  protected reset(): void { this.pegs = new Set(PEG_HOLES.filter((p) => p !== 24)); this.cursor = 24; this.selected = null; this.repeat.reset(); this.checkpoint = this.score; }
   protected update(input: BrickInput): void {
     const d = this.direction(input);
     if (d >= 0) { const x = this.cursor % 7 + DX[d]!, y = Math.floor(this.cursor / 7) + DY[d]!; if (x >= 0 && x < 7 && y >= 0 && y < 7) this.cursor = y * 7 + x; }
-    if (input.pressed.has('fire')) { this.reset(); return; }
+    if (input.pressed.has('fire')) { this.setScore(this.checkpoint); this.reset(); return; }
     if (!input.pressed.has('rotate')) return;
     if (this.pegs.has(this.cursor)) { this.selected = this.cursor; return; }
     if (this.selected === null || !PEG_HOLES.includes(this.cursor)) return;
@@ -193,30 +195,52 @@ export class MazeGame extends LibraryGame {
   protected draw(): Uint8Array { const out = this.walls.slice(); out[this.player] = 2; out[this.goal] = this.tick % 12 < 6 ? 1 : 0; return out; }
 }
 
-/** A small packing puzzle. Pieces come from a known partition, so each board has a solution. */
+/**
+ * A small packing puzzle. Pieces come from a known partition, so each board has a solution.
+ * Управление на кнопках корпуса (стрелки и ROTATE; RESET уходит в меню оболочки и в игру не попадает): стрелки двигают фигуру, короткое нажатие
+ * ROTATE поворачивает её (в момент отпускания), удержание ROTATE дольше `JIGSAW_LONG_PRESS` тактов укладывает фигуру, а удержание вместе с DOWN начинает
+ * задачу заново. Клавиатура: клавиша «огонь» укладывает сразу, «огонь» вместе с DOWN — начинает заново.
+ */
+export const JIGSAW_LONG_PRESS = 20;
 export class JigsawGame extends LibraryGame {
   readonly id = 'jigsaw'; board = new Uint8Array(16); pieceIndex = 0; shape: number[][] = []; x = 0; y = 0;
   private pieces: number[][][] = [];
+  /** Сколько тактов подряд удерживается ROTATE; `locked` — кнопку нужно сначала отпустить (после укладки или начала задачи заново). */
+  private rotateHold = 0; private locked = false;
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
   protected reset(): void { this.repeat.reset(); this.setup(); }
   private setup(): void {
-    this.board.fill(0); this.pieceIndex = 0;
+    this.board.fill(0); this.pieceIndex = 0; this.rotateHold = 0;
     // Four L tetrominoes tile a 4×4 square; two paired 2×4 rectangles give the construction.
     this.pieces = this.rng.shuffled([[[0,0],[0,1],[0,2],[1,2]], [[0,0],[1,0],[1,1],[1,2]], [[0,0],[0,1],[0,2],[1,2]], [[0,0],[1,0],[1,1],[1,2]]]);
     this.next();
   }
   private next(): void { this.shape = this.pieces[this.pieceIndex]!.map((p) => [...p]); this.x = this.y = 0; }
-  protected update(input: BrickInput): void {
-    if (input.pressed.has('fire') && input.held.has('down')) { this.setup(); return; }
-    const d = this.direction(input); if (d >= 0) { this.x = Math.max(0,Math.min(3,this.x + DX[d]!)); this.y = Math.max(0,Math.min(3,this.y + DY[d]!)); }
-    if (input.pressed.has('rotate')) {
-      const turned = this.shape.map(([x,y]) => [-y!,x!]); const minX = Math.min(...turned.map((p) => p[0]!)), minY = Math.min(...turned.map((p) => p[1]!)); this.shape = turned.map(([x,y]) => [x!-minX,y!-minY]);
-    }
-    if (!input.pressed.has('fire')) return;
+  private turn(): void {
+    const turned = this.shape.map(([x,y]) => [-y!,x!]); const minX = Math.min(...turned.map((p) => p[0]!)), minY = Math.min(...turned.map((p) => p[1]!)); this.shape = turned.map(([x,y]) => [x!-minX,y!-minY]);
+    this.emit({ type: 'rotate' });
+  }
+  private place(): void {
     const cells = this.shape.map(([x,y]) => [this.x+x!,this.y+y!]);
     if (cells.some(([x,y]) => x! >= 4 || y! >= 4 || this.board[y!*4+x!])) { this.emit({ type:'blocked' }); return; }
     for (const [x,y] of cells) this.board[y!*4+x!] = 1;
+    this.emit({ type: 'lock' });
     if (++this.pieceIndex === this.pieces.length) this.win(() => this.setup()); else this.next();
+  }
+  protected update(input: BrickInput): void {
+    const fire = input.pressed.has('fire');
+    if (fire && input.held.has('down')) { this.setup(); return; }
+    const d = this.direction(input); if (d >= 0) { this.x = Math.max(0,Math.min(3,this.x + DX[d]!)); this.y = Math.max(0,Math.min(3,this.y + DY[d]!)); }
+    let place = fire;
+    if (!input.held.has('rotate')) {
+      if (!this.locked && this.rotateHold > 0 && this.rotateHold < JIGSAW_LONG_PRESS) this.turn();
+      this.rotateHold = 0; this.locked = false;
+    } else if (!this.locked && ++this.rotateHold >= JIGSAW_LONG_PRESS) {
+      this.locked = true; this.rotateHold = 0;
+      if (input.held.has('down')) { this.setup(); return; }
+      place = true;
+    }
+    if (place) this.place();
   }
   protected draw(): Uint8Array { const out = new Uint8Array(200);
     const block = (x: number,y: number,v: number): void => { if (x >= 4 || y >= 4) return; for (let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) put(out,x*2+1+dx,y*2+6+dy,v); };
