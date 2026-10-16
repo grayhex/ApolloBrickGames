@@ -114,3 +114,13 @@ export function guideBlocks(guide: GameGuideData, def: BrickGameDef | undefined,
   }
   return blocks;
 }
+
+/** Always-visible essentials, with small LCD illustrations; development notes live in Help. */
+export function compactGuide(guide: GameGuideData, lang: Lang): HTMLElement[] {
+  return [
+    h('p', { class: 'gtext gpanel__goal' }, guide.goal[lang]),
+    h('div', { class: 'gquick__schemes' }, ...guide.schemes.slice(0, 2).map((scheme) => schemeEl(scheme, lang))),
+    h('ul', { class: 'grules' }, ...guide.rules.slice(0, 3).map((rule) => h('li', {}, rule[lang]))),
+    h('dl', { class: 'gctl' }, ...guide.controls.filter((control) => control.button !== 'start').flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, BUTTON_CAPS[control.button])), h('dd', {}, control.text[lang])])),
+  ];
+}

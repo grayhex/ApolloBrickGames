@@ -76,8 +76,8 @@ export const TANKS_GUIDE: GameGuideData = {
       'Obstacles start at level 2: "preset fields" variants use a table of levels, "random fields" place them randomly (up to N−1 on level N).',
     ),
     tx(
-      `Перед каждым уровнем и после потери жизни — пауза ${seconds(START_TICKS)} с: ввод не принимается, врагов на поле нет.`,
-      `Before each level and after losing a life there is a ${seconds(START_TICKS)} s pause: input is ignored and no enemies are on the field.`,
+      `Перед каждым уровнем и после потери жизни — пауза ${seconds(START_TICKS)} с: танк можно двигать, враги и стрельба ждут.`,
+      `Before each level and after losing a life there is a ${seconds(START_TICKS)} s pause: movement works; enemies and shooting wait.`,
     ),
     tx(
       `Чем выше уровень, тем чаще новый враг стреляет сразу при появлении: от 1 из ${BORN_SHOT_FIRST} на уровне 1 до 1 из ${BORN_SHOT_LAST} на ${MAX_LEVEL}-м.`,
@@ -107,8 +107,8 @@ export const TANKS_GUIDE: GameGuideData = {
     {
       button: 'rotate',
       text: tx(
-        `Огонь вперёд, удержание — автоогонь; шаг вперёд откладывает выстрел на ${seconds(FIRE_TICKS)} с`,
-        `Fire forward, held for auto-fire; a step forward delays the next shot by ${seconds(FIRE_TICKS)} s`,
+        `Огонь на ходу; удержание — автоогонь, интервал ${seconds(FIRE_TICKS)} с`,
+        `Fire while moving; hold for auto-fire, interval ${seconds(FIRE_TICKS)} s`,
       ),
     },
   ],
@@ -163,8 +163,8 @@ export const TANKS_GUIDE: GameGuideData = {
       'Rules, numbers and tank shapes come from the n0Live/BrickGame donor, not Apollo firmware; whether the device has a base, walls or a boss is not established.',
     ),
     gt(
-      'Во время паузы перед уровнем ввод не принимается совсем (у донора танк уже можно двигать); ROTATE и «огонь» стреляют одинаково.',
-      'During the pause before a level input is ignored entirely (the donor lets the tank move already); ROTATE and "fire" both shoot.',
+      'Новые нажатия без задержки, короткая пауза после поворота и огонь на ходу — доработки управления проекта.',
+      'Immediate new presses, shorter turn delay and firing while moving are project input improvements.',
     ),
   ],
 };

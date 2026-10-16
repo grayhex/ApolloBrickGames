@@ -208,7 +208,7 @@ const RU = {
   'games.src.donor': 'описания близких Brick Game (открытый симулятор, обзоры других моделей) — это не прошивка Apollo',
   'games.src.sticker': 'наклейка и упаковка',
   'games.note.seabattle': 'Режимы A–F — по списку владельца; на наклейке напечатано «теннис» — возможно, это арканоид.',
-  'games.note.clock99': 'Список — по наклейке и подписям кнопок; что встроено на самом деле, уточняется.',
+  'games.note.clock99': 'Пункты 1–3 — тетрис, гонки и стрельба с наклейки; 4–10 — дополнительная подборка проекта. Часы и будильник не моделируются.',
   'games.goal': 'Цель',
   'games.sec.rules': 'Правила',
   'games.sec.controls': 'Кнопки',
@@ -250,9 +250,9 @@ const RU = {
   'game.arkanoid.what': 'Шарик отскакивает от платформы и выбивает ряды кирпичей.',
   'game.arkanoid.open': 'Правила не установлены. На наклейке «Морского боя» напечатано «теннис» — возможно, так названа эта игра.',
   'game.romeo-juliet.what': 'Игра «Ромео и Джульетта»: по описанию владельца, в ней строят лесенку.',
-  'game.romeo-juliet.open': 'Правила не установлены.',
+  'game.romeo-juliet.open': 'Играет приближение проекта: постройка лесенки по описанию владельца; точные правила оригинала не установлены.',
   'game.sea-battle.what': 'Игра, давшая название консоли.',
-  'game.sea-battle.open': 'Как она устроена, в проекте не описано — сведений нет.',
+  'game.sea-battle.open': 'По владельцу: поочерёдные выстрелы по скрытому флоту. Точные параметры Apollo не установлены.',
   'game.frog.what': 'Проведите лягушку через ряды движущихся препятствий на другую сторону поля.',
   'game.frog.how': 'В открытом симуляторе 32 варианта: полосы идут в разные стороны, бывает встречное движение, полосы готовые или случайные, поле иногда перевёрнуто.',
   'game.frog.open': 'Набор и порядок вариантов у Apollo не установлены.',
@@ -324,6 +324,8 @@ const RU = {
   'help.pointer.p':
     'Кнопки на корпусе нажимаются мышью или пальцем — стрелки и JUMP можно удерживать. Подключённый геймпад работает сразу: крестовина — направления, нижняя кнопка — прыжок, левая — огонь, Start — старт и пауза. Клавиши и кнопки геймпада можно переназначить в настройках.',
   'help.about.h': 'Об игре',
+  'help.m.pointer.p': 'Кнопки корпуса работают мышью и касанием. Стрелки управляют выбранной игрой, большая кнопка ROTATE поворачивает или действует. Точные действия указаны в описании игры; в меню ROTATE выбирает следующую игру.',
+  'help.brick.audio': 'Звук: эффекты и короткие мелодии n0Live/BrickGame (MIT), назначения сверены с кодом донора. Совпадение с Apollo не подтверждено. В двух авторских приближениях используются те же сигналы. Фоновая музыка для этих игр не установлена.',
   'help.about.p':
     'Неофициальная браузерная реконструкция электронной игры Apollo Crocodile Mario по фотографиям, упаковке и видео устройства. Графика, звуки и правила приближены к оригиналу, но ещё уточняются.',
 
@@ -569,7 +571,7 @@ const EN: Record<MsgKey, string> = {
   'games.src.donor': 'descriptions of similar Brick Game devices (an open-source simulator, reviews of other models) — not Apollo firmware',
   'games.src.sticker': 'sticker and packaging',
   'games.note.seabattle': 'Modes A–F follow the owner’s list; the sticker prints “tennis”, which may be Arkanoid.',
-  'games.note.clock99': 'The list comes from the sticker and the button labels; what is really built in is still being checked.',
+  'games.note.clock99': 'Entries 1–3 are Tetris, Racing and Shooting from the sticker; 4–10 are a project selection. Clock and alarm functions are not simulated.',
   'games.goal': 'Goal',
   'games.sec.rules': 'Rules',
   'games.sec.controls': 'Buttons',
@@ -613,7 +615,7 @@ const EN: Record<MsgKey, string> = {
   'game.romeo-juliet.what': 'Romeo and Juliet: according to the owner you build a little staircase.',
   'game.romeo-juliet.open': 'The rules are not established.',
   'game.sea-battle.what': 'The game that gives the console its name.',
-  'game.sea-battle.open': 'How it works is not described in the project — no information.',
+  'game.sea-battle.open': 'Owner: alternate shots at a hidden fleet. Exact Apollo parameters are not established.',
   'game.frog.what': 'Lead the frog across rows of moving obstacles to the other side of the field.',
   'game.frog.how': 'The open-source simulator has 32 variants: lanes run in different directions, traffic can oncome, lanes are prepared or random, and the field is sometimes flipped.',
   'game.frog.open': 'The set and order of Apollo’s variants are not established.',
@@ -684,6 +686,8 @@ const EN: Record<MsgKey, string> = {
   'help.pointer.p':
     'The buttons on the toy work with the mouse or a finger — the arrows and JUMP can be held down. A connected gamepad works right away: D-pad — directions, bottom button — jump, left button — fire, Start — start and pause. Keys and gamepad buttons can be reassigned in Settings.',
   'help.about.h': 'About',
+  'help.m.pointer.p': 'Use the device buttons with a mouse or touch. Arrows control the selected game; ROTATE turns a piece or performs an action. See each game’s controls for details. In the menu, ROTATE selects the next game.',
+  'help.brick.audio': 'Audio: effects and short melodies from n0Live/BrickGame (MIT), mapped from donor code. Apollo fidelity is unconfirmed. The two project approximations share these cues. Background music for these games is not established.',
   'help.about.p':
     'An unofficial browser reconstruction of the Apollo Crocodile Mario electronic game, based on photos, the packaging and video of the device. Graphics, sounds and rules are close to the original but still being refined.',
 

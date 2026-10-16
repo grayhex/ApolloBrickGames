@@ -61,7 +61,7 @@ export const SPEED_TENTH_MS = 350;
 const ANIMATION_MS = 30;
 /** Пауза кнопки после шага вперёд, после поворота и после выстрела (`MOVEMENT_SPEED`, `ROTATION_SPEED`, `FIRE_SPEED`). */
 export const MOVE_TICKS = msToTicks(ANIMATION_MS * 3);
-export const ROTATE_TICKS = msToTicks(ANIMATION_MS * 3 * 4);
+export const ROTATE_TICKS = MOVE_TICKS; // donor: 360 ms; responsive turn-to-step
 export const FIRE_TICKS = msToTicks(ANIMATION_MS * 8);
 /** Все снаряды перелетают на клетку раз в 120 мс (`ANIMATION_DELAY * 4`). */
 export const BULLET_TICKS = msToTicks(ANIMATION_MS * 4);
@@ -161,6 +161,7 @@ export class TanksGame extends BrickBase {
   private enemyIndex = 0;
   /** Тактов до следующего хода врагов. */
   private aiLeft = 1;
+  private startLeft = 0;
   private readonly bulletTimer = new Countdown(BULLET_TICKS);
   private readonly keyDelay: Record<GatedKey, number> = { left: 0, right: 0, up: 0, down: 0, fire: 0 };
 
@@ -210,11 +211,9 @@ export class TanksGame extends BrickBase {
     }
     this.bulletTimer.reset(BULLET_TICKS);
     for (const key of GATED_KEYS) this.keyDelay[key] = 0;
-    // Стартовая мелодия: 1500 мс без ввода. Донор позволяет двигать танк уже во время неё, а стрелять — нет;
-    // здесь на это время ввод не принимается совсем (допущение: так задан способ моделировать паузы).
-    this.cutscene(START_TICKS, null, () => {
-      this.aiLeft = 1; // донор делает первый ход врагов сразу, как только мелодия доиграла
-    });
+    // Delay enemies during the intro, but accept player movement immediately.
+    this.startLeft = START_TICKS;
+    this.aiLeft = 1;
   }
 
   private winLevel(): void {
@@ -239,7 +238,9 @@ export class TanksGame extends BrickBase {
 
   protected update(input: BrickInput): void {
     for (const key of GATED_KEYS) if (this.keyDelay[key] > 0) this.keyDelay[key]--;
+    for (const [key] of MOVE_KEYS) if (input.pressed.has(key)) this.keyDelay[key] = 0;
     this.processKeys(input);
+    if (this.startLeft > 0) { this.startLeft--; return; }
     if (this.bulletTimer.fire()) this.flightOfBullets();
     if (this.dead) {
       this.loseLife();
@@ -256,12 +257,9 @@ export class TanksGame extends BrickBase {
     if (this.dead) this.loseLife();
   }
 
-  /**
-   * Ввод игрока (`TanksGame.processKeys`). Первая не приостановленная стрелка (влево, вправо, вверх, вниз): если ствол
-   * смотрит туда же — шаг вперёд, иначе поворот; затем кнопка приостанавливается на `MOVE_TICKS` (шаг) или
-   * `ROTATE_TICKS` (поворот). Стреляет танк только когда ни одна стрелка не сработала; после удачного шага вперёд огонь
-   * ждёт `FIRE_TICKS`. Донорское «снять кнопку огня из набора нажатых» после шага не моделируется: ОС тут же вернула бы её
-   * автоповтором (допущение).
+  /** Fresh direction presses respond next tick; holds repeat at MOVE_TICKS.
+   * Movement and fire are independent; FIRE_TICKS still bounds the weapon rate.
+   * These responsiveness adjustments intentionally differ from the Java donor.
    */
   private processKeys(input: BrickInput): void {
     let moveKey: GatedKey | null = null;
@@ -276,11 +274,10 @@ export class TanksGame extends BrickBase {
     if (moveKey !== null) {
       const sameDirection = this.player.dir === moveDir;
       this.keyDelay[moveKey] = sameDirection ? MOVE_TICKS : ROTATE_TICKS;
-      if (this.movePlayer(moveDir) && sameDirection) this.keyDelay.fire = FIRE_TICKS;
-      return;
+      this.movePlayer(moveDir);
     }
     const fireHeld = input.held.has('rotate') || input.held.has('fire');
-    if (fireHeld && this.keyDelay.fire === 0 && this.fire(this.player, true)) this.keyDelay.fire = FIRE_TICKS;
+    if (this.startLeft === 0 && fireHeld && this.keyDelay.fire === 0 && this.fire(this.player, true)) this.keyDelay.fire = FIRE_TICKS;
   }
 
   private movePlayer(dir: Dir): boolean {

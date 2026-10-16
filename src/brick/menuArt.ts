@@ -57,6 +57,7 @@ export const MENU_LAYOUT = {
 
 /** Иллюстрации игр: 10 × 5 клеток в нижних строках поля. Лягушка — по фото, остальные — допущение. */
 export const ILLUSTRATIONS: Readonly<Record<string, Sprite>> = {
+  shooting: ['..#...#...', '...###....', '..##.##...', '....#.....', '...###....'],
   tank: ['.#........', '###.......', '#.#....#..', '......###.', '......#.#.'],
   frog: ['...###....', '.###......', '.....###..', '##....###.', '....#.....'],
   racing: ['.#........', '###....#..', '.#....###.', '#.#....#..', '......#.#.'],
@@ -98,6 +99,10 @@ export function menuField(symbol: string, modeNumber: number, illustrationId: st
   const field = emptyField();
   const big = symbolSprite(symbol);
   if (big) blit(field, big, MENU_LAYOUT.gameDigit.x, MENU_LAYOUT.gameDigit.y, CELL_ON);
+  else if (/^\d{2}$/.test(symbol)) {
+    blit(field, BIG_DIGITS[Number(symbol[0])]!, 1, 0);
+    blit(field, BIG_DIGITS[Number(symbol[1])]!, 6, 0);
+  }
   drawMode(field, modeNumber);
   const art = ILLUSTRATIONS[illustrationId];
   if (art) {

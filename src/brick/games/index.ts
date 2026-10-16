@@ -4,6 +4,8 @@
  * («168 в 1 танк», 9) пока одна игра — Pentix (правила донора, `PentixGameQ…X`): совпадают ли они на устройствах, не установлено.
  */
 import type { BrickGameDef } from '../types';
+import { seaBattleDef } from './seaBattle';
+import { romeoJulietDef } from './romeoJuliet';
 import { arkanoidDef } from './arkanoid';
 import { constructionDef } from './construction';
 import { froggerDef } from './frogger';
@@ -17,6 +19,9 @@ import { tetrisDef } from './tetris';
 export { arkanoidDef, constructionDef, froggerDef, invadersDef, pentixDef, racingDef, racingShootDef, shapesDef, tanksDef, tetrisDef };
 
 export const BRICK_GAMES: Readonly<Record<string, BrickGameDef>> = {
+  'sea-battle': seaBattleDef,
+  'romeo-juliet': romeoJulietDef,
+  shooting: { ...invadersDef, id: 'shooting' },
   tank: tanksDef,
   frog: froggerDef,
   racing: racingDef,

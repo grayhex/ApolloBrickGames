@@ -1,3 +1,7 @@
+import { BRICK_GAMES } from '../brick/games';
+import { BRICK_GUIDES } from '../brick/guides';
+import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
+import { guideBlocks } from './guidePanel';
 import type { Action } from '../core/actions';
 import { describeSource, type Bindings } from '../input/bindings';
 import { h } from './dom';
@@ -76,6 +80,18 @@ export function gamesSection(model: ToyModel): HTMLElement {
     h('h3', {}, t('help.games.h')),
     h('p', { class: 'help__text' }, t('help.games.p')),
     h('ul', { class: 'games' }, ...rows),
+    ...(model.id === 'clock99' || model.id === 'seabattle' ? [h('p', { class: 'help__text' }, t(model.id === 'clock99' ? 'games.note.clock99' : 'games.note.seabattle'))] : []),
+    ...model.games.map((game) => {
+      const guide = BRICK_GUIDES[game.id];
+      const detail = GAME_GUIDE[game.id];
+      return h('details', { class: 'help__game', 'data-game': game.id },
+        h('summary', {}, GAMES[game.id].names[getLang()]),
+        h('p', { class: 'gtext' }, t(STATUS_KEYS[game.status])),
+        ...(model.menu && guide ? guideBlocks(guide, BRICK_GAMES[game.id], game.modes, getLang()) : [h('p', { class: 'gtext' }, t(detail.what)), h('p', { class: 'gtext' }, t(detail.open))]),
+        h('p', { class: 'gtext' }, `${t('games.src.h')}: ${detail.sources.map((source) => t(SOURCE_KEYS[source])).join('; ')}`),
+      );
+    }),
+    ...(model.menu ? [h('p', { class: 'help__text' }, t('help.brick.audio'))] : []),
     ...(model.gamesCount ? [h('p', { class: 'help__text' }, t('help.games.count', { n: model.gamesCount }))] : []),
   );
 }
@@ -175,7 +191,7 @@ export class HelpDialog {
       h('section', { class: 'settings__section' }, h('h3', {}, t(this.toy ? 'help.t.how.h' : 'help.how.h')), h('p', { class: 'help__text' }, ...rich(t(this.toy ? (this.toy.menu ? 'help.m.how.p' : 'help.t.how.p') : 'help.how.p')))),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.keys.h')), table),
       gamesSection(this.model),
-      h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t(this.toy ? 'help.t.pointer.p' : 'help.pointer.p'))),
+      h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t(this.toy ? (this.toy.menu ? 'help.m.pointer.p' : 'help.t.pointer.p') : 'help.pointer.p'))),
       ...(this.toy
         ? []
         : [

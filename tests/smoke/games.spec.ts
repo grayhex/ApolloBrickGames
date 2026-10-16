@@ -265,20 +265,26 @@ test.describe('«Морской бой»: режимы A–F', () => {
     });
   }
 
-  test('A и C — не восстановлены: в меню выбираются, но не запускаются', async ({ page }) => {
+  test('A и C запускаются: корабли и лестница; RESET возвращает в меню', async ({ page }) => {
     await openConsole(page, 'seabattle');
     await expect.poll(() => area(page, 'game')).toBe('sea-battle');
     await key(page, 'sp').click();
-    await page.waitForTimeout(300);
-    expect(await area(page, 'phase')).toBe('ready');
-    expect(await area(page, 'menu')).toBe('menu');
-    await key(page, 'jump').click();
-    await key(page, 'jump').click();
+    await expect.poll(() => area(page, 'phase')).toBe('playing');
+    await page.keyboard.press('KeyZ');
+    await expect.poll(() => page.evaluate(() => {
+      const game = (window as unknown as { __brick: { game: { ownShots: Uint8Array } } }).__brick.game;
+      return [...game.ownShots].filter(Boolean).length;
+    })).toBe(1);
+    await key(page, 'fire').click();
+    await key(page, 'jump').click(); await key(page, 'jump').click();
     await expect.poll(() => area(page, 'game')).toBe('romeo-juliet');
     await key(page, 'sp').click();
-    await page.waitForTimeout(300);
-    expect(await area(page, 'menu')).toBe('menu');
-    expect(await area(page, 'phase')).toBe('ready');
+    await expect.poll(() => area(page, 'phase')).toBe('playing');
+    await page.keyboard.press('KeyX');
+    await expect.poll(() => page.evaluate(() => {
+      const game = (window as unknown as { __brick: { game: { board: Uint8Array } } }).__brick.game;
+      return [...game.board].filter(Boolean).length;
+    })).toBeGreaterThan(7);
   });
 });
 
@@ -300,4 +306,21 @@ test.describe('игры помнят настройки меню', () => {
     await expect.poll(() => area(page, 'menu')).toBe('menu');
     expect(await area(page, 'game')).toBe('tetris');
   });
+});
+
+test('«Часы+99»: все десять игр запускаются, включая двузначный пункт, TIME/GAME возвращает в меню', async ({ page }) => {
+  await page.goto('./?toy=clock99&view=full&power=on&debug&seed=7');
+  await expect.poll(() => area(page, 'boot')).toBe('off');
+  const ids = ['tetris', 'racing', 'shooting', 'tank', 'frog', 'racing-shooting', 'shooting-figures', 'construction', 'tetris-pentix', 'arkanoid'];
+  for (let i = 0; i < ids.length; i++) {
+    await expect.poll(() => area(page, 'game')).toBe(ids[i]);
+    await expect.poll(() => area(page, 'symbol')).toBe(String(i + 1));
+    await key(page, 'sp').click();
+    await expect.poll(phase(page)).toBe('playing');
+    expect((await cells(page)).length).toBe(200);
+    await key(page, 'fire').click();
+    await expect.poll(() => area(page, 'menu')).toBe('menu');
+    await key(page, 'jump').click();
+  }
+  await expect.poll(() => area(page, 'symbol')).toBe('1');
 });

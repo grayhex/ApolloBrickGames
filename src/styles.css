@@ -1128,7 +1128,7 @@ body[data-chrome='toy'] {
 body[data-chrome='toy'] .arena {
   --side-w: clamp(220px, 18vw, 280px);
   /* Левая справка шире и компактнее по высоте: вся помещается в окне без прокрутки. */
-  --info-w: clamp(260px, 21vw, 340px);
+  --info-w: clamp(280px, 23vw, 370px);
   /* Минимальный просвет между панелью и игрушкой; остальное свободное место уходит в просвет, и панели прижимаются к краям окна. */
   --arena-gap: clamp(32px, 4vw, 64px);
   --stage-w: clamp(240px, calc((100dvh - 24px - var(--head-h, 0px)) / 2.6), 640px);
@@ -4371,8 +4371,8 @@ body.route-editor .shell > :not(#fatal) {
   .side--info:not([data-toy]) .boxbtn { width: 64px; height: 84px; }
 }
 
-/* Невысокие окна (до 880 px; на 1536 × 864 справка Mario и без кнопки не помещалась на 10 px): чуть плотнее промежутки между блоками. */
-@media (max-height: 880px) {
+/* Запас для квадратных иллюстраций и различий метрик шрифтов браузеров. */
+@media (max-height: 960px) {
   .side--info:not([data-toy]) { gap: 6px; }
   .side--info:not([data-toy]) .side__sec { gap: 4px; padding-top: 6px; }
 }
@@ -4405,3 +4405,21 @@ body.route-editor .shell > :not(#fatal) {
     color: var(--text);
   }
 }
+
+/* Player cards retain square frames at every viewport height. */
+.side--info:not([data-toy]) .fig { grid-template-rows: auto auto; }
+.side--info:not([data-toy]) .fig__box {
+  width: 34px; height: auto; aspect-ratio: 1; justify-self: center; grid-auto-rows: max-content;
+}
+.side--info .spr { flex-shrink: 0; }
+.gquick__schemes { display: flex; justify-content: center; align-items: start; gap: 10px; }
+.gquick__schemes .gscheme { flex: 1; min-width: 0; max-width: 145px; margin: 4px 0; }
+.gquick__schemes .gscheme__grid { max-width: 90px; margin-inline: auto; }
+.help__game { padding-block: 10px; border-top: 1px solid var(--line); }
+.help__game > summary { cursor: pointer; font-weight: 700; }
+.help__game .gsec { margin-block: 8px; }
+@media (max-height: 800px) {
+  .side--info:not([data-toy]) { gap: 4px; }
+}
+.gquick__schemes .gscheme__grid { grid-template-columns: repeat(var(--cols), 7px); }
+.gquick__schemes .gscheme__grid i { width: 7px; height: 7px; }
