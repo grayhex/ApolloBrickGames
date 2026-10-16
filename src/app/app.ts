@@ -524,7 +524,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
 
   // ── Панели вокруг игрушки ────────────────────────────────────────────────
   // Блистерная карточка рядом с логотипом: пока диалог 3D-упаковки открыт, игра на паузе, как у справки.
-  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub, 'mario', signal, { dialog: refs.boxDialog, onOpen: () => openMenu(), onClose: () => closeMenu() }) : null;
+  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub, 'mario', signal, { dialog: refs.boxDialog, onOpen: () => openMenu(), onClose: () => closeMenu(), onPointerUse: () => refocusGame() }) : null;
   const panelActions: ControlPanelActions = {
     pickShell: (shell) => {
       currentShell = shell;

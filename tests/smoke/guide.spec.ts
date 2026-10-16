@@ -113,6 +113,25 @@ test.describe('вкладки игр', () => {
     await expect(page.locator('[data-box-open]')).toHaveCount(0);
   });
 
+  test('щелчок мышью по вкладке во время игры возвращает клавиатуру игре; с клавиатуры (Enter) фокус остаётся на вкладке', async ({ page }) => {
+    await open(page, 'toy=tank168');
+    await page.keyboard.press('Enter');
+    await expect.poll(phase(page)).toBe('playing');
+    const x = (): Promise<number> => page.evaluate(() => (window as unknown as TetrisDebug).__tetris.piece?.x ?? -1);
+    await tabs(page).nth(2).click();
+    await expect(selected(page)).toHaveText('3');
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('game-area'); // клавиши снова управляют игрой
+    const before = await x();
+    await page.keyboard.press('ArrowLeft');
+    await expect.poll(x).toBeLessThan(before);
+    // С клавиатуры фокус остаётся на вкладке: по стрелкам перебираются вкладки (игрой управлять с неё нельзя, пока фокус на вкладке).
+    await tabs(page).nth(2).focus();
+    await page.keyboard.press('Enter');
+    expect(await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['game'])).toBe('racing');
+    await page.keyboard.press('ArrowRight');
+    await expect(selected(page)).toHaveText('4');
+  });
+
   test('выбранная вкладка не сбрасывается при смене языка; текст и подписи переводятся', async ({ page }) => {
     await open(page, 'toy=tank168');
     await tabs(page).nth(5).click();
@@ -428,6 +447,24 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     await button(page).click();
     await expect(dialog(page).locator('h2')).toHaveText('Crocodile Mario packaging');
     await expect(page.locator('#box-dialog [data-view="blister"]')).toHaveText('Blister');
+  });
+
+  test('браузерное «назад» при открытом диалоге закрывает его: диалог общий для страницы и не остаётся поверх другой игрушки', async ({ page }) => {
+    await gotoMario(page, 1440, 900);
+    await page.locator('.toysw__item[data-toy="tank168"]').click();
+    await expect(page.locator('body')).toHaveAttribute('data-toy', 'tank168');
+    await page.locator('[data-box-open="tank168"]').click();
+    await expect(dialog(page)).toHaveAttribute('open', '');
+    await expect(viewer(page)).toHaveAttribute('data-pack', 'tank168');
+    await page.goBack();
+    await expect(page.locator('body')).not.toHaveAttribute('data-toy', /.+/); // снова Mario
+    await expect(dialog(page)).not.toHaveAttribute('open', '');
+    await expect(page.locator('#box-dialog .box3d')).toHaveCount(0);
+    // Упаковка Mario открывается как обычно.
+    await expect.poll(phase(page)).toBe('ready');
+    await button(page).click();
+    await expect(dialog(page).locator('h2')).toHaveText('Упаковка Crocodile Mario');
+    await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
   });
 
   test('у «Часов+99» и «Морского боя» упаковки нет, у «168 в 1 танк» — коробка своя', async ({ page }) => {

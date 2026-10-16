@@ -340,6 +340,8 @@ export class BoxDialog {
   private viewer: BoxViewer | null = null;
   private view: BoxView;
   private zoom = 1;
+  /** Приложение снято (игрушка переключена, в том числе кнопками «назад»/«вперёд»): диалог закрыт и обработчики прежней игрушки не вызываются. */
+  private disposed = false;
 
   private readonly dialog: HTMLDialogElement;
   private readonly hooks: BoxDialogHooks;
@@ -349,7 +351,9 @@ export class BoxDialog {
     this.hooks = hooks;
     this.model = model;
     this.view = model.home;
-    dialog.addEventListener('close', () => this.hooks.onClose(), { signal });
+    dialog.addEventListener('close', () => {
+      if (!this.disposed) this.hooks.onClose();
+    }, { signal });
     dialog.addEventListener(
       'cancel',
       (event) => {
@@ -361,6 +365,17 @@ export class BoxDialog {
     onLangChange(() => {
       if (this.dialog.open) this.render();
     }, signal);
+    // Диалог общий для страницы: если игрушку сняли, пока он открыт, закрыть его, а не оставить поверх новой.
+    signal?.addEventListener('abort', () => this.dispose(), { once: true });
+  }
+
+  /** Закрыть диалог и снять просмотрщик, не трогая игру (она уже снята вместе с приложением). */
+  dispose(): void {
+    this.disposed = true;
+    this.viewer?.dispose();
+    this.viewer = null;
+    if (this.dialog.open) this.dialog.close();
+    this.dialog.replaceChildren(); // содержимое прежней игрушки не должно остаться в общем элементе
   }
 
   get isOpen(): boolean {

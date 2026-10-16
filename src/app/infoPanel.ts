@@ -99,11 +99,15 @@ function scoreRow(name: string, ways: readonly (readonly [string, number])[]): H
  * управления. Клавиши берутся из текущих привязок — после переназначения в настройках список обновляется (`render`);
  * язык меняется на лету. Панель намеренно тусклая и без картинок кнопок корпуса, чтобы не читаться как часть игрушки.
  */
-/** 3D-упаковка рядом с наклейкой: диалог страницы и то, что делать игре, пока он открыт (пауза, как у справки). */
+/**
+ * Связи левой панели с игрой: диалог 3D-упаковки (пока он открыт, игра на паузе, как у справки) и возврат клавиатуры игре после щелчка мышью
+ * по вкладке (как у остальных панелей: с клавиатуры, `detail` = 0, фокус остаётся на вкладке, чтобы работали стрелки).
+ */
 export interface InfoPanelBox {
   dialog: HTMLDialogElement;
   onOpen(): void;
   onClose(): void;
+  onPointerUse(): void;
 }
 
 const GAME_STATUS_KEYS = {
@@ -117,6 +121,7 @@ export class InfoPanel {
   private readonly hub: InputHub;
   private readonly toy: ToyId;
   private readonly signal: AbortSignal | undefined;
+  private readonly onPointerUse: (() => void) | undefined;
   /** Модель упаковки игрушки (если есть) и диалог, где её можно рассмотреть. */
   private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
@@ -130,6 +135,7 @@ export class InfoPanel {
     this.root = root;
     this.hub = hub;
     this.signal = signal;
+    this.onPointerUse = box?.onPointerUse;
     this.selected = TOYS[toy].defaultGame;
     const packId = TOYS[toy].pack;
     this.pack = packId ? PACKS[packId] : null;
@@ -323,7 +329,10 @@ export class InfoPanel {
         key,
       );
       if (game.id === model.defaultGame) tab.dataset['playing'] = '';
-      tab.addEventListener('click', () => select(game.id));
+      tab.addEventListener('click', (event) => {
+        select(game.id);
+        if (event.detail !== 0) this.onPointerUse?.(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на вкладке
+      });
       tabs.set(game.id, tab);
       list.append(tab);
     });

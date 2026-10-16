@@ -167,6 +167,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     dialog: refs.boxDialog,
     onOpen: () => openMenu(),
     onClose: () => closeMenu(),
+    onPointerUse: () => refocusGame(),
   });
   const applyLangUi = (): void => {
     const lang = getLang();
