@@ -71,7 +71,7 @@ export interface ToyModel {
   leds: boolean;
   /** Левая панель: у Mario «Figure introduction» по упаковке, у остальных справка по тетрису. */
   info: boolean;
-  /** 3D-модель упаковки рядом с наклейкой: у «168 в 1 танк» — коробка по присланной развёртке, у Crocodile Mario — коробка: лицо по фото упаковки и оборот с инструкцией; у остальных нет. */
+  /** 3D-модель упаковки рядом с наклейкой: у «168 в 1 танк» — коробка по присланной развёртке, у Crocodile Mario модель есть (`packs.ts`), но вывод пока выключен; у остальных нет. */
   pack: PackId | null;
   /** Уровни на пульте справа (у заглушек выключены). */
   levels: boolean;
@@ -118,7 +118,9 @@ export const TOYS: Record<ToyId, ToyModel> = {
     deco: 'frame',
     leds: true,
     info: true,
-    pack: 'mario',
+    // Модель коробки Mario (`PACKS.mario`, картинки в `public/brand/pack-mario`) готова, но вывод выключен по просьбе владельца: коробка выпирала за границы блока панели.
+    // Чтобы включить, вернуть `pack: 'mario'` и проверки из коммита 1d3e3a6 (`tests/smoke/guide.spec.ts`, `tests/smoke/screenshots.spec.ts`).
+    pack: null,
     levels: true,
     lcd: { bg: '#adb38c', ink: '#303a30' },
     stageLabel: 'stage.label',

@@ -345,159 +345,31 @@ test.describe('3D-коробка «168 в 1 танк»', () => {
   });
 });
 
-test.describe('3D-коробка Crocodile Mario (обычная коробка, как у «168 в 1 танк»)', () => {
-  const button = (page: Page) => page.locator('#side-info [data-box-open="mario"]');
-  const dialog = (page: Page) => page.locator('#box-dialog');
-  const viewer = (page: Page) => page.locator('#box-dialog .box3d');
-  const yaw = async (page: Page): Promise<number> => Number(await viewer(page).getAttribute('data-yaw'));
-  const fits = (page: Page) => page.locator('#side-info').evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
-  const gotoMario = async (page: Page, width: number, height: number): Promise<void> => {
-    await page.setViewportSize({ width, height });
-    await page.goto('./?view=full&power=on');
-    await expect.poll(phase(page)).toBe('ready');
-  };
-
+test.describe('3D-коробка Crocodile Mario: вывод выключен', () => {
+  // Модель готова (`PACKS.mario`), но кнопки и диалога у Mario нет: коробка выпирала за границы блока панели. Включение — см. комментарий у `pack` в `src/app/toys.ts`.
   for (const [width, height] of [
     [1920, 1080],
-    [1536, 864],
     [1440, 900],
+    [1280, 720],
   ] as const) {
-    test(`миниатюра справа от логотипа, не перекрывает его и не ломает «без прокрутки» (${width} × ${height})`, async ({ page }) => {
-      await gotoMario(page, width, height);
-      await expect(button(page)).toBeVisible();
-      await expect(button(page)).toHaveAttribute('aria-label', 'Рассмотреть коробку 3D');
-      const logo = (await page.locator('#side-info .about__logo').boundingBox())!;
-      const box = (await button(page).boundingBox())!;
+    test(`у Mario нет кнопки 3D, логотип по центру панели, справка помещается без прокрутки (${width} × ${height})`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto('./?view=full&power=on');
+      await expect.poll(phase(page)).toBe('ready');
+      await expect(page.locator('#side-info [data-box-open]')).toHaveCount(0);
+      await expect(page.locator('#side-info .box3d')).toHaveCount(0);
+      await expect(page.locator('#box-dialog')).not.toHaveAttribute('open', '');
+      const logo = await page.locator('#side-info .about__logo').boundingBox(); // в низком окне (1280 × 720) логотип скрыт
       const panel = (await page.locator('#side-info').boundingBox())!;
-      expect(box.x, 'правее логотипа').toBeGreaterThanOrEqual(logo.x + logo.width - 1);
-      expect(box.x + box.width, 'внутри панели').toBeLessThanOrEqual(panel.x + panel.width);
-      expect(box.y, 'у верхнего края панели').toBeLessThan(panel.y + 40);
-      // Логотип по-прежнему по центру панели, а справка помещается без прокрутки.
-      expect(Math.abs(logo.x + logo.width / 2 - (panel.x + panel.width / 2))).toBeLessThanOrEqual(2);
-      const fit = await fits(page);
+      if (logo) expect(Math.abs(logo.x + logo.width / 2 - (panel.x + panel.width / 2))).toBeLessThanOrEqual(2);
+      const fit = await page.locator('#side-info').evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
       expect(fit.scroll, `${width}×${height}: справка без прокрутки`).toBeLessThanOrEqual(fit.client + 1);
     });
   }
 
-  test('в низком окне (1280 × 720) вместо миниатюры строка с подписью «3D-коробка»; справка помещается без прокрутки', async ({ page }) => {
-    await gotoMario(page, 1280, 720);
-    await expect(button(page)).toBeVisible();
-    await expect(button(page).locator('.boxbtn__label')).toBeVisible();
-    await expect(button(page).locator('.boxbtn__label')).toHaveText('3D-коробка');
-    const box = (await button(page).boundingBox())!;
-    const panel = (await page.locator('#side-info').boundingBox())!;
-    expect(box.height).toBeLessThan(50);
-    expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width);
-    const fit = await fits(page);
-    expect(fit.scroll).toBeLessThanOrEqual(fit.client + 1);
-    // Мини-коробка внутри строки не пропала.
-    expect(await button(page).locator('.box3d__face').count()).toBe(6); // шесть граней коробки
-  });
-
-  test('диалог: коробка из шести граней — лицо (присланное фото) и оборот (инструкция) с картинками, четыре боковые без рисунка; картинки отдаются', async ({ page }) => {
-    await gotoMario(page, 1440, 900);
-    await button(page).click();
-    await expect(dialog(page)).toHaveAttribute('open', '');
-    await expect(dialog(page).locator('h2')).toHaveText('Коробка Crocodile Mario');
-    await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
-    expect(await viewer(page).locator('.box3d__face').count()).toBe(6);
-    const urls = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
-      faces.map((face) => /url\("?([^")]+)"?\)/.exec((face as HTMLElement).style.backgroundImage)?.[1] ?? '').filter(Boolean),
-    );
-    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'front.webp']);
-    const statuses = await page.evaluate(async (list) => Promise.all(list.map(async (url) => (await fetch(url)).status)), urls);
-    expect(statuses).toEqual([200, 200]);
-    const dims = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
-      Object.fromEntries(faces.map((face) => [(face as HTMLElement).dataset['face'], (face as HTMLElement).style.getPropertyValue('--dim')])),
-    );
-    expect(Object.keys(dims).sort()).toEqual(['back', 'bottom', 'front', 'left', 'right', 'top']);
-    for (const [face, dim] of Object.entries(dims)) expect(dim, face).not.toBe(''); // у всех граней освещение
-    await expect(viewer(page)).toBeFocused();
-    await page.keyboard.press('Escape');
-    await expect(dialog(page)).not.toHaveAttribute('open', '');
-  });
-
-  test('вращение и виды: «Лицо», «Оборот», «Бок», «Верх», «Сброс»; стрелки, мышь и колесо', async ({ page }) => {
-    await gotoMario(page, 1440, 900);
-    await button(page).click();
-    expect([await yaw(page), Number(await viewer(page).getAttribute('data-pitch'))]).toEqual([-28, -14]);
-    await expect(page.locator('#box-dialog .box__views [data-view]')).toHaveText(['Лицо', 'Оборот', 'Бок', 'Верх', 'Сброс']);
-    await page.locator('#box-dialog [data-view="back"]').click();
-    expect(await yaw(page)).toBe(180);
-    await page.locator('#box-dialog [data-view="side"]').click();
-    expect(await yaw(page)).toBe(90);
-    await page.locator('#box-dialog [data-view="front"]').click();
-    expect(await yaw(page)).toBe(0);
-    await viewer(page).focus(); // стрелки поворачивают, когда в фокусе сама модель
-    await page.keyboard.press('ArrowRight');
-    expect(await yaw(page)).toBe(12);
-    const rect = (await viewer(page).boundingBox())!;
-    const cx = rect.x + rect.width / 2;
-    const cy = rect.y + rect.height / 2;
-    await page.mouse.move(cx, cy);
-    await page.mouse.down();
-    await page.mouse.move(cx - 80, cy, { steps: 8 });
-    await page.mouse.up();
-    expect(await yaw(page)).toBeLessThan(12 - 30);
-    const zoom = Number(await viewer(page).getAttribute('data-zoom'));
-    await viewer(page).hover();
-    await page.mouse.wheel(0, -300);
-    expect(Number(await viewer(page).getAttribute('data-zoom'))).toBeGreaterThan(zoom);
-    await page.locator('#box-dialog [data-view="home"]').click();
-    expect(await yaw(page)).toBe(-28);
-    expect(Number(await viewer(page).getAttribute('data-zoom'))).toBe(1);
-  });
-
-  test('пока диалог открыт, игра на паузе, а клавиши не уходят в игру; после закрытия она остаётся на паузе', async ({ page }) => {
-    await gotoMario(page, 1440, 900);
-    await page.keyboard.press('Enter');
-    await expect.poll(phase(page)).toBe('playing');
-    await button(page).click();
-    await expect.poll(phase(page)).toBe('paused');
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('Space');
-    expect(await phase(page)()).toBe('paused');
-    await page.locator('#box-dialog .btn--primary').click();
-    await expect(dialog(page)).not.toHaveAttribute('open', '');
-    expect(await phase(page)()).toBe('paused');
-  });
-
-  test('на английском: подписи и заголовок диалога переведены', async ({ page }) => {
-    await gotoMario(page, 1440, 900);
-    await page.locator('#corner-lang').click();
-    await expect(button(page)).toHaveAttribute('aria-label', 'Examine the box in 3D');
-    await button(page).click();
-    await expect(dialog(page).locator('h2')).toHaveText('Crocodile Mario box');
-    await expect(page.locator('#box-dialog [data-view="side"]')).toHaveText('Side');
-  });
-
-  test('браузерное «назад» при открытом диалоге закрывает его: диалог общий для страницы и не остаётся поверх другой игрушки', async ({ page }) => {
-    await gotoMario(page, 1440, 900);
-    await page.locator('.toysw__item[data-toy="tank168"]').click();
-    await expect(page.locator('body')).toHaveAttribute('data-toy', 'tank168');
-    await page.locator('[data-box-open="tank168"]').click();
-    await expect(dialog(page)).toHaveAttribute('open', '');
-    await expect(viewer(page)).toHaveAttribute('data-pack', 'tank168');
-    await page.goBack();
-    await expect(page.locator('body')).not.toHaveAttribute('data-toy', /.+/); // снова Mario
-    await expect(dialog(page)).not.toHaveAttribute('open', '');
-    await expect(page.locator('#box-dialog .box3d')).toHaveCount(0);
-    // Упаковка Mario открывается как обычно.
+  test('у «168 в 1 танк» кнопка 3D остаётся', async ({ page }) => {
+    await page.goto('./?toy=tank168&power=on');
     await expect.poll(phase(page)).toBe('ready');
-    await button(page).click();
-    await expect(dialog(page).locator('h2')).toHaveText('Коробка Crocodile Mario');
-    await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
-  });
-
-  test('у «Часов+99» и «Морского боя» упаковки нет, у «168 в 1 танк» — коробка своя', async ({ page }) => {
-    await open(page, 'toy=clock99');
-    await expect(page.locator('[data-box-open]')).toHaveCount(0);
-    await open(page, 'toy=seabattle');
-    await expect(page.locator('[data-box-open]')).toHaveCount(0);
-    await open(page, 'toy=tank168');
-    await expect(page.locator('[data-box-open="tank168"]')).toBeVisible();
-    await page.locator('[data-box-open]').click();
-    await expect(viewer(page)).toHaveAttribute('data-pack', 'tank168');
-    await expect(viewer(page).locator('.box3d__face')).toHaveCount(6);
+    await expect(page.locator('#side-info [data-box-open="tank168"]')).toBeVisible();
   });
 });

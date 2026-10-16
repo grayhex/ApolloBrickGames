@@ -9,12 +9,14 @@ const ids = Object.keys(PACKS) as PackId[];
 const facing = (id: PackId, view: BoxView): string[] => PACKS[id].faces.filter((face) => normalFacing(face.normal, view)).map((face) => face.id);
 
 describe('модели упаковок', () => {
-  it('у каждой игрушки с упаковкой модель есть, и наоборот — модель принадлежит игрушке', () => {
+  it('у каждой игрушки с выводимой упаковкой модель есть; у Mario модель готова, но вывод выключен (`pack: null`)', () => {
     for (const toy of TOY_IDS) {
       const pack = TOYS[toy].pack;
       if (pack) expect(PACKS[pack], toy).toBeDefined();
     }
-    expect(TOY_IDS.filter((toy) => TOYS[toy].pack).sort()).toEqual([...ids].sort()); // у каждой модели свой хозяин: Mario и «168 в 1 танк»
+    expect(TOY_IDS.filter((toy) => TOYS[toy].pack)).toEqual(['tank168']);
+    expect(ids.sort()).toEqual(['mario', 'tank168']); // модель Mario остаётся в коде и в `public/brand/pack-mario` до включения
+    expect(TOYS.mario.pack).toBeNull();
   });
 
   it('грани не повторяются, картинки граней лежат в public/brand, тексты есть на обоих языках', () => {
