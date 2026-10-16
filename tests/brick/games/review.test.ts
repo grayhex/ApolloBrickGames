@@ -10,6 +10,12 @@ import { cueFor } from '../../../src/app/cabinet';
 import { JigsawGame, MAX_TILE_EXPONENT, MergeGame, SolitaireGame, slideTiles, tileGlyph } from '../../../src/brick/games/library/puzzles';
 import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
 import { findSafePath } from '../safePath';
+import defaults from '../../../src/config/default.json';
+import { validateConfig } from '../../../src/config/schema';
+import { TOY_IDS, TOYS } from '../../../src/app/toys';
+import { bodyActions, canAssign, missingButtons } from '../../../src/app/bodyButtons';
+import { LIBRARY_GAMES } from '../../../src/brick/games/library';
+import { solveJigsaw, type JigsawShape } from '../jigsawSolver';
 
 const run = (g: BrickGame, n: number): BrickEvent[] => {
   const events: BrickEvent[] = [];
@@ -18,106 +24,52 @@ const run = (g: BrickGame, n: number): BrickEvent[] => {
 };
 /** Нажатие и отпускание одной кнопки: два такта (фронт и тишина), чтобы автоповтор не сработал. */
 const tap = (g: BrickGame, action: BrickAction): BrickEvent[] => [...g.step(makeBrickInput([action])), ...g.step(NEUTRAL_BRICK_INPUT)];
-/** Удержание кнопки `ticks` тактов (первый — фронт нажатия), затем отпускание. */
-const hold = (g: BrickGame, action: BrickAction, ticks: number, also: BrickAction[] = []): BrickEvent[] => {
-  const events: BrickEvent[] = [];
-  for (let i = 0; i < ticks; i++) events.push(...g.step(i === 0 ? makeBrickInput([action, ...also]) : makeBrickInput([], [action, ...also])));
-  events.push(...g.step(NEUTRAL_BRICK_INPUT));
-  return events;
-};
-
 // ── R01: Jigsaw проходится кнопками корпуса (без отдельной клавиши «огонь») ───────────────────────────────────────────────────────
 
-interface Placement {
-  turns: number;
-  x: number;
-  y: number;
-}
-type Shape = number[][];
-const normalise = (shape: Shape): Shape => {
-  const minX = Math.min(...shape.map((p) => p[0]!));
-  const minY = Math.min(...shape.map((p) => p[1]!));
-  return shape.map(([x, y]) => [x! - minX, y! - minY]);
-};
-const turnShape = (shape: Shape): Shape => normalise(shape.map(([x, y]) => [-y!, x!]));
-
-/** Решение пазла перебором (независимо от игры): для каждой фигуры — число поворотов и положение угла рамки. */
-function solveJigsaw(pieces: Shape[]): Placement[] | null {
-  const search = (index: number, mask: number, placed: Placement[]): Placement[] | null => {
-    if (index === pieces.length) return mask === 0xffff ? placed : null;
-    let shape = normalise(pieces[index]!.map((p) => [...p]));
-    for (let turns = 0; turns < 4; turns++) {
-      for (let y = 0; y < 4; y++) {
-        for (let x = 0; x < 4; x++) {
-          if (shape.some(([dx, dy]) => x + dx! >= 4 || y + dy! >= 4)) continue;
-          const bits = shape.reduce((m, [dx, dy]) => m | (1 << ((y + dy!) * 4 + x + dx!)), 0);
-          if (bits & mask) continue;
-          const rest = search(index + 1, mask | bits, [...placed, { turns, x, y }]);
-          if (rest) return rest;
-        }
-      }
-      shape = turnShape(shape);
-    }
-    return null;
-  };
-  return search(0, 0, []);
-}
-
-describe('R01 Jigsaw: полное прохождение только кнопками корпуса (вверх, вниз, влево, вправо, ROTATE)', () => {
-  /** Что умеет корпус: четыре стрелки и ROTATE (`rotate`); RESET уходит в меню оболочки и в игру не попадает. */
-  const BODY: readonly BrickAction[] = ['left', 'right', 'up', 'down', 'rotate'];
-  const bodyOnly = (g: BrickGame, action: BrickAction, ticks = 1, also: BrickAction[] = []): BrickEvent[] => {
-    expect(BODY).toContain(action);
-    for (const extra of also) expect(BODY).toContain(extra);
-    return ticks <= 1 ? tap(g, action) : hold(g, action, ticks, also);
-  };
-
-  it('четыре L-фигуры укладываются в квадрат без клавиши «огонь», игра переходит на следующий уровень', () => {
+describe('R01 Jigsaw: нужна кнопка «огонь», которой на корпусе нет, — игра не назначается игрушкам', () => {
+  it('правила не изменены: фигуры укладываются «огнём», игра решаема и ведёт на следующий уровень (проверка ядра, не корпуса)', () => {
     const g = new JigsawGame({ seed: 3 });
     g.start();
-    const plan = solveJigsaw(g['pieces'] as Shape[]);
+    const plan = solveJigsaw(g['pieces'] as JigsawShape[]);
     expect(plan).not.toBeNull();
     const events: BrickEvent[] = [];
     for (const step of plan!) {
-      for (let i = 0; i < step.turns; i++) events.push(...bodyOnly(g, 'rotate'));
-      for (let x = 0; x < step.x; x++) events.push(...bodyOnly(g, 'right'));
-      for (let y = 0; y < step.y; y++) events.push(...bodyOnly(g, 'down'));
-      events.push(...bodyOnly(g, 'rotate', 40)); // удержание ROTATE укладывает фигуру
+      for (let i = 0; i < step.turns; i++) events.push(...tap(g, 'rotate'));
+      for (let x = 0; x < step.x; x++) events.push(...tap(g, 'right'));
+      for (let y = 0; y < step.y; y++) events.push(...tap(g, 'down'));
+      events.push(...tap(g, 'fire'));
     }
     expect(events).toContainEqual({ type: 'win' });
-    run(g, 80); // сценка победы
+    run(g, 80);
     expect(g.level).toBe(2);
-    expect(g.score).toBeGreaterThanOrEqual(100);
   });
 
-  it('короткое нажатие ROTATE только поворачивает и ничего не укладывает', () => {
+  it('без «огня» (только стрелки и ROTATE, как на корпусе) фигуру уложить нельзя — поэтому игра объявляет, что ей нужна эта кнопка', () => {
     const g = new JigsawGame({ seed: 3 });
     g.start();
-    const before = JSON.stringify(g.shape);
-    bodyOnly(g, 'rotate');
-    expect(g.pieceIndex).toBe(0);
-    expect(JSON.stringify(g.shape)).not.toBe(before);
+    for (let i = 0; i < 400; i++) g.step(makeBrickInput([(['left', 'right', 'up', 'down', 'rotate'] as const)[i % 5]!]));
     expect(g.board.some(Boolean)).toBe(false);
+    expect(LIBRARY_GAMES.jigsaw.needs).toEqual(['fire']);
   });
 
-  it('ошибочная укладка не тупик: удержание ROTATE вместе с DOWN начинает задачу заново, а не выходит из игры', () => {
-    const g = new JigsawGame({ seed: 3 });
-    g.start();
-    bodyOnly(g, 'rotate', 40);
-    expect(g.board.some(Boolean)).toBe(true);
-    bodyOnly(g, 'rotate', 40, ['down']);
-    expect(g.board.some(Boolean)).toBe(false);
-    expect(g.pieceIndex).toBe(0);
-    expect(g.phase).toBe('playing');
+  it('игра не назначается ни одной игрушке: схема конфигурации отклоняет её, а в списке «Добавить игру» админки её нет', () => {
+    for (const toy of TOY_IDS.filter((id) => id !== 'mario')) {
+      expect(canAssign(LIBRARY_GAMES.jigsaw, TOYS[toy]), toy).toBe(false);
+      expect(missingButtons(LIBRARY_GAMES.jigsaw, TOYS[toy]), toy).toEqual(['fire']);
+      const config = validateConfig(defaults);
+      config.toys[toy].games = [{ id: 'jigsaw' }];
+      config.toys[toy].defaultGame = 'jigsaw';
+      expect(() => validateConfig(config), toy).toThrow(/нужна кнопка «fire»/);
+    }
   });
 
-  it('клавиатура по-прежнему укладывает фигуру сразу клавишей «огонь», а сброс — «огонь» вместе с DOWN', () => {
-    const g = new JigsawGame({ seed: 3 });
-    g.start();
-    tap(g, 'fire');
-    expect(g.board.some(Boolean)).toBe(true);
-    g.step(makeBrickInput(['fire'], ['down']));
-    expect(g.board.some(Boolean)).toBe(false);
+  it('кнопки корпуса игрушек 1–4 — стрелки и ROTATE; RESET корпуса отдельным «огнём» не считается', () => {
+    for (const toy of TOY_IDS.filter((id) => id !== 'mario')) expect([...bodyActions(TOYS[toy])].sort(), toy).toEqual(['down', 'left', 'right', 'rotate', 'up']);
+  });
+
+  it('все остальные игры библиотеки назначаются любой консоли: единственный запрет — у Jigsaw', () => {
+    const blocked = Object.values(LIBRARY_GAMES).filter((def) => !canAssign(def, TOYS.tank168)).map((def) => def.id);
+    expect(blocked).toEqual(['jigsaw']);
   });
 });
 

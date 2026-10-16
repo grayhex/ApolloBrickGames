@@ -210,50 +210,33 @@ export class MazeGame extends LibraryGame {
 
 /**
  * A small packing puzzle. Pieces come from a known partition, so each board has a solution.
- * Управление на кнопках корпуса (стрелки и ROTATE; RESET уходит в меню оболочки и в игру не попадает): стрелки двигают фигуру, короткое нажатие
- * ROTATE поворачивает её (в момент отпускания), удержание ROTATE дольше `JIGSAW_LONG_PRESS` тактов укладывает фигуру, а удержание вместе с DOWN начинает
- * задачу заново. Клавиатура: клавиша «огонь» укладывает сразу, «огонь» вместе с DOWN — начинает заново.
+ * Управление: стрелки двигают фигуру, ROTATE поворачивает, **«огонь» укладывает** (с DOWN — задача заново). Укладка требует отдельной кнопки «огонь»,
+ * которой на корпусах игрушек 1–4 нет (RESET корпуса — выход в меню, не огонь), поэтому игра объявлена с `needs: ['fire']` и игрушке не назначается
+ * (проверка в схеме конфигурации и в списке админки): обходных способов — удержания, сочетаний, клавиатуры — не придумано, это не аутентично.
  */
-export const JIGSAW_LONG_PRESS = 20;
 export class JigsawGame extends LibraryGame {
   readonly id = 'jigsaw'; board = new Uint8Array(16); pieceIndex = 0; shape: number[][] = []; x = 0; y = 0;
   private pieces: number[][][] = [];
-  /** Сколько тактов подряд удерживается ROTATE; `locked` — кнопку нужно сначала отпустить (после укладки или начала задачи заново). */
-  private rotateHold = 0; private locked = false;
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
   protected reset(): void { this.repeat.reset(); this.setup(); }
   private setup(): void {
-    this.board.fill(0); this.pieceIndex = 0; this.rotateHold = 0;
+    this.board.fill(0); this.pieceIndex = 0;
     // Four L tetrominoes tile a 4×4 square; two paired 2×4 rectangles give the construction.
     this.pieces = this.rng.shuffled([[[0,0],[0,1],[0,2],[1,2]], [[0,0],[1,0],[1,1],[1,2]], [[0,0],[0,1],[0,2],[1,2]], [[0,0],[1,0],[1,1],[1,2]]]);
     this.next();
   }
   private next(): void { this.shape = this.pieces[this.pieceIndex]!.map((p) => [...p]); this.x = this.y = 0; }
-  private turn(): void {
-    const turned = this.shape.map(([x,y]) => [-y!,x!]); const minX = Math.min(...turned.map((p) => p[0]!)), minY = Math.min(...turned.map((p) => p[1]!)); this.shape = turned.map(([x,y]) => [x!-minX,y!-minY]);
-    this.emit({ type: 'rotate' });
-  }
-  private place(): void {
+  protected update(input: BrickInput): void {
+    if (input.pressed.has('fire') && input.held.has('down')) { this.setup(); return; }
+    const d = this.direction(input); if (d >= 0) { this.x = Math.max(0,Math.min(3,this.x + DX[d]!)); this.y = Math.max(0,Math.min(3,this.y + DY[d]!)); }
+    if (input.pressed.has('rotate')) {
+      const turned = this.shape.map(([x,y]) => [-y!,x!]); const minX = Math.min(...turned.map((p) => p[0]!)), minY = Math.min(...turned.map((p) => p[1]!)); this.shape = turned.map(([x,y]) => [x!-minX,y!-minY]);
+    }
+    if (!input.pressed.has('fire')) return;
     const cells = this.shape.map(([x,y]) => [this.x+x!,this.y+y!]);
     if (cells.some(([x,y]) => x! >= 4 || y! >= 4 || this.board[y!*4+x!])) { this.emit({ type:'blocked' }); return; }
     for (const [x,y] of cells) this.board[y!*4+x!] = 1;
-    this.emit({ type: 'lock' });
     if (++this.pieceIndex === this.pieces.length) this.win(() => this.setup()); else this.next();
-  }
-  protected update(input: BrickInput): void {
-    const fire = input.pressed.has('fire');
-    if (fire && input.held.has('down')) { this.setup(); return; }
-    const d = this.direction(input); if (d >= 0) { this.x = Math.max(0,Math.min(3,this.x + DX[d]!)); this.y = Math.max(0,Math.min(3,this.y + DY[d]!)); }
-    let place = fire;
-    if (!input.held.has('rotate')) {
-      if (!this.locked && this.rotateHold > 0 && this.rotateHold < JIGSAW_LONG_PRESS) this.turn();
-      this.rotateHold = 0; this.locked = false;
-    } else if (!this.locked && ++this.rotateHold >= JIGSAW_LONG_PRESS) {
-      this.locked = true; this.rotateHold = 0;
-      if (input.held.has('down')) { this.setup(); return; }
-      place = true;
-    }
-    if (place) this.place();
   }
   protected draw(): Uint8Array { const out = new Uint8Array(200);
     const block = (x: number,y: number,v: number): void => { if (x >= 4 || y >= 4) return; for (let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) put(out,x*2+1+dx,y*2+6+dy,v); };

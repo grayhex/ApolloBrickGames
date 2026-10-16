@@ -1,7 +1,8 @@
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { SHELLS, type Shell } from '../input/settings';
-import { TOY_IDS, type ToyId } from '../app/toys';
+import { TOY_IDS, TOYS, type ToyId } from '../app/toys';
+import { missingButtons } from '../app/bodyButtons';
 export interface ConfigGame { id: GameId; modes?: number[] }
 export interface ConfigToy { games: ConfigGame[]; defaultGame: GameId; shells: Shell[]; defaultShell: Shell }
 export interface SiteConfig { version: 1; toys: Record<ToyId, ConfigToy> }
@@ -18,6 +19,8 @@ export function validateConfig(value: unknown): SiteConfig {
       if (!record(g) || typeof g['id'] !== 'string' || !isGameId(g['id']) || seen.has(g['id'])) throw new Error(`${id}: неизвестная или повторная игра.`);
       const gameId = g['id']; seen.add(gameId);
       if (id === 'mario' ? gameId !== 'mario' : GAMES[gameId].engine !== 'brick' || !BRICK_GAMES[gameId]) throw new Error(`${id}: игра ${gameId} несовместима с экраном приставки.`);
+      const needed = id === 'mario' ? [] : missingButtons(BRICK_GAMES[gameId]!, TOYS[id]);
+      if (needed.length) throw new Error(`${id}: игре ${gameId} нужна кнопка «${needed.join('», «')}», которой на корпусе нет, — игра не назначается.`);
       if (g['modes'] === undefined) return { id: gameId };
       const modes = g['modes'], max = BRICK_GAMES[gameId]?.modes.length ?? 1;
       if (!Array.isArray(modes) || !modes.length || modes.length > max || new Set(modes).size !== modes.length || modes.some((m) => !Number.isInteger(m) || m < 0 || m >= max)) throw new Error(`${id}/${gameId}: недопустимые варианты игры.`);

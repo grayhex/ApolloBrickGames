@@ -1,5 +1,5 @@
 import { LIBRARY_IDS, LIBRARY_NAMES, type LibraryId } from '../../../games/library';
-import type { BrickGame, BrickGameDef, BrickGameOptions } from '../../types';
+import type { BrickAction, BrickGame, BrickGameDef, BrickGameOptions } from '../../types';
 import { MazeGame, JigsawGame, LightsGame, SokobanGame, SolitaireGame, ReversiGame, MergeGame, FillGame } from './puzzles';
 import { SnakeGame, PadsGame, MatchingGame, FlappyGame, BasketGame, DiggerGame, BomberGame, DiceGame } from './arcade';
 import { RoadGame, ShooterGame, BallGame, BowlingGame } from './action';
@@ -17,6 +17,8 @@ const factories: Record<LibraryId, (o: BrickGameOptions) => BrickGame> = {
   pong: (o) => new BallGame('pong',o), 'pong-double': (o) => new BallGame('pong-double',o), 'pneumatic-ball': (o) => new BallGame('pneumatic-ball',o), 'arkanoid-dots': (o) => new BallGame('arkanoid-dots',o), bowling: (o) => new BowlingGame(o),
   'tetris-flicker': (o) => new FlickerTetrisGame(o), quarth: (o) => new QuarthGame(o), 'dr-mario': (o) => new CapsuleGame('dr-mario',o), columns: (o) => new CapsuleGame('columns',o), 'columns-flicker': (o) => new CapsuleGame('columns-flicker',o),
 };
+/** Кнопки, без которых игра не проходится и которых нет на корпусе игрушек 1–4: такая игра не назначается игрушке (см. `needs` в `BrickGameDef`). */
+const NEEDS: Partial<Record<LibraryId, readonly BrickAction[]>> = { jigsaw: ['fire'] };
 export const LIBRARY_GAMES: Readonly<Record<LibraryId, BrickGameDef>> = Object.fromEntries(LIBRARY_IDS.map((id): [LibraryId, BrickGameDef] => [id, {
-  id, declaredModes: null, modes: [{ name: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, note: 'Реконструкция по описанию правил; точная прошивка и варианты оригинала не подтверждены.' }], create: factories[id],
+  id, declaredModes: null, ...(NEEDS[id] ? { needs: NEEDS[id] } : {}), modes: [{ name: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, note: 'Реконструкция по описанию правил; точная прошивка и варианты оригинала не подтверждены.' }], create: factories[id],
 }])) as Record<LibraryId, BrickGameDef>;

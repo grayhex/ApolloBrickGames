@@ -2,6 +2,7 @@ import './admin.css';
 import { TOYS, TOY_IDS, type ToyId } from '../app/toys';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
+import { canAssign } from '../app/bodyButtons';
 import { SHELLS, type Shell } from '../input/settings';
 import { defaultConfig } from '../config/runtime';
 import { validateConfig } from '../config/schema';
@@ -67,7 +68,7 @@ export async function startAdmin(): Promise<void> {
       list.append(row);
     }); menu.append(list);
     if (active === 'mario') { const future = el('div','','admin__music'); future.append(el('h3','Оригинальные игры · позже'),el('p','TETRIS (99) — ожидает реализации'),el('p','SHOOTING (1) — ожидает реализации')); menu.append(future); }
-    const add = el('select'); add.setAttribute('aria-label','Добавить игру'); const available = Object.values(GAMES).filter((g) => (active === 'mario' ? g.id === 'mario' : g.engine === 'brick' && BRICK_GAMES[g.id]) && !toy.games.some((i) => i.id === g.id)); add.append(...available.map((g) => option(g.id,g.names.ru))); add.disabled = !available.length;
+    const add = el('select'); add.setAttribute('aria-label','Добавить игру'); const available = Object.values(GAMES).filter((g) => (active === 'mario' ? g.id === 'mario' : g.engine === 'brick' && BRICK_GAMES[g.id] && canAssign(BRICK_GAMES[g.id]!, TOYS[active])) && !toy.games.some((i) => i.id === g.id)); add.append(...available.map((g) => option(g.id,g.names.ru))); add.disabled = !available.length;
     menu.append(add,button('Добавить в меню',() => { if (!add.value) return; toy.games.push({ id:add.value as GameId }); changed(); render(); },!available.length)); content.append(menu);
     save.disabled = busy || !connected;
   }
