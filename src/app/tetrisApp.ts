@@ -578,6 +578,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   let lastStatus = '';
   const updateUi = (): void => {
     setData('toy', model.id);
+    infoPanel.setActive(cabinet.activeGame);
     setData('phase', cabinet.phase);
     setData('score', cabinet.score);
     setData('hiscore', cabinet.hiScore);

@@ -368,28 +368,30 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     const fit = await fits(page);
     expect(fit.scroll).toBeLessThanOrEqual(fit.client + 1);
     // Мини-коробка внутри строки не пропала.
-    await expect(button(page).locator('.box3d__face')).toHaveCount(16);
+    expect(await button(page).locator('.box3d__face').count()).toBeGreaterThan(40); // карточка, игрушка со стенками по контуру и блистер
   });
 
-  test('диалог: карточка, игрушка и прозрачный блистер — 16 граней; картинки отдаются; блик пластика не затемняется', async ({ page }) => {
+  test('диалог: карточка, раскрытая игрушка со стенками и прозрачный блистер; картинки отдаются; пластик не затемняется', async ({ page }) => {
     await gotoMario(page, 1440, 900);
     await button(page).click();
     await expect(dialog(page)).toHaveAttribute('open', '');
     await expect(dialog(page).locator('h2')).toHaveText('Упаковка Crocodile Mario');
     await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
-    await expect(viewer(page).locator('.box3d__face')).toHaveCount(16);
+    expect(await viewer(page).locator('.box3d__face').count()).toBeGreaterThan(40);
     const urls = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
       faces.map((face) => /url\("?([^")]+)"?\)/.exec((face as HTMLElement).style.backgroundImage)?.[1] ?? '').filter(Boolean),
     );
-    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'front.webp', 'toy.webp']);
+    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'bubble.svg', 'front.webp', 'toy-base.webp', 'toy-lid.webp']);
     const statuses = await page.evaluate(async (list) => Promise.all(list.map(async (url) => (await fetch(url)).status)), urls);
-    expect(statuses).toEqual([200, 200, 200]);
+    expect(statuses).toEqual([200, 200, 200, 200, 200]);
     const dims = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
       Object.fromEntries(faces.map((face) => [(face as HTMLElement).dataset['face'], (face as HTMLElement).style.getPropertyValue('--dim')])),
     );
     expect(dims['bubble-front']).toBe(''); // прозрачный пластик не затемняется
     expect(dims['card-front']).not.toBe('');
-    expect(dims['toy-front']).not.toBe('');
+    expect(dims['toy-lid-front']).not.toBe('');
+    expect(dims['toy-base-front']).not.toBe('');
+    expect(dims['toy-base-wall-0']).not.toBe('');
     await expect(viewer(page)).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog(page)).not.toHaveAttribute('open', '');

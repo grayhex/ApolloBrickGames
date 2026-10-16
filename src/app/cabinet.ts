@@ -9,7 +9,7 @@ import {
   type BrickGameDef,
   type BrickPhase,
 } from '../brick';
-import { GAMES } from '../games/catalog';
+import { GAMES, type GameId } from '../games/catalog';
 import { makeTetrisInput, TetrisGame, type TetrisAction, type TetrisEvent } from '../tetris';
 import { MAX_SCORE } from '../brick/types';
 import type { TetrisScene } from '../render/tetrisScreen';
@@ -32,6 +32,8 @@ export interface Cabinet {
   readonly tick: number;
   /** В игре сейчас меню (консоль ещё не запустила игру): ввод идёт в `menu`. */
   readonly inMenu: boolean;
+  /** Идентификатор игры каталога, выбранной в меню или играющей сейчас (у тетриса-заглушки — тетрис). */
+  readonly activeGame: GameId;
   /** Состояние для отладки и проверок: `data-*` игровой области. */
   readonly info: Readonly<Record<string, string | number>>;
   /** Ключ хранилища рекорда текущей игры (у консоли — игры и варианта); `null`, пока игра не выбрана. */
@@ -140,6 +142,7 @@ class TetrisCabinet implements Cabinet {
     return this.game.tick;
   }
   readonly inMenu = false;
+  readonly activeGame: GameId = 'tetris';
   get info(): Readonly<Record<string, string | number>> {
     return {};
   }
@@ -242,6 +245,9 @@ class ConsoleCabinet implements Cabinet {
   }
   get inMenu(): boolean {
     return this.console_.inMenu;
+  }
+  get activeGame(): GameId {
+    return this.console_.gameId as GameId;
   }
   get info(): Readonly<Record<string, string | number>> {
     const c = this.console_;

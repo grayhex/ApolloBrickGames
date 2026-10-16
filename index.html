@@ -19,11 +19,14 @@
   <body data-chrome="toy" data-motion="off" data-booting>
     <main class="shell">
       <h1 class="visually-hidden">Crocodile Mario</h1>
-        <span class="devs chrome-dock" id="devices" role="status" aria-label="Устройство управления">
-          <span class="dev" data-device="keyboard" data-state="ready" title="Клавиатура"></span>
-          <span class="dev" data-device="gamepad" data-state="ready" title="Геймпад" hidden></span>
-          <span class="dev dev--pause" data-device="pause" data-state="off" title="Игра не на паузе"></span>
-        </span>
+        <div class="topleft" id="topleft">
+          <span class="devs" id="devices" role="status" aria-label="Устройство управления">
+            <span class="dev" data-device="keyboard" data-state="ready" title="Клавиатура"></span>
+            <span class="dev" data-device="gamepad" data-state="ready" title="Геймпад" hidden></span>
+            <span class="dev dev--pause" data-device="pause" data-state="off" title="Игра не на паузе"></span>
+          </span>
+          <img class="topleft__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="Apollo" />
+        </div>
       <nav class="corner chrome-dock" id="corner" aria-label="Сервис" data-i18n-attrs="aria-label=corner.nav">
         <button type="button" class="corner__btn" id="tgl-ghost" data-tgl="ghost" aria-pressed="false" aria-label="Сегменты"></button>
         <button type="button" class="corner__btn" id="corner-theme" data-theme="dark" aria-label="Светлый фон" title="Светлый фон"></button>
@@ -48,7 +51,7 @@
 
       <div class="arena" id="arena" data-shell="blue" data-view="closed" data-closed>
         <header class="brand" id="brand">
-          <img class="brand__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="Apollo" />
+          <img class="brand__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="" aria-hidden="true" />
           <nav class="toysw chrome-dock" id="toy-switch" aria-label="Игрушки Apollo"></nav>
         </header>
       <aside class="side side--info" id="side-info" aria-labelledby="info-title"></aside>
@@ -196,12 +199,12 @@
                   <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
                   <stop offset="1" stop-color="#000" stop-opacity="0.4"/>
                 </linearGradient>
-                <clipPath id="cover-clip"><path d="M14,0 L386,0 Q400,0 400,14 L400,319 C400,355 382,380 350,381 Q200,389 50,381 C18,380 0,355 0,319 L0,14 Q0,0 14,0 Z"/></clipPath>
+                <clipPath id="cover-clip"><path d="M14,0 L386,0 Q400,0 400,14 L400,352 C400,372 391,381 372,381.5 Q200,388.5 28,381.5 C9,381 0,372 0,352 L0,14 Q0,0 14,0 Z"/></clipPath>
               </defs>
               <!-- Оборот крышки (по фото закрытой игрушки): верхняя кромка прямая — по краям из-за неё выглядывают втулки шарнира, посередине ничего нет; свободная кромка внизу — плавная дуга без выступа. -->
-              <path d="M14,0 L386,0 Q400,0 400,14 L400,319 C400,355 382,380 350,381 Q200,389 50,381 C18,380 0,355 0,319 L0,14 Q0,0 14,0 Z" fill="url(#cover-body)"/>
-              <path d="M14,0 L386,0 Q400,0 400,14 L400,319 C400,355 382,380 350,381 Q200,389 50,381 C18,380 0,355 0,319 L0,14 Q0,0 14,0 Z" fill="url(#cover-gloss)"/>
-              <path d="M14,0 L386,0 Q400,0 400,14 L400,319 C400,355 382,380 350,381 Q200,389 50,381 C18,380 0,355 0,319 L0,14 Q0,0 14,0 Z" fill="none" stroke="url(#cover-rim)" stroke-width="7" clip-path="url(#cover-clip)"/>
+              <path d="M14,0 L386,0 Q400,0 400,14 L400,352 C400,372 391,381 372,381.5 Q200,388.5 28,381.5 C9,381 0,372 0,352 L0,14 Q0,0 14,0 Z" fill="url(#cover-body)"/>
+              <path d="M14,0 L386,0 Q400,0 400,14 L400,352 C400,372 391,381 372,381.5 Q200,388.5 28,381.5 C9,381 0,372 0,352 L0,14 Q0,0 14,0 Z" fill="url(#cover-gloss)"/>
+              <path d="M14,0 L386,0 Q400,0 400,14 L400,352 C400,372 391,381 372,381.5 Q200,388.5 28,381.5 C9,381 0,372 0,352 L0,14 Q0,0 14,0 Z" fill="none" stroke="url(#cover-rim)" stroke-width="7" clip-path="url(#cover-clip)"/>
             </svg>
             <img class="lid__logo lid__logo--white" src="/brand/apollo-logo-white-caption.svg" width="1000" height="1000" alt="" aria-hidden="true" />
             <img class="lid__logo lid__logo--red" src="/brand/apollo-logo.svg" width="1000" height="1000" alt="" aria-hidden="true" />

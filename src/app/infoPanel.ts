@@ -130,6 +130,10 @@ export class InfoPanel {
   private thumb: BoxViewer | null = null;
   /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
   private selected: GameId;
+  /** Игра, которая выбрана в меню консоли или играет сейчас (вкладка с точкой); у консоли с меню вкладка следует за выбором в меню. */
+  private active: GameId;
+  private tabEls = new Map<GameId, HTMLButtonElement>();
+  private showTab: ((id: GameId) => void) | null = null;
 
   constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal, box?: InfoPanelBox) {
     this.toy = toy;
@@ -138,6 +142,7 @@ export class InfoPanel {
     this.signal = signal;
     this.onPointerUse = box?.onPointerUse;
     this.selected = TOYS[toy].defaultGame;
+    this.active = TOYS[toy].defaultGame;
     const packId = TOYS[toy].pack;
     this.pack = packId ? PACKS[packId] : null;
     this.boxDialog = box && this.pack ? new BoxDialog(box.dialog, this.pack, { onOpen: box.onOpen, onClose: box.onClose }, signal) : null;
@@ -152,6 +157,20 @@ export class InfoPanel {
 
   closeBox(): void {
     this.boxDialog?.close();
+  }
+
+  /**
+   * Игра консоли изменилась (выбрана в меню или запущена): вкладка с точкой и открытое описание переходят к ней. Пока игра та же, вкладку,
+   * которую читатель открыл сам, не трогаем.
+   */
+  setActive(id: GameId): void {
+    if (id === this.active) return;
+    this.active = id;
+    for (const [gameId, tab] of this.tabEls) {
+      if (gameId === id) tab.dataset['playing'] = '';
+      else delete tab.dataset['playing'];
+    }
+    this.showTab?.(id);
   }
 
   render(): void {
@@ -319,6 +338,7 @@ export class InfoPanel {
     const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
     const panel = h('div', { class: 'gpanel', role: 'tabpanel', id: 'gpanel' });
     const tabs = new Map<GameId, HTMLButtonElement>();
+    this.tabEls = tabs;
     const ids = model.games.map((game) => game.id);
     const select = (id: GameId, focus = false): void => {
       this.selected = id;
@@ -340,7 +360,7 @@ export class InfoPanel {
         { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${game.id}`, 'data-game': game.id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
         key,
       );
-      if (game.id === model.defaultGame) tab.dataset['playing'] = '';
+      if (game.id === this.active) tab.dataset['playing'] = '';
       tab.addEventListener('click', (event) => {
         select(game.id);
         if (event.detail !== 0) this.onPointerUse?.(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на вкладке
@@ -356,6 +376,7 @@ export class InfoPanel {
       event.preventDefault();
       select(ids[next] ?? this.selected, true);
     });
+    this.showTab = (id) => select(id);
     select(ids.includes(this.selected) ? this.selected : model.defaultGame);
     const notes = { clock99: 'games.note.clock99', seabattle: 'games.note.seabattle', tank168: null, mario: null } as const;
     const note = notes[model.id];
