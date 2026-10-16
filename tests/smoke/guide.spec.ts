@@ -345,7 +345,7 @@ test.describe('3D-коробка «168 в 1 танк»', () => {
   });
 });
 
-test.describe('3D-упаковка Crocodile Mario (блистерная карточка)', () => {
+test.describe('3D-коробка Crocodile Mario (обычная коробка, как у «168 в 1 танк»)', () => {
   const button = (page: Page) => page.locator('#side-info [data-box-open="mario"]');
   const dialog = (page: Page) => page.locator('#box-dialog');
   const viewer = (page: Page) => page.locator('#box-dialog .box3d');
@@ -365,7 +365,7 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     test(`миниатюра справа от логотипа, не перекрывает его и не ломает «без прокрутки» (${width} × ${height})`, async ({ page }) => {
       await gotoMario(page, width, height);
       await expect(button(page)).toBeVisible();
-      await expect(button(page)).toHaveAttribute('aria-label', 'Рассмотреть упаковку 3D');
+      await expect(button(page)).toHaveAttribute('aria-label', 'Рассмотреть коробку 3D');
       const logo = (await page.locator('#side-info .about__logo').boundingBox())!;
       const box = (await button(page).boundingBox())!;
       const panel = (await page.locator('#side-info').boundingBox())!;
@@ -379,11 +379,11 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     });
   }
 
-  test('в низком окне (1280 × 720) вместо миниатюры строка с подписью «3D-упаковка»; справка помещается без прокрутки', async ({ page }) => {
+  test('в низком окне (1280 × 720) вместо миниатюры строка с подписью «3D-коробка»; справка помещается без прокрутки', async ({ page }) => {
     await gotoMario(page, 1280, 720);
     await expect(button(page)).toBeVisible();
     await expect(button(page).locator('.boxbtn__label')).toBeVisible();
-    await expect(button(page).locator('.boxbtn__label')).toHaveText('3D-упаковка');
+    await expect(button(page).locator('.boxbtn__label')).toHaveText('3D-коробка');
     const box = (await button(page).boundingBox())!;
     const panel = (await page.locator('#side-info').boundingBox())!;
     expect(box.height).toBeLessThan(50);
@@ -391,44 +391,41 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     const fit = await fits(page);
     expect(fit.scroll).toBeLessThanOrEqual(fit.client + 1);
     // Мини-коробка внутри строки не пропала.
-    expect(await button(page).locator('.box3d__face').count()).toBeGreaterThan(40); // карточка, игрушка со стенками по контуру и блистер
+    expect(await button(page).locator('.box3d__face').count()).toBe(6); // шесть граней коробки
   });
 
-  test('диалог: карточка, раскрытая игрушка со стенками и прозрачный блистер; картинки отдаются; пластик не затемняется', async ({ page }) => {
+  test('диалог: коробка из шести граней — лицо (присланное фото) и оборот (инструкция) с картинками, четыре боковые без рисунка; картинки отдаются', async ({ page }) => {
     await gotoMario(page, 1440, 900);
     await button(page).click();
     await expect(dialog(page)).toHaveAttribute('open', '');
-    await expect(dialog(page).locator('h2')).toHaveText('Упаковка Crocodile Mario');
+    await expect(dialog(page).locator('h2')).toHaveText('Коробка Crocodile Mario');
     await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
-    expect(await viewer(page).locator('.box3d__face').count()).toBeGreaterThan(40);
+    expect(await viewer(page).locator('.box3d__face').count()).toBe(6);
     const urls = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
       faces.map((face) => /url\("?([^")]+)"?\)/.exec((face as HTMLElement).style.backgroundImage)?.[1] ?? '').filter(Boolean),
     );
-    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'bubble.svg', 'front.webp', 'toy-base.webp', 'toy-lid.webp']);
+    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'front.webp']);
     const statuses = await page.evaluate(async (list) => Promise.all(list.map(async (url) => (await fetch(url)).status)), urls);
-    expect(statuses).toEqual([200, 200, 200, 200, 200]);
+    expect(statuses).toEqual([200, 200]);
     const dims = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
       Object.fromEntries(faces.map((face) => [(face as HTMLElement).dataset['face'], (face as HTMLElement).style.getPropertyValue('--dim')])),
     );
-    expect(dims['bubble-front']).toBe(''); // прозрачный пластик не затемняется
-    expect(dims['card-front']).not.toBe('');
-    expect(dims['toy-lid-front']).not.toBe('');
-    expect(dims['toy-base-front']).not.toBe('');
-    expect(dims['toy-base-wall-0']).not.toBe('');
+    expect(Object.keys(dims).sort()).toEqual(['back', 'bottom', 'front', 'left', 'right', 'top']);
+    for (const [face, dim] of Object.entries(dims)) expect(dim, face).not.toBe(''); // у всех граней освещение
     await expect(viewer(page)).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog(page)).not.toHaveAttribute('open', '');
   });
 
-  test('вращение и виды: «Лицо», «Оборот», «Блистер», «Сброс»; стрелки, мышь и колесо', async ({ page }) => {
+  test('вращение и виды: «Лицо», «Оборот», «Бок», «Верх», «Сброс»; стрелки, мышь и колесо', async ({ page }) => {
     await gotoMario(page, 1440, 900);
     await button(page).click();
-    expect([await yaw(page), Number(await viewer(page).getAttribute('data-pitch'))]).toEqual([-24, -8]);
-    await expect(page.locator('#box-dialog .box__views [data-view]')).toHaveText(['Лицо', 'Оборот', 'Блистер', 'Сброс']);
+    expect([await yaw(page), Number(await viewer(page).getAttribute('data-pitch'))]).toEqual([-28, -14]);
+    await expect(page.locator('#box-dialog .box__views [data-view]')).toHaveText(['Лицо', 'Оборот', 'Бок', 'Верх', 'Сброс']);
     await page.locator('#box-dialog [data-view="back"]').click();
     expect(await yaw(page)).toBe(180);
-    await page.locator('#box-dialog [data-view="blister"]').click();
-    expect(await yaw(page)).toBe(-52);
+    await page.locator('#box-dialog [data-view="side"]').click();
+    expect(await yaw(page)).toBe(90);
     await page.locator('#box-dialog [data-view="front"]').click();
     expect(await yaw(page)).toBe(0);
     await viewer(page).focus(); // стрелки поворачивают, когда в фокусе сама модель
@@ -447,7 +444,7 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     await page.mouse.wheel(0, -300);
     expect(Number(await viewer(page).getAttribute('data-zoom'))).toBeGreaterThan(zoom);
     await page.locator('#box-dialog [data-view="home"]').click();
-    expect(await yaw(page)).toBe(-24);
+    expect(await yaw(page)).toBe(-28);
     expect(Number(await viewer(page).getAttribute('data-zoom'))).toBe(1);
   });
 
@@ -468,10 +465,10 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
   test('на английском: подписи и заголовок диалога переведены', async ({ page }) => {
     await gotoMario(page, 1440, 900);
     await page.locator('#corner-lang').click();
-    await expect(button(page)).toHaveAttribute('aria-label', 'Examine the packaging in 3D');
+    await expect(button(page)).toHaveAttribute('aria-label', 'Examine the box in 3D');
     await button(page).click();
-    await expect(dialog(page).locator('h2')).toHaveText('Crocodile Mario packaging');
-    await expect(page.locator('#box-dialog [data-view="blister"]')).toHaveText('Blister');
+    await expect(dialog(page).locator('h2')).toHaveText('Crocodile Mario box');
+    await expect(page.locator('#box-dialog [data-view="side"]')).toHaveText('Side');
   });
 
   test('браузерное «назад» при открытом диалоге закрывает его: диалог общий для страницы и не остаётся поверх другой игрушки', async ({ page }) => {
@@ -488,7 +485,7 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     // Упаковка Mario открывается как обычно.
     await expect.poll(phase(page)).toBe('ready');
     await button(page).click();
-    await expect(dialog(page).locator('h2')).toHaveText('Упаковка Crocodile Mario');
+    await expect(dialog(page).locator('h2')).toHaveText('Коробка Crocodile Mario');
     await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
   });
 

@@ -174,7 +174,7 @@ describe('набор игр у консоли', () => {
     }
   });
 
-  it('3D-упаковка есть у Crocodile Mario (блистерная карточка по фото) и «168 в 1 танк» (коробка по развёртке); у остальных нет', () => {
+  it('3D-коробка есть у Crocodile Mario (лицо и оборот по фото упаковки) и «168 в 1 танк» (по развёртке); у остальных нет', () => {
     expect(TOY_IDS.filter((id) => TOYS[id].pack)).toEqual(['mario', 'tank168']);
     expect(TOYS.mario.pack).toBe('mario');
     expect(TOYS.tank168.pack).toBe('tank168');

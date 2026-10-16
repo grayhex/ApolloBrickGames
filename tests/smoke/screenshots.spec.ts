@@ -220,7 +220,7 @@ test('три игрушки: шапка с переключателем, «Ча�
   await page.keyboard.press('Escape');
 });
 
-test('упаковка Crocodile Mario: кнопка у логотипа и диалог 3D (снимки для docs/toys.md)', async ({ page }) => {
+test('коробка Crocodile Mario: кнопка у логотипа и диалог 3D (снимки для docs/toys.md)', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./?view=full&power=on');
@@ -229,7 +229,6 @@ test('упаковка Crocodile Mario: кнопка у логотипа и ди
   await page.waitForTimeout(300);
   await page.locator('#side-info').screenshot({ path: `${dir}/mario-panel-pack.png` });
   await page.locator('[data-box-open="mario"]').click();
-  await page.locator('#box-dialog [data-view="blister"]').click();
   await page.waitForTimeout(400);
   await page.locator('#box-dialog').screenshot({ path: `${dir}/mario-pack.png` });
   await page.keyboard.press('Escape');
