@@ -136,6 +136,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     lidCover: byId<HTMLButtonElement>('lid-cover'),
     lower: byId<HTMLElement>('lower'),
     help: byId<HTMLDialogElement>('help'),
+    boxDialog: byId<HTMLDialogElement>('box-dialog'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
     canvas: byId<HTMLCanvasElement>('screen'),
@@ -226,7 +227,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   // Клавиатура принадлежит игре, пока не открыт диалог и фокус не в кнопке/поле страницы: на пустом месте
   // страницы или на игровой области клавиши работают без предварительного клика.
   const isKeyboardActive = (): boolean => {
-    if (settingsDialog.isOpen || helpDialog.isOpen) return false;
+    if (settingsDialog.isOpen || helpDialog.isOpen || infoPanel?.boxOpen) return false;
     if (view === 'closed') return false; // пока крышка закрыта, игре клавиши не принадлежат: Enter или пробел открывают игрушку
     const active = document.activeElement;
     return active === null || active === document.body || refs.gameArea.contains(active);
@@ -356,11 +357,12 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   /** Навигация по настройкам с геймпада: вверх/вниз — фокус, подтвердить — нажатие, назад — закрыть. */
   function handleMenuInput(frame: InputFrame): void {
     if (settingsDialog.capturing) return;
-    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : null;
+    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : infoPanel?.boxOpen ? refs.boxDialog : null;
     if (!dialog) return;
     if (frame.pressed & NAV_BACK) {
       settingsDialog.close();
       helpDialog.close();
+      infoPanel?.closeBox();
       return;
     }
     const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]), select, input')];
@@ -521,7 +523,8 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   }
 
   // ── Панели вокруг игрушки ────────────────────────────────────────────────
-  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub, 'mario', signal) : null;
+  // Блистерная карточка рядом с логотипом: пока диалог 3D-упаковки открыт, игра на паузе, как у справки.
+  const infoPanel = route.lid ? new InfoPanel(refs.sideInfo, hub, 'mario', signal, { dialog: refs.boxDialog, onOpen: () => openMenu(), onClose: () => closeMenu(), onPointerUse: () => refocusGame() }) : null;
   const panelActions: ControlPanelActions = {
     pickShell: (shell) => {
       currentShell = shell;
@@ -741,7 +744,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
-    if (settingsDialog.isOpen || helpDialog.isOpen) return;
+    if (settingsDialog.isOpen || helpDialog.isOpen || infoPanel?.boxOpen) return;
     const active = document.activeElement;
     if (active !== null && active !== document.body && active !== refs.lidCover) return; // фокус в кнопке или поле — клавиша им и нужна
     event.preventDefault();

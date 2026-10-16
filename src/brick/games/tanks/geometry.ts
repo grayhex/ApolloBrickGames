@@ -47,6 +47,7 @@ export interface Bullet {
 }
 
 /** Маски из `TankShape.charactersTable` (направление «вверх»; y вверх). Ствол — клетка (0, 1). */
+// prettier-ignore
 const TANK_TABLE: readonly (readonly Point[])[] = [
   // 0 — танк игрока (7 клеток)
   [[-1, -1], [0, -1], [1, -1], [-1, 0], [0, 0], [1, 0], [0, 1]],

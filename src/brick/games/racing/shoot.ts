@@ -14,6 +14,7 @@ import { livesPreview } from '../../base';
 import { msToTicks } from '../../timing';
 import { BRICK_ROWS, CELL_ON, PREVIEW_COLS, type BrickGameOptions, type BrickInput } from '../../types';
 import { RacingBase } from './base';
+import { RACING_SHOOT_ID } from './modes';
 import { CAR_MAX_Y, CAR_Y, ROAD_MODE_COUNT, carCovers } from './road';
 
 /** Допущение: патронов за сбитого пешехода и размер магазина (одна клетка превью справа — один патрон). */
@@ -39,7 +40,7 @@ export interface Shell {
 }
 
 export class RacingShootGame extends RacingBase {
-  readonly id = 'racing-shoot';
+  readonly id = RACING_SHOOT_ID;
 
   /** Патроны (допущение: в начале уровня и после аварии — ноль). */
   protected ammo = 0;

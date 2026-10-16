@@ -40,7 +40,7 @@ const ROWS = BRICK_ROWS;
 
 /** Донорская пауза анимации (`ANIMATION_DELAY`), мс. */
 const ANIMATION_DELAY_MS = 30;
-/** Скорость мяча по формуле донора: 400 мс на шаг на первом уровне скорости и 80 мс на десятом (`getSpeedOfFirstLevel/TenthLevel`). */
+/** Скорость мяча по формуле донора: 400 мс на шаг на скорости 1 и 80 мс на скорости 10 (`getSpeedOfFirstLevel/TenthLevel`). */
 const FIRST_LEVEL_MS = 400;
 const TENTH_LEVEL_MS = 80;
 /** Ожидание перед мячом после загрузки уровня: «стартовая мелодия» донора, 1500 мс (`START_MUSIC_DURATION`) = 90 тактов. */
@@ -110,7 +110,8 @@ function describeMode(index: number): BrickModeDef {
     en.push('paddles on both sides');
   }
   const note =
-    `Донор: ArkanoidGame, тип ${index + 1}. Платформа ${v.cells} кл., ${v.preloaded ? 'готовые стены уровней' : 'случайные стены'}, ` +
+    `Донор: ArkanoidGame, тип ${index + 1}. Платформа ${v.cells} кл., ` +
+    `${v.preloaded ? 'готовые стены уровней' : 'случайные стены'}, ` +
     `${v.shifting ? 'стена сдвигается каждые 400 мс' : 'стена неподвижна'}, ` +
     `${v.doubleSided ? 'платформы внизу и вверху' : 'платформа внизу'}. ` +
     'Допущение: номер варианта на устройстве совпадает с номером типа донора (смысл 32 режимов Apollo неизвестен).';
@@ -213,14 +214,15 @@ export class ArkanoidGame extends BrickBase {
 
   // ---------------------------------------------------------------- уровень
 
-  /** Загрузка или перезагрузка уровня (`loadLevel`): платформа и мяч в центре, мяч летит вверх-вправо; стену строят заново, только если `newWall`. */
+  /** Загрузка или перезагрузка уровня (`loadLevel`): платформа и мяч в центре, мяч летит вверх-вправо; стена новая только при `newWall`. */
   private loadLevel(newWall: boolean): void {
     this.board.fill(0);
     this.curX = START_X;
     this.ballX = this.curX;
     this.ballY = 1;
     this.dirY = 1;
-    this.dirX = 1; // допущение: вращение по часовой стрелке (настройка донора по умолчанию); у донора направление меняется в паузе
+    // допущение: вращение по часовой стрелке (настройка донора по умолчанию; у донора его меняют в паузе кнопкой поворота)
+    this.dirX = 1;
     if (newWall) {
       this.wall = this.variant.preloaded ? BricksWall.preloaded(this.level) : BricksWall.generated(this.level, this.rng);
       this.bricksY = this.variant.doubleSided ? Math.floor((ROWS - this.wall.height) / 2) : ROWS - this.wall.height;
@@ -232,7 +234,7 @@ export class ArkanoidGame extends BrickBase {
     this.ballClock = BALL_READY;
   }
 
-  /** Победа в уровне (`GameWithLives.win`): очистка поля, следующий уровень (после десятого — первый и скорость выше), новая стена. */
+  /** Победа в уровне (`GameWithLives.win`): очистка поля, следующий уровень (после десятого — первый, скорость выше), новая стена. */
   private win(): void {
     this.emit({ type: 'win' });
     this.animateClear(CLEAR_WIN_TICKS, () => {
@@ -241,7 +243,10 @@ export class ArkanoidGame extends BrickBase {
     });
   }
 
-  /** Потеря мяча (`GameWithLives.loss`): взрыв на месте мяча, минус жизнь; жизни остались — очистка и тот же уровень (стена как была), иначе конец игры. */
+  /**
+   * Потеря мяча (`GameWithLives.loss`): взрыв на месте мяча, минус жизнь; жизни остались — очистка и тот же уровень
+   * (стена как была), иначе конец игры.
+   */
   private loss(): void {
     this.emit({ type: 'explode' });
     this.animateKaboom(this.ballX, ROWS - 1 - this.ballY, () => {
@@ -254,7 +259,7 @@ export class ArkanoidGame extends BrickBase {
 
   // ---------------------------------------------------------------- мяч
 
-  /** Период шага мяча, такты: «настоящая» скорость, умноженная на 1,2 - 0,2 * тип платформы; в двухстороннем варианте ещё + 30 мс. */
+  /** Период шага мяча, такты: «настоящая» скорость * (1,2 - 0,2 * тип платформы); в двухстороннем варианте ещё + 30 мс. */
   private ballPeriod(): number {
     const base = genuineTicks(this.speed, FIRST_LEVEL_MS, TENTH_LEVEL_MS);
     const period = Math.max(1, Math.round(base * this.speedFactor));
@@ -375,7 +380,7 @@ export class ArkanoidGame extends BrickBase {
     }
   }
 
-  /** Сдвинуть платформу в `x`; `false`, если она вышла бы за край. Мяч, лежащий на платформе, едет вместе с ней (`movePlatform`). */
+  /** Сдвинуть платформу в `x`; `false`, если она вышла бы за край. Мяч над платформой едет вместе с ней (`movePlatform`). */
   private movePlatform(x: number): boolean {
     if (x + this.platformMin < 0 || x + this.platformMax >= COLS) return false;
     this.paintPlatform(this.curX, 0);

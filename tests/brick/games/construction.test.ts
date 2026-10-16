@@ -257,7 +257,7 @@ describe('construction: выстрел и полёт пули', () => {
     const game = bare();
     tap(game, 'rotate');
     expect(game.bulletCount()).toBe(1);
-    run(game, 20, () => makeBrickInput([], ['rotate', 'fire']));
+    run(game, 10, () => makeBrickInput([], ['rotate', 'fire']));
     expect(game.bulletCount()).toBe(1);
     tap(game, ['rotate', 'fire']);
     expect(game.bulletCount()).toBe(2);
@@ -312,7 +312,7 @@ describe('construction: выстрел и полёт пули', () => {
     tap(game, 'fire', 3);
     tap(game, 'left');
     tap(game, 'fire');
-    expect(game.bulletRows(4)).toEqual([6]);
+    expect(game.bulletRows(4)).toEqual([7]);
     expect(game.bulletRows(3)).toEqual([2]);
   });
 
@@ -412,9 +412,9 @@ describe('construction: полный ряд', () => {
   it('пока ряд убирается, пушка не двигается и не стреляет, пули в воздухе пропадают', () => {
     const game = almostFull();
     tap(game, 'fire', 2);
-    tap(game, 'left'); // вторая пуля из колонки 3 — уйдёт в воздух до сборки ряда
-    expect(game.bulletCount()).toBe(2);
+    tap(game, ['left', 'fire']); // вторая пуля — из колонки 3, она упрётся в стену раньше, чем соберётся ряд
     tap(game, 'right');
+    expect(game.bulletCount()).toBe(2);
     let events = [] as ReturnType<typeof tap>;
     for (let i = 0; i < 20 && !types(events).includes('lines'); i++) events = idle(game);
     expect(types(events)).toContain('lines');
@@ -437,7 +437,7 @@ describe('construction: полный ряд', () => {
     expect(upside.score).toBe(normal.score);
   });
 
-  it('с краю колонки пушки ряд гаснет только в одну сторону и дольше (десять шагов от колонки 0)', () => {
+  it('пушка в колонке 0: ряд гаснет только в одну сторону и дольше (десять шагов вместо шести)', () => {
     const game = bare();
     for (let i = 0; i < 4; i++) tap(game, 'left');
     game.fillRow(10, [0]);
@@ -445,8 +445,10 @@ describe('construction: полный ряд', () => {
     tap(game, 'fire');
     let events = [] as ReturnType<typeof tap>;
     for (let i = 0; i < 20 && !types(events).includes('lines'); i++) events = idle(game);
-    expect(rowCells(game.cells(), 9)).toBe(8); // сразу погасла колонка 0, а колонки -1 нет
-    idle(game, 36);
+    expect(rowCells(game.cells(), 9)).toBe(9); // сразу погасла колонка 0, а колонки -1 нет
+    idle(game, 4);
+    expect(rowCells(game.cells(), 9)).toBe(8);
+    idle(game, 32);
     expect(rowCells(game.cells(), 9)).toBe(0);
     expect(game.score).toBe(1);
     idle(game, 4);
@@ -513,7 +515,7 @@ describe('construction: спуск стены', () => {
     expect(game.cells()).toEqual(before);
   });
 
-  it('стартовый таймер спуска начинается после «мелодии» и не уходит в минус при паузе', () => {
+  it('таймер спуска начинается после «мелодии»; пауза его не сдвигает', () => {
     const game = started();
     idle(game, 100);
     game.pause();
@@ -554,9 +556,12 @@ describe('construction: сдвиг поля', () => {
     game.put(9, 12);
     game.put(0, 13);
     idle(game, 3);
+    // после спуска метки на рядах 11 и 12; сдвиг вправо: (9,11)->(0,11), (0,12)->(1,12); влево: (9,11)->(8,11), (0,12)->(9,12)
     const field = game.field();
-    const moved = field.get(0, 12) + field.get(8, 12);
-    expect(moved).toBe(1); // клетка из колонки 9 ушла в колонку 0 или в 8
+    const right = field.get(0, 11) === 1 && field.get(1, 12) === 1;
+    const left = field.get(8, 11) === 1 && field.get(9, 12) === 1;
+    expect(right !== left).toBe(true);
+    expect(field.total() - field.rowCount(19) - field.rowCount(18)).toBe(2);
     expect(game.gunX()).toBe(4);
     expect(at(game.cells(), 4, 18)).toBe(1);
   });
@@ -694,10 +699,11 @@ describe('construction: очки, скорость, уровень, жизни',
     game.put(7, 2);
     tap(game, 'down');
     const cells = game.cells();
-    expect(rowCells(cells, 16)).toBe(3);
-    expect(rowCells(cells, 17)).toBe(2);
-    expect(rowCells(cells, 18)).toBe(3);
+    // в квадрате 5 × 5 вокруг (4, 17) горит только кольцо первой волны; метка (7, 1) за его пределами
+    const ring = [15, 16, 17, 18, 19].map((y) => [2, 3, 4, 5, 6].filter((x) => at(cells, x, y) === 1).length);
+    expect(ring).toEqual([0, 3, 2, 3, 0]);
     expect(at(cells, 4, 17)).toBe(0);
+    expect(at(cells, 4, 18)).toBe(1);
   });
 
   it('конец игры: жизни кончились — взрыв, заливка поля, фаза over; новая партия начинается с чистого счёта, рекорд сохраняется', () => {
@@ -752,6 +758,7 @@ describe('construction: очки, скорость, уровень, жизни',
 
 /** Бот: выбирает ряд, который выстрел дополнит сильнее всего, идёт к нужной колонке (или паре колонок) и стреляет. */
 function botInput(game: TestConstruction): BrickInput {
+  if (game.bulletCount() > 0) return NEUTRAL_BRICK_INPUT; // ждёт, пока выстрел ляжет: иначе нарастит столб до пушки
   const space = game.field();
   const lanes = (gx: number): number[] =>
     (game.barrels() === 2 ? [gx - 1, gx + 1] : [gx]).filter((x) => x >= 0 && x < BRICK_COLS);

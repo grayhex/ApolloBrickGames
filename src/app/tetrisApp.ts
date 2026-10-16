@@ -100,6 +100,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     lidCover: byId<HTMLButtonElement>('lid-cover'),
     lower: byId<HTMLElement>('lower'),
     help: byId<HTMLDialogElement>('help'),
+    boxDialog: byId<HTMLDialogElement>('box-dialog'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
     canvas: byId<HTMLCanvasElement>('screen'),
@@ -126,7 +127,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   if (params.has('debug')) Object.defineProperty(window, model.menu ? '__brick' : '__tetris', { configurable: true, get: () => cabinet.debugTarget() });
 
   const isKeyboardActive = (): boolean => {
-    if (settingsDialog.isOpen || helpDialog.isOpen) return false;
+    if (settingsDialog.isOpen || helpDialog.isOpen || infoPanel.boxOpen) return false;
     if (view === 'closed') return false; // пока крышка закрыта, игре клавиши не принадлежат: Enter или пробел открывают игрушку
     const active = document.activeElement;
     return active === null || active === document.body || refs.gameArea.contains(active);
@@ -144,7 +145,13 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   });
 
   setLang(hub.settings.display.lang);
-  const infoPanel = new InfoPanel(refs.sideInfo, hub, model.id, signal);
+  // 3D-коробка рядом с наклейкой (у «168 в 1 танк»): пока диалог открыт, игра на паузе, как у справки; `openMenu`/`closeMenu` объявлены ниже.
+  const infoPanel = new InfoPanel(refs.sideInfo, hub, model.id, signal, {
+    dialog: refs.boxDialog,
+    onOpen: () => openMenu(),
+    onClose: () => closeMenu(),
+    onPointerUse: () => refocusGame(),
+  });
   const applyLangUi = (): void => {
     const lang = getLang();
     document.documentElement.lang = lang;
@@ -330,11 +337,12 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   /** Навигация по настройкам с геймпада: вверх/вниз — фокус, подтвердить — нажатие, назад — закрыть. */
   function handleMenuInput(frame: InputFrame): void {
     if (settingsDialog.capturing) return;
-    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : null;
+    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : infoPanel.boxOpen ? refs.boxDialog : null;
     if (!dialog) return;
     if (frame.pressed & NAV_BACK) {
       settingsDialog.close();
       helpDialog.close();
+      infoPanel.closeBox();
       return;
     }
     const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]), select, input')];

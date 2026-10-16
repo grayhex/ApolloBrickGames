@@ -101,7 +101,8 @@ export class ShapesGame extends GunGameBase {
   readonly id = 'shapes';
   /** Достройка (иначе разрушение). */
   private readonly building: boolean;
-  private readonly descentClock = new Countdown(1);
+  /** Таймер спуска фигур (открыт для тестов). */
+  readonly descentClock = new Countdown(1);
   /** Шагов спуска с появления последней фигуры. */
   private sinceSpawn = 0;
   /** Клетки достроенного прямоугольника, который сейчас мигает перед исчезновением. */

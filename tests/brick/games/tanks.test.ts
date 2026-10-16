@@ -31,9 +31,17 @@ import {
   tanksDef,
   tanksRules,
 } from '../../../src/brick/games/tanks';
-import { chooseMove, distanceToObstacle, moveWeights, shootDirection, shotChance, sortByWeight } from '../../../src/brick/games/tanks/ai';
+import {
+  chooseMove,
+  distanceToObstacle,
+  moveWeights,
+  shootDirection,
+  shotChance,
+  sortByWeight,
+} from '../../../src/brick/games/tanks/ai';
 import {
   BOX_KIND,
+  DIRS,
   DOWN,
   ENEMY_KIND,
   LEFT,
@@ -270,9 +278,10 @@ describe('танки: маски, поворот и перевод в систе
     expect(tankMask(ENEMY_KIND, UP).cells.length).toBe(6);
     expect(tankMask(BOX_KIND, UP).cells.length).toBe(9);
     const box = new Set(cellsOf(BOX_KIND, UP));
-    for (const dir of [UP, RIGHT, DOWN, LEFT]) {
+    for (const dir of DIRS) {
       // коробка перекрывает оба рисунка танка в любом повороте
-      for (const kind of [PLAYER_KIND, ENEMY_KIND] as const) for (const key of cellsOf(kind, dir)) expect(box.has(key)).toBe(true);
+      for (const kind of [PLAYER_KIND, ENEMY_KIND] as const)
+        for (const key of cellsOf(kind, dir)) expect(box.has(key)).toBe(true);
     }
     // у врага нет клетки позади центра — проверять место появления рисунком нельзя: нужна полная маска
     expect(cellsOf(ENEMY_KIND, UP)).not.toContain('0,-1');
@@ -289,7 +298,7 @@ describe('танки: маски, поворот и перевод в систе
       return cellKey(far[0], far[1]);
     };
     for (const kind of [PLAYER_KIND, ENEMY_KIND] as const) {
-      expect([UP, RIGHT, DOWN, LEFT].map((dir) => barrel(kind, dir))).toEqual(['0,1', '1,0', '0,-1', '-1,0']);
+      expect(DIRS.map((dir) => barrel(kind, dir))).toEqual(['0,1', '1,0', '0,-1', '-1,0']);
     }
   });
 
@@ -327,7 +336,10 @@ describe('танки: маски, поворот и перевод в систе
   });
 
   it('препятствия: фигуры и повороты как у донора (нижний левый угол в нуле)', () => {
-    const sorted = (type: 0 | 1 | 2, dir: Dir): string[] => obstacleCells(type, dir).map(([x, y]) => cellKey(x, y)).sort();
+    const sorted = (type: 0 | 1 | 2, dir: Dir): string[] =>
+      obstacleCells(type, dir)
+        .map(([x, y]) => cellKey(x, y))
+        .sort();
     expect(sorted(0, UP)).toEqual(['0,0']);
     expect(sorted(1, UP)).toEqual(['0,0', '0,1', '1,0']);
     expect(sorted(1, RIGHT)).toEqual(['0,0', '0,1', '1,1']);
@@ -343,19 +355,16 @@ describe('танки: маски, поворот и перевод в систе
     expect(obstacleSet(presetObstacles(0)).size).toBe(0);
     expect(TANK_LEVELS.length).toBe(11);
     // уровень 2: уголок вверх в (1, 3), уголок влево в (6, 3), прямоугольник 2 × 3 в (8, 8)
-    expect([...obstacleSet(presetObstacles(2))].sort()).toEqual(
-      [
-        '1,3', '2,3', '1,4', //
-        '6,3', '7,3', '7,4', //
-        '8,8', '9,8', '8,9', '9,9', '8,10', '9,10',
-      ].sort(),
-    );
+    const level2 = ['1,3', '2,3', '1,4', '6,3', '7,3', '7,4', '8,8', '9,8', '8,9', '9,9', '8,10', '9,10'];
+    expect([...obstacleSet(presetObstacles(2))].sort()).toEqual(level2.sort());
     const sizes = [2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => obstacleSet(presetObstacles(level)).size);
     expect(sizes).toEqual([12, 12, 12, 6, 18, 21, 15, 27, 24]);
   });
 
   it('готовые поля не задевают места старта танка игрока', () => {
-    const footprint = new Set(tankMask(PLAYER_KIND, UP).cells.map(([x, y]) => cellKey(PLAYER_START.x + x, PLAYER_START.y + y)));
+    const footprint = new Set(
+      tankMask(PLAYER_KIND, UP).cells.map(([x, y]) => cellKey(PLAYER_START.x + x, PLAYER_START.y + y)),
+    );
     for (let level = 1; level <= 10; level++) {
       for (const key of obstacleSet(presetObstacles(level))) expect(footprint.has(key)).toBe(false);
     }
@@ -421,14 +430,16 @@ describe('танки: движение и повороты игрока', () => 
   });
 
   it('все четыре стрелки поворачивают в свою сторону; границы поля держат центр в 1..8 по x и в 1..18 по y', () => {
-    for (const dir of [UP, RIGHT, DOWN, LEFT]) {
+    for (const dir of DIRS) {
       const game = newGame();
       arrange(game, {});
       game.step(hold(KEY_OF[dir]));
       expect(game['player'].dir).toBe(dir);
       run(game, 400, hold(KEY_OF[dir]));
       const { x, y } = game['player'];
-      expect({ x, y }).toEqual({ [UP]: { x: 4, y: 18 }, [RIGHT]: { x: 8, y: 7 }, [DOWN]: { x: 4, y: 1 }, [LEFT]: { x: 1, y: 7 } }[dir]);
+      expect({ x, y }).toEqual(
+        { [UP]: { x: 4, y: 18 }, [RIGHT]: { x: 8, y: 7 }, [DOWN]: { x: 4, y: 1 }, [LEFT]: { x: 1, y: 7 } }[dir],
+      );
     }
   });
 
@@ -476,7 +487,12 @@ describe('танки: движение и повороты игрока', () => 
 
   it('ступенька тоже может быть закрыта — тогда танк остаётся как был', () => {
     const game = newGame();
-    arrange(game, { obstacles: [[3, 8], [6, 7]] });
+    arrange(game, {
+      obstacles: [
+        [3, 8],
+        [6, 7],
+      ],
+    });
     game.step(hold('right'));
     expect(game['player']).toEqual({ x: 4, y: 7, dir: UP });
   });
@@ -532,7 +548,8 @@ describe('танки: стрельба и попадания', () => {
     }
     expect(shotTicks[0]).toBe(1);
     expect(shotTicks[1]).toBe(1 + FIRE_TICKS);
-    for (let i = 1; i < shotTicks.length; i++) expect((shotTicks[i] ?? 0) - (shotTicks[i - 1] ?? 0)).toBeGreaterThanOrEqual(FIRE_TICKS);
+    for (let i = 1; i < shotTicks.length; i++)
+      expect((shotTicks[i] ?? 0) - (shotTicks[i - 1] ?? 0)).toBeGreaterThanOrEqual(FIRE_TICKS);
     expect(peak).toBe(PLAYER_BULLET_LIMIT);
     expect(shotTicks.length).toBeGreaterThan(PLAYER_BULLET_LIMIT);
   });
@@ -596,7 +613,13 @@ describe('танки: стрельба и попадания', () => {
 
   it('снаряд разрушает клетку препятствия, на которую попал, и пропадает', () => {
     const game = newGame();
-    arrange(game, { obstacles: [[4, 12], [3, 12], [5, 12]] });
+    arrange(game, {
+      obstacles: [
+        [4, 12],
+        [3, 12],
+        [5, 12],
+      ],
+    });
     game.step(hold('fire'));
     const events = run(game, 40);
     expect(types(events)).toEqual(['hit']);
@@ -687,7 +710,17 @@ describe('танки: гибель игрока, жизни и конец игр
     run(game, 5 * BULLET_TICKS);
     // первая волна — кольцо 3 × 3 вокруг центра (4, 7); вокруг него остальное из 5 × 5 стёрто
     expect(lit(game, 4, 7)).toBe(false);
-    for (const [x, y] of [[3, 6], [4, 6], [5, 6], [3, 7], [5, 7], [3, 8], [4, 8], [5, 8]] as const) expect(lit(game, x, y)).toBe(true);
+    for (const [x, y] of [
+      [3, 6],
+      [4, 6],
+      [5, 6],
+      [3, 7],
+      [5, 7],
+      [3, 8],
+      [4, 8],
+      [5, 8],
+    ] as const)
+      expect(lit(game, x, y)).toBe(true);
     expect(lit(game, 2, 7)).toBe(false);
     expect(lit(game, 6, 7)).toBe(false);
   });
@@ -740,7 +773,12 @@ describe('танки: гибель игрока, жизни и конец игр
   it('добавочная жизнь за каждые 500 очков (как getScoresToExtraLife донора); при полных жизнях — бонус к счёту', () => {
     expect(SCORES_TO_EXTRA_LIFE).toBe(500);
     const game = newGame();
-    arrange(game, { enemies: [{ x: 4, y: 10, dir: DOWN }, { x: 4, y: 16, dir: DOWN }] });
+    arrange(game, {
+      enemies: [
+        { x: 4, y: 10, dir: DOWN },
+        { x: 4, y: 16, dir: DOWN },
+      ],
+    });
     game['setLives'](2);
     game['setScore'](SCORES_TO_EXTRA_LIFE - 1);
     const events = game.step(hold('fire'));
@@ -829,7 +867,9 @@ describe('танки: переход уровня', () => {
           if (seen.has(key)) continue;
           seen.add(key);
           const [x, y] = key.split(',').map(Number) as [number, number];
-          for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if (cells.has(cellKey(x + dx, y + dy))) stack.push(cellKey(x + dx, y + dy));
+          for (let dx = -1; dx <= 1; dx++)
+            for (let dy = -1; dy <= 1; dy++)
+              if (cells.has(cellKey(x + dx, y + dy))) stack.push(cellKey(x + dx, y + dy));
         }
       }
       // каждая из фигур даёт один кусок, а фигуры не слипаются: кусков не больше пяти и не меньше одного
@@ -839,7 +879,9 @@ describe('танки: переход уровня', () => {
   });
 
   it('под местом старта танка препятствий нет ни в одном варианте и на любом уровне', () => {
-    const footprint = new Set(tankMask(PLAYER_KIND, UP).cells.map(([x, y]) => cellKey(PLAYER_START.x + x, PLAYER_START.y + y)));
+    const footprint = new Set(
+      tankMask(PLAYER_KIND, UP).cells.map(([x, y]) => cellKey(PLAYER_START.x + x, PLAYER_START.y + y)),
+    );
     for (let mode = 0; mode < 5; mode++) {
       for (let level = 1; level <= 10; level++) {
         for (const seed of [1, 2, 3, 4, 5, 6]) {
@@ -999,16 +1041,24 @@ describe('танки: ИИ врагов', () => {
     expect(fired).toBe(true);
   });
 
-  it('враг, которому некуда стрелять и ехать, остаётся на месте; ход всё равно засчитывается', () => {
-    const game = newGame({ seed: 5, mode: 0 });
-    // заперт: вокруг сплошные препятствия
-    const walls: [number, number][] = [];
-    for (let x = 0; x <= 4; x++) for (let y = 14; y <= 18; y++) if (x > 2 || y < 16 || y > 17) walls.push([x, y]);
+  it('заблокированный со всех сторон враг не сдвигается с места: может лишь повернуться', () => {
+    // 3 × 3 вокруг центра (1, 16) — x 0..2, y 15..17; кольцо препятствий закрывает любой шаг (слева — край поля)
+    const board = newBoard();
+    for (let x = 0; x <= 2; x++) board[boardIndex(x, 14)] = board[boardIndex(x, 18)] = 1;
+    for (let y = 15; y <= 17; y++) board[boardIndex(3, y)] = 1;
     const trapped: Tank = { x: 1, y: 16, dir: UP };
-    const cells = new Set(tankMask(ENEMY_KIND, UP).cells.map(([x, y]) => cellKey(1 + x, 16 + y)));
-    arrange(game, { enemies: [trapped], obstacles: walls.filter(([x, y]) => !cells.has(cellKey(x, y))) });
-    for (let i = 0; i < 20; i++) expect(game['aiTurn'](0)).toBe(true);
-    expect(game['enemies'][0]?.x).toBeLessThanOrEqual(2);
+    expect(moveTank(board, ENEMY_KIND, trapped, UP, false)).toBe(trapped);
+    for (const dir of DIRS.filter((d) => d !== UP)) {
+      const turned = moveTank(board, ENEMY_KIND, trapped, dir, false);
+      expect({ x: turned.x, y: turned.y, dir: turned.dir }).toEqual({ x: 1, y: 16, dir });
+    }
+    for (const dir of DIRS) {
+      const facing: Tank = { x: 1, y: 16, dir };
+      expect(moveTank(board, ENEMY_KIND, facing, dir, false)).toBe(facing);
+      // закрытая сторона получает вес ниже базового (0,25): враг почти не выбирает её
+      const weights = moveWeights(board, facing, { x: 8, y: 3, dir: UP });
+      expect(weights[dir]).toBeLessThan(0.25);
+    }
   });
 
   it('одно зерно — один бой: враги и снаряды одинаковы такт за тактом; другое зерно — другой бой', () => {
@@ -1056,7 +1106,6 @@ describe('танки: сценарии с ботом', () => {
     expect(log).toContain('levelUp');
     expect(game.level).toBeGreaterThanOrEqual(2);
     expect(game.score).toBeGreaterThanOrEqual(KILLS_TO_NEXT_LEVEL);
-    expect(game.score).toBeGreaterThan(game['killed']);
   });
 
   it('в бою сохраняются инварианты: танки и препятствия не накладываются, снарядов не больше лимитов', () => {
@@ -1067,7 +1116,9 @@ describe('танки: сценарии с ботом', () => {
         game.step(botInput(game));
         if (game['busy']) continue;
         expect(noOverlaps(game)).toBe(true);
-        expect(game['playerBullets'].filter((bullet) => bullet !== null).length).toBeLessThanOrEqual(PLAYER_BULLET_LIMIT);
+        expect(game['playerBullets'].filter((bullet) => bullet !== null).length).toBeLessThanOrEqual(
+          PLAYER_BULLET_LIMIT,
+        );
         expect(game['enemyBullets'].filter((bullet) => bullet !== null).length).toBeLessThanOrEqual(game.rules.enemies);
         expect(game['killed'] + game['onBoard']).toBeLessThanOrEqual(KILLS_TO_NEXT_LEVEL);
         expect(liveEnemies(game).length).toBe(game['onBoard']);

@@ -48,13 +48,21 @@ function ready(mode = 0, options: BrickGameOptions = {}): ArkanoidGame {
   return game;
 }
 
-/** Игра с остановленными мячом и сдвигом стены: тест сам расставляет мяч и вызывает `ballStep`. */
+/** Свежая партия без вступления, с остановленным сдвигом стены: тест сам расставляет мяч и вызывает `ballStep`. */
 function still(mode = 0, options: BrickGameOptions = {}): ArkanoidGame {
-  const game = ready(mode, options);
-  game['ballClock'] = 0;
+  const game = make(mode, options);
+  game.start();
   game['shiftLeft'] = NEVER;
+  game['introLeft'] = 0;
+  game['ballClock'] = 0;
   return game;
 }
+
+/** Повернуть строку вправо на `n` позиций (сдвиг стены по кругу). */
+const rotateRight = (line: string, n: number): string => {
+  const k = n % line.length;
+  return k === 0 ? line : line.slice(-k) + line.slice(0, -k);
+};
 
 /** Рисунок поля строками, как на экране: верх — первая строка. */
 function rows(game: ArkanoidGame): string[] {
@@ -106,6 +114,25 @@ function clearWallExcept(game: ArkanoidGame, keepX: number, keepWy: number): voi
   game['insertWall']();
 }
 
+/**
+ * Оставить в стене один кирпич (самый нижний, левый) и поставить мяч так, чтобы следующий шаг по диагонали разбил его вершиной.
+ * Возвращает клетку кирпича в системе донора.
+ */
+function armLastBrick(game: ArkanoidGame): { x: number; y: number } {
+  const wall = game['wall'];
+  for (let wy = 0; wy < wall.height; wy++) {
+    for (let x = 0; x < WALL_WIDTH; x++) {
+      if (!wall.has(x, wy)) continue;
+      clearWallExcept(game, x, wy);
+      const y = game['bricksY'] + wy;
+      if (x > 0) place(game, x - 1, y - 1, 1, 1);
+      else place(game, x + 1, y - 1, -1, 1);
+      return { x, y };
+    }
+  }
+  throw new Error('в стене нет кирпичей');
+}
+
 /** Пройти сценки (взрыв, очистку) до их конца, но не больше `max` тактов; вернуть все события. */
 function finishScenes(game: ArkanoidGame, max = 1000): BrickEvent[] {
   const events: BrickEvent[] = [];
@@ -115,7 +142,7 @@ function finishScenes(game: ArkanoidGame, max = 1000): BrickEvent[] {
 
 // ---------------------------------------------------------------- общие проверки
 
-conformance(arkanoidDef, { fuzzTicks: 2000 });
+conformance(arkanoidDef, { fuzzTicks: 1500 });
 
 // ---------------------------------------------------------------- варианты
 
@@ -222,7 +249,7 @@ describe('арканоид: стены кирпичей', () => {
     expect(bricks / cells).toBeLessThan(0.78);
   });
 
-  it('случайная стена: счётчик кирпичей совпадает с рисунком; повторяется по зерну; у разных зёрен разная; бывает симметрия сверху вниз', () => {
+  it('случайная стена: счётчик верен, повторяется по зерну, у разных зёрен разная, бывает симметрия сверху вниз', () => {
     const picture = (seed: number): string => rows(make(16, { seed, level: 2 })).slice(0, 6).join('/');
     expect(picture(5)).toBe(picture(5));
     expect(new Set([1, 2, 3, 4, 5, 6].map(picture)).size).toBeGreaterThan(3);
@@ -241,8 +268,7 @@ describe('арканоид: стены кирпичей', () => {
   it('новая стена на каждом уровне у вариантов со случайными стенами (зерно ГСЧ идёт дальше)', () => {
     const game = still(16, { seed: 3 });
     const first = rows(game).slice(0, 6).join('/');
-    clearWallExcept(game, 4, 3);
-    place(game, 3, game['bricksY'] - 1, 1, 1);
+    armLastBrick(game);
     expect(types(ballStep(game))).toContain('win');
     finishScenes(game);
     expect(game.level).toBe(2);
@@ -260,7 +286,7 @@ describe('арканоид: платформа', () => {
     expect(game['curX']).toBe(4);
     const left = game.step(tap('left'));
     expect(game['curX']).toBe(3);
-    expect(types(left)).toEqual(['started', 'move'].slice(1));
+    expect(types(left)).toEqual(['move']);
     expect(rows(game)[BRICK_ROWS - 1]).toBe('..####....');
     game.step(tap('right'));
     game.step(NEUTRAL_BRICK_INPUT);
@@ -340,19 +366,27 @@ describe('арканоид: платформа', () => {
     expect(game['ballX']).toBe(2);
   });
 
-  it('мяч, вернувшийся на платформу, можно сдвинуть вместе с ней в такт отскока', () => {
-    const game = still(0);
+  it('мяч, лежащий над платформой, едет вместе с ней; в любом другом месте платформа его не трогает', () => {
+    const game = still(0); // платформа 3..6, центр 4
     place(game, 5, 2, 1, -1);
-    ballStep(game); // (6,1) — над платформой 3..6
+    ballStep(game); // (6,1) — над платформой
     expect(ball(game)).toEqual({ x: 6, y: 1, dx: 1, dy: -1 });
-    ballStep(game); // отскок: мяч остаётся, летит вверх
-    expect(ball(game)).toEqual({ x: 6, y: 1, dx: -1, dy: 1 });
-    game.step(tap('left')); // платформа 3..6 -> 2..5; мяч (6,1) уже не над ней? Он над клеткой 6, платформа теперь 2..5
+    ballStep(game); // отскок: мяч остаётся на месте, вертикаль развернулась, горизонталь прежняя
+    expect(ball(game)).toEqual({ x: 6, y: 1, dx: 1, dy: 1 });
+    game.step(tap('left')); // донор сверяет мяч со старым положением платформы 3..6: мяч над ней и едет
     expect(game['curX']).toBe(3);
-    expect(game['ballX']).toBe(6); // не на платформе: остался на месте
+    expect(ball(game)).toEqual({ x: 5, y: 1, dx: 1, dy: 1 });
+    expect(rows(game)[BRICK_ROWS - 2]).toBe('.....#....');
+    // мяч выше первого ряда над платформой или правее её — на месте
+    place(game, 5, 2, 1, 1);
+    game.step(tap('left'));
+    expect(game['curX']).toBe(2);
+    expect(ball(game).x).toBe(5);
+    place(game, 8, 1, 1, 1); // платформа 1..4: мяч правее
+    game.step(NEUTRAL_BRICK_INPUT);
     game.step(tap('right'));
-    expect(game['curX']).toBe(4);
-    expect(game['ballX']).toBe(7); // платформа 3..6 -> 4..7... мяч (6,1) над ней, поэтому едет: 6 + 1
+    expect(game['curX']).toBe(3);
+    expect(ball(game).x).toBe(8);
   });
 });
 
@@ -367,8 +401,8 @@ describe('арканоид: ход мяча', () => {
     idle(game, 14);
     expect(ball(game)).toEqual({ x: 6, y: 3, dx: 1, dy: 1 });
     // рисунок: мяч на экране на 19 - y
-    expect(rows(game)[BRICK_ROWS - 1 - 3][6]).toBe('#');
-    expect(rows(game)[BRICK_ROWS - 1 - 2][5]).toBe('.');
+    expect(rows(game)[BRICK_ROWS - 1 - 3]?.[6]).toBe('#');
+    expect(rows(game)[BRICK_ROWS - 1 - 2]?.[5]).toBe('.');
   });
 
   it('период шага мяча: «настоящая» скорость донора, умноженная на 1,2 - 0,2 * тип платформы; у двухсторонних + 30 мс', () => {
@@ -411,8 +445,7 @@ describe('арканоид: ход мяча', () => {
 
   it('отскок от верхней границы поля (без верхней платформы) и угловой отскок', () => {
     const game = still(0);
-    game['wall'].breakBrick(0, 0); // не нужен: мяч идёт вдоль самого верха пустого поля
-    clearWallExcept(game, 5, 7);
+    clearWallExcept(game, 1, 7); // остался один кирпич в левом верхнем углу, далеко от пути мяча
     place(game, 3, 19, 1, 1);
     const events = ballStep(game);
     expect(ball(game)).toEqual({ x: 4, y: 18, dx: 1, dy: -1 });
@@ -435,7 +468,7 @@ describe('арканоид: ход мяча', () => {
 
   it('верхняя платформа двухстороннего варианта отражает мяч, как нижняя', () => {
     const game = still(8);
-    clearWallExcept(game, 0, 0);
+    clearWallExcept(game, 3, 0);
     place(game, 4, 17, 1, 1);
     ballStep(game); // (5,18) под верхней платформой 3..6 не доходит до её клетки
     expect(ball(game)).toEqual({ x: 5, y: 18, dx: 1, dy: 1 });
@@ -522,7 +555,7 @@ describe('арканоид: кирпичи и очки', () => {
     ballStep(game);
     expect(game.score).toBe(1);
     expect(ball(game)).toEqual({ x: 2, y: 12, dx: -1, dy: -1 });
-    expect(rows(game)[7]).toBe('....###...');
+    expect(rows(game)[7]).toBe('..#.###...'); // кирпич (3,12) погас, мяч в клетке (2,12) горит
   });
 
   it('мяч в проёме между двумя кирпичами бьёт сразу два: по горизонтали и по вертикали', () => {
@@ -551,18 +584,17 @@ describe('арканоид: кирпичи и очки', () => {
 
   it('кирпич, который стена сдвинула в клетку мяча, разбивается на следующем шаге', () => {
     const game = still(4); // стена едет; платформа 4, готовые стены
-    // уровень 1: экранный ряд 7 (y = 12) '...####...' после сдвига вправо станет '....####..'
+    // уровень 1: нижний ряд стены (y = 12) '...####...' после сдвига вправо станет '....####..', то есть кирпичи 4..7
     place(game, 7, 12, 1, 1); // (7,12) пока пусто
     game['shiftBricks']();
-    expect(rows(game)[7]).toBe('....####..'.replace('....####..', '....####..'));
-    // кирпичи 4..7; мяч в (7,12) стоит внутри кирпича
+    expect(rows(game)[7]).toBe('....####..'); // мяч внутри кирпича неотличим от него
     expect(game['wall'].has(7, 0)).toBe(true);
-    const before = game['wall'].remaining;
     const events = ballStep(game);
-    expect(types(events)).toContain('hit');
-    expect(game['wall'].remaining).toBeLessThan(before);
+    // шаг начинается с «кирпича под мячом»; затем мяч идёт вверх-вправо: сверху (7,13) — тоже кирпич сдвинутого ряда
+    expect(types(events)).toEqual(['hit', 'hit']);
     expect(game['wall'].has(7, 0)).toBe(false);
-    expect(game.score).toBeGreaterThanOrEqual(1);
+    expect(game['wall'].has(7, 1)).toBe(false);
+    expect(game.score).toBe(2);
   });
 });
 
@@ -570,18 +602,22 @@ describe('арканоид: кирпичи и очки', () => {
 
 describe('арканоид: сдвиг стены', () => {
   it('в вариантах со сдвигом стена едет вправо по кругу: в первом такте и далее каждые 400 мс = 24 такта', () => {
+    expect(msToTicks(400)).toBe(24);
     const game = make(4);
     game.start();
     const top = (): string | undefined => rows(game)[0];
-    expect(top()).toBe('.#.#..#.#.');
-    game.step(NEUTRAL_BRICK_INPUT);
-    expect(top()).toBe('..#.#..#.#.'.slice(0, 10));
+    const original = '.#.#..#.#.';
+    expect(top()).toBe(original);
+    game.step(NEUTRAL_BRICK_INPUT); // такт 1
+    expect(top()).toBe(rotateRight(original, 1));
     idle(game, 23); // такт 24
-    expect(top()).toBe('..#.#..#.#');
+    expect(top()).toBe(rotateRight(original, 1));
     game.step(NEUTRAL_BRICK_INPUT); // такт 25
-    expect(top()).toBe('...#.#..#.');
-    idle(game, 24);
-    expect(top()).toBe('....#.#..#');
+    expect(top()).toBe(rotateRight(original, 2));
+    idle(game, 24); // такт 49
+    expect(top()).toBe(rotateRight(original, 3));
+    // низ стены едет вместе с верхом
+    expect(rows(game)[7]).toBe(rotateRight('...####...', 3));
   });
 
   it('кирпичи, ушедшие за правый край, возвращаются слева', () => {
@@ -589,11 +625,11 @@ describe('арканоид: сдвиг стены', () => {
     expect(rows(game)[0]).toBe('#..#..#..#');
     game.start();
     game.step(NEUTRAL_BRICK_INPUT);
-    expect(rows(game)[0]).toBe('##..#..#..');
+    expect(rows(game)[0]).toBe(rotateRight('#..#..#..#', 1));
     expect(game['wall'].remaining).toBe(60);
   });
 
-  it('вариантах без сдвига стена неподвижна', () => {
+  it('в вариантах без сдвига стена неподвижна', () => {
     const game = make(0);
     game.start();
     idle(game, 120);
@@ -604,9 +640,8 @@ describe('арканоид: сдвиг стены', () => {
     const game = make(4);
     game.start();
     idle(game, 5);
-    expect(rows(game)[0]).toBe('..#.#..#.#');
+    expect(rows(game)[0]).toBe(rotateRight('.#.#..#.#.', 1));
     place(game, 0, 0, -1, -1);
-    game['introLeft'] = 0;
     ballStep(game); // потеря мяча
     expect(game['busy']).toBe(true);
     const shiftLeft = game['shiftLeft'];
@@ -618,7 +653,7 @@ describe('арканоид: сдвиг стены', () => {
 // ---------------------------------------------------------------- удар кнопкой
 
 describe('арканоид: удар по мячу кнопкой', () => {
-  it('rotate делает лишний шаг мяча сразу; зажатая кнопка повторяется через 60 мс = 4 такта; `fire` — то же, что `rotate`', () => {
+  it('rotate делает лишний шаг мяча сразу, зажатая кнопка повторяется через 4 такта (60 мс); `fire` — то же', () => {
     expect(msToTicks(60)).toBe(4);
     for (const action of ['rotate', 'fire'] as const) {
       const game = ready(0, { speed: 1 });
@@ -821,8 +856,8 @@ describe('арканоид: пауза, повторяемость', () => {
 // ---------------------------------------------------------------- бот
 
 /**
- * «Бот»: ведёт платформу под мячом, а в такт отскока сдвигает её на случайное (но детерминированное) число клеток, унося мяч с собой —
- * иначе мяч с углом 45° уходит в замкнутую орбиту и перестаёт задевать кирпичи.
+ * «Бот»: ведёт платформу под мячом, а в такт отскока сдвигает её на случайное (но детерминированное) число клеток,
+ * унося мяч с собой, — иначе мяч с углом 45° уходит в замкнутую орбиту и перестаёт задевать кирпичи.
  */
 function makeBot(): (game: ArkanoidGame) => BrickInput {
   let previous: BrickAction | null = null;

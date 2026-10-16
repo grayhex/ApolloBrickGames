@@ -1,8 +1,13 @@
+import { BRICK_GAMES } from '../brick/games';
+import { GAMES, type GameId } from '../games/catalog';
+import { BoxDialog, BoxViewer } from './boxViewer';
+import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
-import { onLangChange, t, type MsgKey } from './i18n';
-import { gameRows, keyCaps, POWER_KEY, SOUND_KEY } from './help';
+import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
+import { getLang, onLangChange, t, type MsgKey } from './i18n';
+import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
-import { engineOf, TOYS, type ToyId } from './toys';
+import { engineOf, gameKey, TOYS, type ToyGame, type ToyId, type ToyModel } from './toys';
 
 /**
  * Спрайты LCD-ячеек — те самые, что рисует игра (public/graphics/lcd): на упаковке в разделе «Figure introduction»
@@ -95,17 +100,58 @@ function scoreRow(name: string, ways: readonly (readonly [string, number])[]): H
  * управления. Клавиши берутся из текущих привязок — после переназначения в настройках список обновляется (`render`);
  * язык меняется на лету. Панель намеренно тусклая и без картинок кнопок корпуса, чтобы не читаться как часть игрушки.
  */
+/**
+ * Связи левой панели с игрой: диалог 3D-упаковки (пока он открыт, игра на паузе, как у справки) и возврат клавиатуры игре после щелчка мышью
+ * по вкладке (как у остальных панелей: с клавиатуры, `detail` = 0, фокус остаётся на вкладке, чтобы работали стрелки).
+ */
+export interface InfoPanelBox {
+  dialog: HTMLDialogElement;
+  onOpen(): void;
+  onClose(): void;
+  onPointerUse(): void;
+}
+
+const GAME_STATUS_KEYS = {
+  ready: 'game.status.ready',
+  placeholder: 'game.status.placeholder',
+  planned: 'game.status.planned',
+} as const;
+
 export class InfoPanel {
   private readonly root: HTMLElement;
   private readonly hub: InputHub;
   private readonly toy: ToyId;
+  private readonly signal: AbortSignal | undefined;
+  private readonly onPointerUse: (() => void) | undefined;
+  /** Модель упаковки игрушки (если есть) и диалог, где её можно рассмотреть. */
+  private readonly pack: PackModel | null;
+  private readonly boxDialog: BoxDialog | null;
+  /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
+  private thumb: BoxViewer | null = null;
+  /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
+  private selected: GameId;
 
-  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal) {
+  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal, box?: InfoPanelBox) {
     this.toy = toy;
     this.root = root;
     this.hub = hub;
+    this.signal = signal;
+    this.onPointerUse = box?.onPointerUse;
+    this.selected = TOYS[toy].defaultGame;
+    const packId = TOYS[toy].pack;
+    this.pack = packId ? PACKS[packId] : null;
+    this.boxDialog = box && this.pack ? new BoxDialog(box.dialog, this.pack, { onOpen: box.onOpen, onClose: box.onClose }, signal) : null;
     this.render();
     onLangChange(() => this.render(), signal);
+  }
+
+  /** Открыт ли диалог 3D-коробки (геймпад закрывает его кнопкой «назад»). */
+  get boxOpen(): boolean {
+    return this.boxDialog?.isOpen ?? false;
+  }
+
+  closeBox(): void {
+    this.boxDialog?.close();
   }
 
   render(): void {
@@ -113,68 +159,56 @@ export class InfoPanel {
     const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
 
     const model = TOYS[this.toy];
+    const sticker = h(
+      'div',
+      { class: 'about__sticker' },
+      h('img', {
+        class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
+        src: `${import.meta.env.BASE_URL}brand/${this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
+        width: '1000',
+        height: '443',
+        alt: model.name,
+      }),
+    );
+    const boxButton = this.boxButton();
     const head = h(
       'header',
-      { class: 'side__top side__top--logo' },
+      { class: `side__top side__top--logo${boxButton ? ' side__top--box' : ''}` },
       h('h2', { class: 'visually-hidden', id: 'info-title' }, t('info.title')),
-      h(
-        'div',
-        { class: 'about__sticker' },
-        h('img', {
-          class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
-          src: `${import.meta.env.BASE_URL}brand/${this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
-          width: '1000',
-          height: '443',
-          alt: model.name,
-        }),
-      ),
+      sticker,
+      ...(boxButton ? [boxButton] : []),
     );
 
     if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
-      const section = (id: string, title: MsgKey, ...children: HTMLElement[]): HTMLElement => h('section',
-        { class: 'side__sec', 'aria-labelledby': id }, h('h3', { class: 'side__h', id }, t(title)), ...children);
-      const facts = h('ul', { class: 'facts' },
-        ...([['10×20', 'info.t.field'], ['7', 'info.t.pieces'], ['10', 'info.t.speed']] as const).map(([n, key]) =>
-          h('li', {}, h('b', {}, n), h('span', {}, t(key)))));
-      const controls = section('keys-title', 'info.controls.h', h('ul', { class: 'keys', id: 'keymap' },
-        keyRow(t('info.t.move'), keys('left'), keys('right')),
-        keyRow(t('info.t.rotate'), keys('jump', 'up')),
-        keyRow(t('info.t.down'), keys('down')),
-        keyRow(t('info.t.drop'), keys('fire')),
-        keyRow(t('info.keys.startPause'), keys('start', 'pause')),
-        keyRow(t('info.keys.power'), [POWER_KEY]),
-        keyRow(t('info.keys.sound'), [SOUND_KEY])));
-      const rules = section('rules-title', 'info.t.rules', h('ol', { class: 'tetris-rules' },
-        ...(['info.t.rule.place', 'info.t.rule.lines', 'info.t.rule.speed', 'info.t.rule.over'] as const).map(key => h('li', {}, t(key)))));
-      const score = section('score-title', 'info.score.h', h('ul', { class: 'score' },
-        ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) =>
-          scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]]))),
-        h('p', { class: 'side__text' }, t('info.t.bonus')));
-      if (model.menu) {
-        // Консоль с меню игр: вместо правил тетриса — как пользоваться меню и список игр (знак на экране, название, вариантов, состояние).
-        const menuFacts = h('ul', { class: 'facts' },
-          h('li', {}, h('b', {}, String(model.games.length)), h('span', {}, t('info.m.games'))),
-          h('li', {}, h('b', {}, '10×20'), h('span', {}, t('info.m.field'))),
-          h('li', {}, h('b', {}, '0–9'), h('span', {}, t('info.m.speedlevel'))));
-        const keyRowNote = (label: string, note: string, ...caps: string[][]): HTMLElement => keyRow(`${label} (${note})`, ...caps);
-        const menuControls = section('keys-title', 'info.controls.h', h('ul', { class: 'keys', id: 'keymap' },
-          keyRowNote(t('info.m.leftRight'), t('info.m.leftRight.menu'), keys('left'), keys('right')),
-          keyRowNote(t('info.m.upDown'), t('info.m.upDown.menu'), keys('up'), keys('down')),
-          keyRowNote(t('info.m.rotate'), t('info.m.rotate.menu'), keys('jump')),
-          keyRow(t('info.m.fire'), keys('fire')),
+      // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у тетрис-заглушки — только тетрис.
+      const rows = model.menu
+        ? [
+            keyRow(`${t('info.m.leftRight')} (${t('info.m.leftRight.menu')})`, keys('left'), keys('right')),
+            keyRow(`${t('info.m.upDown')} (${t('info.m.upDown.menu')})`, keys('up'), keys('down')),
+            keyRow(`${t('info.m.rotate')} (${t('info.m.rotate.menu')})`, keys('jump')),
+            keyRow(t('info.m.fire'), keys('fire')),
+          ]
+        : [
+            keyRow(t('info.t.move'), keys('left'), keys('right')),
+            keyRow(t('info.t.rotate'), keys('jump', 'up')),
+            keyRow(t('info.t.down'), keys('down')),
+            keyRow(t('info.t.drop'), keys('fire')),
+          ];
+      const controls = h(
+        'section',
+        { class: 'side__sec', 'aria-labelledby': 'keys-title' },
+        h('h3', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')),
+        h(
+          'ul',
+          { class: 'keys', id: 'keymap' },
+          ...rows,
           keyRow(t('info.keys.startPause'), keys('start', 'pause')),
           keyRow(t('info.keys.power'), [POWER_KEY]),
-          keyRow(t('info.keys.sound'), [SOUND_KEY])));
-        const menuRules = section('rules-title', 'info.t.rules', h('ol', { class: 'tetris-rules' },
-          ...(['info.m.rule.menu', 'info.m.rule.select', 'info.m.rule.start', 'info.m.rule.reset'] as const).map(key => h('li', {}, t(key)))));
-        const list = section('menu-games-title', 'info.m.list.h', h('ul', { class: 'games games--menu', id: 'menu-games' }, ...gameRows(model)));
-        const menuNote = h('p', { class: 'side__text side__text--over' }, t('info.m.note'));
-        this.root.replaceChildren(head, section('about-title', 'info.m.title', menuFacts), list, menuControls, menuRules, menuNote);
-        return;
-      }
-      const note = h('p', { class: 'side__text side__text--over' }, t(model.id === 'clock99' ? 'info.t.clock' : model.id === 'tank168' ? 'info.t.tank' : 'info.t.sea'));
-      this.root.replaceChildren(head, section('about-title', 'info.t.title', facts), controls, rules, score, note);
+          keyRow(t('info.keys.sound'), [SOUND_KEY]),
+        ),
+      );
+      this.root.replaceChildren(head, controls, this.gamesSection(model));
       return;
     }
 
@@ -252,5 +286,137 @@ export class InfoPanel {
     );
 
     this.root.replaceChildren(head, about, controls, figures, score);
+  }
+
+  /** Миниатюра 3D-упаковки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) упаковка медленно поворачивается. */
+  private boxButton(): HTMLElement | null {
+    const dialog = this.boxDialog;
+    const pack = this.pack;
+    this.thumb?.dispose();
+    this.thumb = null;
+    if (!dialog || !pack) return null;
+    const thumb = new BoxViewer({ model: pack, interactive: false, signal: this.signal });
+    this.thumb = thumb;
+    const button = h(
+      'button',
+      { type: 'button', class: 'boxbtn', 'data-box-open': pack.id, 'aria-label': t(pack.text.open), title: t(pack.text.open) },
+      thumb.element,
+      h('span', { class: 'boxbtn__cap', 'aria-hidden': 'true' }, t('box.cap')),
+      h('span', { class: 'boxbtn__label', 'aria-hidden': 'true' }, t(pack.text.short)),
+    );
+    const options = { signal: this.signal };
+    button.addEventListener('click', () => dialog.open(), options);
+    button.addEventListener('pointerenter', () => thumb.setSpin(true), options);
+    button.addEventListener('pointerleave', () => thumb.setSpin(false), options);
+    button.addEventListener('focus', () => thumb.setSpin(true), options);
+    button.addEventListener('blur', () => thumb.setSpin(false), options);
+    return button;
+  }
+
+  /** Раздел «Игры на устройстве»: вкладки игр консоли (цифры или буквы, как в меню устройства) и описание открытой игры. */
+  private gamesSection(model: ToyModel): HTMLElement {
+    const lang = getLang();
+    const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
+    const panel = h('div', { class: 'gpanel', role: 'tabpanel', id: 'gpanel' });
+    const tabs = new Map<GameId, HTMLButtonElement>();
+    const ids = model.games.map((game) => game.id);
+    const select = (id: GameId, focus = false): void => {
+      this.selected = id;
+      for (const [gameId, tab] of tabs) {
+        const on = gameId === id;
+        tab.setAttribute('aria-selected', String(on));
+        tab.tabIndex = on ? 0 : -1;
+      }
+      panel.setAttribute('aria-labelledby', `gtab-${id}`);
+      panel.dataset['game'] = id;
+      panel.replaceChildren(...this.gamePanel(model, id));
+      if (focus) tabs.get(id)?.focus();
+    };
+    model.games.forEach((game, index) => {
+      const key = gameKey(model, index);
+      const name = GAMES[game.id].names[lang];
+      const tab = h(
+        'button',
+        { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${game.id}`, 'data-game': game.id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
+        key,
+      );
+      if (game.id === model.defaultGame) tab.dataset['playing'] = '';
+      tab.addEventListener('click', (event) => {
+        select(game.id);
+        if (event.detail !== 0) this.onPointerUse?.(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на вкладке
+      });
+      tabs.set(game.id, tab);
+      list.append(tab);
+    });
+    list.addEventListener('keydown', (event) => {
+      const at = ids.indexOf(this.selected);
+      const last = ids.length - 1;
+      const next = { ArrowRight: at >= last ? 0 : at + 1, ArrowDown: at >= last ? 0 : at + 1, ArrowLeft: at <= 0 ? last : at - 1, ArrowUp: at <= 0 ? last : at - 1, Home: 0, End: last }[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      select(ids[next] ?? this.selected, true);
+    });
+    select(ids.includes(this.selected) ? this.selected : model.defaultGame);
+    const notes = { clock99: 'games.note.clock99', seabattle: 'games.note.seabattle', tank168: null, mario: null } as const;
+    const note = notes[model.id];
+    return h(
+      'section',
+      { class: 'side__sec side__sec--games', 'aria-labelledby': 'games-title' },
+      h('h3', { class: 'side__h', id: 'games-title' }, t('help.games.h')),
+      ...(note ? [h('p', { class: 'side__text games__note' }, t(note))] : []),
+      list,
+      panel,
+    );
+  }
+
+  /** Содержимое открытой вкладки: название, состояние в проекте, что за игра, что известно и что не установлено; у тетриса — ещё правила и очки. */
+  private gamePanel(model: ToyModel, id: GameId): HTMLElement[] {
+    const game = model.games.find((slot): slot is ToyGame => slot.id === id);
+    if (!game) return [];
+    const guide = GAME_GUIDE[id];
+    const key = gameKey(model, model.games.indexOf(game));
+    const meta = h('p', { class: 'gpanel__meta' }, h('span', { class: 'chip', 'data-status': game.status }, t(GAME_STATUS_KEYS[game.status])));
+    if (game.variants) meta.append(h('span', { class: 'chip' }, t('games.variants', { n: game.variants })));
+    const brick = model.menu ? BRICK_GAMES[id] : undefined;
+    if (brick) meta.append(h('span', { class: 'chip', 'data-modes': '' }, t('info.m.modes', { n: game.modes?.length ?? brick.modes.length })));
+    const parts: HTMLElement[] = [
+      h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()])),
+      meta,
+      h('p', { class: 'side__text' }, t(guide.what)),
+    ];
+    if (guide.how) parts.push(h('p', { class: 'side__text' }, t(guide.how)));
+    if (id === 'tetris' && !model.menu) parts.push(...this.tetrisDetails());
+    parts.push(
+      h('p', { class: 'side__text gpanel__open' }, h('b', {}, `${t('games.open.h')}: `), t(guide.open)),
+      h('p', { class: 'side__text gpanel__src' }, h('b', {}, `${t('games.src.h')}: `), guide.sources.map((source) => t(SOURCE_KEYS[source])).join('; ')),
+    );
+    return parts;
+  }
+
+  /** Тетрис: поле, правила и очки — то, что играет сейчас (заглушка у всех трёх консолей). */
+  private tetrisDetails(): HTMLElement[] {
+    const facts = h(
+      'ul',
+      { class: 'facts' },
+      ...([['10×20', 'info.t.field'], ['7', 'info.t.pieces'], ['10', 'info.t.speed']] as const).map(([n, key]) => h('li', {}, h('b', {}, n), h('span', {}, t(key)))),
+    );
+    const rules = h(
+      'ol',
+      { class: 'tetris-rules' },
+      ...(['info.t.rule.place', 'info.t.rule.lines', 'info.t.rule.speed', 'info.t.rule.over'] as const).map((key) => h('li', {}, t(key))),
+    );
+    const score = h(
+      'ul',
+      { class: 'score' },
+      ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) => scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]])),
+    );
+    return [
+      facts,
+      h('h5', { class: 'gpanel__sub', id: 'rules-title' }, t('info.t.rules')),
+      rules,
+      h('h5', { class: 'gpanel__sub', id: 'score-title' }, t('info.score.h')),
+      score,
+      h('p', { class: 'side__text' }, t('info.t.bonus')),
+    ];
   }
 }

@@ -19,6 +19,7 @@ import {
   LEVELUP_POINT,
   SCORES_TO_EXTRA_LIFE,
 } from '../../../src/brick/games/racing/base';
+import { RACING_ID, RACING_SHOOT_ID } from '../../../src/brick/games/racing/modes';
 import {
   CAR_Y,
   Road,
@@ -163,10 +164,11 @@ function makeBot(game: BrickGame, mode: number, options: { walkers?: boolean; sh
 
 describe('гонки: варианты и общий вид', () => {
   it('четыре варианта донора, число вариантов на устройстве не установлено', () => {
-    expect(racingDef.id).toBe('racing');
+    expect(racingDef.id).toBe(RACING_ID);
     expect(racingDef.declaredModes).toBeNull();
     expect(racingDef.modes.length).toBe(4);
-    expect(racingShootDef.id).toBe('racing-shoot');
+    expect(racingShootDef.id).toBe(RACING_SHOOT_ID);
+    expect(new Set([racingDef.id, racingShootDef.id]).size).toBe(2);
     expect(racingShootDef.declaredModes).toBeNull();
     expect(racingShootDef.modes.length).toBe(4);
     for (const mode of racingShootDef.modes) expect(mode.note).toContain('допущение');

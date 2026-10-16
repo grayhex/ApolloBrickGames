@@ -80,7 +80,9 @@ function isTankAhead(sx: number, sy: number, distance: number, view: Dir, tank: 
 }
 
 function isFriendAhead(tank: Tank, enemies: readonly (Tank | null)[], distance: number, view: Dir): boolean {
-  return enemies.some((other) => other !== null && other !== tank && isTankAhead(tank.x, tank.y, distance, view, other));
+  return enemies.some(
+    (other) => other !== null && other !== tank && isTankAhead(tank.x, tank.y, distance, view, other),
+  );
 }
 
 const MIN_SHOT_DISTANCE = 4;
@@ -93,12 +95,7 @@ const SHOT_RATE = 1 / (MIN_SHOT_DISTANCE + MAX_SHOT_DISTANCE);
  * игрок едет навстречу, у врага «в упор» (рядом по линии игрока) и при близком препятствии на линии огня; падает, если
  * на линии свой танк. Всегда в пределах [rate, 1 - rate]. `board` — поле без этого танка.
  */
-export function shotChance(
-  board: Uint8Array,
-  tank: Tank,
-  player: Tank,
-  enemies: readonly (Tank | null)[],
-): number {
+export function shotChance(board: Uint8Array, tank: Tank, player: Tank, enemies: readonly (Tank | null)[]): number {
   const horizontal = tank.x - player.x;
   const vertical = tank.y - player.y;
   const nearer = Math.min(Math.abs(horizontal), Math.abs(vertical));
@@ -143,11 +140,7 @@ export function wantsToShoot(
  * базовый 0,25, плюс за свободный шаг, за текущее направление и за приближение к игроку по более короткой оси, минус за
  * преграду (на шаг и на целую длину танка) и за пересечение курса игрока. `board` — поле без этого танка.
  */
-export function moveWeights(
-  board: Uint8Array,
-  tank: Tank,
-  player: Tank,
-): [number, number, number, number] {
+export function moveWeights(board: Uint8Array, tank: Tank, player: Tank): [number, number, number, number] {
   const weights: [number, number, number, number] = [0.25, 0.25, 0.25, 0.25];
   const blocked: [boolean, boolean, boolean, boolean] = [false, false, false, false];
   const horizontal = tank.x - player.x;
@@ -171,7 +164,8 @@ export function moveWeights(
   if (!blocked[tank.dir]) weights[tank.dir] += 0.25;
 
   // к игроку: по более короткой оси вес растёт сильнее, если путь не закрыт
-  if (horizontal !== 0) weights[preferredHorizontal] += horizontalIsNearer && !blocked[preferredHorizontal] ? 0.5 : 0.25;
+  if (horizontal !== 0)
+    weights[preferredHorizontal] += horizontalIsNearer && !blocked[preferredHorizontal] ? 0.5 : 0.25;
   if (vertical !== 0) weights[preferredVertical] += !horizontalIsNearer && !blocked[preferredVertical] ? 0.5 : 0.25;
   // не ехать поперёк курса игрока
   weights[player.dir === LEFT || player.dir === RIGHT ? preferredVertical : preferredHorizontal] -= 0.25;

@@ -4,7 +4,7 @@ import { h } from './dom';
 import { getLang, onLangChange, rich, t, type MsgKey } from './i18n';
 import type { InputHub } from './hub';
 import { GAMES, type GameStatus } from '../games/catalog';
-import { engineOf, keyLabel, TOYS, type ToyModel } from './toys';
+import { engineOf, gameKey, keyLabel, TOYS, type ToyModel } from './toys';
 import type { ToyKeyId } from './toy';
 
 export interface HelpRow {
@@ -56,14 +56,15 @@ const STATUS_KEYS: Record<GameStatus, 'game.status.ready' | 'game.status.placeho
 /** Строки списка игр консоли: у консолей с меню — со знаком игры на экране (цифра или буква). */
 export function gameRows(model: ToyModel): HTMLElement[] {
   const lang = getLang();
-  return model.games.map((game) =>
-    h(
+  return model.games.map((game, index) => {
+    const symbol = model.menu ? gameKey(model, index) : null;
+    return h(
       'li',
-      { class: 'games__row', 'data-game': game.id, 'data-status': game.status, ...(game.symbol ? { 'data-symbol': game.symbol } : {}) },
-      h('b', { class: 'games__name' }, `${game.symbol ? `${game.symbol}. ` : ''}${game.variants ? `${game.label} (${game.variants})` : game.label}`),
+      { class: 'games__row', 'data-game': game.id, 'data-status': game.status, ...(symbol ? { 'data-symbol': symbol } : {}) },
+      h('b', { class: 'games__name' }, `${symbol ? `${symbol}. ` : ''}${game.variants ? `${game.label} (${game.variants})` : game.label}`),
       h('span', { class: 'games__note' }, `${GAMES[game.id].names[lang]} — ${t(STATUS_KEYS[game.status])}`),
-    ),
-  );
+    );
+  });
 }
 
 /** Раздел «Игры на устройстве»: набор игр консоли по наклейке, упаковке или меню и состояние каждой. */

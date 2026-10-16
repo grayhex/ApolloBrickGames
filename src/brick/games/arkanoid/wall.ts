@@ -37,7 +37,7 @@ export const PRELOADED_WALLS: readonly (readonly string[])[] = [
   ['..######..', '.#####.##.', '##..######', '.##.##....', '.########.', '..######..', '...####...', '....##....'],
 ];
 
-/** Высота случайной стены уровня: `level / 2 + 5` (целочисленное деление, как в коде донора; его комментарий «6..9» расходится с кодом). */
+/** Высота случайной стены уровня: `level / 2 + 5` (целочисленное деление; комментарий донора «6..9» расходится с его кодом). */
 export const generatedWallHeight = (level: number): number => Math.floor(level / 2) + 5;
 
 const clampLevel = (level: number): number => Math.min(PRELOADED_WALLS.length, Math.max(1, Math.trunc(level) || 1));
@@ -112,7 +112,7 @@ export class BricksWall {
     return true;
   }
 
-  /** Круговой сдвиг стены по горизонтали на `dx` клеток (вправо при `dx > 0`): кирпичи, ушедшие за край, появляются с другой стороны. */
+  /** Круговой сдвиг стены по горизонтали на `dx` клеток (вправо при `dx > 0`): ушедшие за край кирпичи возвращаются с другой стороны. */
   shift(dx: number): void {
     const shift = ((Math.trunc(dx) % this.width) + this.width) % this.width;
     if (shift === 0) return;

@@ -95,7 +95,7 @@ describe('рисунок меню по фотографии экрана', () =>
 
   it('у каждой игры есть иллюстрация 10 × 5, и все они различаются', () => {
     const ids = Object.keys(ILLUSTRATIONS);
-    expect(ids.length).toBe(12);
+    expect(ids.length).toBe(13);
     for (const id of ids) {
       const art = ILLUSTRATIONS[id] ?? [];
       expect(art.length).toBe(5);

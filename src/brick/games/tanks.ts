@@ -14,13 +14,7 @@
 import { BrickBase, CLEAR_LOSE_TICKS, CLEAR_WIN_TICKS } from '../base';
 import { cellIndex, emptyField } from '../grid';
 import { Countdown, genuineTicks, msToTicks } from '../timing';
-import {
-  CELL_ON,
-  type BrickGameDef,
-  type BrickGameOptions,
-  type BrickInput,
-  type BrickModeDef,
-} from '../types';
+import { CELL_ON, type BrickGameDef, type BrickGameOptions, type BrickInput, type BrickModeDef } from '../types';
 import { chooseMove, shootDirection, wantsToShoot } from './tanks/ai';
 import {
   DOWN,
@@ -102,7 +96,8 @@ export function tanksRules(donorType: number): TanksRules {
  */
 const DONOR_TYPES: readonly number[] = [1, 2, 4, 5, 8];
 
-const DONOR_NOTE = 'Выбор пяти вариантов из восьми донорских — допущение: на устройстве их пять, смысл каждого неизвестен.';
+const DONOR_NOTE =
+  'Выбор пяти вариантов из восьми донорских — допущение: на устройстве их пять, смысл каждого неизвестен.';
 const PRESET_NOTE = 'С уровня 2 препятствия берутся из готовой таблицы уровней донора.';
 const RANDOM_NOTE = 'С уровня 2 на каждом уровне случайно ставится столько препятствий, каков номер уровня минус один.';
 
@@ -201,8 +196,9 @@ export class TanksGame extends BrickBase {
     this.enemies.fill(null);
     this.onBoard = 0;
     this.player = PLAYER_START;
-    if (this.level <= 1) this.obstacles = newBoard();
-    else this.obstacles = this.rules.preloaded ? presetObstacles(this.level) : randomObstacles(this.rng, this.level - 1);
+    if (this.level <= 1) this.obstacles = newBoard(); // у донора препятствия только с уровня 2
+    else if (this.rules.preloaded) this.obstacles = presetObstacles(this.level);
+    else this.obstacles = randomObstacles(this.rng, this.level - 1);
     // Донор ставит случайные препятствия на пустое поле и рисует танк игрока поверх: клетки под танком сливаются с ним
     // и пропадают, когда танк уезжает. Здесь танк и препятствия хранятся отдельно, поэтому такие клетки убираются сразу.
     for (const [cx, cy] of tankMask(PLAYER_KIND, PLAYER_START.dir).cells) {

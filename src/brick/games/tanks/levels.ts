@@ -23,6 +23,7 @@ import {
 /** Тип препятствия: 0 — квадрат, 1 — уголок, 2 — прямоугольник 3 × 2 (`Obstacle.charactersTable`). */
 export type ObstacleType = 0 | 1 | 2;
 
+// prettier-ignore
 const OBSTACLE_TABLE: readonly (readonly Point[])[] = [
   [[0, 0]],
   [[1, 0], [0, 0], [0, 1]],

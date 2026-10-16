@@ -154,7 +154,7 @@ const KABOOM_TICKS = 4 * 7 * KABOOM_WAVE_TICKS;
 
 // ---------------------------------------------------------------- общие проверки
 
-conformance(froggerDef);
+conformance(froggerDef, { fuzzTicks: 1500 });
 
 // ---------------------------------------------------------------- варианты
 
@@ -847,9 +847,10 @@ describe('лягушка: бот переходит дорогу', () => {
     }
   });
 
-  it('бот проходит и на большой скорости, и на перевёрнутом поле (типы 17 и 32)', () => {
-    const fast = froggerDef.create({ seed: 4, mode: 8, speed: 10 });
-    play(fast, 2500, botFor(genuineTicks(10, 450, 120) * 3));
+  it('бот проходит и на средней скорости, и на перевёрнутом поле (типы 17 и 32)', () => {
+    // скорость 5: дорога стоит 54 такта; на скорости 10 (21 такт) путь из десяти прыжков по два такта уже не успеть
+    const fast = froggerDef.create({ seed: 4, mode: 8, speed: 5 });
+    play(fast, 2500, botFor(genuineTicks(5, 450, 120) * 3));
     expect(fast.score).toBeGreaterThanOrEqual(10);
     for (const type of [17, 32]) {
       const game = new FroggerGame({ seed: 3, speed: 1 }, rulesOfDonorType(type));

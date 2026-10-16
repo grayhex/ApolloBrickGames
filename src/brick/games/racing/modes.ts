@@ -4,6 +4,10 @@
  */
 import type { BrickModeDef } from '../../types';
 
+/** Идентификаторы игр (`GameId` каталога консоли); менять только здесь. */
+export const RACING_ID = 'racing';
+export const RACING_SHOOT_ID = 'racing-shoot';
+
 export const RACING_MODES: readonly BrickModeDef[] = [
   {
     name: { ru: 'Две полосы', en: 'Two lanes' },

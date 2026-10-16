@@ -13,7 +13,7 @@ import { GAMES } from '../games/catalog';
 import { makeTetrisInput, TetrisGame, type TetrisAction, type TetrisEvent } from '../tetris';
 import { MAX_SCORE } from '../brick/types';
 import type { TetrisScene } from '../render/tetrisScreen';
-import type { ToyModel } from './toys';
+import { gameKey, type ToyModel } from './toys';
 
 /**
  * «Кабинет» игрушки с тетрисным экраном: что оболочка (`tetrisApp.ts`) знает об игре. Два вида: тетрис-заглушка («Часы+99») и консоль с меню игр
@@ -200,8 +200,8 @@ class TetrisCabinet implements Cabinet {
 
 /** Пункты меню консоли: игры игрушки по порядку (`ToyModel.games`) с восстановленными играми из `defs`. */
 export function consoleEntries(model: ToyModel, defs: Readonly<Record<string, BrickGameDef>>): BrickConsoleEntry[] {
-  return model.games.map((game) => ({
-    symbol: game.symbol ?? '?',
+  return model.games.map((game, index) => ({
+    symbol: gameKey(model, index),
     id: game.id,
     def: game.status === 'planned' ? null : (defs[game.id] ?? null),
     ...(game.modes ? { modes: game.modes } : {}),
@@ -210,7 +210,7 @@ export function consoleEntries(model: ToyModel, defs: Readonly<Record<string, Br
 }
 
 /** Игры с движением по клеткам, где звук каждого шага уместен (тетрис). */
-const STEP_SOUND_GAMES: ReadonlySet<string> = new Set([GAMES.tetris.id, GAMES.pentix.id]);
+const STEP_SOUND_GAMES: ReadonlySet<string> = new Set([GAMES.tetris.id, GAMES['tetris-big'].id, GAMES['tetris-pentix'].id]);
 
 class ConsoleCabinet implements Cabinet {
   private readonly console_: BrickConsole;
