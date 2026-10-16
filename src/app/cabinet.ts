@@ -319,6 +319,7 @@ export interface CabinetOptions {
 }
 
 export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet {
+  if (model.defaultGame === null) throw new Error('This console has no game engine yet.');
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
   const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}:hi`;
   return new ConsoleCabinet(model.id, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => g.id === model.defaultGame)));

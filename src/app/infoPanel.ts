@@ -137,8 +137,10 @@ export class InfoPanel {
     this.hub = hub;
     this.signal = signal;
     this.onPointerUse = box?.onPointerUse;
-    this.selected = TOYS[toy].defaultGame;
-    this.active = TOYS[toy].defaultGame;
+    const first = TOYS[toy].defaultGame;
+    if (first === null) throw new Error('A playable information panel requires a game.');
+    this.selected = first;
+    this.active = first;
     const packId = TOYS[toy].pack;
     this.pack = packId ? PACKS[packId] : null;
     this.boxDialog = box && this.pack ? new BoxDialog(box.dialog, this.pack, { onOpen: box.onOpen, onClose: box.onClose }, signal) : null;
@@ -329,6 +331,7 @@ export class InfoPanel {
 
   /** Раздел «Игры на устройстве»: вкладки игр консоли (цифры или буквы, как в меню устройства) и описание открытой игры. */
   private gamesSection(model: ToyModel): HTMLElement {
+    if (model.defaultGame === null) throw new Error('This console has no game catalog yet.');
     const lang = getLang();
     const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
     const panel = h('div', { class: 'gpanel', role: 'tabpanel', id: 'gpanel' });

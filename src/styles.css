@@ -4423,3 +4423,36 @@ body.route-editor .shell > :not(#fatal) {
 }
 .gquick__schemes .gscheme__grid { grid-template-columns: repeat(var(--cols), 7px); }
 .gquick__schemes .gscheme__grid i { width: 7px; height: 7px; }
+
+/* Families share the existing animated dock; opening a family leaves the current game running. */
+.toysw__families { display:grid; gap:2px; padding-right:6px; margin-right:2px; border-right:1px solid var(--line); }
+.toysw__family { padding:2px 9px; min-height:18px; border:0; border-radius:999px; background:transparent; color:var(--muted); font:700 10px/1.2 system-ui,sans-serif; cursor:pointer; transition:background .18s,color .18s; }
+.toysw__family[aria-selected='true'] { background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--text); }
+.toysw__family:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.toysw__items { display:flex; align-items:center; gap:4px; animation:toy-family-enter .22s cubic-bezier(.2,.8,.2,1) both; }
+.toysw__items[hidden] { display:none; }
+@keyframes toy-family-enter { from {opacity:0;transform:translateY(5px) scale(.97)} to {opacity:1;transform:translateY(0) scale(1)} }
+@media (max-width:1399px) { .toysw__item:not([aria-current='page']) .toysw__name { display:none; } }
+.toysw__items[data-family='other'] .toysw__name { display:block; max-width:140px; }
+@media (max-width:480px) {
+  .toysw__family { padding-inline:6px; font-size:9px; }
+  .toysw__items { gap:1px; }
+  .toysw__item { padding-inline:6px; gap:5px; }
+  .toysw__items[data-family='other'] .toysw__name { display:block; max-width:105px; overflow:hidden; text-overflow:ellipsis; }
+}
+@media (prefers-reduced-motion:reduce) { .toysw__items { animation:none; }.toysw__family { transition:none; } }
+
+.corner__btn[hidden] { display:none; }
+
+/* Flex children must shrink through the whole dock, including wide fallback fonts. */
+.toysw, .toysw__items, .toysw__item, .toysw__name { min-width:0; }
+.toysw__families { flex-shrink:0; }
+.toysw__name { overflow:hidden; text-overflow:ellipsis; }
+
+@media (max-width:480px) {
+  .toysw__items[data-family=other] .toysw__item { flex:1 1 0; }
+  .toysw__items[data-family=other] .toysw__name { white-space:normal; font-size:9px; line-height:1.2; max-width:80px; }
+}
+@media (min-width:900px) {
+  body[data-chrome='toy'] .brand:has([data-family='other']:not([hidden])) { max-width:min(560px, calc(100vw - 640px)); }
+}

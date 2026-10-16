@@ -1,0 +1,166 @@
+/* Shared exhibit surfaces; each model supplies its own artwork and physical controls. */
+body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick']) {
+  --stage-w: clamp(210px, calc((100dvh - 30px - var(--head-h, 0px)) / 2.82), 600px);
+}
+body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-closed] {
+  --stage-w: clamp(230px, calc((100dvh - 30px - var(--head-h, 0px)) / 1.76), 600px);
+}
+body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-compact] {
+  --stage-w: clamp(250px, calc((100dvh - 30px - var(--head-h, 0px)) / 1.14), 950px);
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) {
+  --rim: #eeede1;
+  --rim-dark: #d1d1c2;
+  --lcd-dim: saturate(0.7) brightness(0.85);
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__front {
+  padding: 0;
+  aspect-ratio: 400 / 440;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__face {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  display: block;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__bezel {
+  position: absolute;
+  left: 16.5%;
+  top: 14%;
+  width: 67%;
+  height: 73%;
+  padding: 2.2cqw;
+  border: 0.8cqw solid #ad574d;
+  border-radius: 0;
+  background: linear-gradient(130deg, #d2d0b9, #808270);
+  box-shadow:
+    0 0 0 0.5cqw #b9b9a4,
+    inset 0.5cqw 0.5cqw 1cqw #edead0,
+    inset -0.6cqw -0.6cqw 0.8cqw #62685b;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__window {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: linear-gradient(115deg, #77856e, #9aa68b 75%);
+  box-shadow:
+    inset 1cqw 1cqw 1.5cqw #3c4a35,
+    inset -0.3cqw -0.3cqw 0.8cqw #697461;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) #game-area {
+  height: 100%;
+  aspect-ratio: auto;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) #screen {
+  visibility: hidden;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .base {
+  aspect-ratio: 400 / 660;
+  border-radius: 5cqw;
+  background: #e5e4d6;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .base__art {
+  position: absolute;
+  display: block;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  pointer-events: none;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__cover {
+  border-radius: 5cqw;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__hinge {
+  margin-left: 10%;
+  margin-right: 10%;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__knuckle {
+  flex-basis: 25%;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__band {
+  cursor: default;
+  background: #20231e;
+  height: 10cqw;
+}
+.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__band::before {
+  inset: 22% 7% 8%;
+  opacity: 1;
+  mask: none;
+  background: repeating-linear-gradient(90deg, #8c8d80 0 0.55cqw, #dfdfce 0.8cqw 1.65cqw, #aaac9c 1.9cqw 2.3cqw);
+  border-radius: 0 0 40% 40%;
+  box-shadow: inset 0 -0.9cqw 0.8cqw #3c4035;
+}
+:is(.alibaba-key, .minibrick-key) {
+  position: absolute;
+  padding: 0;
+  border: 0.4cqw solid #747968;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 26%, #bfc2ad, #a2a691 60%, #919780 85%, #c2c5b2);
+  box-shadow:
+    inset 0.2cqw 0.3cqw 0.6cqw #e3e6d0,
+    inset -0.2cqw -0.2cqw 0.5cqw #68705a,
+    0 0.45cqw 0.55cqw #666953;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+:is(.alibaba-key, .minibrick-key):active {
+  transform: translateY(0.35cqw);
+  filter: brightness(0.92);
+  box-shadow: inset 0 0 0.8cqw #6c725f;
+}
+:is(.alibaba-key, .minibrick-key):focus-visible {
+  outline: 0.7cqw solid #b65e52;
+  outline-offset: 1cqw;
+}
+#side-ctl:is([data-toy='alibaba'], [data-toy='minibrick']) :is(#blk-sound, #blk-levels) {
+  display: none;
+}
+.side--info:is([data-toy='alibaba'], [data-toy='minibrick']) {
+  height: auto;
+  grid-template-rows: none;
+  align-content: start;
+}
+.side--info:is([data-toy='alibaba'], [data-toy='minibrick']) .side__sec {
+  align-content: start;
+}
+.alibaba-info__mark {
+  width: 72%;
+  max-width: 220px;
+  margin: 6px auto 0;
+}
+.alibaba-info__mark svg {
+  width: 100%;
+  display: block;
+}
+.alibaba-status {
+  color: var(--warn);
+  font-weight: 650;
+}
+.alibaba-notice {
+  max-width: 480px;
+  padding: 28px;
+  border-radius: 22px;
+}
+.alibaba-notice h2 {
+  margin-top: 0;
+}
+.alibaba-notice p {
+  line-height: 1.6;
+  color: var(--muted);
+}
+@media (max-width: 899px) {
+  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick']) {
+    --stage-w: clamp(200px, calc((100dvh - 90px - var(--head-h, 0px)) / 2.82), 460px);
+  }
+  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-closed] {
+    --stage-w: clamp(220px, calc((100dvh - 90px - var(--head-h, 0px)) / 1.76), 460px);
+  }
+  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-compact] {
+    --stage-w: clamp(240px, calc((100dvh - 90px - var(--head-h, 0px)) / 1.14), 700px);
+  }
+}
+
+body:is([data-toy='alibaba'], [data-toy='minibrick']) #corner-editor {
+  display: none;
+}
