@@ -4371,8 +4371,8 @@ body.route-editor .shell > :not(#fatal) {
   .side--info:not([data-toy]) .boxbtn { width: 64px; height: 84px; }
 }
 
-/* Невысокие окна (до 880 px; на 1536 × 864 справка Mario и без кнопки не помещалась на 10 px): чуть плотнее промежутки между блоками. */
-@media (max-height: 880px) {
+/* Запас для квадратных иллюстраций и различий метрик шрифтов браузеров. */
+@media (max-height: 960px) {
   .side--info:not([data-toy]) { gap: 6px; }
   .side--info:not([data-toy]) .side__sec { gap: 4px; padding-top: 6px; }
 }
