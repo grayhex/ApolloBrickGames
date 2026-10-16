@@ -11,6 +11,29 @@ export interface GuideText {
   en: string;
 }
 
+/** Короткая запись строки на двух языках: `t('Цель', 'Goal')`. */
+export const gt = (ru: string, en: string): GuideText => ({ ru, en });
+
+/** Пределы длины текстов (знаков на язык): описание должно помещаться во вкладку левой панели. */
+export const GUIDE_LIMITS = {
+  summary: 240,
+  goal: 140,
+  rule: 150,
+  control: 90,
+  scoreWhat: 70,
+  scorePoints: 24,
+  factLabel: 40,
+  factValue: 12,
+  progression: 200,
+  lives: 200,
+  caption: 80,
+  assumption: 160,
+  rulesMax: 8,
+  controlsMax: 6,
+  scoringMax: 8,
+  assumptionsMax: 5,
+} as const;
+
 /**
  * Схема-иллюстрация из клеток: строки одинаковой длины, `#` — клетка горит, `*` — мигает, `.` — пусто (в схеме есть и фрагмент поля, и целое поле 10 × 20).
  * Рисуется теми же ячейками, что и экран игрушки; подпись — одна короткая фраза о том, что на схеме.
@@ -64,34 +87,45 @@ export interface GameGuideData {
   assumptions: readonly GuideText[];
 }
 
-/** Проверка описания: что схемы прямоугольные, из допустимых символов, а тексты не пустые. Возвращает список проблем (пустой — всё хорошо). */
+/** Проверка описания: что схемы прямоугольные, из допустимых символов, тексты не пустые и не длиннее пределов `GUIDE_LIMITS`. Возвращает список проблем (пустой — всё хорошо). */
 export function guideProblems(guide: GameGuideData): string[] {
   const problems: string[] = [];
-  const text = (name: string, value: GuideText | null): void => {
+  const text = (name: string, value: GuideText | null, limit?: number): void => {
     if (value === null) return;
     if (value.ru.trim() === '') problems.push(`${name}: пустой русский текст`);
     if (value.en.trim() === '') problems.push(`${name}: пустой английский текст`);
+    if (limit !== undefined) {
+      if (value.ru.length > limit) problems.push(`${name}: русский текст длиннее ${limit} знаков (${value.ru.length})`);
+      if (value.en.length > limit) problems.push(`${name}: английский текст длиннее ${limit} знаков (${value.en.length})`);
+    }
   };
-  text('summary', guide.summary);
-  text('goal', guide.goal);
-  text('progression', guide.progression);
-  text('lives', guide.lives);
-  guide.rules.forEach((rule, i) => text(`rules[${i}]`, rule));
-  guide.controls.forEach((control, i) => text(`controls[${i}]`, control.text));
+  text('summary', guide.summary, GUIDE_LIMITS.summary);
+  text('goal', guide.goal, GUIDE_LIMITS.goal);
+  text('progression', guide.progression, GUIDE_LIMITS.progression);
+  text('lives', guide.lives, GUIDE_LIMITS.lives);
+  guide.rules.forEach((rule, i) => text(`rules[${i}]`, rule, GUIDE_LIMITS.rule));
+  guide.controls.forEach((control, i) => text(`controls[${i}]`, control.text, GUIDE_LIMITS.control));
   guide.scoring.forEach((score, i) => {
-    text(`scoring[${i}]`, score.what);
+    text(`scoring[${i}]`, score.what, GUIDE_LIMITS.scoreWhat);
     if (score.points.trim() === '') problems.push(`scoring[${i}]: пустые очки`);
+    if (score.points.length > GUIDE_LIMITS.scorePoints) problems.push(`scoring[${i}]: очки длиннее ${GUIDE_LIMITS.scorePoints} знаков`);
   });
   guide.facts.forEach((fact, i) => {
-    text(`facts[${i}]`, fact.label);
+    text(`facts[${i}]`, fact.label, GUIDE_LIMITS.factLabel);
     if (fact.value.trim() === '') problems.push(`facts[${i}]: пустое значение`);
+    if (fact.value.length > GUIDE_LIMITS.factValue) problems.push(`facts[${i}]: значение длиннее ${GUIDE_LIMITS.factValue} знаков`);
   });
-  guide.assumptions.forEach((assumption, i) => text(`assumptions[${i}]`, assumption));
+  guide.assumptions.forEach((assumption, i) => text(`assumptions[${i}]`, assumption, GUIDE_LIMITS.assumption));
   if (guide.rules.length < 3) problems.push('rules: меньше трёх пунктов');
+  if (guide.rules.length > GUIDE_LIMITS.rulesMax) problems.push(`rules: больше ${GUIDE_LIMITS.rulesMax} пунктов`);
+  if (guide.controls.length === 0) problems.push('controls: нет ни одной кнопки');
+  if (guide.controls.length > GUIDE_LIMITS.controlsMax) problems.push(`controls: больше ${GUIDE_LIMITS.controlsMax} кнопок`);
+  if (guide.scoring.length > GUIDE_LIMITS.scoringMax) problems.push(`scoring: больше ${GUIDE_LIMITS.scoringMax} строк`);
+  if (guide.assumptions.length > GUIDE_LIMITS.assumptionsMax) problems.push(`assumptions: больше ${GUIDE_LIMITS.assumptionsMax} пунктов`);
   if (guide.facts.length < 2 || guide.facts.length > 4) problems.push('facts: должно быть от двух до четырёх');
   if (guide.schemes.length < 1 || guide.schemes.length > 3) problems.push('schemes: должно быть от одной до трёх');
   guide.schemes.forEach((scheme, i) => {
-    text(`schemes[${i}]`, scheme.caption);
+    text(`schemes[${i}]`, scheme.caption, GUIDE_LIMITS.caption);
     const width = scheme.cells[0]?.length ?? 0;
     if (scheme.cells.length === 0 || width === 0) problems.push(`schemes[${i}]: пустая схема`);
     scheme.cells.forEach((row, y) => {
