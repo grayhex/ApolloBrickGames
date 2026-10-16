@@ -96,16 +96,20 @@ test.describe('«168 в 1 танк»', () => {
     expect(await label()).not.toBe('#2b8a4e');
   });
 
-  test('справка: набор игр по наклейке («168 в 1»: танк, гонки, тетрис, лягушка, стройка, стрельба); играет только тетрис', async ({ page }) => {
+  test('справка: набор игр «168 в 1 танк» по списку владельца (девять игр меню); играет только тетрис', async ({ page }) => {
     await ready(page, '?toy=tank168&power=on');
     await page.locator('#corner-help').click();
     const games = page.locator('#help .games__row');
-    await expect(games).toHaveCount(6);
-    expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['game']))).toEqual(['tank', 'racing', 'tetris', 'frog', 'construction', 'shooting']);
+    await expect(games).toHaveCount(9);
+    expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['game']))).toEqual([
+      'tank', 'frog', 'racing', 'racing-shooting', 'shooting-array', 'shooting-figures', 'construction', 'tetris', 'tetris-pentix',
+    ]);
     await expect(page.locator('#help .games__row[data-game="tetris"]')).toHaveAttribute('data-status', 'placeholder');
     await expect(page.locator('#help .games__row[data-game="tetris"]')).toContainText('пока обычный тетрис');
+    await expect(page.locator('#help .games__row[data-game="tetris"] .games__name')).toHaveText('Тетрис (51)'); // вариантов — со слов владельца
+    await expect(page.locator('#help .games__row[data-game="tank"] .games__name')).toHaveText('Танки (5)');
     await expect(page.locator('#help .games__row[data-game="frog"]')).toContainText('ещё не восстановлена');
-    await expect(page.locator('#help .games__row[data-game="racing"] .games__name')).toHaveText('ГОНКИ');
+    await expect(page.locator('#help .games__row[data-game="racing"] .games__name')).toHaveText('Гонки');
     await expect(page.locator('#help #device-games')).toContainText('168');
     await page.keyboard.press('Escape');
   });

@@ -51,6 +51,8 @@ export interface ToyModel {
   defaultGame: GameId;
   /** Сколько игр заявлено на наклейке в целом («168 в 1»), если больше названных. */
   gamesCount?: number;
+  /** Чем отмечены игры в меню устройства: цифрами (1, 2, 3…) или буквами (A, B, C…, как у «Морского боя»). */
+  gameKeys: 'digits' | 'letters';
   /** Рисунок ячейки матрицы: звёздочка или точка в прямоугольнике. */
   glyph: 'star' | 'square';
   /** Боковая панель экрана тетриса: у «Часов+99» значки режима, у «Морского боя» чашка, у «168 в 1 танк» танк. */
@@ -61,6 +63,8 @@ export interface ToyModel {
   leds: boolean;
   /** Левая панель: у Mario «Figure introduction» по упаковке, у остальных справка по тетрису. */
   info: boolean;
+  /** Есть ли рядом с наклейкой 3D-модель упаковки (у «168 в 1 танк» — по присланной развёртке). */
+  box: boolean;
   /** Уровни на пульте справа (у заглушек выключены). */
   levels: boolean;
   /** Цвета LCD: фон окна и «чернила» включённых сегментов (по фото оригинала). */
@@ -99,11 +103,13 @@ export const TOYS: Record<ToyId, ToyModel> = {
       { id: 'shooting', label: 'SHOOTING', variants: 1, status: 'planned' },
     ],
     defaultGame: 'mario',
+    gameKeys: 'digits',
     glyph: 'square',
     panel: 'sea',
     deco: 'frame',
     leds: true,
     info: true,
+    box: false,
     levels: true,
     lcd: { bg: '#adb38c', ink: '#303a30' },
     stageLabel: 'stage.label',
@@ -124,11 +130,13 @@ export const TOYS: Record<ToyId, ToyModel> = {
       { id: 'racing', label: 'автогонка', status: 'planned' },
     ],
     defaultGame: 'tetris',
+    gameKeys: 'digits',
     glyph: 'star',
     panel: 'clock',
     deco: 'flourish',
     leds: true,
     info: true,
+    box: false,
     levels: false,
     lcd: { bg: '#b8bbb3', ink: '#222a33' },
     stageLabel: 'stage.label.clock99',
@@ -164,20 +172,23 @@ export const TOYS: Record<ToyId, ToyModel> = {
     name: 'Морской бой',
     shells: ['red', 'blue'],
     defaultShell: 'red',
-    // Наклейка: «МОРСКОЙ БОЙ» — танк, тетрис, теннис, Ромео и Джульетта.
+    // Режимы A–F — по списку владельца. На наклейке напечатаны «танк, тетрис, теннис, Ромео и Джульетта»: «теннис», видимо, и есть арканоид (F) — не подтверждено.
     games: [
-      { id: 'sea-battle', label: 'МОРСКОЙ БОЙ', status: 'planned' },
-      { id: 'tank', label: 'ТАНК', status: 'planned' },
-      { id: 'tetris', label: 'ТЕТРИС', status: 'placeholder' },
-      { id: 'tennis', label: 'ТЕННИС', status: 'planned' },
-      { id: 'romeo-juliet', label: 'РОМЕО И ДЖУЛЬЕТТА', status: 'planned' },
+      { id: 'sea-battle', label: 'Морской бой', status: 'planned' },
+      { id: 'tank', label: 'Танки', status: 'planned' },
+      { id: 'romeo-juliet', label: 'Ромео и Джульетта', status: 'planned' },
+      { id: 'tetris-big', label: 'Тетрис с большими фигурами', status: 'planned' },
+      { id: 'tetris', label: 'Тетрис', status: 'placeholder' },
+      { id: 'arkanoid', label: 'Арканоид', status: 'planned' },
     ],
     defaultGame: 'tetris',
+    gameKeys: 'letters',
     glyph: 'square',
     panel: 'sea',
     deco: 'frame',
     leds: false,
     info: true,
+    box: false,
     levels: false,
     lcd: { bg: '#c0c4a9', ink: '#252921' },
     stageLabel: 'stage.label.seabattle',
@@ -213,22 +224,28 @@ export const TOYS: Record<ToyId, ToyModel> = {
     name: '168 в 1 танк',
     shells: ['red', 'yellow'],
     defaultShell: 'red',
-    // Наклейка: «168 в 1 танк» — гонки, тетрис, лягушка, стройка, стрельба. Названы шесть игр из заявленных 168.
+    // Девять игр меню по наблюдениям владельца (порядок — как в меню); на упаковке и наклейке напечатаны «танк, автогонки, тетрис, стрельба, лягушка».
+    // Из заявленных 168 — это игры, число вариантов у большинства не установлено.
     games: [
-      { id: 'tank', label: 'танк', status: 'planned' },
-      { id: 'racing', label: 'ГОНКИ', status: 'planned' },
-      { id: 'tetris', label: 'ТЕТРИС', status: 'placeholder' },
-      { id: 'frog', label: 'ЛЯГУШКА', status: 'planned' },
-      { id: 'construction', label: 'СТРОЙКА', status: 'planned' },
-      { id: 'shooting', label: 'СТРЕЛЬБА', status: 'planned' },
+      { id: 'tank', label: 'Танки', variants: 5, status: 'planned' },
+      { id: 'frog', label: 'Лягушка', status: 'planned' },
+      { id: 'racing', label: 'Гонки', status: 'planned' },
+      { id: 'racing-shooting', label: 'Гонки со стрельбой', status: 'planned' },
+      { id: 'shooting-array', label: 'Стрельба по массиву и точкам', status: 'planned' },
+      { id: 'shooting-figures', label: 'Стрельба по фигурам', status: 'planned' },
+      { id: 'construction', label: 'Строитель', status: 'planned' },
+      { id: 'tetris', label: 'Тетрис', variants: 51, status: 'placeholder' },
+      { id: 'tetris-pentix', label: 'Тетрис Pentix', status: 'planned' },
     ],
     defaultGame: 'tetris',
     gamesCount: 168,
+    gameKeys: 'digits',
     glyph: 'square',
     panel: 'tank',
     deco: 'flourish',
     leds: true,
     info: true,
+    box: true,
     levels: false,
     lcd: { bg: '#c3c8c6', ink: '#232a34' },
     stageLabel: 'stage.label.tank168',
@@ -258,6 +275,11 @@ export const TOYS: Record<ToyId, ToyModel> = {
     },
   },
 };
+
+/** Отметка игры в меню устройства: номер или буква по порядку (`1`…`9`, `A`…`F`). */
+export function gameKey(model: ToyModel, index: number): string {
+  return model.gameKeys === 'letters' ? String.fromCharCode(65 + index) : String(index + 1);
+}
 
 /** Движок, которым сейчас играет игрушка: оригинальный Mario или тетрис-заглушка. */
 export function engineOf(model: ToyModel): GameEngine {

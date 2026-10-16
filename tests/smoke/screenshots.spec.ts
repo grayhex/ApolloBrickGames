@@ -209,4 +209,13 @@ test('три игрушки: шапка с переключателем, «Ча�
   await open('?toy=tank168&power=on&seed=7');
   await page.locator('#shell-picker [data-shell="yellow"]').click();
   await page.screenshot({ path: `${dir}/toys-tank168.png` });
+  // Левая панель с вкладкой «5 — стрельба по массиву и точкам» (панель приглушена, пока на неё не навели указатель) и диалог с 3D-коробкой.
+  await page.locator('.gtab[data-game="shooting-array"]').click();
+  await page.locator('#side-info').hover();
+  await page.waitForTimeout(250);
+  await page.locator('#side-info').screenshot({ path: `${dir}/toys-tank168-tabs.png` });
+  await page.locator('[data-box-open]').click();
+  await page.waitForTimeout(300);
+  await page.locator('#box-dialog').screenshot({ path: `${dir}/toys-tank168-box.png` });
+  await page.keyboard.press('Escape');
 });

@@ -1,8 +1,11 @@
+import { GAMES, type GameId } from '../games/catalog';
+import { BoxDialog, BoxViewer } from './boxViewer';
 import { h } from './dom';
-import { onLangChange, t, type MsgKey } from './i18n';
+import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
+import { getLang, onLangChange, t, type MsgKey } from './i18n';
 import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
-import { engineOf, TOYS, type ToyId } from './toys';
+import { engineOf, gameKey, TOYS, type ToyGame, type ToyId, type ToyModel } from './toys';
 
 /**
  * Спрайты LCD-ячеек — те самые, что рисует игра (public/graphics/lcd): на упаковке в разделе «Figure introduction»
@@ -95,17 +98,49 @@ function scoreRow(name: string, ways: readonly (readonly [string, number])[]): H
  * управления. Клавиши берутся из текущих привязок — после переназначения в настройках список обновляется (`render`);
  * язык меняется на лету. Панель намеренно тусклая и без картинок кнопок корпуса, чтобы не читаться как часть игрушки.
  */
+/** 3D-коробка рядом с наклейкой: диалог страницы и то, что делать игре, пока он открыт (пауза, как у справки). */
+export interface InfoPanelBox {
+  dialog: HTMLDialogElement;
+  onOpen(): void;
+  onClose(): void;
+}
+
+const GAME_STATUS_KEYS = {
+  ready: 'game.status.ready',
+  placeholder: 'game.status.placeholder',
+  planned: 'game.status.planned',
+} as const;
+
 export class InfoPanel {
   private readonly root: HTMLElement;
   private readonly hub: InputHub;
   private readonly toy: ToyId;
+  private readonly signal: AbortSignal | undefined;
+  /** Диалог 3D-коробки (только у игрушки с коробкой). */
+  private readonly boxDialog: BoxDialog | null;
+  /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
+  private thumb: BoxViewer | null = null;
+  /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
+  private selected: GameId;
 
-  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal) {
+  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal, box?: InfoPanelBox) {
     this.toy = toy;
     this.root = root;
     this.hub = hub;
+    this.signal = signal;
+    this.selected = TOYS[toy].defaultGame;
+    this.boxDialog = box && TOYS[toy].box ? new BoxDialog(box.dialog, { onOpen: box.onOpen, onClose: box.onClose }, signal) : null;
     this.render();
     onLangChange(() => this.render(), signal);
+  }
+
+  /** Открыт ли диалог 3D-коробки (геймпад закрывает его кнопкой «назад»). */
+  get boxOpen(): boolean {
+    return this.boxDialog?.isOpen ?? false;
+  }
+
+  closeBox(): void {
+    this.boxDialog?.close();
   }
 
   render(): void {
@@ -113,46 +148,45 @@ export class InfoPanel {
     const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
 
     const model = TOYS[this.toy];
+    const sticker = h(
+      'div',
+      { class: 'about__sticker' },
+      h('img', {
+        class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
+        src: `${import.meta.env.BASE_URL}brand/${this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
+        width: '1000',
+        height: '443',
+        alt: model.name,
+      }),
+    );
+    const boxButton = this.boxButton();
     const head = h(
       'header',
-      { class: 'side__top side__top--logo' },
+      { class: `side__top side__top--logo${boxButton ? ' side__top--box' : ''}` },
       h('h2', { class: 'visually-hidden', id: 'info-title' }, t('info.title')),
-      h(
-        'div',
-        { class: 'about__sticker' },
-        h('img', {
-          class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
-          src: `${import.meta.env.BASE_URL}brand/${this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
-          width: '1000',
-          height: '443',
-          alt: model.name,
-        }),
-      ),
+      sticker,
+      ...(boxButton ? [boxButton] : []),
     );
 
     if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
-      const section = (id: string, title: MsgKey, ...children: HTMLElement[]): HTMLElement => h('section',
-        { class: 'side__sec', 'aria-labelledby': id }, h('h3', { class: 'side__h', id }, t(title)), ...children);
-      const facts = h('ul', { class: 'facts' },
-        ...([['10×20', 'info.t.field'], ['7', 'info.t.pieces'], ['10', 'info.t.speed']] as const).map(([n, key]) =>
-          h('li', {}, h('b', {}, n), h('span', {}, t(key)))));
-      const controls = section('keys-title', 'info.controls.h', h('ul', { class: 'keys', id: 'keymap' },
-        keyRow(t('info.t.move'), keys('left'), keys('right')),
-        keyRow(t('info.t.rotate'), keys('jump', 'up')),
-        keyRow(t('info.t.down'), keys('down')),
-        keyRow(t('info.t.drop'), keys('fire')),
-        keyRow(t('info.keys.startPause'), keys('start', 'pause')),
-        keyRow(t('info.keys.power'), [POWER_KEY]),
-        keyRow(t('info.keys.sound'), [SOUND_KEY])));
-      const rules = section('rules-title', 'info.t.rules', h('ol', { class: 'tetris-rules' },
-        ...(['info.t.rule.place', 'info.t.rule.lines', 'info.t.rule.speed', 'info.t.rule.over'] as const).map(key => h('li', {}, t(key)))));
-      const score = section('score-title', 'info.score.h', h('ul', { class: 'score' },
-        ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) =>
-          scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]]))),
-        h('p', { class: 'side__text' }, t('info.t.bonus')));
-      const note = h('p', { class: 'side__text side__text--over' }, t(model.id === 'clock99' ? 'info.t.clock' : model.id === 'tank168' ? 'info.t.tank' : 'info.t.sea'));
-      this.root.replaceChildren(head, section('about-title', 'info.t.title', facts), controls, rules, score, note);
+      const controls = h(
+        'section',
+        { class: 'side__sec', 'aria-labelledby': 'keys-title' },
+        h('h3', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')),
+        h(
+          'ul',
+          { class: 'keys', id: 'keymap' },
+          keyRow(t('info.t.move'), keys('left'), keys('right')),
+          keyRow(t('info.t.rotate'), keys('jump', 'up')),
+          keyRow(t('info.t.down'), keys('down')),
+          keyRow(t('info.t.drop'), keys('fire')),
+          keyRow(t('info.keys.startPause'), keys('start', 'pause')),
+          keyRow(t('info.keys.power'), [POWER_KEY]),
+          keyRow(t('info.keys.sound'), [SOUND_KEY]),
+        ),
+      );
+      this.root.replaceChildren(head, controls, this.gamesSection(model));
       return;
     }
 
@@ -230,5 +264,130 @@ export class InfoPanel {
     );
 
     this.root.replaceChildren(head, about, controls, figures, score);
+  }
+
+  /** Миниатюра 3D-коробки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) коробка медленно поворачивается. */
+  private boxButton(): HTMLElement | null {
+    const dialog = this.boxDialog;
+    this.thumb?.dispose();
+    this.thumb = null;
+    if (!dialog) return null;
+    const thumb = new BoxViewer({ interactive: false, signal: this.signal });
+    this.thumb = thumb;
+    const button = h(
+      'button',
+      { type: 'button', class: 'boxbtn', 'data-box-open': '', 'aria-label': t('box.open'), title: t('box.open') },
+      thumb.element,
+      h('span', { class: 'boxbtn__cap', 'aria-hidden': 'true' }, t('box.cap')),
+    );
+    const options = { signal: this.signal };
+    button.addEventListener('click', () => dialog.open(), options);
+    button.addEventListener('pointerenter', () => thumb.setSpin(true), options);
+    button.addEventListener('pointerleave', () => thumb.setSpin(false), options);
+    button.addEventListener('focus', () => thumb.setSpin(true), options);
+    button.addEventListener('blur', () => thumb.setSpin(false), options);
+    return button;
+  }
+
+  /** Раздел «Игры на устройстве»: вкладки игр консоли (цифры или буквы, как в меню устройства) и описание открытой игры. */
+  private gamesSection(model: ToyModel): HTMLElement {
+    const lang = getLang();
+    const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
+    const panel = h('div', { class: 'gpanel', role: 'tabpanel', id: 'gpanel' });
+    const tabs = new Map<GameId, HTMLButtonElement>();
+    const ids = model.games.map((game) => game.id);
+    const select = (id: GameId, focus = false): void => {
+      this.selected = id;
+      for (const [gameId, tab] of tabs) {
+        const on = gameId === id;
+        tab.setAttribute('aria-selected', String(on));
+        tab.tabIndex = on ? 0 : -1;
+      }
+      panel.setAttribute('aria-labelledby', `gtab-${id}`);
+      panel.dataset['game'] = id;
+      panel.replaceChildren(...this.gamePanel(model, id));
+      if (focus) tabs.get(id)?.focus();
+    };
+    model.games.forEach((game, index) => {
+      const key = gameKey(model, index);
+      const name = GAMES[game.id].names[lang];
+      const tab = h(
+        'button',
+        { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${game.id}`, 'data-game': game.id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
+        key,
+      );
+      if (game.id === model.defaultGame) tab.dataset['playing'] = '';
+      tab.addEventListener('click', () => select(game.id));
+      tabs.set(game.id, tab);
+      list.append(tab);
+    });
+    list.addEventListener('keydown', (event) => {
+      const at = ids.indexOf(this.selected);
+      const last = ids.length - 1;
+      const next = { ArrowRight: at >= last ? 0 : at + 1, ArrowDown: at >= last ? 0 : at + 1, ArrowLeft: at <= 0 ? last : at - 1, ArrowUp: at <= 0 ? last : at - 1, Home: 0, End: last }[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      select(ids[next] ?? this.selected, true);
+    });
+    select(ids.includes(this.selected) ? this.selected : model.defaultGame);
+    const notes = { clock99: 'games.note.clock99', seabattle: 'games.note.seabattle', tank168: 'games.note.tank168', mario: null } as const;
+    const note = notes[model.id];
+    return h(
+      'section',
+      { class: 'side__sec side__sec--games', 'aria-labelledby': 'games-title' },
+      h('h3', { class: 'side__h', id: 'games-title' }, t('help.games.h')),
+      ...(note ? [h('p', { class: 'side__text games__note' }, t(note))] : []),
+      list,
+      panel,
+    );
+  }
+
+  /** Содержимое открытой вкладки: название, состояние в проекте, что за игра, что известно и что не установлено; у тетриса — ещё правила и очки. */
+  private gamePanel(model: ToyModel, id: GameId): HTMLElement[] {
+    const game = model.games.find((slot): slot is ToyGame => slot.id === id);
+    if (!game) return [];
+    const guide = GAME_GUIDE[id];
+    const key = gameKey(model, model.games.indexOf(game));
+    const meta = h('p', { class: 'gpanel__meta' }, h('span', { class: 'chip', 'data-status': game.status }, t(GAME_STATUS_KEYS[game.status])));
+    if (game.variants) meta.append(h('span', { class: 'chip' }, t('games.variants', { n: game.variants })));
+    const parts: HTMLElement[] = [
+      h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()])),
+      meta,
+      h('p', { class: 'side__text' }, t(guide.what)),
+    ];
+    if (guide.how) parts.push(h('p', { class: 'side__text' }, t(guide.how)));
+    if (id === 'tetris') parts.push(...this.tetrisDetails());
+    parts.push(
+      h('p', { class: 'side__text gpanel__open' }, h('b', {}, `${t('games.open.h')}: `), t(guide.open)),
+      h('p', { class: 'side__text gpanel__src' }, h('b', {}, `${t('games.src.h')}: `), guide.sources.map((source) => t(SOURCE_KEYS[source])).join('; ')),
+    );
+    return parts;
+  }
+
+  /** Тетрис: поле, правила и очки — то, что играет сейчас (заглушка у всех трёх консолей). */
+  private tetrisDetails(): HTMLElement[] {
+    const facts = h(
+      'ul',
+      { class: 'facts' },
+      ...([['10×20', 'info.t.field'], ['7', 'info.t.pieces'], ['10', 'info.t.speed']] as const).map(([n, key]) => h('li', {}, h('b', {}, n), h('span', {}, t(key)))),
+    );
+    const rules = h(
+      'ol',
+      { class: 'tetris-rules' },
+      ...(['info.t.rule.place', 'info.t.rule.lines', 'info.t.rule.speed', 'info.t.rule.over'] as const).map((key) => h('li', {}, t(key))),
+    );
+    const score = h(
+      'ul',
+      { class: 'score' },
+      ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) => scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]])),
+    );
+    return [
+      facts,
+      h('h5', { class: 'gpanel__sub', id: 'rules-title' }, t('info.t.rules')),
+      rules,
+      h('h5', { class: 'gpanel__sub', id: 'score-title' }, t('info.score.h')),
+      score,
+      h('p', { class: 'side__text' }, t('info.t.bonus')),
+    ];
   }
 }
