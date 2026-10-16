@@ -1,10 +1,10 @@
 import raw from './default.json';
 import { validateConfig, type SiteConfig } from './schema';
 import { GAMES } from '../games/catalog';
-import { TOYS, TOY_IDS } from '../app/toys';
+import { TOYS, APOLLO_IDS } from '../app/toys';
 export const defaultConfig = (): SiteConfig => validateConfig(raw);
 export function applyConfig(config: SiteConfig): void {
-  for (const id of TOY_IDS) {
+  for (const id of APOLLO_IDS) {
     const model = TOYS[id], settings = config.toys[id];
     const original = model.games;
     model.shells = settings.shells; model.defaultShell = settings.defaultShell; model.defaultGame = settings.defaultGame;

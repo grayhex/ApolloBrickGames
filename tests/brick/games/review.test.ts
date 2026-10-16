@@ -12,7 +12,7 @@ import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent,
 import { findSafePath } from '../safePath';
 import defaults from '../../../src/config/default.json';
 import { validateConfig } from '../../../src/config/schema';
-import { TOY_IDS, TOYS } from '../../../src/app/toys';
+import { APOLLO_IDS, TOYS } from '../../../src/app/toys';
 import { bodyActions, canAssign, missingButtons } from '../../../src/app/bodyButtons';
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
 import { solveJigsaw, type JigsawShape } from '../jigsawSolver';
@@ -53,7 +53,7 @@ describe('R01 Jigsaw: нужна кнопка «огонь», которой н�
   });
 
   it('игра не назначается ни одной игрушке: схема конфигурации отклоняет её, а в списке «Добавить игру» админки её нет', () => {
-    for (const toy of TOY_IDS.filter((id) => id !== 'mario')) {
+    for (const toy of APOLLO_IDS.filter((id) => id !== 'mario')) {
       expect(canAssign(LIBRARY_GAMES.jigsaw, TOYS[toy]), toy).toBe(false);
       expect(missingButtons(LIBRARY_GAMES.jigsaw, TOYS[toy]), toy).toEqual(['fire']);
       const config = validateConfig(defaults);
@@ -64,7 +64,7 @@ describe('R01 Jigsaw: нужна кнопка «огонь», которой н�
   });
 
   it('кнопки корпуса игрушек 1–4 — стрелки и ROTATE; RESET корпуса отдельным «огнём» не считается', () => {
-    for (const toy of TOY_IDS.filter((id) => id !== 'mario')) expect([...bodyActions(TOYS[toy])].sort(), toy).toEqual(['down', 'left', 'right', 'rotate', 'up']);
+    for (const toy of APOLLO_IDS.filter((id) => id !== 'mario')) expect([...bodyActions(TOYS[toy])].sort(), toy).toEqual(['down', 'left', 'right', 'rotate', 'up']);
   });
 
   it('все остальные игры библиотеки назначаются любой консоли: единственный запрет — у Jigsaw', () => {

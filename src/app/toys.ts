@@ -5,11 +5,15 @@ import type { PackId } from './packs';
 import type { ToyKeyId } from './toy';
 
 /**
- * Четыре складные игрушки Apollo: на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
+ * Коллекция: четыре складные игрушки Apollo на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
+ * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка, в группе «Другие».
  * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» используют общий BrickConsole с меню игр. Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
  * цвет и вид (свёрнута / полная / только экран) сохраняются, страница не перезагружается (см. `host.ts`).
  */
-export const TOY_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
+export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
+export type ApolloId = (typeof APOLLO_IDS)[number];
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick'] as const;
+export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
 export const DEFAULT_TOY: ToyId = 'mario';
@@ -43,14 +47,15 @@ export interface ToyModel {
   id: ToyId;
   /** Название на корпусе и в переключателе (не переводится). */
   name: string;
+  family: ToyFamily;
   /** Цвета корпуса, подтверждённые фотографиями оригинала; других игрушка не имеет. */
   shells: readonly Shell[];
   /** Цвет по умолчанию, если сохранённый в настройках для этой игрушки не бывает. */
   defaultShell: Shell;
   /** Набор игр консоли по наклейке или упаковке (порядок — как напечатано). Игры конкретной консоли настраиваются отдельно (позже — в «админке»). */
   games: readonly ToyGame[];
-  /** Игра, которая запускается сейчас: у Mario своя, у остальных игра из общего Brick Game. Всегда входит в `games`. */
-  defaultGame: GameId;
+  /** Игра, которая запускается сейчас: у Mario своя, у остальных игра из общего Brick Game. Входит в `games`; null у экспонатов без движка. */
+  defaultGame: GameId | null;
   /** Сколько игр заявлено на наклейке в целом («168 в 1»), если больше названных. */
   gamesCount?: number;
   /**
@@ -100,6 +105,7 @@ const MARIO_LABELS: ToyLabels = {
 export const TOYS: Record<ToyId, ToyModel> = {
   mario: {
     id: 'mario',
+    family: 'apollo',
     name: 'Crocodile Mario',
     shells: ['blue', 'red', 'yellow', 'white'],
     defaultShell: 'blue',
@@ -129,6 +135,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
   // «Часы+99»: жёлтый, красный и белый корпуса (фото владельцев); звёздочка в ячейке; светодиоды над экраном; рамка с орнаментом.
   clock99: {
     id: 'clock99',
+    family: 'apollo',
     name: 'Часы+99',
     shells: ['yellow', 'red', 'white'],
     defaultShell: 'yellow',
@@ -187,6 +194,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
   // «Морской бой»: красный и синий корпуса; точка в прямоугольнике; без светодиодов; линия вокруг экрана цвета корпуса.
   seabattle: {
     id: 'seabattle',
+    family: 'apollo',
     name: 'Морской бой',
     shells: ['red', 'blue'],
     defaultShell: 'red',
@@ -243,6 +251,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
   // Ячейка — прямоугольник с точкой (классический тетрис), в углу боковой панели — танк.
   tank168: {
     id: 'tank168',
+    family: 'apollo',
     name: '168 в 1 танк',
     shells: ['red', 'yellow'],
     defaultShell: 'red',
@@ -297,6 +306,26 @@ export const TOYS: Record<ToyId, ToyModel> = {
       jump: 'help.m.rotate',
     },
   },
+  alibaba: {
+    id: 'alibaba', family: 'other', name: 'Alibaba Dance 99 in 1',
+    shells: ['white'], defaultShell: 'white', games: [], defaultGame: null,
+    gamesCount: 99, menu: false, gameKeys: 'digits', glyph: 'square', panel: 'sea',
+    deco: 'frame', leds: false, info: true, pack: null, levels: false,
+    lcd: { bg: '#8e9781', ink: '#303a30' }, stageLabel: 'stage.label.alibaba',
+    labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'S/P'},{key:'sound',top:'MUTE'},{key:'fire',top:'QUIT'}],
+      up: '', left: 'LEFT', right: 'RIGHT', down: 'DOWN', big: 'ROTATE' },
+    keyWhat: { onoff: 'alibaba.unavailable' },
+  },
+  minibrick: {
+    id: 'minibrick', family: 'other', name: 'Mini Brick Game B-S96',
+    shells: ['red'], defaultShell: 'red', games: [], defaultGame: null,
+    gamesCount: 96, menu: false, gameKeys: 'letters', glyph: 'square', panel: 'sea',
+    deco: 'frame', leds: false, info: true, pack: null, levels: false,
+    lcd: { bg: '#c6cfab', ink: '#303a30' }, stageLabel: 'stage.label.minibrick',
+    labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START',bottom:'PAUSE'},{key:'sound',top:'MUSIC',bottom:'VOICE'},{key:'fire',top:'RESET'}],
+      up: '', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'ROTATE' },
+    keyWhat: { onoff: 'alibaba.unavailable' },
+  },
 };
 
 /** Отметка игры в меню устройства: номер или буква по порядку (`1`…`9`, `A`…`F`). */
@@ -305,7 +334,8 @@ export function gameKey(model: ToyModel, index: number): string {
 }
 
 /** Оболочка, в которой играет игрушка: оригинальный Mario или оболочка «тетрисных» игрушек (тетрис-заглушка и консоли с меню игр). */
-export function engineOf(model: ToyModel): 'mario' | 'tetris' {
+export function engineOf(model: ToyModel): 'mario' | 'tetris' | 'exhibit' {
+  if (model.defaultGame === null) return 'exhibit';
   return GAMES[model.defaultGame].engine === 'mario' ? 'mario' : 'tetris';
 }
 
