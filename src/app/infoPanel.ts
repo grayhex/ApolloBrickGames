@@ -1,6 +1,6 @@
 import { h } from './dom';
 import { onLangChange, t, type MsgKey } from './i18n';
-import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
+import { gameRows, keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
 import { engineOf, TOYS, type ToyId } from './toys';
 
@@ -151,6 +151,28 @@ export class InfoPanel {
         ...([['1', 100], ['2', 300], ['3', 700], ['4', 1500]] as const).map(([n, value]) =>
           scoreRow(t(n === '1' ? 'info.t.row' : 'info.t.rows', { n }), [['', value]]))),
         h('p', { class: 'side__text' }, t('info.t.bonus')));
+      if (model.menu) {
+        // Консоль с меню игр: вместо правил тетриса — как пользоваться меню и список игр (знак на экране, название, вариантов, состояние).
+        const menuFacts = h('ul', { class: 'facts' },
+          h('li', {}, h('b', {}, String(model.games.length)), h('span', {}, t('info.m.games'))),
+          h('li', {}, h('b', {}, '10×20'), h('span', {}, t('info.m.field'))),
+          h('li', {}, h('b', {}, '0–9'), h('span', {}, t('info.m.speedlevel'))));
+        const keyRowNote = (label: string, note: string, ...caps: string[][]): HTMLElement => keyRow(`${label} (${note})`, ...caps);
+        const menuControls = section('keys-title', 'info.controls.h', h('ul', { class: 'keys', id: 'keymap' },
+          keyRowNote(t('info.m.leftRight'), t('info.m.leftRight.menu'), keys('left'), keys('right')),
+          keyRowNote(t('info.m.upDown'), t('info.m.upDown.menu'), keys('up'), keys('down')),
+          keyRowNote(t('info.m.rotate'), t('info.m.rotate.menu'), keys('jump')),
+          keyRow(t('info.m.fire'), keys('fire')),
+          keyRow(t('info.keys.startPause'), keys('start', 'pause')),
+          keyRow(t('info.keys.power'), [POWER_KEY]),
+          keyRow(t('info.keys.sound'), [SOUND_KEY])));
+        const menuRules = section('rules-title', 'info.t.rules', h('ol', { class: 'tetris-rules' },
+          ...(['info.m.rule.menu', 'info.m.rule.select', 'info.m.rule.start', 'info.m.rule.reset'] as const).map(key => h('li', {}, t(key)))));
+        const list = section('menu-games-title', 'info.m.list.h', h('ul', { class: 'games games--menu', id: 'menu-games' }, ...gameRows(model)));
+        const menuNote = h('p', { class: 'side__text side__text--over' }, t('info.m.note'));
+        this.root.replaceChildren(head, section('about-title', 'info.m.title', menuFacts), list, menuControls, menuRules, menuNote);
+        return;
+      }
       const note = h('p', { class: 'side__text side__text--over' }, t(model.id === 'clock99' ? 'info.t.clock' : model.id === 'tank168' ? 'info.t.tank' : 'info.t.sea'));
       this.root.replaceChildren(head, section('about-title', 'info.t.title', facts), controls, rules, score, note);
       return;

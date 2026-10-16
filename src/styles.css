@@ -3947,3 +3947,24 @@ body.route-editor .shell > :not(#fatal) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Список игр меню в левой панели («168 в 1 танк», «Морской бой»): знак игры, название, вариантов и состояние — плотно, в одну колонку. */
+.games--menu {
+  gap: 0;
+}
+
+.games--menu .games__row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  padding: 3px 0;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.games--menu .games__row[data-status='planned'] .games__name {
+  color: var(--muted);
+}
+
+.games--menu .games__note {
+  font-size: 0.64rem;
+}

@@ -1,20 +1,13 @@
 import { actionBit, maskOf, type InputFrame, type Phase } from '../core';
 import { WebAudioPort } from '../audio/beeper';
-import type { AudioCue } from '../audio/audio';
 import { browserGamepadProvider, type GamepadStatus } from '../input/gamepad';
 import { boundSources, keySource } from '../input/bindings';
 import { LANGS } from '../input/lang';
 import { browserStorage, musicVolumeOf, THEMES, type Shell } from '../input/settings';
+import { BRICK_GAMES } from '../brick/games';
 import { SCREEN_HEIGHT, SCREEN_WIDTH, TetrisScreen, type TetrisScene } from '../render/tetrisScreen';
-import {
-  DEFAULT_SEED,
-  makeTetrisInput,
-  MAX_SCORE,
-  TETRIS_TICK_HZ,
-  TetrisGame,
-  type TetrisAction,
-  type TetrisEvent,
-} from '../tetris';
+import { DEFAULT_SEED, MAX_SCORE, TETRIS_TICK_HZ } from '../tetris';
+import { cabinetCue, createCabinet, type CabinetEvent } from './cabinet';
 import { CableGlitch } from './cableGlitch';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
@@ -48,7 +41,10 @@ const START = actionBit('start');
 const PAUSE = actionBit('pause');
 const CONFIRM = actionBit('confirm');
 
-/** Действия кнопок корпуса у игрушек с тетрисом: FIRE у них не стреляет (под ним TIME/GAME или RESET), а UP — поворот, как и большая кнопка. */
+/**
+ * Действия кнопок корпуса: FIRE-кнопка у них не стреляет (под ней TIME/GAME или RESET), поэтому в таблице её нет; UP — вверх (в тетрисе поворот, в меню следующий вариант),
+ * большая кнопка JUMP — ROTATE: поворот, огонь, в меню выбор игры.
+ */
 const TETRIS_KEY_ACTIONS: Partial<Record<ToyKeyId, number>> = {
   left: maskOf('left'),
   right: maskOf('right'),
@@ -56,44 +52,31 @@ const TETRIS_KEY_ACTIONS: Partial<Record<ToyKeyId, number>> = {
   up: maskOf('up'),
   jump: maskOf('jump'),
 };
-const ROTATE_MASK = maskOf('up', 'jump');
-const DROP_MASK = maskOf('fire');
 /** Сколько тактов горят все сегменты при включении (≈ 0,8 с, как «проверка экрана» у настоящих игрушек). */
 const BOOT_TICKS = 48;
 
-/** Звуки заглушки: те же короткие сигналы пищалки, что и у Crocodile Mario (отдельных записей у «тетрисных» игрушек пока нет). */
-const CUES: Partial<Record<TetrisEvent['type'], AudioCue>> = {
-  started: 'confirm',
-  move: 'introStep',
-  rotate: 'bump',
-  lock: 'land',
-  drop: 'land',
-  levelUp: 'confirm',
-  gameOver: 'gameOver',
-};
-
-/** Рекорд хранится отдельно у каждой игрушки; недоступное хранилище не мешает игре. */
-const hiKey = (toy: ToyId): string => `crocodile-mario:tetris:${toy}:hi`;
-function loadHi(toy: ToyId): number {
+/** Рекорд хранится отдельно у каждой игрушки (у консоли с меню — у каждой игры и варианта); недоступное хранилище не мешает игре. */
+function loadHi(key: string): number {
   try {
-    const value = Number.parseInt(browserStorage()?.getItem(hiKey(toy)) ?? '', 10);
+    const value = Number.parseInt(browserStorage()?.getItem(key) ?? '', 10);
     return Number.isFinite(value) ? Math.min(Math.max(value, 0), MAX_SCORE) : 0;
   } catch {
     return 0;
   }
 }
-function saveHi(toy: ToyId, value: number): void {
+function saveHi(key: string, value: number): void {
   try {
-    browserStorage()?.setItem(hiKey(toy), String(value));
+    browserStorage()?.setItem(key, String(value));
   } catch {
     // рекорд не сохранится — игре это не мешает
   }
 }
 
 /**
- * Игрушки «Часы+99» и «Морской бой»: та же раскладушка и та же оболочка (вид, питание, звук, пульт справа), но другая «аппаратура» —
- * см. `toyModel.ts` — и пока обычный тетрис вместо оригинальных игр (`src/tetris`, `render/tetrisScreen.ts`). Слева общая справка по тетрису, уровни
- * на пульте отключены, музыки нет (есть только эффекты). Оболочка повторяет `startApp` — общая часть вынесется, когда у игрушек появятся свои игры.
+ * Игрушки «Часы+99», «Морской бой» и «168 в 1 танк»: та же раскладушка и та же оболочка (вид, питание, звук, пульт справа), но другая «аппаратура» —
+ * см. `toyModel.ts`. «Часы+99» пока играют в обычный тетрис (`src/tetris`); «Морской бой» и «168 в 1 танк» — консоли с меню игр (`src/brick`, правила донора,
+ * `docs/brick-games.md`). Что именно играет, скрывает «кабинет» (`cabinet.ts`); экран один — `render/tetrisScreen.ts`. Уровни на пульте отключены, музыки нет
+ * (есть только эффекты). Оболочка повторяет `startApp` — общая часть вынесется позже.
  */
 export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<AppHandle> {
   const model = TOYS[toyId];
@@ -139,8 +122,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   let gamepadStatus: GamepadStatus = { kind: 'none' };
 
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || (Date.now() % 0x7fffffff) || DEFAULT_SEED;
-  const game = new TetrisGame({ seed, hiScore: loadHi(toyId) });
-  if (params.has('debug')) Object.defineProperty(window, '__tetris', { configurable: true, get: () => game });
+  const cabinet = createCabinet(model, { seed, loadHi, defs: BRICK_GAMES });
+  if (params.has('debug')) Object.defineProperty(window, model.menu ? '__brick' : '__tetris', { configurable: true, get: () => cabinet.debugTarget() });
 
   const isKeyboardActive = (): boolean => {
     if (settingsDialog.isOpen || helpDialog.isOpen) return false;
@@ -262,27 +245,24 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
 
   // ── Игра ─────────────────────────────────────────────────────────────
-  const emit = (events: readonly TetrisEvent[]): void => {
-    for (const event of events) {
-      const cue = event.type === 'lines' ? (event.count >= 4 ? 'secret' : 'levelCompleted') : CUES[event.type];
-      if (cue) audio.play(cue);
-      if (event.type === 'gameOver' || event.type === 'lines') {
-        if (game.hiScore > loadHi(toyId)) saveHi(toyId, game.hiScore);
-      }
+  /** Рекорд текущей игры: хранится, как только он побит (ключ — у консоли с меню игра и вариант). */
+  const savedHi = new Map<string, number>();
+  const persistHi = (): void => {
+    if (cabinet.inMenu) return;
+    const key = cabinet.hiKey();
+    const stored = savedHi.get(key) ?? loadHi(key);
+    savedHi.set(key, stored);
+    if (cabinet.hiScore > stored) {
+      savedHi.set(key, cabinet.hiScore);
+      saveHi(key, cabinet.hiScore);
     }
   };
-  /** Ввод такта в понятиях тетриса: поворот — UP и большая кнопка (JUMP), бросок — FIRE на клавиатуре. */
-  const tetrisInput = (frame: InputFrame): ReturnType<typeof makeTetrisInput> => {
-    const pick = (mask: number): TetrisAction[] => {
-      const actions: TetrisAction[] = [];
-      if (mask & actionBit('left')) actions.push('left');
-      if (mask & actionBit('right')) actions.push('right');
-      if (mask & actionBit('down')) actions.push('down');
-      if (mask & ROTATE_MASK) actions.push('rotate');
-      if (mask & DROP_MASK) actions.push('drop');
-      return actions;
-    };
-    return makeTetrisInput(pick(frame.pressed), pick(frame.held));
+  const emit = (events: readonly CabinetEvent[]): void => {
+    for (const event of events) {
+      const cue = cabinetCue(cabinet, event);
+      if (cue) audio.play(cue);
+    }
+    if (events.length > 0) persistHi();
   };
 
   function tick(): void {
@@ -297,24 +277,25 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     }
     const startCmd = (raw.pressed & (START | CONFIRM)) !== 0;
     const pauseCmd = (raw.pressed & PAUSE) !== 0;
-    switch (game.phase) {
+    switch (cabinet.phase) {
       case 'ready':
       case 'over':
-        if (startCmd) emit(game.start());
+        if (startCmd) emit(cabinet.start());
+        else if (cabinet.inMenu) emit(cabinet.menu(raw));
         break;
       case 'paused':
-        if (startCmd || pauseCmd) emit(game.resume());
+        if (startCmd || pauseCmd) emit(cabinet.resume());
         break;
       case 'playing':
-        if (pauseCmd) emit(game.pause());
-        else emit(game.step(tetrisInput(raw)));
+        if (pauseCmd) emit(cabinet.pause());
+        else emit(cabinet.step(raw));
         break;
     }
   }
 
   /** Скрытие вкладки, потеря фокуса, отключение геймпада: пауза, очистка ввода и времени. */
   function suspend(): void {
-    emit(game.pause());
+    emit(cabinet.pause());
     hub.resetDevices();
     hub.tracker.reset();
     stepper.reset();
@@ -393,7 +374,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     audio.silence();
     hub.tracker.reset();
     if (on) {
-      game.restart();
+      cabinet.restart();
       bootTicks = BOOT_TICKS;
     } else {
       suspend();
@@ -402,19 +383,20 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const restartGame = (): void => {
-    game.restart();
+    persistHi();
+    cabinet.restart();
     hub.tracker.reset();
     stepper.reset();
     refocusGame();
   };
 
   const toyPanel = new ToyPanel(refs.toy, hub, {
-    phase: (): Phase => (game.phase === 'playing' ? 'playing' : game.phase === 'paused' ? 'paused' : 'ready'),
+    phase: (): Phase => (cabinet.phase === 'playing' ? 'playing' : cabinet.phase === 'paused' ? 'paused' : 'ready'),
     powered: () => powered,
     onPower: () => setPower(!powered),
     onSound: () => setSound(!hub.settings.display.sound),
     keyActions: TETRIS_KEY_ACTIONS,
-    // TIME/GAME (часов в заглушке нет) ничего не делает, RESET начинает партию заново; игровых действий у них нет.
+    // TIME/GAME (часов в заглушке нет) ничего не делает, RESET начинает партию заново (у консоли с меню — возвращает в меню); игровых действий у них нет.
     onPress: (id) => {
       if (id !== 'fire') return false;
       if (hasReset(model) && powered && bootTicks === 0) restartGame();
@@ -483,8 +465,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   refs.gameArea.addEventListener('pointerdown', () => {
     if (view !== 'screen') return;
     if (!powered) setPower(true);
-    else if (game.phase === 'ready' || game.phase === 'over') emit(game.start());
-    else if (game.phase === 'paused') emit(game.resume());
+    else if (cabinet.phase === 'ready' || cabinet.phase === 'over') emit(cabinet.start());
+    else if (cabinet.phase === 'paused') emit(cabinet.resume());
   }, { signal });
 
   // ── Пульт справа и угловое меню ──────────────────────────────────────
@@ -567,7 +549,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const ledsFor = (): LedState => {
     if (!powered || !model.leds) return { red: false, yellow: false, green: false };
     if (bootTicks > 0) return { red: true, yellow: true, green: true };
-    switch (game.phase) {
+    switch (cabinet.phase) {
       case 'ready':
         return { red: false, yellow: false, green: true };
       case 'playing':
@@ -588,21 +570,22 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   let lastStatus = '';
   const updateUi = (): void => {
     setData('toy', model.id);
-    setData('phase', game.phase);
-    setData('score', game.score);
-    setData('hiscore', game.hiScore);
-    setData('lines', game.lines);
-    setData('speed', game.speed);
-    setData('level', game.level);
-    setData('tick', game.tick);
+    setData('phase', cabinet.phase);
+    setData('score', cabinet.score);
+    setData('hiscore', cabinet.hiScore);
+    setData('lines', cabinet.lines);
+    setData('speed', cabinet.speed);
+    setData('level', cabinet.level);
+    setData('tick', cabinet.tick);
+    for (const [name, value] of Object.entries(cabinet.info)) setData(name, value);
     setData('power', powered ? 'on' : 'off');
     setData('boot', bootTicks > 0 ? 'on' : 'off');
     setData('context', context);
     setData('gamepad', gamepadStatus.kind);
     showLeds(ledsFor());
     corner.setDevices(deviceView(gamepadStatus, hub.lastDevice));
-    corner.setPaused(powered && game.phase === 'paused');
-    const status = !powered ? t('status.off') : game.phase === 'playing' ? '' : t(game.phase === 'paused' ? 'status.paused' : 'status.ready');
+    corner.setPaused(powered && cabinet.phase === 'paused');
+    const status = !powered ? t('status.off') : cabinet.phase === 'playing' ? '' : t(cabinet.phase === 'paused' ? 'status.paused' : 'status.ready');
     if (status !== lastStatus) {
       lastStatus = status;
       refs.srStatus.textContent = status;
@@ -641,21 +624,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
       updateUi();
       return;
     }
-    lastScene = {
-      cells: game.snapshot(),
-      clearRows: game.clearRows,
-      clearTimer: game.clearTimer,
-      overFill: game.overFill,
-      next: game.phase === 'ready' ? null : game.next,
-      score: game.score,
-      hiScore: game.hiScore,
-      speed: game.speed,
-      level: game.level,
-      sound: hub.settings.display.sound,
-      phase: game.phase,
-      tick: game.tick,
-      allOn: bootTicks > 0,
-    };
+    lastScene = cabinet.scene({ sound: hub.settings.display.sound, allOn: bootTicks > 0 });
     screen.render(lastScene);
     applyGlitch(now);
     updateUi();

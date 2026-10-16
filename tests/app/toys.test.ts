@@ -4,6 +4,7 @@ import { setLang } from '../../src/app/i18n';
 import { MESSAGES } from '../../src/app/messages';
 import { TOY_KEY_IDS } from '../../src/app/toy';
 import { DEFAULT_TOY, engineOf, hasReset, keyLabel, parseToy, shellFor, toyHref, TOY_IDS, TOYS } from '../../src/app/toys';
+import { ILLUSTRATIONS } from '../../src/brick';
 import { GAME_IDS, GAMES } from '../../src/games/catalog';
 import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindings';
 import { SHELLS } from '../../src/input/settings';
@@ -47,12 +48,13 @@ describe('выбор игрушки', () => {
     expect(shellFor(TOYS.tank168, 'yellow')).toBe('yellow');
   });
 
-  it('у заглушек тетриса уровней нет, слева справка, светодиоды — у всех, кроме «Морского боя»; у Mario всё как было', () => {
-    expect(TOYS.mario).toMatchObject({ defaultGame: 'mario', info: true, levels: true, leds: true });
-    expect(TOYS.clock99).toMatchObject({ defaultGame: 'tetris', info: true, levels: false, leds: true, glyph: 'star', panel: 'clock', deco: 'flourish' });
-    expect(TOYS.seabattle).toMatchObject({ defaultGame: 'tetris', info: true, levels: false, leds: false, glyph: 'square', panel: 'sea', deco: 'frame' });
-    // «168 в 1 танк»: точка в прямоугольнике, как у «Морского боя», а рамка с завитками и светодиоды — как у «Часов+99»; в углу панели танк.
-    expect(TOYS.tank168).toMatchObject({ defaultGame: 'tetris', info: true, levels: false, leds: true, glyph: 'square', panel: 'tank', deco: 'flourish', gamesCount: 168 });
+  it('у тетрис-заглушки и консолей с меню уровней на пульте нет, слева справка, светодиоды — у всех, кроме «Морского боя»; у Mario всё как было', () => {
+    expect(TOYS.mario).toMatchObject({ defaultGame: 'mario', menu: false, info: true, levels: true, leds: true });
+    expect(TOYS.clock99).toMatchObject({ defaultGame: 'tetris', menu: false, info: true, levels: false, leds: true, glyph: 'star', panel: 'clock', deco: 'flourish' });
+    // «Морской бой» и «168 в 1 танк» — консоли с меню игр: первая восстановленная игра — танки.
+    expect(TOYS.seabattle).toMatchObject({ defaultGame: 'tank', menu: true, info: true, levels: false, leds: false, glyph: 'square', panel: 'sea', deco: 'frame' });
+    // «168 в 1 танк»: точка в прямоугольнике, как у «Морского боя», а рамка с завитками и светодиоды — как у «Часов+99»; в углу панели чашка паузы.
+    expect(TOYS.tank168).toMatchObject({ defaultGame: 'tank', menu: true, info: true, levels: false, leds: true, glyph: 'square', panel: 'tank', deco: 'flourish', gamesCount: 168 });
     expect(engineOf(TOYS.mario)).toBe('mario');
     for (const id of ['clock99', 'seabattle', 'tank168'] as const) expect(engineOf(TOYS[id]), id).toBe('tetris');
   });
@@ -116,7 +118,8 @@ describe('справка игрушек с тетрисом', () => {
     expect(rows.find((row) => row.button === 'ON/OFF')?.keys).toBe('O');
     const sea = toyHelpRows(TOYS.seabattle, bindings);
     expect(sea.map((row) => row.button)).toContain('RIGHT/SPEED');
-    expect(sea.find((row) => row.button === 'RESET')?.what).toBe('новая игра');
+    expect(sea.find((row) => row.button === 'RESET')?.what).toBe('в меню (выбор игры)');
+    expect(sea.find((row) => row.button === 'UP/MODE')?.what).toBe('вверх · в меню — следующий вариант');
   });
 });
 
@@ -136,29 +139,78 @@ describe('набор игр у консоли', () => {
     const ids = (id: (typeof TOY_IDS)[number]): string[] => TOYS[id].games.map((game) => game.id);
     expect(TOYS.mario.games.map((game) => [game.label, game.variants])).toEqual([['MARIO', 9], ['TETRIS', 99], ['SHOOTING', 1]]);
     expect(ids('clock99')).toEqual(['clock', 'tetris', 'shooting', 'racing']);
-    expect(ids('seabattle')).toEqual(['sea-battle', 'tank', 'tetris', 'tennis', 'romeo-juliet']);
-    expect(ids('tank168')).toEqual(['tank', 'racing', 'tetris', 'frog', 'construction', 'shooting']);
+    expect(ids('clock99')).toEqual(['clock', 'tetris', 'shooting', 'racing']);
     expect(TOYS.tank168.games.find((game) => game.id === 'racing')?.label).toBe('ГОНКИ'); // у «Часов+99» то же — «автогонка»: название своё у каждой консоли
     expect(TOYS.clock99.games.find((game) => game.id === 'racing')?.label).toBe('автогонка');
+  });
+
+  it('меню «168 в 1 танк» (наблюдения владельца): девять игр, цифры 1–9; танки — 5 вариантов, тетрис — 51', () => {
+    expect(TOYS.tank168.games.map((game) => [game.symbol, game.id])).toEqual([
+      ['1', 'tank'],
+      ['2', 'frog'],
+      ['3', 'racing'],
+      ['4', 'racing-shoot'],
+      ['5', 'invaders'],
+      ['6', 'shapes'],
+      ['7', 'construction'],
+      ['8', 'tetris'],
+      ['9', 'pentix'],
+    ]);
+    expect(TOYS.tank168.games.filter((game) => game.variants !== undefined).map((game) => [game.id, game.variants])).toEqual([['tank', 5], ['tetris', 51]]);
+    expect(TOYS.tank168.games.every((game) => game.status === 'ready')).toBe(true);
+  });
+
+  it('меню «Морского боя» (наблюдения владельца): игры выбираются буквами A–F; танки — 2 режима, оба тетриса — по 20, арканоид — 32; морской бой и «Ромео и Джульетта» ещё не восстановлены', () => {
+    expect(TOYS.seabattle.games.map((game) => [game.symbol, game.id, game.variants])).toEqual([
+      ['A', 'sea-battle', undefined],
+      ['B', 'tank', 2],
+      ['C', 'romeo-juliet', undefined],
+      ['D', 'pentix', 20],
+      ['E', 'tetris', 20],
+      ['F', 'arkanoid', 32],
+    ]);
+    expect(TOYS.seabattle.games.find((game) => game.id === 'tank')?.modes).toEqual([0, 1]);
+    expect(TOYS.seabattle.games.filter((game) => game.status === 'planned').map((game) => game.id)).toEqual(['sea-battle', 'romeo-juliet']);
+  });
+
+  it('у каждой игры меню есть иллюстрация, знаки не повторяются, у консолей без меню знаков нет', () => {
+    for (const id of TOY_IDS) {
+      const model = TOYS[id];
+      if (!model.menu) {
+        for (const game of model.games) expect(game.symbol, `${id}:${game.id}`).toBeUndefined();
+        continue;
+      }
+      expect(new Set(model.games.map((game) => game.symbol)).size, id).toBe(model.games.length);
+      for (const game of model.games) {
+        expect(game.symbol, `${id}:${game.id}`).toMatch(/^[0-9A-F]$/);
+        expect(ILLUSTRATIONS[game.id], `${id}:${game.id}`).toBeDefined();
+      }
+    }
   });
 
   it('игры консолей пересекаются: тетрис — у всех, стрельба — у Mario, «Часов+99» и «168 в 1», гонки — у «Часов+99» и «168 в 1», танк — у «Морского боя» и «168 в 1»', () => {
     const owners = (game: (typeof GAME_IDS)[number]): string[] => TOY_IDS.filter((id) => TOYS[id].games.some((slot) => slot.id === game));
     expect(owners('tetris')).toEqual([...TOY_IDS]);
-    expect(owners('shooting')).toEqual(['mario', 'clock99', 'tank168']);
+    expect(owners('shooting')).toEqual(['mario', 'clock99']);
     expect(owners('racing')).toEqual(['clock99', 'tank168']);
     expect(owners('tank')).toEqual(['seabattle', 'tank168']);
+    expect(owners('pentix')).toEqual(['seabattle', 'tank168']);
+    expect(owners('arkanoid')).toEqual(['seabattle']);
   });
 
-  it('сейчас запускаются только Mario (настоящая) и тетрис (заглушка); остальные игры ещё не восстановлены', () => {
+  it('запускаются Mario (настоящая), тетрис-заглушка «Часов+99» и игры ядра «кирпичных» (по донору); остальные ещё не восстановлены', () => {
     const engines = GAME_IDS.filter((id) => GAMES[id].engine !== null);
-    expect(engines).toEqual(['mario', 'tetris']);
+    expect(engines).toEqual(['mario', 'tetris', 'pentix', 'invaders', 'shapes', 'racing', 'racing-shoot', 'tank', 'arkanoid', 'frog', 'construction']);
+    expect(GAMES.mario.engine).toBe('mario');
+    for (const id of engines.filter((game) => game !== 'mario')) expect(GAMES[id].engine, id).toBe('brick');
     for (const id of TOY_IDS) {
       const slot = TOYS[id].games.find((game) => game.id === TOYS[id].defaultGame);
-      expect(slot?.status, id).toBe(id === 'mario' ? 'ready' : 'placeholder');
+      expect(slot?.status, id).toBe(id === 'clock99' ? 'placeholder' : 'ready');
       // Всё, у чего нет движка, помечено «ещё не восстановлена» (или заглушкой, если играет тетрис).
       for (const game of TOYS[id].games) {
         if (GAMES[game.id].engine === null) expect(game.status, `${id}:${game.id}`).toBe('planned');
+        // У тетриса «Часов+99» движка-заглушки нет в каталоге: эта игра играет заглушкой.
+        if (id !== 'clock99' && id !== 'mario' && GAMES[game.id].engine === 'brick') expect(game.status, `${id}:${game.id}`).toBe('ready');
       }
     }
     expect(TOYS.tank168.gamesCount).toBe(168);

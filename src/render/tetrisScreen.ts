@@ -15,7 +15,11 @@ const PANEL_CX = 216; // середина боковой панели
 const DIVIDER_X = 162;
 
 export type TetrisGlyph = 'star' | 'square';
-/** Боковая панель: у «Часов+99» значки режима сверху, у «Морского боя» чашка внизу, у «168 в 1 танк» танк внизу. */
+/**
+ * Боковая панель: у «Часов+99» значки режима сверху, у «Морского боя» чашка внизу; у «168 в 1 танк» (по фотографиям) чашка внизу — значок паузы
+ * (горит на паузе и при полной заливке). У обеих игрушек с чашкой (по фотографиям) NEXT — сегмент (горит, когда у игры есть превью), а старшая цифра счёта,
+ * SPEED и LEVEL умеет показывать только «1».
+ */
 export type TetrisPanel = 'clock' | 'sea' | 'tank';
 
 export interface TetrisScreenOptions {
@@ -43,7 +47,14 @@ export interface TetrisScene {
   tick: number;
   /** Все сегменты включены (вспышка при включении игрушки). */
   allOn: boolean;
+  /** Игры консоли с меню: превью 4 × 4 (16 значений) или `null`, если превью нет (NEXT не горит). Если поле задано, `next` не используется. */
+  preview?: Uint8Array | null;
+  /** Игры консоли с меню: значение клетки (матрицы и превью), которое мигает (у этих игр — 2). */
+  blinkValue?: number;
 }
+
+/** Мигающие клетки: полпериода в тактах. */
+const BLINK_HALF_TICKS = 15;
 
 // Сегменты цифры: a (верх), b (верх-право), c (низ-право), d (низ), e (низ-лево), f (верх-лево), g (середина).
 const DIGITS: readonly string[] = ['abcdef', 'bc', 'abdeg', 'abcdg', 'bcfg', 'acdfg', 'acdefg', 'abc', 'abcdefg', 'abcdfg'];
@@ -135,7 +146,9 @@ export class TetrisScreen {
     // Compare visible state, not simulation ticks: an unmoved piece needs no repaint.
     const blink = scene.clearTimer > 0 && Math.floor(scene.clearTimer / 4) % 2 === 1;
     const hi = scene.phase === 'over' && scene.overFill >= FIELD_ROWS ? Math.floor(scene.tick / 90) % 2 : 0;
-    const signature = `${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}`;
+    const blinkOn = scene.blinkValue === undefined || Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 0;
+    const hasPreview = scene.preview !== undefined && scene.preview !== null;
+    const signature = `${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}`;
     if (signature === this.signature && scene.cells.length === this.previousCells.length &&
       scene.cells.every((cell, i) => cell === this.previousCells[i])) return;
     const ctx = this.ctx;
@@ -156,10 +169,13 @@ export class TetrisScreen {
   // ── Матрица ────────────────────────────────────────────────────────────
   private drawMatrix(scene: TetrisScene): void {
     const blinkOff = scene.clearTimer > 0 && Math.floor(scene.clearTimer / 4) % 2 === 1;
+    const blinkHidden = scene.blinkValue !== undefined && Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 1 && !scene.allOn;
     for (let y = 0; y < FIELD_ROWS; y++) {
       const clearing = scene.clearRows.includes(y);
       for (let x = 0; x < FIELD_COLUMNS; x++) {
-        let lit = scene.allOn || (scene.cells[y * FIELD_COLUMNS + x] ?? 0) !== 0;
+        const value = scene.cells[y * FIELD_COLUMNS + x] ?? 0;
+        let lit = scene.allOn || value !== 0;
+        if (blinkHidden && value === scene.blinkValue) lit = false;
         if (clearing && blinkOff) lit = false;
         if (scene.overFill > 0 && y >= FIELD_ROWS - scene.overFill) lit = true;
         this.cell(x * CELL, y * CELL, CELL, lit);
@@ -197,9 +213,12 @@ export class TetrisScreen {
   // ── Боковая панель ─────────────────────────────────────────────────────
   private drawPanel(scene: TetrisScene): void {
     const sea = this.options.panel !== 'clock'; // раскладка «Морского боя»: без значков сверху, внизу значок игры
+    const tank = this.options.panel === 'tank'; // «168 в 1 танк»: чашка — значок паузы (по фотографиям оригинала)
+    const lcd = sea; // «Морской бой» и «168 в 1 танк» — один LCD: старшие цифры только «1», NEXT — сегмент (по фотографиям обоих)
     const all = scene.allOn;
     const showHi = scene.phase === 'ready' || (scene.phase === 'over' && scene.overFill >= FIELD_ROWS && Math.floor(scene.tick / 90) % 2 === 1);
     const value = showHi ? scene.hiScore : scene.score;
+    const segmentAlpha = (on: boolean): number => (on ? 1 : this.ghost ? GHOST_ALPHA : 0);
 
     // «Часы+99»: значки режима сверху панели; в игре горит значок игры, часов у заглушки нет (чёрточка и PM — бледные).
     const top = sea ? 0 : 30;
@@ -211,19 +230,28 @@ export class TetrisScreen {
       this.ctx.fillRect(DIVIDER_X, 28, SCREEN_WIDTH - DIVIDER_X, 1.2);
     }
 
-    // Счёт или рекорд: подпись и семь цифр.
+    // Счёт или рекорд: подпись и семь цифр (у «168 в 1» старшая цифра — только «1»: счёт до 1 999 999).
     this.text(showHi || all ? 'HI-SCORE' : 'SC', PANEL_CX, top + 11, 9.5, 1, 'center');
-    this.number(String(Math.min(value, 9_999_999)).padStart(7, '0'), 7, 171, top + 16, 11, 20, all);
+    const shown = lcd ? Math.min(value, 1_999_999) : Math.min(value, 9_999_999);
+    this.number(String(shown).padStart(7, '0'), 7, 171, top + 16, 11, 20, all, false, lcd);
     this.note(PANEL_CX, top + (sea ? 54 : 58), all || scene.sound);
 
-    // NEXT 4 × 4.
+    // NEXT 4 × 4. У «168 в 1» подпись и сетка — сегменты: горят, когда у игры есть превью (следующая фигура, жизни).
     const nextTop = sea ? 84 : 112;
-    this.text('NEXT', PANEL_CX, nextTop - 6, 9.5, 1, 'center');
+    const previewOn = scene.preview !== undefined ? scene.preview !== null : true;
+    this.text('NEXT', PANEL_CX, nextTop - 6, 9.5, lcd ? segmentAlpha(all || previewOn) : 1, 'center');
     const shape = scene.next && scene.phase !== 'ready' ? cellsOf(scene.next, 0) : [];
+    const blinkHidden = scene.blinkValue !== undefined && Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 1;
     const size = 15;
     for (let gy = 0; gy < 4; gy++) {
       for (let gx = 0; gx < 4; gx++) {
-        const lit = all || shape.some(([dx, dy]) => dx === gx && dy === gy);
+        let lit: boolean;
+        if (scene.preview !== undefined) {
+          const cell = scene.preview?.[gy * 4 + gx] ?? 0;
+          lit = all || (cell !== 0 && !(blinkHidden && cell === scene.blinkValue));
+        } else {
+          lit = all || shape.some(([dx, dy]) => dx === gx && dy === gy);
+        }
         this.cell(PANEL_CX - 30 + gx * size, nextTop + gy * size, size, lit);
       }
     }
@@ -231,15 +259,14 @@ export class TetrisScreen {
     // SPEED и LEVEL: два двузначных числа и подписи.
     const speedLabel = nextTop + 60 + 20;
     this.text('SPEED', PANEL_CX, speedLabel, 9.5, 1, 'center');
-    this.number(String(scene.speed).padStart(2, '0'), 2, PANEL_CX - 17, speedLabel + 6, 14, 24, all, true);
-    this.number(String(scene.level).padStart(2, '0'), 2, PANEL_CX - 17, speedLabel + 6 + 31, 14, 24, all, true);
+    this.number(String(scene.speed).padStart(2, '0'), 2, PANEL_CX - 17, speedLabel + 6, 14, 24, all, true, lcd);
+    this.number(String(scene.level).padStart(2, '0'), 2, PANEL_CX - 17, speedLabel + 6 + 31, 14, 24, all, true, lcd);
     this.text('LEVEL', PANEL_CX, speedLabel + 6 + 31 + 24 + 14, 9.5, 1, 'center');
 
-    // «Морской бой»: чашка в углу панели — как у оригинала, виден при включении и на экране ожидания.
+    // Чашка в углу панели. У «Морского боя» — виден при включении и на экране ожидания; у «168 в 1» — значок паузы: горит на паузе и при полной заливке.
     if (sea) {
-      const alpha = all || scene.phase === 'ready' ? 1 : this.ghost ? GHOST_ALPHA : 0;
-      if (this.options.panel === 'tank') this.tankIcon(PANEL_CX, 296, alpha);
-      else this.cup(PANEL_CX, 296, alpha);
+      const on = tank ? all || scene.phase === 'paused' : all || scene.phase === 'ready';
+      this.cup(PANEL_CX, 296, segmentAlpha(on));
     }
   }
 
@@ -255,19 +282,32 @@ export class TetrisScreen {
   }
 
   /** Число из `count` цифр; у `blankZero` ведущий ноль не горит (двузначные SPEED и LEVEL). */
-  private number(text: string, count: number, x: number, y: number, w: number, h: number, all: boolean, blankZero = false): void {
+  private number(
+    text: string,
+    count: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    all: boolean,
+    blankZero = false,
+    onesFirst = false,
+  ): void {
     const step = w + (w >= 14 ? 3 : 2.2);
     for (let i = 0; i < count; i++) {
       const ch = text[i] ?? '0';
-      const blank = blankZero && i === 0 && ch === '0';
-      this.digit(x + i * step, y, w, h, blank ? null : Number(ch), all);
+      // Старшая цифра, которая умеет показывать только «1» (два сегмента), гаснет вместо нуля.
+      const onesOnly = onesFirst && i === 0;
+      const blank = (blankZero || onesOnly) && i === 0 && ch === '0';
+      this.digit(x + i * step, y, w, h, blank ? null : Number(ch), all, onesOnly);
     }
   }
 
   /** Семь сегментов; слегка наклонены, как на LCD. `value === null` — цифра погашена (бледный «8» остаётся в слое сегментов). */
-  private digit(x: number, y: number, w: number, h: number, value: number | null, all: boolean): void {
+  private digit(x: number, y: number, w: number, h: number, value: number | null, all: boolean, onesOnly = false): void {
     const ctx = this.ctx;
-    const lit = all ? 'abcdefg' : value === null ? '' : (DIGITS[value] ?? '');
+    const existing = onesOnly ? 'bc' : 'abcdefg'; // сегменты, которые у цифры есть физически
+    const lit = all ? existing : value === null ? '' : (DIGITS[value] ?? '');
     const t = Math.max(1.6, w * 0.19);
     const half = h / 2;
     const seg: Record<string, [number, number, number, number]> = {
@@ -281,7 +321,7 @@ export class TetrisScreen {
     };
     ctx.save();
     ctx.transform(1, 0, -0.1, 1, y * 0.1, 0); // наклон: нижний край остаётся на месте
-    for (const name of 'abcdefg') {
+    for (const name of existing) {
       const on = lit.includes(name);
       if (!on && !this.ghost) continue;
       const box = seg[name];
@@ -307,36 +347,6 @@ export class TetrisScreen {
     ctx.lineTo(cx - 0.3, cy - 8);
     ctx.bezierCurveTo(cx + 2, cy - 6, cx + 6, cy - 5, cx + 5, cy - 0.5);
     ctx.stroke();
-    ctx.restore();
-  }
-
-  /** Танк: корпус на гусенице, башня и ствол — значок игры «168 в 1 танк» в углу панели. */
-  private tankIcon(cx: number, cy: number, alpha: number): void {
-    if (alpha <= 0) return;
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.lineWidth = 1.5;
-    ctx.lineJoin = 'round';
-    ctx.beginPath(); // гусеница
-    ctx.roundRect(cx - 19, cy + 3, 38, 11, 5.5);
-    ctx.stroke();
-    for (const dx of [-12, -4, 4, 12]) {
-      ctx.beginPath(); // катки
-      ctx.arc(cx + dx, cy + 8.5, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.beginPath(); // корпус
-    ctx.moveTo(cx - 15, cy + 3);
-    ctx.lineTo(cx - 12, cy - 4);
-    ctx.lineTo(cx + 12, cy - 4);
-    ctx.lineTo(cx + 15, cy + 3);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath(); // башня
-    ctx.roundRect(cx - 7, cy - 10, 14, 7, 2.5);
-    ctx.fill();
-    ctx.fillRect(cx + 5, cy - 8.2, 17, 2.6); // ствол
     ctx.restore();
   }
 

@@ -53,17 +53,22 @@ const STATUS_KEYS: Record<GameStatus, 'game.status.ready' | 'game.status.placeho
   planned: 'game.status.planned',
 };
 
-/** Раздел «Игры на устройстве»: набор игр консоли по наклейке или упаковке и состояние каждой. */
-export function gamesSection(model: ToyModel): HTMLElement {
+/** Строки списка игр консоли: у консолей с меню — со знаком игры на экране (цифра или буква). */
+export function gameRows(model: ToyModel): HTMLElement[] {
   const lang = getLang();
-  const rows = model.games.map((game) =>
+  return model.games.map((game) =>
     h(
       'li',
-      { class: 'games__row', 'data-game': game.id, 'data-status': game.status },
-      h('b', { class: 'games__name' }, game.variants ? `${game.label} (${game.variants})` : game.label),
+      { class: 'games__row', 'data-game': game.id, 'data-status': game.status, ...(game.symbol ? { 'data-symbol': game.symbol } : {}) },
+      h('b', { class: 'games__name' }, `${game.symbol ? `${game.symbol}. ` : ''}${game.variants ? `${game.label} (${game.variants})` : game.label}`),
       h('span', { class: 'games__note' }, `${GAMES[game.id].names[lang]} — ${t(STATUS_KEYS[game.status])}`),
     ),
   );
+}
+
+/** Раздел «Игры на устройстве»: набор игр консоли по наклейке, упаковке или меню и состояние каждой. */
+export function gamesSection(model: ToyModel): HTMLElement {
+  const rows = gameRows(model);
   return h(
     'section',
     { class: 'settings__section help__games', id: 'device-games' },
@@ -166,7 +171,7 @@ export class HelpDialog {
 
     this.dialog.replaceChildren(
       h('h2', { id: 'help-title' }, t('help.title')),
-      h('section', { class: 'settings__section' }, h('h3', {}, t(this.toy ? 'help.t.how.h' : 'help.how.h')), h('p', { class: 'help__text' }, ...rich(t(this.toy ? 'help.t.how.p' : 'help.how.p')))),
+      h('section', { class: 'settings__section' }, h('h3', {}, t(this.toy ? 'help.t.how.h' : 'help.how.h')), h('p', { class: 'help__text' }, ...rich(t(this.toy ? (this.toy.menu ? 'help.m.how.p' : 'help.t.how.p') : 'help.how.p')))),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.keys.h')), table),
       gamesSection(this.model),
       h('section', { class: 'settings__section' }, h('h3', {}, t('help.pointer.h')), h('p', { class: 'help__text' }, t(this.toy ? 'help.t.pointer.p' : 'help.pointer.p'))),
@@ -182,7 +187,7 @@ export class HelpDialog {
               ),
             ),
           ]),
-      h('section', { class: 'settings__section' }, h('h3', {}, t('help.about.h')), h('p', { class: 'help__text' }, t(this.toy ? 'help.t.about.p' : 'help.about.p'))),
+      h('section', { class: 'settings__section' }, h('h3', {}, t('help.about.h')), h('p', { class: 'help__text' }, t(this.toy ? (this.toy.menu ? 'help.m.about.p' : 'help.t.about.p') : 'help.about.p'))),
       h('div', { class: 'settings__row settings__row--end' }, close),
     );
   }
