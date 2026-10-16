@@ -4,7 +4,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { RoadGame, ShooterGame } from '../../../src/brick/games/library/action';
-import { JigsawGame, SolitaireGame } from '../../../src/brick/games/library/puzzles';
+import { CapsuleGame } from '../../../src/brick/games/library/falling';
+import { PadsGame } from '../../../src/brick/games/library/arcade';
+import { cueFor } from '../../../src/app/cabinet';
+import { JigsawGame, MAX_TILE_EXPONENT, MergeGame, SolitaireGame, slideTiles, tileGlyph } from '../../../src/brick/games/library/puzzles';
 import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
 import { findSafePath } from '../safePath';
 
@@ -314,5 +317,235 @@ describe('R06 Peg Solitaire: повтор задачи не позволяет �
     jump(g);
     tap(g, 'fire');
     expect(g.score).toBe(solved);
+  });
+});
+
+// ── R05: Dr. Mario — полный поворот капсулы и связи половинок при падении ─────────────────────────────────────────────────────────
+
+describe('R05 Dr. Mario: капсула из двух связанных половинок', () => {
+  const capsule = (): CapsuleGame => {
+    const g = new CapsuleGame('dr-mario', { seed: 3 });
+    g.start();
+    g.board.fill(0);
+    g.link.fill(-1);
+    g.viruses = new Set([35]); // дальний вирус: партия не заканчивается победой, пока проверяется падение
+    g.board[35] = 3;
+    g.piece = [1, 2];
+    g.x = 1;
+    g.y = 3;
+    g.orientation = 0;
+    return g;
+  };
+  const at = (g: CapsuleGame): string => g.capsuleCells().map((c) => `${c.cell}:${c.color}`).sort().join(' ');
+
+  it('четыре поворота дают четыре разных положения с правильным порядком половинок и возвращают капсулу в исходное', () => {
+    const g = capsule();
+    const seen: string[] = [at(g)];
+    for (let i = 0; i < 4; i++) { tap(g, 'rotate'); seen.push(at(g)); }
+    // клетки 13 и 14 — горизонтально (y=3, x=1,2); вертикально — 13 и 17.
+    expect(seen).toEqual(['13:1 14:2', '13:1 17:2', '13:2 14:1', '13:2 17:1', '13:1 14:2']);
+    expect(new Set(seen.slice(0, 4)).size).toBe(4);
+  });
+
+  it('у стенки поворот, которому нет места, не сдвигает капсулу: положение не меняется и подаётся сигнал «нельзя»', () => {
+    const g = capsule();
+    g.orientation = 1; // вертикально у правого края: после поворота нужно две клетки вправо
+    g.x = 3;
+    const before = at(g);
+    const events = tap(g, 'rotate');
+    expect(at(g)).toBe(before);
+    expect(events).toContainEqual({ type: 'blocked' });
+  });
+
+  it('капсула, одной половинкой лежащая на опоре, остаётся горизонтальной (половинки связаны): вторая не падает отдельно', () => {
+    const g = capsule();
+    g.board[32] = 2; // опора под левой половинкой в нижнем ряду
+    g.viruses.add(32);
+    g.y = 7;
+    g.x = 0;
+    for (let i = 0; i < 300 && g.board[28] === 0; i++) g.step(NEUTRAL_BRICK_INPUT);
+    expect(g.board[28]).toBe(1);
+    expect(g.board[29]).toBe(2);
+    expect(g.board[33]).toBe(0); // под правой половинкой пусто, но она висит вместе с левой
+    run(g, 5);
+    expect(g.board[29]).toBe(2);
+  });
+
+  it('очистка одной половинки отпускает вторую: оставшаяся падает, остальные клетки и вирусы стоят', () => {
+    const g = capsule();
+    g.board[28] = 1; g.board[29] = 2; g.link[28] = 29; g.link[29] = 28; // связанная пара в седьмой строке
+    for (const p of [20, 24, 32]) g.board[p] = 1; // вертикаль из четырёх единиц в колонке 0 (с клеткой 28)
+    g.resolve();
+    expect([20, 24, 28, 32].every((p) => g.board[p] === 0)).toBe(true);
+    expect(g.board[29]).toBe(0);
+    expect(g.board[33]).toBe(2); // оставшаяся половинка упала на одну строку
+    expect(g.board[35]).toBe(3);
+    expect(g.viruses.has(35)).toBe(true);
+  });
+
+  it('падение запускается после посадки, а не только после совпадения: порядок «посадка → падение → совпадения → каскад»', () => {
+    const g = capsule();
+    // Висящая одиночная клетка без связи должна осесть при любом разборе поля, даже если совпадений нет.
+    g.board[9] = 2;
+    g.resolve();
+    expect(g.board[9]).toBe(0);
+    expect(g.board[33]).toBe(2);
+  });
+
+  it('вирусы закреплены, каскад завершается, а когда исчез последний вирус — победа', () => {
+    const g = capsule();
+    g.board[35] = 0;
+    g.viruses = new Set([32]); // единственный вирус — единица в левом столбце внизу
+    g.board[32] = 1; g.board[28] = 1;
+    g.piece = [1, 1]; g.orientation = 1; g.x = 0; g.y = 0; // вертикальная пара единиц падает на 28 и вместе с 32 даёт четвёрку
+    const events: BrickEvent[] = [];
+    for (let i = 0; i < 600 && !events.some((e) => e.type === 'win'); i++) events.push(...g.step(NEUTRAL_BRICK_INPUT));
+    expect(events).toContainEqual({ type: 'win' });
+    expect(g.viruses.size).toBe(0);
+  });
+
+  it('вирус не падает: под ним пусто, но он остаётся на месте', () => {
+    const g = capsule();
+    g.viruses = new Set([20]);
+    g.board[20] = 3; // вирус в воздухе (под ним пусто)
+    g.resolve();
+    expect(g.board[20]).toBe(3);
+  });
+
+  it('переполнение горлышка завершает партию', () => {
+    const g = capsule();
+    const left = [1, 2, 3, 1, 2, 3, 1, 2], right = [2, 3, 1, 2, 3, 1, 2, 3]; // столбцы 1 и 2 набиты доверху (без совпадений) — строки 1–8
+    for (let row = 1; row <= 8; row++) { g.board[row * 4 + 1] = left[row - 1]!; g.board[row * 4 + 2] = right[row - 1]!; }
+    g.y = 0;
+    const events: BrickEvent[] = [];
+    for (let i = 0; i < 300 && g.phase === 'playing'; i++) events.push(...g.step(NEUTRAL_BRICK_INPUT));
+    expect(events).toContainEqual({ type: 'gameOver' });
+  });
+});
+
+// ── R07: 2048 — однозначное изображение плиток ──────────────────────────────────────────────────────────────────────────────────
+
+describe('R07 2048: плитки различимы на экране для всего поддерживаемого диапазона', () => {
+  const picture = (exponent: number): string => {
+    const g = new MergeGame({ seed: 3 });
+    g.start();
+    g.board.fill(0);
+    g.board[0] = exponent;
+    const rows: string[] = [];
+    const cells = g.cells();
+    for (let y = 0; y < 4; y++) rows.push(`${cells[y * 10 + 1] ? '#' : '.'}${cells[y * 10 + 2] ? '#' : '.'}`);
+    return rows.join(' ');
+  };
+
+  it('рисунки для 2, 4, 16, 128, 1024, 2048 — заданные (по клеткам рамки 2 × 4)', () => {
+    expect(picture(1)).toBe('## #. #. #.'); // 2
+    expect(picture(2)).toBe('#. ## #. #.'); // 4
+    expect(picture(4)).toBe('#. #. ## #.'); // 16
+    expect(picture(7)).toBe('## ## ## #.'); // 128
+    expect(picture(10)).toBe('#. ## #. ##'); // 1024
+    expect(picture(11)).toBe('## ## #. ##'); // 2048
+  });
+
+  it('все показатели 1…17 рисуются по-разному и непусто (нет коллизий вроде 16 = пусто и 17 = 2)', () => {
+    const pictures = Array.from({ length: MAX_TILE_EXPONENT }, (_, i) => picture(i + 1));
+    expect(new Set(pictures).size).toBe(MAX_TILE_EXPONENT);
+    for (const one of pictures) expect(one).not.toBe('.. .. .. ..');
+    expect(tileGlyph(16).length).toBeGreaterThan(0);
+  });
+
+  it('плитка горит постоянно: в обеих фазах мигания экрана (такты 0 и 6 по 12) рисунок один и тот же', () => {
+    const g = new MergeGame({ seed: 3 });
+    g.start();
+    g.board.fill(0);
+    for (const [i, e] of [1, 2, 4, 7, 10, 11, 16, 17].entries()) g.board[i] = e;
+    const phaseA = Array.from(g.cells()).join('');
+    run(g, 6);
+    g.board.fill(0);
+    for (const [i, e] of [1, 2, 4, 7, 10, 11, 16, 17].entries()) g.board[i] = e;
+    expect(Array.from(g.cells()).join('')).toBe(phaseA);
+    expect(Array.from(g.cells()).every((v) => v <= 1)).toBe(true);
+  });
+
+  it('на пределе плитки не сливаются и не переполняют показатель; обычное слияние и один раз за ход сохранены', () => {
+    expect(slideTiles([17, 17, 0, 0])).toEqual({ cells: [17, 17, 0, 0], score: 0 });
+    expect(slideTiles([1, 1, 1, 1])).toEqual({ cells: [2, 2, 0, 0], score: 8 });
+    expect(slideTiles([1, 1, 2, 0])).toEqual({ cells: [2, 2, 0, 0], score: 4 });
+  });
+});
+
+// ── R08: Simon и танцы — события тонов площадок ───────────────────────────────────────────────────────────────────────────────
+
+describe('R08 Simon и танцы: звуковая обратная связь', () => {
+  const tones = (events: BrickEvent[]): { pad: number; ticks: number }[] => events.flatMap((e) => (e.type === 'tone' ? [{ pad: e.pad, ticks: e.ticks }] : []));
+  const key = (pad: number): BrickAction => (['up', 'right', 'down', 'left'] as const)[pad]!;
+
+  it('Simon: при показе каждая площадка последовательности даёт ровно один тон, в порядке показа', () => {
+    const g = new PadsGame('simon', { seed: 4 });
+    g.start();
+    const shown = tones(run(g, 80));
+    expect(shown).toEqual([{ pad: g.sequence[0]!, ticks: 25 }]);
+  });
+
+  it('Simon: во втором раунде показываются два сигнала подряд — два тона в порядке последовательности', () => {
+    const g = new PadsGame('simon', { seed: 4 });
+    g.start();
+    run(g, 80);
+    const answer = tones(g.step(makeBrickInput([key(g.sequence[0]!)]))); // верный ответ первого раунда: тон ответа
+    expect(answer).toHaveLength(1);
+    const events = run(g, 140); // показ второго раунда
+    expect(g.sequence).toHaveLength(2);
+    expect(tones(events).map((t) => t.pad)).toEqual(g.sequence);
+  });
+
+  it('Simon: тон на ответ игрока — той площадки, которую он нажал; верный и ошибочный ответ различаются потерей жизни', () => {
+    const g = new PadsGame('simon', { seed: 4 });
+    g.start();
+    run(g, 80);
+    const first = g.sequence[0]!;
+    const events = g.step(makeBrickInput([key(first)]));
+    expect(tones(events)).toEqual([{ pad: first, ticks: 12 }]);
+    expect(g.lives).toBe(4);
+  });
+
+  it('пауза не проигрывает пропущенные сигналы пачкой: тоны за показ не повторяются и не пропадают', () => {
+    const g = new PadsGame('simon', { seed: 4 });
+    g.start();
+    const events: BrickEvent[] = [...run(g, 10)];
+    g.pause();
+    for (let i = 0; i < 100; i++) expect(g.step(makeBrickInput(['rotate']))).toEqual([]); // на паузе событий нет
+    g.resume();
+    events.push(...run(g, 100));
+    expect(tones(events)).toHaveLength(1);
+  });
+
+  it('тон не меняет игровую шкалу: два одинаковых прохождения совпадают по состоянию (звук — только событие)', () => {
+    const a = new PadsGame('simon', { seed: 4 }), b = new PadsGame('simon', { seed: 4 });
+    a.start(); b.start();
+    for (let t = 0; t < 300; t++) {
+      const input = t % 90 === 40 ? makeBrickInput(['up']) : NEUTRAL_BRICK_INPUT;
+      expect(a.step(input)).toEqual(b.step(input));
+    }
+    expect(a.sequence).toEqual(b.sequence);
+  });
+
+  it('танцы: попадание по дорожке даёт тон этой дорожки, промах — потерю жизни без тона', () => {
+    const g = new PadsGame('dance', { seed: 4 });
+    g.start();
+    g.notes = [{ direction: 1, y: 17 }];
+    const events = tap(g, 'right');
+    expect(tones(events)).toEqual([{ pad: 1, ticks: 12 }]);
+    const miss = new PadsGame('dance', { seed: 4 });
+    miss.start();
+    miss.notes = [{ direction: 1, y: 17 }];
+    const bad = tap(miss, 'left');
+    expect(tones(bad)).toEqual([]);
+    expect(miss.lives).toBe(3);
+  });
+
+  it('оболочка: тоны четырёх площадок звучат четырьмя разными сигналами пищалки', () => {
+    const cues = [0, 1, 2, 3].map((pad) => cueFor({ type: 'tone', pad, ticks: 12 }, false));
+    expect(cues.every((c) => c !== null)).toBe(true);
+    expect(new Set(cues).size).toBe(4);
+    expect(cueFor({ type: 'tone', pad: 7, ticks: 12 }, false)).toBeNull();
   });
 });

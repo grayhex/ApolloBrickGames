@@ -130,12 +130,24 @@ export class ReversiGame extends LibraryGame {
   }
 }
 
+/** Наибольший показатель степени плитки: на поле 4 × 4 больше 2^17 не собрать; плитки с этим показателем не сливаются (определённое поведение на пределе). */
+export const MAX_TILE_EXPONENT = 17;
 export function slideTiles(line: readonly number[]): { cells: number[]; score: number } {
   const packed = line.filter(Boolean), cells: number[] = []; let score = 0;
   for (let i = 0; i < packed.length; i++) {
-    let value = packed[i]!; if (packed[i + 1] === value) { value++; i++; score += 2 ** value; } cells.push(value);
+    let value = packed[i]!; if (packed[i + 1] === value && value < MAX_TILE_EXPONENT) { value++; i++; score += 2 ** value; } cells.push(value);
   }
   while (cells.length < line.length) cells.push(0); return { cells, score };
+}
+/** Клетки плитки с показателем степени `exponent` (1…17) в рамке 2 × 4: `[столбец, строка]`. */
+export function tileGlyph(exponent: number): [number, number][] {
+  const cells: [number, number][] = [];
+  const tall = exponent >= 16;
+  for (let b = 0; b < 4; b++) {
+    if (!(tall && b === 3)) cells.push([0, b]);
+    if (exponent & (1 << b)) cells.push([1, b]);
+  }
+  return cells;
 }
 export class MergeGame extends LibraryGame {
   readonly id = '2048'; board = new Uint8Array(16); private won = false;
@@ -154,9 +166,10 @@ export class MergeGame extends LibraryGame {
   }
   protected draw(): Uint8Array {
     const out = new Uint8Array(200);
-    // Each 2×4 tile shows its exponent as binary pips; the guide provides a value legend.
+    // Плитка 2 × 4: слева полоса (четыре клетки; у показателей 16 и 17 — три, нижняя погашена), справа четыре двоичных разряда младших бит показателя.
+    // Всё горит постоянно (не мигает), поэтому в обеих фазах мигания экрана плитки различимы; для 1…17 рисунки не повторяются (см. tileGlyph).
     this.board.forEach((v, p) => { if (!v) return; const x = p % 4 * 2 + 1, y = Math.floor(p / 4) * 5;
-      for (let b = 0; b < 4; b++) { put(out, x, y + b, 1); if (v & (1 << b)) put(out, x + 1, y + b, 2); }
+      for (const [dx, dy] of tileGlyph(v)) put(out, x + dx, y + dy, 1);
     }); return out;
   }
 }

@@ -2,7 +2,7 @@ import type { GameEvent } from '../core/state';
 
 /**
  * Эффекты (одиночные звуки поверх мелодии). Ноты и тайминги — phrases.ts; источник — запись игрушки со звуком
- * (docs/video-observations.md §8). `confirm`, `hit`, `blocked`, `levelCompleted`, `gameOver`, `secret`, `stomp`, `roomIn`, `roomOut` в записи не встретились — условные.
+ * (docs/video-observations.md §8). `confirm`, `hit`, `blocked`, `levelCompleted`, `gameOver`, `secret`, `stomp`, `roomIn`, `roomOut` в записи не встретились — условные; `pad0`–`pad3` — собственные синтезированные тоны площадок Simon и танцев (записей нет).
  */
 export type AudioCue =
   | 'introStep'
@@ -21,7 +21,11 @@ export type AudioCue =
   | 'secret'
   | 'stomp'
   | 'roomIn'
-  | 'roomOut';
+  | 'roomOut'
+  | 'pad0'
+  | 'pad1'
+  | 'pad2'
+  | 'pad3';
 
 /**
  * Мелодия — «фоновый» слой, который не прерывается эффектами:

@@ -188,6 +188,11 @@ export const CUES: Readonly<Record<AudioCue, CueDef>> = {
     priority: 3,
     notes: [0, 4, 7, 12, 7, 12].map((semitones, index) => tone(index < 4 ? 70 : 90, semitones)),
   },
+  /** Тоны площадок (вверх, вправо, вниз, влево) у Simon и танцев — собственные синтезированные сигналы (записей нет): до, ми, соль малой октавы и ми. */
+  pad0: { priority: 2, notes: [{ ms: 280, hz: [523] }] },
+  pad1: { priority: 2, notes: [{ ms: 280, hz: [659] }] },
+  pad2: { priority: 2, notes: [{ ms: 280, hz: [392] }] },
+  pad3: { priority: 2, notes: [{ ms: 280, hz: [330] }] },
   /** Игра окончена — условный (в записи нет). */
   gameOver: {
     priority: 4,
