@@ -23,7 +23,7 @@ export const BRICK_GAMES: Readonly<Record<string, BrickGameDef>> = {
   ...LIBRARY_GAMES,
   'sea-battle': seaBattleDef,
   'romeo-juliet': romeoJulietDef,
-  shooting: { ...invadersDef, id: 'shooting' },
+  shooting: invadersDef,
   tank: tanksDef,
   frog: froggerDef,
   racing: racingDef,
@@ -36,3 +36,19 @@ export const BRICK_GAMES: Readonly<Record<string, BrickGameDef>> = {
   'tetris-pentix': pentixDef,
   arkanoid: arkanoidDef,
 };
+
+/**
+ * Явные алиасы каталога: записи, у которых нет собственной реализации и они делят игру ядра с другой записью. Ключ каталога (`GameId`) — то, что видят меню,
+ * рекорды (`crocodile-mario:brick:<игрушка>:<запись>:<вариант>:hi`) и справка; у игры ядра свой идентификатор реализации (`def.id`).
+ * Совпадение записей — допущение проекта, не установленный факт об устройствах: «Тетрис с большими фигурами» («Морской бой», D) и «Pentix» («168 в 1 танк», 9)
+ * пока играются одним ядром, а «Стрельба» (`shooting`) у «Часов+99» — тот же строй, что «Стрельба по массиву» (`shooting-array`).
+ */
+export const BRICK_ALIASES: Readonly<Record<string, string>> = {
+  shooting: 'shooting-array',
+  'tetris-big': 'tetris-pentix',
+};
+
+/** Идентификатор реализации (игры ядра) для записи каталога. */
+export function implementationId(catalogId: string): string | undefined {
+  return BRICK_GAMES[catalogId]?.id;
+}

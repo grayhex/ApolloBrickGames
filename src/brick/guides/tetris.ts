@@ -25,8 +25,7 @@ export const LINE_SCORING: readonly GuideScore[] = [
 /** Кнопки игры; текст кнопки поворота у тетриса и Pentix разный (в Pentix у смены фигуры 26 фигур). */
 export function tetrisControls(rotate: GuideText): readonly GuideControl[] {
   return [
-    { button: 'left', text: gt('Фигура влево; зажатая — повторяет сдвиг.', 'Move the piece left; holding repeats.') },
-    { button: 'right', text: gt('Фигура вправо; зажатая — повторяет сдвиг.', 'Move the piece right; holding repeats.') },
+    { button: 'sides', text: gt('Фигура влево и вправо; зажатая кнопка повторяет сдвиг.', 'Move the piece left and right; holding repeats.') },
     { button: 'rotate', text: rotate },
     {
       button: 'up',
@@ -34,8 +33,10 @@ export function tetrisControls(rotate: GuideText): readonly GuideControl[] {
     },
     {
       button: 'down',
-      text: gt('Ускоренное падение; бросок до упора — клавиша «огонь» (клавиатура, геймпад).', 'Faster fall; drop to the bottom — the “fire” key (keyboard, gamepad).'),
+      text: gt('Ускоренное падение.', 'Faster fall.'),
+      hold: true,
     },
+    { button: 'fire', text: gt('Бросок до упора (клавиатура, геймпад).', 'Drop to the bottom (keyboard, gamepad).'), keyboardOnly: true },
     { button: 'start', text: gt('Старт и пауза; после конца игры — новая партия.', 'Start and pause; after game over — a new game.') },
   ];
 }

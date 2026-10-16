@@ -1,4 +1,4 @@
-import type { GameGuideData, GuideButton, GuideScheme, GuideText } from '../brick/guide';
+import type { GameGuideData, GuideButton, GuideControl, GuideScheme, GuideText } from '../brick/guide';
 import type { BrickGameDef } from '../brick/types';
 import type { Lang } from '../input/lang';
 import { h } from './dom';
@@ -17,8 +17,19 @@ export const BUTTON_CAPS: Readonly<Record<GuideButton, string>> = {
   up: 'UP',
   down: 'DOWN',
   rotate: 'ROTATE',
+  fire: 'FIRE',
   start: 'S./P.',
+  arrows: '← ↑ ↓ →',
+  sides: '← →',
+  vertical: '↑ ↓',
 };
+
+/** Подпись строки управления: кнопки через «+», затем пометки «удержание» и «клавиатура» (у кнопок, которых на корпусе нет). */
+export function controlCap(control: GuideControl): string {
+  const caps = [control.button, ...(control.with ?? [])].map((button) => BUTTON_CAPS[button]).join(' + ');
+  const marks = [control.hold ? t('games.ctl.hold') : '', control.keyboardOnly ? t('games.ctl.keys') : ''].filter(Boolean);
+  return marks.length > 0 ? `${caps} · ${marks.join(', ')}` : caps;
+}
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
@@ -70,7 +81,7 @@ export function guideBlocks(guide: GameGuideData, def: BrickGameDef | undefined,
       h(
         'dl',
         { class: 'gctl' },
-        ...guide.controls.flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, BUTTON_CAPS[control.button])), h('dd', {}, control.text[lang])]),
+        ...guide.controls.flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, controlCap(control))), h('dd', {}, control.text[lang])]),
       ),
     ),
   ];
@@ -121,6 +132,6 @@ export function compactGuide(guide: GameGuideData, lang: Lang): HTMLElement[] {
     h('p', { class: 'gtext gpanel__goal' }, guide.goal[lang]),
     h('div', { class: 'gquick__schemes' }, ...guide.schemes.slice(0, 2).map((scheme) => schemeEl(scheme, lang))),
     h('ul', { class: 'grules' }, ...guide.rules.slice(0, 3).map((rule) => h('li', {}, rule[lang]))),
-    h('dl', { class: 'gctl' }, ...guide.controls.filter((control) => control.button !== 'start').flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, BUTTON_CAPS[control.button])), h('dd', {}, control.text[lang])])),
+    h('dl', { class: 'gctl' }, ...guide.controls.filter((control) => control.button !== 'start').flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, controlCap(control))), h('dd', {}, control.text[lang])])),
   ];
 }

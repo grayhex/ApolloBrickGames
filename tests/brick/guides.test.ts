@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { GUIDE_LIMITS, gt, guideProblems, secondsText, type GameGuideData } from '../../src/brick';
+import { GUIDE_LIMITS, NEUTRAL_BRICK_INPUT, gt, guideProblems, guidedActions, makeBrickInput, secondsText, type BrickAction, type BrickGame, type BrickInput, type GameGuideData } from '../../src/brick';
+import { LIBRARY_IDS } from '../../src/games/library';
+import { deepClone } from './safePath';
 import { BRICK_GAMES } from '../../src/brick/games';
 import { FroggerGame } from '../../src/brick/games/frogger';
 import { INVADERS_GUIDE, FROGGER_GUIDE, RACING_GUIDE, RACING_SHOOT_GUIDE, BRICK_GUIDES } from '../../src/brick/guides';
@@ -97,8 +99,9 @@ describe('описания игр: реестр', () => {
       });
 
       it('кнопки управления не повторяются, схемы не пустые, очки — со знаком, число или нулём', () => {
-        const buttons = guide.controls.map((control) => control.button);
-        expect(new Set(buttons).size).toBe(buttons.length);
+        // Строка управления — кнопка вместе с сочетанием, способом (нажатие/удержание) и пометкой «клавиатура»: одинаковых строк быть не должно.
+        const rows = guide.controls.map((control) => [control.button, ...(control.with ?? []), control.hold ? 'hold' : 'tap', control.keyboardOnly ? 'kbd' : 'body'].join('+'));
+        expect(new Set(rows).size).toBe(rows.length);
         for (const score of guide.scoring) expect(score.points).toMatch(/^[+×]?\d|^0/);
         for (const scheme of guide.schemes) expect(scheme.cells.join('')).toContain('#');
       });
@@ -144,5 +147,67 @@ describe('описания игр: числа совпадают с игрой',
     expect(fact(RACING_SHOOT_GUIDE, 0)).toBe(String(AMMO_PER_PEDESTRIAN));
     expect(fact(RACING_SHOOT_GUIDE, 1)).toBe(String(MAX_AMMO));
     expect(fact(RACING_SHOOT_GUIDE, 3)).toBe(String(racingShootDef.modes.length));
+  });
+});
+
+describe('описания игр: кнопки в справке совпадают с тем, на что игра реагирует', () => {
+  const ACTIONS: BrickAction[] = ['left', 'right', 'up', 'down', 'rotate', 'fire'];
+  /** Исход эксперимента: видимое состояние через `ticks` тактов (поле, счёт, жизни, уровень, события) — без скрытых счётчиков. */
+  const outcome = (game: BrickGame, inputs: BrickInput[], ticks: number): string => {
+    const events: string[] = [];
+    for (let t = 0; t < ticks; t++) for (const e of game.step(inputs[t] ?? NEUTRAL_BRICK_INPUT)) events.push(e.type + (e.type === 'tone' ? e.pad : ''));
+    return `${Array.from(game.cells()).join('')}|${game.score}|${game.lives}|${game.level}|${events.join(',')}`;
+  };
+  /**
+   * Игра, прожившая `warm` тактов без ввода и дошедшая до состояния без сценки: сценки держат замыкания на исходный объект, и клон ушёл бы в него.
+   */
+  function warmed(id: string, warm: number): BrickGame {
+    const game = BRICK_GAMES[id]!.create({ seed: 7 });
+    game.start();
+    const busy = (): boolean => (game as unknown as { busy: boolean }).busy;
+    for (let t = 0; t < warm || (busy() && t < warm + 800); t++) game.step(NEUTRAL_BRICK_INPUT);
+    expect(busy(), `${id}: сценка не закончилась`).toBe(false);
+    return game;
+  }
+  /** Реагирует ли игра на действие (нажатие или удержание) хотя бы в одном из нескольких состояний партии. */
+  function reacts(id: string, action: BrickAction): boolean {
+    for (const warm of [0, 40, 400]) {
+      const base = warmed(id, warm);
+      const idle = outcome(deepClone(base), [], 60);
+      const press = [makeBrickInput([action])];
+      const holdIt = Array.from({ length: 60 }, (_, t) => (t === 0 ? makeBrickInput([action]) : makeBrickInput([], [action])));
+      if (outcome(deepClone(base), press, 60) !== idle || outcome(deepClone(base), holdIt, 60) !== idle) return true;
+    }
+    return false;
+  }
+  /** `fire` — отдельная строка, только если делает не то же, что ROTATE (иначе это синоним, на корпусе его нет). */
+  function fireDiffers(id: string): boolean {
+    for (const warm of [0, 40, 400]) {
+      const base = warmed(id, warm);
+      const asFire = Array.from({ length: 60 }, (_, t) => (t === 0 ? makeBrickInput(['fire']) : makeBrickInput([], ['fire'])));
+      const asRotate = Array.from({ length: 60 }, (_, t) => (t === 0 ? makeBrickInput(['rotate']) : makeBrickInput([], ['rotate'])));
+      if (outcome(deepClone(base), asFire, 60) !== outcome(deepClone(base), asRotate, 60)) return true;
+    }
+    return false;
+  }
+
+  for (const id of Object.keys(BRICK_GAMES)) {
+    it(`${id}: каждое действие, на которое игра реагирует, описано в кнопках; клавиша «огонь» — отдельной строкой, если она не синоним ROTATE`, () => {
+      const covered = guidedActions(BRICK_GUIDES[id]!.controls);
+      for (const action of ACTIONS) {
+        if (action === 'fire') {
+          if (fireDiffers(id)) expect(covered.has('fire'), `${id}: «огонь» ведёт себя иначе, чем ROTATE, но в справке не описан`).toBe(true);
+          continue;
+        }
+        if (reacts(id, action)) expect(covered.has(action), `${id}: игра реагирует на «${action}», в справке этого нет`).toBe(true);
+      }
+    });
+  }
+
+  it('кнопки только клавиатуры (fire) не единственный способ выполнить действие: у каждой такой строки есть кнопка корпуса для основного хода игры', () => {
+    for (const id of LIBRARY_IDS) {
+      const bodyRows = BRICK_GUIDES[id]!.controls.filter((control) => !control.keyboardOnly && control.button !== 'start');
+      expect(bodyRows.length, id).toBeGreaterThan(0);
+    }
   });
 });
