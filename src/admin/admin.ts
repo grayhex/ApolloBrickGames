@@ -1,5 +1,5 @@
 import './admin.css';
-import { TOYS, TOY_IDS, type ToyId } from '../app/toys';
+import { TOYS, APOLLO_IDS, type ApolloId } from '../app/toys';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { SHELLS, type Shell } from '../input/settings';
@@ -12,7 +12,7 @@ const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',ye
 export async function startAdmin(): Promise<void> {
   document.title = 'Apollo · Настройки коллекции'; document.body.dataset['chrome'] = 'tech'; delete document.body.dataset['booting'];
   const root = el('main','','admin'); document.body.replaceChildren(root);
-  let config = defaultConfig(), revision = 0, active: ToyId = 'mario', dirty = false, busy = false, connected = false;
+  let config = defaultConfig(), revision = 0, active: ApolloId = 'mario', dirty = false, busy = false, connected = false;
   const header = el('header','','admin__header'); header.append(el('div','APOLLO / STUDIO','admin__eyebrow'),el('h1','Четыре корпуса. Ваша коллекция.'),el('p','Соберите меню каждой приставки, выберите доступные цвета и опубликуйте настройки для всех игроков.'));
   const back = el('a','Открыть коллекцию ↗'); back.href = import.meta.env.BASE_URL; header.append(back); root.append(header);
   const status = el('p','Загрузка конфигурации…','admin__status'); status.setAttribute('role','status'); root.append(status);
@@ -37,7 +37,7 @@ export async function startAdmin(): Promise<void> {
   function changed(): void { dirty = true; message('Есть неопубликованные изменения.'); }
   function option(value: string, text: string): HTMLOptionElement { const o = el('option',text); o.value = value; return o; }
   function render(): void {
-    tabs.replaceChildren(...TOY_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
+    tabs.replaceChildren(...APOLLO_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
     content.replaceChildren(); const toy = config.toys[active];
     const appearance = el('section','','admin__card'); appearance.append(el('h2',TOYS[active].name),el('p','Цвета корпуса','admin__eyebrow'));
     const swatches = el('div','','admin__swatches');

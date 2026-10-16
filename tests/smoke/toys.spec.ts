@@ -39,7 +39,7 @@ test.describe('шапка и переключатель', () => {
     const logo = page.locator('.topleft__logo');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-    const items = page.locator('.toysw__item');
+    const items = page.locator('[data-family=apollo] .toysw__item');
     await expect(items).toHaveCount(4);
     await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк']);
     await expect(items.locator('svg.toysw__icon')).toHaveCount(4); // миниатюры закрытых игрушек

@@ -1,16 +1,16 @@
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { SHELLS, type Shell } from '../input/settings';
-import { TOY_IDS, type ToyId } from '../app/toys';
+import { APOLLO_IDS, type ApolloId } from '../app/toys';
 export interface ConfigGame { id: GameId; modes?: number[] }
 export interface ConfigToy { games: ConfigGame[]; defaultGame: GameId; shells: Shell[]; defaultShell: Shell }
-export interface SiteConfig { version: 1; toys: Record<ToyId, ConfigToy> }
+export interface SiteConfig { version: 1; toys: Record<ApolloId, ConfigToy> }
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 /** Reject the whole document; never partly apply an invalid menu. Return a clean value without extra fields. */
 export function validateConfig(value: unknown): SiteConfig {
   if (!record(value) || value['version'] !== 1 || !record(value['toys'])) throw new Error('Нужна конфигурация версии 1 с четырьмя игрушками.');
   const toys = {} as SiteConfig['toys'];
-  for (const id of TOY_IDS) {
+  for (const id of APOLLO_IDS) {
     const source = value['toys'][id];
     if (!record(source) || !Array.isArray(source['games']) || source['games'].length < 1 || source['games'].length > 99) throw new Error(`${id}: в меню должно быть от 1 до 99 игр.`);
     const seen = new Set<string>();

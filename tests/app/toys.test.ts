@@ -4,15 +4,17 @@ import { toyHelpRows } from '../../src/app/help';
 import { setLang } from '../../src/app/i18n';
 import { MESSAGES } from '../../src/app/messages';
 import { TOY_KEY_IDS } from '../../src/app/toy';
-import { DEFAULT_TOY, engineOf, gameKey, hasReset, keyLabel, parseToy, shellFor, toyHref, TOY_IDS, TOYS } from '../../src/app/toys';
+import { APOLLO_IDS, DEFAULT_TOY, engineOf, gameKey, hasReset, keyLabel, parseToy, shellFor, toyHref, TOY_IDS, TOYS } from '../../src/app/toys';
 import { ILLUSTRATIONS } from '../../src/brick';
 import { GAME_IDS, GAMES } from '../../src/games/catalog';
 import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindings';
 import { SHELLS } from '../../src/input/settings';
 
 describe('выбор игрушки', () => {
-  it('четыре игрушки: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
-    expect([...TOY_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
+  it('четыре Apollo и Alibaba: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
+    expect([...APOLLO_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
+    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba']);
+    expect(parseToy('?toy=alibaba')).toBe('alibaba');
     expect(DEFAULT_TOY).toBe('mario');
     expect(parseToy('')).toBe('mario');
     expect(parseToy('?toy=clock99')).toBe('clock99');
@@ -126,7 +128,7 @@ describe('справка игрушек с тетрисом', () => {
 
 describe('набор игр у консоли', () => {
   it('у каждой консоли набор закреплён по наклейке или упаковке; все игры есть в каталоге, играемая — в наборе', () => {
-    for (const id of TOY_IDS) {
+    for (const id of APOLLO_IDS) {
       const model = TOYS[id];
       expect(model.games.length, id).toBeGreaterThan(0);
       expect(new Set(model.games.map((game) => game.id)).size, `${id}: игры не повторяются`).toBe(model.games.length);
@@ -183,7 +185,7 @@ describe('набор игр у консоли', () => {
 
   it('игры консолей пересекаются: тетрис — у всех, стрельба — у Mario и «Часов+99», гонки — у «Часов+99» и «168 в 1», танк — у «Морского боя» и «168 в 1»', () => {
     const owners = (game: (typeof GAME_IDS)[number]): string[] => TOY_IDS.filter((id) => TOYS[id].games.some((slot) => slot.id === game));
-    expect(owners('tetris')).toEqual([...TOY_IDS]);
+    expect(owners('tetris')).toEqual([...APOLLO_IDS]);
     expect(owners('shooting')).toEqual(['mario', 'clock99']);
     expect(owners('racing')).toEqual(['clock99', 'tank168']);
     expect(owners('tank')).toEqual(['clock99', 'seabattle', 'tank168']);
@@ -194,7 +196,7 @@ describe('набор игр у консоли', () => {
     expect(engines).toEqual([...LIBRARY_IDS, 'mario', 'tetris', 'tetris-big', 'tetris-pentix', 'shooting', 'shooting-array', 'shooting-figures', 'racing', 'racing-shooting', 'tank', 'arkanoid', 'romeo-juliet', 'sea-battle', 'frog', 'construction']);
     expect(GAMES.mario.engine).toBe('mario');
     for (const id of engines.filter((game) => game !== 'mario')) expect(GAMES[id].engine, id).toBe('brick');
-    for (const id of TOY_IDS) {
+    for (const id of APOLLO_IDS) {
       const slot = TOYS[id].games.find((game) => game.id === TOYS[id].defaultGame);
       expect(slot?.status, id).toBe('ready');
       // Всё, у чего нет движка, помечено «ещё не восстановлена» (или заглушкой, если играет тетрис).
@@ -206,4 +208,10 @@ describe('набор игр у консоли', () => {
     }
     expect(TOYS.tank168.gamesCount).toBe(168);
   });
+});
+
+it('Alibaba — экспонат без игр и движка, отдельно от Apollo', () => {
+  expect(TOYS.alibaba).toMatchObject({family:'other', games:[], defaultGame:null, menu:false, shells:['white']});
+  expect(engineOf(TOYS.alibaba)).toBe('exhibit');
+  for (const id of APOLLO_IDS) expect(TOYS[id].family).toBe('apollo');
 });

@@ -1,3 +1,4 @@
+import { alibabaMini } from './alibabaModel';
 import { svg } from './dom';
 import { TOYS, type ToyId } from './toys';
 import type { View } from './view';
@@ -83,6 +84,7 @@ function base(toy: ToyId, closed: boolean): SVGGElement {
 
 /** Миниатюры используют реальные рисунки крышки, кнопок, динамика и наклеек выбранной модели. */
 export function miniView(view: View, toy: ToyId = 'mario'): SVGSVGElement {
+  if (toy === 'alibaba') return alibabaMini(view);
   const model = TOYS[toy];
   const height = view === 'full' ? 1056 : view === 'closed' ? 660 : 431;
   const root = svg('svg', { class: 'view-mini', viewBox: `0 0 440 ${height}`, 'data-layout': view, 'aria-hidden': 'true', focusable: 'false' });

@@ -29,15 +29,21 @@ export async function startHost(initial: ToyId): Promise<void> {
   const base = byId('base');
   const face = document.querySelector<HTMLElement>('.lid__face');
   const stage = byId('stage');
+  const cover = byId('lid-cover');
+  const lidShell = document.querySelector('.lid__shell')!;
   if (!face) throw new Error('В index.html нет лицевой панели крышки');
 
   // Чистый снимок каркаса — Crocodile Mario, как он лежит в index.html: с него начинается любая игрушка.
   const pristine = {
+    cover: [...cover.childNodes].map((node) => node.cloneNode(true)),
+    lidShell: lidShell.cloneNode(true),
     base: [...base.childNodes].map((node) => node.cloneNode(true)),
     face: [...face.childNodes].map((node) => node.cloneNode(true)),
     stageLabel: stage.dataset['i18nAttrs'] ?? '',
   };
   const restoreShell = (): void => {
+    cover.replaceChildren(...pristine.cover.map((node) => node.cloneNode(true)));
+    document.querySelector('.lid__shell')?.replaceWith(pristine.lidShell.cloneNode(true));
     base.replaceChildren(...pristine.base.map((node) => node.cloneNode(true)));
     face.replaceChildren(...pristine.face.map((node) => node.cloneNode(true)));
     stage.dataset['i18nAttrs'] = pristine.stageLabel;
@@ -49,7 +55,10 @@ export async function startHost(initial: ToyId): Promise<void> {
     document.title = TOYS.mario.name;
   };
 
-  const mount = (id: ToyId, carry?: Carry): Promise<AppHandle> => (engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry));
+  const mount = (id: ToyId, carry?: Carry): Promise<AppHandle> => {
+    if (id === 'alibaba') return import('./alibabaApp').then(({startAlibabaApp}) => startAlibabaApp(carry));
+    return engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry);
+  };
 
   const toySwitch = mountToySwitch(nav, initial, (id) => void switchTo(id, true));
   let current: { id: ToyId; handle: AppHandle } = { id: initial, handle: await mount(initial) };
@@ -65,11 +74,12 @@ export async function startHost(initial: ToyId): Promise<void> {
 
   /** Подготовка новой игрушки до того, как прежняя будет снята: данные и картинки уже на месте, поэтому замена пройдёт за один кадр. */
   async function prepare(id: ToyId): Promise<void> {
+    if (id === 'alibaba') await import('./alibabaApp');
     if (engineOf(TOYS[id]) === 'mario') {
       await preloadRoom();
     } else {
       const image = new Image();
-      image.src = `${import.meta.env.BASE_URL}brand/sticker-${id}.webp`;
+      image.src = `${import.meta.env.BASE_URL}brand/${id === 'alibaba' ? 'alibaba-logos.png' : `sticker-${id}.webp`}`;
       await image.decode().catch(() => undefined); // не загрузилась — игрушка всё равно запустится, наклейка появится позже
     }
   }
