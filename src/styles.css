@@ -4235,8 +4235,8 @@ body.route-editor .shell > :not(#fatal) {
 }
 
 .gpanel {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   /* Длинное описание (тетрис с правилами и очками) прокручивается внутри, а не сдвигает остальную панель. */
   max-height: clamp(170px, calc(100dvh - 600px), 440px);
@@ -4247,6 +4247,8 @@ body.route-editor .shell > :not(#fatal) {
   border-radius: 10px;
   background: color-mix(in srgb, var(--text) 3%, transparent);
 }
+
+.gpanel > * { flex: none; }
 
 .gpanel__head {
   display: flex;
@@ -4308,6 +4310,7 @@ body.route-editor .shell > :not(#fatal) {
 }
 
 /* ── Описание игры «по факту реализации» во вкладке (src/app/guidePanel.ts) ─────────────────────────── */
+.gtext { margin: 0; font-size: 0.72rem; line-height: 1.45; } /* не `.side__text`: тот на невысоком окне скрыт (справка Mario) */
 .gpanel__goal { margin: 0; }
 .gfacts {
   display: grid;
@@ -4365,6 +4368,18 @@ body.route-editor .shell > :not(#fatal) {
 .gscheme__grid i[data-v='#'] { background: var(--text); }
 .gscheme__grid i[data-v='*'] { background: var(--text); animation: gblink 0.9s steps(1) infinite; }
 .gscheme__cap { font-size: 0.64rem; line-height: 1.3; color: var(--muted); }
+/* Панель консоли с играми занимает всю доступную высоту, а вкладка игры забирает остаток (прокрутка — внутри вкладки). Схема клавиш у консолей с меню — раскрывашка. */
+@media (min-width: 900px) {
+  .side--info[data-toy] { height: calc(100dvh - 100px); grid-template-rows: auto auto minmax(0, 1fr); }
+  .side--info[data-toy] .side__sec--games { display: flex; flex-direction: column; min-height: 0; }
+  .side--info[data-toy] .gpanel { flex: 1 1 auto; max-height: none; min-height: 150px; }
+}
+.side__sec--keys > summary { cursor: pointer; list-style: none; }
+.side__sec--keys > summary::-webkit-details-marker { display: none; }
+.side__sec--keys > summary::after { content: '▸'; margin-left: auto; font-size: 0.8rem; color: var(--muted); }
+.side__sec--keys[open] > summary::after { content: '▾'; }
+.side__sec--keys > summary:focus-visible { outline: 2px solid var(--tone, currentColor); outline-offset: 2px; border-radius: 4px; }
+.side__sec--keys:not([open]) { padding-bottom: 2px; }
 @keyframes gblink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.18; } }
 @media (prefers-reduced-motion: reduce) { .gscheme__grid i[data-v='*'] { animation: none; opacity: 0.55; } }
 

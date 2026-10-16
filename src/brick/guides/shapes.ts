@@ -59,8 +59,8 @@ export const SHAPES_GUIDE: GameGuideData = {
   ),
   rules: [
     gt(
-      `Фигуры появляются сверху в случайной колонке и опускаются все вместе на ряд за шаг; новая — каждые ${SPAWN_EVERY} шагов или сразу, если поле пусто.`,
-      `Shapes appear at the top in a random column and all drop one row per step; a new one comes every ${SPAWN_EVERY} steps, or at once if the field is empty.`,
+      `Фигуры появляются сверху в случайной колонке и опускаются все вместе на ряд за шаг; новая — каждые ${SPAWN_EVERY} шагов или на ближайшем, если поле пусто.`,
+      `Shapes appear at the top in a random column and all drop one row per step; a new one comes every ${SPAWN_EVERY} steps, or on the next step if the field is empty.`,
     ),
     gt(
       'Отстрел: фигуры — тетрамино; пуля уничтожает первую клетку на пути, без цели исчезает. Обломки падают вместе со всем полем.',

@@ -320,7 +320,7 @@ describe('construction: правила описания совпадают с и
 
   it('«мелодия» перед уровнем — 1,5 с без управления', () => {
     expect(introTicks() / BRICK_TICK_HZ).toBe(1.5);
-    const ru = GUIDE.rules.find((text) => text.ru.includes('«мелодии»'));
+    const ru = GUIDE.rules.find((text) => text.ru.includes('«мелодия»'));
     expect(ru?.ru).toContain('1,5 с');
     expect(ru?.en).toContain('1.5 s');
   });

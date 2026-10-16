@@ -71,12 +71,12 @@ export const CONSTRUCTION_GUIDE: GameGuideData = {
       'A full row goes out from the gun toward the edges and disappears; rows between it and the gun rise into its place, the others stay.',
     ),
     gt(
-      `Любая клетка стены в ряду дула — потеря жизни: взрыв, очистка поля, тот же уровень заново. Перед уровнем ${INTRO.ru} «мелодии» без управления.`,
-      `Any wall cell in the muzzle row costs a life: explosion, field cleared, same level again. Before a level, ${INTRO.en} of jingle with no control.`,
+      'Стена опустилась до ряда дула (хоть одной клеткой) — потеря жизни: взрыв, очистка поля, тот же уровень заново.',
+      'The wall dropping to the muzzle row (even one cell) costs a life: an explosion, the field is cleared, the same level restarts.',
     ),
     gt(
-      'Пока убирается ряд и пока взрыв, кнопки не работают; пули в воздухе пропадают.',
-      'While a row is being removed or the gun explodes, the buttons do nothing; bullets in the air vanish.',
+      `Пока убирается ряд, идёт взрыв или играет «мелодия» перед уровнем (${INTRO.ru}), кнопки не работают; пули пропадают.`,
+      `While a row is removed, the gun explodes or the pre-level jingle plays (${INTRO.en}), the buttons do nothing; bullets vanish.`,
     ),
     gt(
       `${CONSTRUCTION_MODES.length} вариантов: одна или две пушки (пули из колонок по бокам, вдвое медленнее), сдвиг поля, поле вверх ногами.`,

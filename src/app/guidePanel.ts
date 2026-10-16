@@ -39,7 +39,7 @@ function section(title: string, open: boolean, name: string, ...body: HTMLElemen
   return details;
 }
 
-const line = (text: GuideText, lang: Lang, className = 'side__text'): HTMLElement => h('p', { class: className }, text[lang]);
+const line = (text: GuideText, lang: Lang, className = 'gtext'): HTMLElement => h('p', { class: className }, text[lang]);
 
 /**
  * Названия вариантов, которые показывает консоль: `modes` — индексы в списке игры (без них — все реализованные); номер на экране консоли — позиция + 1.
@@ -56,7 +56,7 @@ export function modeLabels(def: BrickGameDef, modes: readonly number[] | undefin
 export function guideBlocks(guide: GameGuideData, def: BrickGameDef | undefined, modes: readonly number[] | undefined, lang: Lang): HTMLElement[] {
   const blocks: HTMLElement[] = [
     line(guide.summary, lang),
-    h('p', { class: 'side__text gpanel__goal' }, h('b', {}, `${t('games.goal')}: `), guide.goal[lang]),
+    h('p', { class: 'gtext gpanel__goal' }, h('b', {}, `${t('games.goal')}: `), guide.goal[lang]),
     h(
       'ul',
       { class: 'gfacts' },
@@ -85,8 +85,8 @@ export function guideBlocks(guide: GameGuideData, def: BrickGameDef | undefined,
     );
   }
   scoring.push(
-    h('p', { class: 'side__text' }, h('b', {}, `${t('games.progress.h')}: `), guide.progression[lang]),
-    h('p', { class: 'side__text' }, h('b', {}, `${t('games.lives.h')}: `), guide.lives ? guide.lives[lang] : t('games.lives.none')),
+    h('p', { class: 'gtext' }, h('b', {}, `${t('games.progress.h')}: `), guide.progression[lang]),
+    h('p', { class: 'gtext' }, h('b', {}, `${t('games.lives.h')}: `), guide.lives ? guide.lives[lang] : t('games.lives.none')),
   );
   blocks.push(section(t('games.sec.scoring'), false, 'scoring', ...scoring));
   blocks.push(section(t('games.sec.schemes'), false, 'schemes', ...guide.schemes.map((scheme) => schemeEl(scheme, lang))));

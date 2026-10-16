@@ -158,7 +158,10 @@ export function describeVariant(variant: TetrisVariant): BrickModeDef {
   if (variant.pool === 'pentix') parts.push('Фигуры из 3, 4 и 5 клеток (26 штук).');
   else parts.push('Семь тетрамино.');
   if (variant.lineTimer) parts.push('Примерно раз в 30 секунд снизу добавляется случайный ряд (ждёт, пока фигура опустится достаточно низко).');
-  if (variant.morph) parts.push('Кнопка поворота не вращает, а меняет фигуру на следующую из каталога (rotateFigure).');
+  if (variant.morph) {
+    const circle = variant.pool === 'pentix' ? 'по кругу из 26 фигур' : 'по кругу из семи тетрамино';
+    parts.push(`Кнопка поворота не вращает, а меняет фигуру на следующую ${circle} (rotateFigure).`);
+  }
   if (variant.shift) parts.push('После каждой фигуры всё поле сдвигается на столбец вправо по кругу (boardHorizontalShift).');
   if (variant.family !== 'plain') parts.push(FAMILY_NOTE[variant.family]);
   if (variant.supers.length > 0) parts.push(`Спецфигуры: ${variant.supers.map((i) => SUPER_NOTE[i]).join('; ')}.`);

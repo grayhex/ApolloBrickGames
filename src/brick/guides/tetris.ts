@@ -70,7 +70,7 @@ export const SPECIAL_PIECES_SCHEME: readonly string[] = ['....*.*.*.', '..*.*..*
 
 export const TETRIS_GUIDE: GameGuideData = {
   summary: gt(
-    `Классический тетрис на поле ${BRICK_COLS}×${BRICK_ROWS}: ${TETRIS_POOL.length} фигур из четырёх клеток падают сверху, собранный ряд исчезает. ${TETRIS_VARIANTS.length} вариантов добавляют спецфигуры, особые мигающие фигуры, новые ряды, смену фигуры, сдвиг и переворот поля.`,
+    `Классический тетрис на поле ${BRICK_COLS}×${BRICK_ROWS}: ${TETRIS_POOL.length} фигур из четырёх клеток падают сверху, собранный ряд исчезает. Варианты (всего ${TETRIS_VARIANTS.length}) добавляют спецфигуры, особые мигающие фигуры, новые ряды, смену фигуры, сдвиг и переворот поля.`,
     `Classic Tetris on a ${BRICK_COLS}×${BRICK_ROWS} field: ${TETRIS_POOL.length} four-cell pieces fall from the top and a completed row vanishes. ${TETRIS_VARIANTS.length} variants add special pieces, blinking special pieces, new rows, piece swap, board shift and an upside-down board.`,
   ),
   goal: gt(
@@ -103,8 +103,8 @@ export const TETRIS_GUIDE: GameGuideData = {
       'Guns fire with ROTATE: the super gun removes the nearest cell below it, the mud gun adds a cell on top of the nearest obstacle.',
     ),
     gt(
-      `В вариантах с особыми фигурами каждая ${SPECIAL_CHANCE}-я мигает: рассыпается по столбцам, прожигает клетки кислотой или проходит сквозь них.`,
-      `In variants with special pieces about one in ${SPECIAL_CHANCE} blinks: it crumbles down its columns, burns cells with acid or passes through them.`,
+      `В вариантах с рассыпающимися, кислотными, сквозными и случайными фигурами каждая ${SPECIAL_CHANCE}-я мигает: рассыпается, прожигает клетки или проходит сквозь.`,
+      `In the crumbling, acid, pass-through and random variants one piece in ${SPECIAL_CHANCE} blinks: it crumbles, burns cells with acid or passes through.`,
     ),
     gt(
       `Другие варианты: новый ряд раз в ~${LINE_TIMER_SECONDS} с, смена фигуры вместо поворота (падение на ${MORPH_EXTRA_MS} мс медленнее), сдвиг поля, перевёрнутое поле.`,

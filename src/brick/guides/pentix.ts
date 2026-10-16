@@ -46,7 +46,7 @@ export const PENTIX_CROSS_SCHEME: readonly string[] = [
 
 export const PENTIX_GUIDE: GameGuideData = {
   summary: gt(
-    `Тетрис с большими фигурами: ${PENTIX_POOL.length} фигур из трёх, четырёх и пяти клеток падают в стакан ${BRICK_COLS}×${BRICK_ROWS}. Ряды и очки как в тетрисе, падение медленнее на ${PENTIX_EXTRA_MS} мс. ${PENTIX_VARIANTS.length} вариантов с теми же механиками.`,
+    `Тетрис с большими фигурами: ${PENTIX_POOL.length} фигур из трёх, четырёх и пяти клеток падают в стакан ${BRICK_COLS}×${BRICK_ROWS}. Ряды и очки как в тетрисе, падение медленнее на ${PENTIX_EXTRA_MS} мс. Вариантов — ${PENTIX_VARIANTS.length}, механики те же.`,
     `Tetris with big pieces: ${PENTIX_POOL.length} pieces of three, four and five cells fall into a ${BRICK_COLS}×${BRICK_ROWS} well. Rows and scoring as in Tetris, falling ${PENTIX_EXTRA_MS} ms slower. ${PENTIX_VARIANTS.length} variants with the same mechanics.`,
   ),
   goal: gt(
@@ -75,8 +75,8 @@ export const PENTIX_GUIDE: GameGuideData = {
       'The LEVEL number is how many random rows lie at the bottom at the start; every row has both cells and gaps.',
     ),
     gt(
-      `Спецфигуры и особые мигающие фигуры (1 из ${SPECIAL_CHANCE}) — как в тетрисе: точка, пушки, бомба ${BLAST_SIZE}×${BLAST_SIZE}, рассыпание, кислота, проход сквозь.`,
-      `Special and blinking special pieces (1 in ${SPECIAL_CHANCE}) work as in Tetris: point, guns, ${BLAST_SIZE}×${BLAST_SIZE} bomb, crumbling, acid, passing through.`,
+      `Спецфигуры (точка, пушки, бомба ${BLAST_SIZE}×${BLAST_SIZE}) и мигающие рассыпающиеся, кислотные и сквозные фигуры (1 из ${SPECIAL_CHANCE}) — как в тетрисе.`,
+      `Special pieces (point, guns, ${BLAST_SIZE}×${BLAST_SIZE} bomb) and blinking crumbling, acid and pass-through pieces (1 in ${SPECIAL_CHANCE}) work as in Tetris.`,
     ),
     gt(
       `В вариантах со сменой фигуры ROTATE листает все ${PENTIX_POOL.length} фигур по кругу, а падение ещё на ${MORPH_EXTRA_MS} мс медленнее.`,

@@ -188,6 +188,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
       { id: 'sea-battle', label: 'Морской бой', status: 'planned' },
       { id: 'tank', label: 'Танки', variants: 2, modes: [0, 1], status: 'ready' },
       { id: 'romeo-juliet', label: 'Ромео и Джульетта (постройка лесенки)', status: 'planned' },
+      // Заявлено 20 режимов; у игры ядра (Pentix) их тоже 20 — сочетания классов донора Q…X (часть — допущение, см. `docs/brick/tetris.md`).
       { id: 'tetris-big', label: 'Тетрис с большими фигурами', variants: 20, status: 'ready' },
       // Заявлено 20 режимов, у игры ядра их 51: показываются первые 20 (какие именно режимы у устройства — допущение).
       { id: 'tetris', label: 'Тетрис', variants: 20, modes: Array.from({ length: 20 }, (_, index) => index), status: 'ready' },
