@@ -98,7 +98,7 @@ export function toyHelpRows(model: ToyModel, bindings: Bindings): HelpRow[] {
     const what = model.keyWhat[id];
     return what ? [{ button: keyLabel(model, id), what: t(what), keys: keys[id] }] : [];
   });
-  return [...rows, { button: '⌨ / 🎮', what: t('help.t.drop'), keys: keysOf(bindings, 'fire') }];
+  return [...rows, { button: '⌨ / 🎮', what: t(model.menu ? 'help.m.fire' : 'help.t.drop'), keys: keysOf(bindings, 'fire') }];
 }
 
 export interface HelpDialogOptions {

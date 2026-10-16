@@ -76,8 +76,6 @@ const RU = {
   'info.m.rule.reset': 'RESET возвращает в меню; после конца игры S./P. начинает ту же игру заново. Рекорд хранится у каждой игры и варианта отдельно.',
   'info.m.list.h': 'Игры в меню',
   'info.m.note': 'Меню, правила и варианты игр восстановлены по открытому симулятору BrickGame (MIT) и наблюдениям владельцев; как именно листается меню и что в каждом варианте, неизвестно — это допущения. Игра «не восстановлена» выбирается, но не запускается.',
-  'info.m.modes': 'вариантов: {n}',
-  'info.m.modes.declared': 'на устройстве вариантов: {n}',
 
   'info.journey.h': 'Путешествие Марио',
   'info.facts.aria': 'Правила по упаковке',
@@ -298,6 +296,7 @@ const RU = {
   'help.m.up': 'вверх · в меню — следующий вариант',
   'help.m.down': 'вниз · в меню — предыдущий вариант',
   'help.m.rotate': 'поворот или огонь · в меню — следующая игра',
+  'help.m.fire': 'огонь (только клавиатура, геймпад) · в меню — следующая игра',
   'help.t.left': 'фигура влево',
   'help.t.right': 'фигура вправо',
   'help.t.down': 'фигура вниз, быстрее',
@@ -430,8 +429,6 @@ const EN: Record<MsgKey, string> = {
   'info.m.rule.reset': 'RESET returns to the menu; after game over S./P. starts the same game again. Each game and variant keeps its own high score.',
   'info.m.list.h': 'Games in the menu',
   'info.m.note': 'The menu, rules and variants are reconstructed from the open BrickGame simulator (MIT) and owners’ observations; how exactly the menu is browsed and what each variant does is unknown — these are assumptions. A game marked “not reconstructed” can be selected but does not start.',
-  'info.m.modes': 'variants: {n}',
-  'info.m.modes.declared': 'variants on the device: {n}',
 
   'info.journey.h': `Mario's breathtaking journey`,
   'info.facts.aria': 'Rules from the packaging',
@@ -637,6 +634,7 @@ const EN: Record<MsgKey, string> = {
   'help.m.up': 'up · in the menu: next variant',
   'help.m.down': 'down · in the menu: previous variant',
   'help.m.rotate': 'rotate or fire · in the menu: next game',
+  'help.m.fire': 'fire (keyboard and gamepad only) · in the menu: next game',
   'help.t.left': 'piece left',
   'help.t.right': 'piece right',
   'help.t.down': 'piece down, faster',

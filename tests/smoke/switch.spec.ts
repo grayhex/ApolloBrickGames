@@ -61,29 +61,44 @@ test.describe('«168 в 1 танк»', () => {
     await expect(sticker).toHaveAttribute('src', /sticker-tank168\.webp$/);
     expect(await sticker.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     await expect(page.locator('.base__logo')).toHaveCount(0);
-    // Классический тетрис: матрица 10 × 20 на портретном экране.
+    // Матрица 10 × 20 на портретном экране.
     const win = await page.locator('#lcd-window').boundingBox();
     if (!win) throw new Error('нет окна LCD');
     expect(win.width / win.height).toBeCloseTo(264 / 320, 1);
   });
 
-  test('играет тетрис: старт кнопкой S./P., RESET начинает партию заново, TIME/GAME нет; на экране рисуется матрица', async ({ page }) => {
+  test('меню консоли: ROTATE листает игры, UP/DOWN — варианты, LEFT — уровень, RIGHT — скорость; S./P. запускает, RESET возвращает в меню; на экране рисуется матрица', async ({ page }) => {
     await ready(page, '?toy=tank168&power=on&seed=7');
-    await key(page, 'sp').click();
+    const menu = async (): Promise<string> => (await Promise.all(['menu', 'symbol', 'mode', 'speed', 'level', 'phase'].map((name) => area(page, name)))).join(' ');
+    await expect.poll(menu).toBe('menu 1 1 0 0 ready'); // знак игры 1 (танки), вариант 01, скорость и уровень 0
+    await key(page, 'jump').click(); // ROTATE — следующая игра
+    await expect.poll(menu).toBe('menu 2 1 0 0 ready');
+    await key(page, 'up').click(); // UP/MODE — следующий вариант
+    await expect.poll(menu).toBe('menu 2 2 0 0 ready');
+    await key(page, 'down').click(); // DOWN — предыдущий
+    await expect.poll(menu).toBe('menu 2 1 0 0 ready');
+    await key(page, 'left').click(); // LEFT/LEVEL
+    await key(page, 'right').click(); // RIGHT/SPEED
+    await key(page, 'right').click();
+    await expect.poll(menu).toBe('menu 2 1 2 1 ready');
+    expect(await area(page, 'game')).toBe('frog');
+    const painted = async (): Promise<number> =>
+      page.evaluate(() => {
+        const canvas = document.getElementById('screen') as HTMLCanvasElement;
+        const data = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height).data;
+        let count = 0;
+        if (data) for (let i = 3; i < data.length; i += 4) if ((data[i] ?? 0) > 0) count++;
+        return count;
+      });
+    expect(await painted()).toBeGreaterThan(1000); // знак, номер варианта и картинка игры нарисованы на матрице
+    await key(page, 'sp').click(); // S./P. запускает выбранную игру
     await expect.poll(phase(page)).toBe('playing');
-    await page.keyboard.press('KeyX');
-    await expect.poll(async () => Number(await area(page, 'score'))).toBeGreaterThan(0);
-    await key(page, 'fire').click(); // RESET
-    await expect.poll(phase(page)).toBe('ready');
-    expect(await area(page, 'score')).toBe('0');
-    const painted = await page.evaluate(() => {
-      const canvas = document.getElementById('screen') as HTMLCanvasElement;
-      const data = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height).data;
-      let count = 0;
-      if (data) for (let i = 3; i < data.length; i += 4) if ((data[i] ?? 0) > 0) count++;
-      return count;
-    });
-    expect(painted).toBeGreaterThan(1000);
+    expect(await area(page, 'menu')).toBe('game');
+    await key(page, 'sp').click(); // он же ставит на паузу
+    await expect.poll(phase(page)).toBe('paused');
+    await key(page, 'fire').click(); // RESET — в меню; выбор игры, варианта, скорости и уровня остаётся
+    await expect.poll(menu).toBe('menu 2 1 2 1 ready');
+    expect(await painted()).toBeGreaterThan(1000);
   });
 
   test('цвета: красный и жёлтый; на жёлтом надписи зелёные, на красном светлые (по фото)', async ({ page }) => {
@@ -96,7 +111,7 @@ test.describe('«168 в 1 танк»', () => {
     expect(await label()).not.toBe('#2b8a4e');
   });
 
-  test('справка: набор игр «168 в 1 танк» по списку владельца (девять игр меню); играет только тетрис', async ({ page }) => {
+  test('справка: набор игр «168 в 1 танк» по списку владельца (девять игр меню); восстановлены все девять, правила — по открытому симулятору', async ({ page }) => {
     await ready(page, '?toy=tank168&power=on');
     await page.locator('#corner-help').click();
     const games = page.locator('#help .games__row');
@@ -104,22 +119,22 @@ test.describe('«168 в 1 танк»', () => {
     expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['game']))).toEqual([
       'tank', 'frog', 'racing', 'racing-shooting', 'shooting-array', 'shooting-figures', 'construction', 'tetris', 'tetris-pentix',
     ]);
-    await expect(page.locator('#help .games__row[data-game="tetris"]')).toHaveAttribute('data-status', 'placeholder');
-    await expect(page.locator('#help .games__row[data-game="tetris"]')).toContainText('пока обычный тетрис');
-    await expect(page.locator('#help .games__row[data-game="tetris"] .games__name')).toHaveText('Тетрис (51)'); // вариантов — со слов владельца
-    await expect(page.locator('#help .games__row[data-game="tank"] .games__name')).toHaveText('Танки (5)');
-    await expect(page.locator('#help .games__row[data-game="frog"]')).toContainText('ещё не восстановлена');
-    await expect(page.locator('#help .games__row[data-game="racing"] .games__name')).toHaveText('Гонки');
+    expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['status']))).toEqual(Array(9).fill('ready'));
+    await expect(page.locator('#help .games__row[data-game="tetris"]')).toContainText('есть (приближённо)');
+    await expect(page.locator('#help .games__row[data-game="tetris"] .games__name')).toHaveText('8. Тетрис (51)'); // знак игры в меню и число вариантов
+    await expect(page.locator('#help .games__row[data-game="tank"] .games__name')).toHaveText('1. Танки (5)');
+    await expect(page.locator('#help .games__row[data-game="racing"] .games__name')).toHaveText('3. Гонки');
     await expect(page.locator('#help #device-games')).toContainText('168');
+    await expect(page.locator('#help')).toContainText('ROTATE выбирает игру'); // как листается меню
     await page.keyboard.press('Escape');
   });
 
   test('слева справка с наклейкой этой игрушки', async ({ page }) => {
     await ready(page, '?toy=tank168&power=on');
     await expect(page.locator('#side-info .about__logo')).toHaveAttribute('src', /sticker-tank168/);
-    await expect(page.locator('#side-info #keymap')).toContainText('Поворот');
+    await expect(page.locator('#side-info #keymap')).toContainText('ROTATE');
     await expect(page.locator('#side-info')).toContainText('Игры на устройстве'); // набор игр консоли — вкладками
-    await expect(page.locator('#side-info')).toContainText('заявлено 168');
+    await expect(page.locator('#side-info')).not.toContainText('заявлено 168'); // надпись про 168 убрана (на наклейке 168 и так напечатано)
   });
 });
 

@@ -397,9 +397,10 @@ export class InfoPanel {
     const guide = GAME_GUIDE[id];
     const key = gameKey(model, model.games.indexOf(game));
     const meta = h('p', { class: 'gpanel__meta' }, h('span', { class: 'chip', 'data-status': game.status }, t(GAME_STATUS_KEYS[game.status])));
-    if (game.variants) meta.append(h('span', { class: 'chip' }, t('games.variants', { n: game.variants })));
+    // У игр консоли с меню число вариантов — то, что даёт сама консоль (у «Морского боя» — по списку владельца), у остальных — из каталога.
     const brick = model.menu ? BRICK_GAMES[id] : undefined;
-    if (brick) meta.append(h('span', { class: 'chip', 'data-modes': '' }, t('info.m.modes', { n: game.modes?.length ?? brick.modes.length })));
+    const variants = brick ? (game.modes?.length ?? brick.modes.length) : game.variants;
+    if (variants) meta.append(h('span', { class: 'chip', ...(brick ? { 'data-modes': '' } : {}) }, t('games.variants', { n: variants })));
     const parts: HTMLElement[] = [
       h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()])),
       meta,
