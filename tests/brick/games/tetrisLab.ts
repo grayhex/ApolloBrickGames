@@ -6,7 +6,7 @@
 import { PENTIX_VARIANTS } from '../../../src/brick/games/pentix';
 import { TETRIS_VARIANTS } from '../../../src/brick/games/tetris';
 import { TetrisCore } from '../../../src/brick/games/tetris/core';
-import { makePiece, type Piece } from '../../../src/brick/games/tetris/shapes';
+import { makePiece, rotatePiece, type Piece } from '../../../src/brick/games/tetris/shapes';
 import type { TetrisVariant } from '../../../src/brick/games/tetris/variants';
 import {
   BRICK_COLS,
@@ -306,7 +306,8 @@ export class Bot {
     this.attempts++;
     this.released = false;
     if (this.attempts > 24) return makeBrickInput(['fire']);
-    if (piece.angle !== this.target.angle) return makeBrickInput(['rotate']);
+    // квадрат, пентамино X и спецфигуры не вращаются (угол при появлении у них случайный и не меняется): крутить их незачем
+    if (rotatePiece(piece) !== piece && piece.angle !== this.target.angle) return makeBrickInput(['rotate']);
     if (lab.px < this.target.x) return makeBrickInput(['right']);
     if (lab.px > this.target.x) return makeBrickInput(['left']);
     return makeBrickInput(['fire']);
