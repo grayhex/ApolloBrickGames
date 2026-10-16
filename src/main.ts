@@ -6,6 +6,7 @@ import { parseToy } from './app/toys';
 import { startSheet } from './app/sheet';
 import { clearTheme } from './app/theme';
 
+const isAdmin = /\/admin\/?$/.test(window.location.pathname);
 const route = parseRoute(window.location.hash);
 // Вид страницы: игрушка (комната, клип) выставляет startApp; контрольный лист и редактор — технические страницы.
 if (route === 'sheet' || route === 'editor') {
@@ -20,12 +21,14 @@ window.addEventListener('hashchange', () => window.location.reload());
 // Страница игрушки (комната): хозяин страницы запускает игрушку из адреса `?toy=…` (без параметра — Crocodile Mario) и меняет игрушки на месте,
 // без перезагрузки (шапка с логотипом и переключателем — тоже его). Техническое демо запускается напрямую: оно одно и не переключается.
 const start: Promise<unknown> =
-  route === 'sheet'
+  isAdmin
+    ? import('./admin/admin').then((module) => module.startAdmin())
+    : route === 'sheet'
     ? startSheet()
     : route === 'editor'
       ? import('./editor/ui/editorApp').then((module) => module.startEditor())
       : route === 'room'
-        ? startHost(parseToy(window.location.search))
+        ? import('./config/runtime').then(async ({ loadConfig }) => { await loadConfig(); return startHost(parseToy(window.location.search)); })
         : startApp(route);
 
 start.catch((error: unknown) => {

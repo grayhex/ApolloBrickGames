@@ -1,0 +1,33 @@
+import { GAMES, isGameId, type GameId } from '../games/catalog';
+import { BRICK_GAMES } from '../brick/games';
+import { SHELLS, type Shell } from '../input/settings';
+import { TOY_IDS, type ToyId } from '../app/toys';
+export interface ConfigGame { id: GameId; modes?: number[] }
+export interface ConfigToy { games: ConfigGame[]; defaultGame: GameId; shells: Shell[]; defaultShell: Shell }
+export interface SiteConfig { version: 1; toys: Record<ToyId, ConfigToy> }
+const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+/** Reject the whole document; never partly apply an invalid menu. Return a clean value without extra fields. */
+export function validateConfig(value: unknown): SiteConfig {
+  if (!record(value) || value['version'] !== 1 || !record(value['toys'])) throw new Error('Нужна конфигурация версии 1 с четырьмя игрушками.');
+  const toys = {} as SiteConfig['toys'];
+  for (const id of TOY_IDS) {
+    const source = value['toys'][id];
+    if (!record(source) || !Array.isArray(source['games']) || source['games'].length < 1 || source['games'].length > 99) throw new Error(`${id}: в меню должно быть от 1 до 99 игр.`);
+    const seen = new Set<string>();
+    const games = source['games'].map((g: unknown): ConfigGame => {
+      if (!record(g) || typeof g['id'] !== 'string' || !isGameId(g['id']) || seen.has(g['id'])) throw new Error(`${id}: неизвестная или повторная игра.`);
+      const gameId = g['id']; seen.add(gameId);
+      if (id === 'mario' ? gameId !== 'mario' : GAMES[gameId].engine !== 'brick' || !BRICK_GAMES[gameId]) throw new Error(`${id}: игра ${gameId} несовместима с экраном приставки.`);
+      if (g['modes'] === undefined) return { id: gameId };
+      const modes = g['modes'], max = BRICK_GAMES[gameId]?.modes.length ?? 1;
+      if (!Array.isArray(modes) || !modes.length || modes.length > max || new Set(modes).size !== modes.length || modes.some((m) => !Number.isInteger(m) || m < 0 || m >= max)) throw new Error(`${id}/${gameId}: недопустимые варианты игры.`);
+      return { id: gameId, modes: [...modes] as number[] };
+    });
+    const shells = source['shells'];
+    if (!Array.isArray(shells) || !shells.length || shells.length > 4 || new Set(shells).size !== shells.length || shells.some((s) => !SHELLS.includes(s))) throw new Error(`${id}: выберите допустимые цвета корпуса.`);
+    if (!shells.includes(source['defaultShell'])) throw new Error(`${id}: основной цвет должен входить в доступные.`);
+    if (typeof source['defaultGame'] !== 'string' || !seen.has(source['defaultGame'])) throw new Error(`${id}: стартовая игра должна входить в меню.`);
+    toys[id] = { games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, defaultGame: source['defaultGame'] as GameId };
+  }
+  return { version: 1, toys };
+}

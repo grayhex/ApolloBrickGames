@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "toys": {
+    "mario": {
+      "games": [
+        {
+          "id": "mario"
+        }
+      ],
+      "shells": [
+        "blue",
+        "red",
+        "yellow",
+        "white"
+      ],
+      "defaultShell": "blue",
+      "defaultGame": "mario"
+    },
+    "clock99": {
+      "games": [
+        {
+          "id": "tetris"
+        },
+        {
+          "id": "racing"
+        },
+        {
+          "id": "shooting"
+        },
+        {
+          "id": "tank"
+        },
+        {
+          "id": "frog"
+        },
+        {
+          "id": "racing-shooting"
+        },
+        {
+          "id": "shooting-figures"
+        },
+        {
+          "id": "construction"
+        },
+        {
+          "id": "tetris-pentix"
+        },
+        {
+          "id": "arkanoid"
+        }
+      ],
+      "shells": [
+        "yellow",
+        "red",
+        "white"
+      ],
+      "defaultShell": "yellow",
+      "defaultGame": "tetris"
+    },
+    "seabattle": {
+      "games": [
+        {
+          "id": "sea-battle"
+        },
+        {
+          "id": "tank",
+          "modes": [
+            0,
+            1
+          ]
+        },
+        {
+          "id": "romeo-juliet"
+        },
+        {
+          "id": "tetris-big"
+        },
+        {
+          "id": "tetris",
+          "modes": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ]
+        },
+        {
+          "id": "arkanoid"
+        }
+      ],
+      "shells": [
+        "red",
+        "blue"
+      ],
+      "defaultShell": "red",
+      "defaultGame": "sea-battle"
+    },
+    "tank168": {
+      "games": [
+        {
+          "id": "tank"
+        },
+        {
+          "id": "frog"
+        },
+        {
+          "id": "racing"
+        },
+        {
+          "id": "racing-shooting"
+        },
+        {
+          "id": "shooting-array"
+        },
+        {
+          "id": "shooting-figures"
+        },
+        {
+          "id": "construction"
+        },
+        {
+          "id": "tetris"
+        },
+        {
+          "id": "tetris-pentix"
+        }
+      ],
+      "shells": [
+        "red",
+        "yellow"
+      ],
+      "defaultShell": "red",
+      "defaultGame": "tank"
+    }
+  }
+}

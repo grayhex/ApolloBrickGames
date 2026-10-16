@@ -24,7 +24,7 @@ import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
 import { applyToyModel, relabelKeys } from './toyModel';
 import { ToyPanel, type ToyKeyId } from './toy';
-import { shellFor, TOYS, type ToyId } from './toys';
+import { initialShell, shellFor, TOYS, type ToyId } from './toys';
 import { parseView, type View } from './view';
 import { deviceView } from './viewModel';
 
@@ -204,7 +204,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   resize();
 
   // ── Внешний вид: цвет, сегменты, звук, вид, фон ─────────────────────────
-  let currentShell: Shell = shellFor(model, carryIn?.shell ?? hub.settings.display.shell);
+  let currentShell: Shell = carryIn ? shellFor(model, carryIn.shell) : initialShell(model, hub.settings.display.shell);
   const ghostOn = (): boolean => hub.settings.display.ghost ?? true;
   const applyDisplay = (): void => {
     const { display } = hub.settings;

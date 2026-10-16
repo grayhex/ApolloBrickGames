@@ -219,9 +219,9 @@ class ConsoleCabinet implements Cabinet {
   private readonly console_: BrickConsole;
   private readonly toy: string;
 
-  constructor(toy: string, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number) {
+  constructor(toy: string, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0) {
     this.toy = toy;
-    this.console_ = new BrickConsole({ catalog: entries, seed, hiScore });
+    this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game });
   }
 
   get phase(): BrickPhase {
@@ -321,7 +321,7 @@ export interface CabinetOptions {
 export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet {
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
   const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}:hi`;
-  return new ConsoleCabinet(model.id, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)));
+  return new ConsoleCabinet(model.id, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => g.id === model.defaultGame)));
 }
 
 /** Звук события для кабинета: в консоли движение звучит только там, где оно уместно. */

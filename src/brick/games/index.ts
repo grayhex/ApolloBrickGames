@@ -1,3 +1,4 @@
+import { LIBRARY_GAMES } from './library';
 /**
  * Реестр «кирпичных» игр: идентификатор игры каталога (`GameId` из `src/games/catalog.ts`) → игра ядра. Консоли с меню (`app/cabinet.ts`) берут отсюда игры своих
  * пунктов; игры, которых здесь нет, в меню выбираются, но не запускаются (событие `blocked`). У «Тетриса с большими фигурами» («Морской бой», D) и «Тетриса Pentix»
@@ -19,6 +20,7 @@ import { tetrisDef } from './tetris';
 export { arkanoidDef, constructionDef, froggerDef, invadersDef, pentixDef, racingDef, racingShootDef, shapesDef, tanksDef, tetrisDef };
 
 export const BRICK_GAMES: Readonly<Record<string, BrickGameDef>> = {
+  ...LIBRARY_GAMES,
   'sea-battle': seaBattleDef,
   'romeo-juliet': romeoJulietDef,
   shooting: { ...invadersDef, id: 'shooting' },

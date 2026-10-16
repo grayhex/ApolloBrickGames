@@ -21,7 +21,7 @@ const browserOnlyGlobals = [
 ].map((name) => ({ name, message: 'Ядро и формат данных не обращаются к браузеру и часам.' }));
 
 export default defineConfig(
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'test-results/**', 'playwright-report/**'] },
+  { ignores: ['.wrangler/**', 'dist/**', 'node_modules/**', 'coverage/**', 'test-results/**', 'playwright-report/**'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

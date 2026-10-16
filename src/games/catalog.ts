@@ -1,9 +1,11 @@
+import { LIBRARY_IDS, LIBRARY_NAMES, type LibraryId } from './library';
 /**
  * Каталог игр, которые встречаются на игрушках Apollo. Игры у консолей **пересекаются** (тетрис есть почти везде, стрельба, гонки и танк — на нескольких),
  * поэтому игра описана один раз, а у каждой консоли (`app/toys.ts`) указан её набор — по наклейке или упаковке, с названием как напечатано.
  * Чистые данные без DOM: когда будут восстановлены логика и настройки каждой игры (в том числе в «админке»), они подключатся к этому каталогу по `id`.
  */
 export const GAME_IDS = [
+  ...LIBRARY_IDS,
   'mario',
   'clock',
   'tetris',
@@ -37,7 +39,10 @@ export interface GameDef {
   engine: GameEngine | null;
 }
 
+const library = Object.fromEntries(LIBRARY_IDS.map((id) => [id, { id, names: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, engine: 'brick' }])) as Record<LibraryId, GameDef>;
+
 export const GAMES: Record<GameId, GameDef> = {
+  ...library,
   mario: { id: 'mario', names: { ru: 'Crocodile Mario', en: 'Crocodile Mario' }, engine: 'mario' },
   clock: { id: 'clock', names: { ru: 'Часы', en: 'Clock' }, engine: null },
   tetris: { id: 'tetris', names: { ru: 'Тетрис', en: 'Tetris' }, engine: 'brick' },

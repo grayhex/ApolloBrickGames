@@ -1,3 +1,4 @@
+import { LIBRARY_GUIDES } from './library';
 /**
  * Описания игр для левой панели: идентификатор игры каталога (`GameId`) -> описание «по факту реализации» (`GameGuideData`).
  * Каждое описание лежит в своём файле рядом и строится по коду игры (числа берутся из экспортируемых констант игры); сюда они только собраны.
@@ -30,6 +31,7 @@ export {
 };
 
 export const BRICK_GUIDES: Readonly<Record<string, GameGuideData>> = {
+  ...LIBRARY_GUIDES,
   'sea-battle': SEA_GUIDE,
   'romeo-juliet': ROMEO_GUIDE,
   shooting: INVADERS_GUIDE,
