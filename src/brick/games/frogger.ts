@@ -45,9 +45,9 @@ export const SCORE_PER_ROW = 10;
 export const FROG_SCORES_TO_EXTRA_LIFE = 500;
 
 /** Скорость дороги: сдвиг раз в `3 × getSpeed(true)` мс; getSpeed(true) — от 450 мс (скорость 1) до 120 мс (скорость 10). */
-const SPEED_OF_FIRST_LEVEL_MS = 450;
-const SPEED_OF_TENTH_LEVEL_MS = 120;
-const ROAD_SHIFT_FACTOR = 3;
+export const SPEED_OF_FIRST_LEVEL_MS = 450;
+export const SPEED_OF_TENTH_LEVEL_MS = 120;
+export const ROAD_SHIFT_FACTOR = 3;
 
 /** Мелодия старта донора: 1500 мс до начала уровня (дорога стоит, «вверх/вниз/огонь» не работают, «влево/вправо» работают). */
 export const START_WAIT_TICKS = msToTicks(1500);

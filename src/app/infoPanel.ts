@@ -1,9 +1,11 @@
 import { BRICK_GAMES } from '../brick/games';
+import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
 import { BoxDialog, BoxViewer } from './boxViewer';
 import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
 import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
+import { guideBlocks } from './guidePanel';
 import { getLang, onLangChange, t, type MsgKey } from './i18n';
 import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
@@ -51,6 +53,9 @@ function figure(picture: Picture, className = 'score__fig'): HTMLElement {
   }
   return box;
 }
+
+/** Выше этого окна схема клавиш консоли с меню раскрыта сразу, ниже — свёрнута (место нужно описанию игры). */
+const KEYS_OPEN_MIN_HEIGHT = 900;
 
 const B = 'block';
 const H = 'hero';
@@ -214,19 +219,19 @@ export class InfoPanel {
             keyRow(t('info.t.down'), keys('down')),
             keyRow(t('info.t.drop'), keys('fire')),
           ];
-      const controls = h(
-        'section',
-        { class: 'side__sec', 'aria-labelledby': 'keys-title' },
-        h('h3', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')),
-        h(
-          'ul',
-          { class: 'keys', id: 'keymap' },
-          ...rows,
-          keyRow(t('info.keys.startPause'), keys('start', 'pause')),
-          keyRow(t('info.keys.power'), [POWER_KEY]),
-          keyRow(t('info.keys.sound'), [SOUND_KEY]),
-        ),
+      const keyList = h(
+        'ul',
+        { class: 'keys', id: 'keymap' },
+        ...rows,
+        keyRow(t('info.keys.startPause'), keys('start', 'pause')),
+        keyRow(t('info.keys.power'), [POWER_KEY]),
+        keyRow(t('info.keys.sound'), [SOUND_KEY]),
       );
+      // У консоли с меню описания игр важнее схемы клавиш: на невысоком окне схема свёрнута (раскрывается заголовком), чтобы описанию хватило места.
+      const controls = model.menu
+        ? h('details', { class: 'side__sec side__sec--keys' }, h('summary', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')), keyList)
+        : h('section', { class: 'side__sec', 'aria-labelledby': 'keys-title' }, h('h3', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')), keyList);
+      if (model.menu && window.innerHeight >= KEYS_OPEN_MIN_HEIGHT) controls.setAttribute('open', '');
       this.root.replaceChildren(head, controls, this.gamesSection(model));
       return;
     }
@@ -401,17 +406,15 @@ export class InfoPanel {
     const brick = model.menu ? BRICK_GAMES[id] : undefined;
     const variants = brick ? (game.modes?.length ?? brick.modes.length) : game.variants;
     if (variants) meta.append(h('span', { class: 'chip', ...(brick ? { 'data-modes': '' } : {}) }, t('games.variants', { n: variants })));
-    const parts: HTMLElement[] = [
-      h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()])),
-      meta,
-      h('p', { class: 'side__text' }, t(guide.what)),
-    ];
-    if (guide.how) parts.push(h('p', { class: 'side__text' }, t(guide.how)));
+    const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, key), h('h4', { class: 'gpanel__name' }, GAMES[id].names[getLang()]));
+    const source = h('p', { class: 'gtext gpanel__src' }, h('b', {}, `${t('games.src.h')}: `), guide.sources.map((src) => t(SOURCE_KEYS[src])).join('; '));
+    // Игры, которые уже играют по правилам ядра, описаны «по факту реализации» (`src/brick/guides`); у остальных — общие сведения об игре.
+    const data = brick && game.status === 'ready' ? BRICK_GUIDES[id] : undefined;
+    if (data) return [head, meta, ...guideBlocks(data, brick, game.modes, getLang()), source];
+    const parts: HTMLElement[] = [head, meta, h('p', { class: 'gtext' }, t(guide.what))];
+    if (guide.how) parts.push(h('p', { class: 'gtext' }, t(guide.how)));
     if (id === 'tetris' && !model.menu) parts.push(...this.tetrisDetails());
-    parts.push(
-      h('p', { class: 'side__text gpanel__open' }, h('b', {}, `${t('games.open.h')}: `), t(guide.open)),
-      h('p', { class: 'side__text gpanel__src' }, h('b', {}, `${t('games.src.h')}: `), guide.sources.map((source) => t(SOURCE_KEYS[source])).join('; ')),
-    );
+    parts.push(h('p', { class: 'gtext gpanel__open' }, h('b', {}, `${t('games.open.h')}: `), t(guide.open)), source);
     return parts;
   }
 

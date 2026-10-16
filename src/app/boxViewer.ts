@@ -15,7 +15,7 @@ import type { PackModel } from './packs';
 
 /**
  * 3D-модель упаковки: грани-картинки (вырезаны из присланных фото упаковки, `public/brand/<каталог модели>`) на CSS-преобразованиях
- * `preserve-3d`, без библиотек и WebGL; модели («коробка» «168 в 1 танк», блистерная карточка Crocodile Mario) описаны в `packs.ts`. Вращение — мышью или пальцем (с инерцией), стрелками; колесо и «+/−» — масштаб; освещение пересчитывается
+ * `preserve-3d`, без библиотек и WebGL; модели («коробки» «168 в 1 танк» и Crocodile Mario) описаны в `packs.ts`. Вращение — мышью или пальцем (с инерцией), стрелками; колесо и «+/−» — масштаб; освещение пересчитывается
  * при каждом повороте (тёмный слой на грани), поэтому гранёность видна и на плоских картинках. Углы и яркость — в `boxMath.ts`.
  */
 const faceUrl = (model: PackModel, file: string): string => `${import.meta.env.BASE_URL}brand/${model.dir}/${file}`;
@@ -75,10 +75,9 @@ export class BoxViewer {
     this.zoomValue = options.zoom ?? 1;
 
     const scene = h('div', { class: 'box3d__scene' });
-    for (const { id, image, kind, style } of this.model.faces) {
-      const face = h('i', { class: `box3d__face box3d__face--${id}${kind ? ` box3d__face--${kind}` : ''}`, 'data-face': id });
+    for (const { id, image } of this.model.faces) {
+      const face = h('i', { class: `box3d__face box3d__face--${id}`, 'data-face': id });
       if (image) face.style.backgroundImage = `url("${faceUrl(this.model, image)}")`;
-      if (style) for (const [name, value] of Object.entries(style)) face.style.setProperty(name, value);
       this.faces.set(id, face);
       scene.append(face);
     }
@@ -172,9 +171,7 @@ export class BoxViewer {
     const view = this.currentView;
     this.element.style.setProperty('--ry', `${this.yaw.toFixed(2)}deg`);
     this.element.style.setProperty('--rx', `${this.pitch.toFixed(2)}deg`);
-    for (const { id, normal, lit } of this.model.faces) {
-      if (lit !== false) this.faces.get(id)?.style.setProperty('--dim', String(normalDim(normal, view)));
-    }
+    for (const { id, normal } of this.model.faces) this.faces.get(id)?.style.setProperty('--dim', String(normalDim(normal, view)));
     this.element.dataset['yaw'] = String(Math.round(this.yaw));
     this.element.dataset['pitch'] = String(Math.round(this.pitch));
   }

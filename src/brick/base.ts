@@ -194,6 +194,8 @@ export abstract class BrickBase implements BrickGame {
         if (this.lives < MAX_LIVES) this.lives++;
         else this.score = Math.min(MAX_SCORE, this.score + Math.floor(this.scoresToExtraLife / 10));
       }
+      // бонус за полные жизни тоже счёт: рекорд не может быть ниже текущего счёта
+      if (this.score > this.hiScore) this.hiScore = this.score;
     }
   }
 

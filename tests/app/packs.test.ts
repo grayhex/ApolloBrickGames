@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { HOME_VIEW, normalDim, normalFacing, type BoxView } from '../../src/app/boxMath';
 import { MESSAGES } from '../../src/app/messages';
-import { MARIO_OUTLINES } from '../../src/app/packOutline';
 import { PACKS, type PackId } from '../../src/app/packs';
 import { TOY_IDS, TOYS } from '../../src/app/toys';
 
@@ -10,12 +9,14 @@ const ids = Object.keys(PACKS) as PackId[];
 const facing = (id: PackId, view: BoxView): string[] => PACKS[id].faces.filter((face) => normalFacing(face.normal, view)).map((face) => face.id);
 
 describe('модели упаковок', () => {
-  it('у каждой игрушки с упаковкой модель есть, и наоборот — модель принадлежит игрушке', () => {
+  it('у каждой игрушки с выводимой упаковкой модель есть; у Mario модель готова, но вывод выключен (`pack: null`)', () => {
     for (const toy of TOY_IDS) {
       const pack = TOYS[toy].pack;
       if (pack) expect(PACKS[pack], toy).toBeDefined();
     }
-    expect(TOY_IDS.filter((toy) => TOYS[toy].pack).sort()).toEqual([...ids].sort()); // у каждой модели свой хозяин: Mario и «168 в 1 танк»
+    expect(TOY_IDS.filter((toy) => TOYS[toy].pack)).toEqual(['tank168']);
+    expect(ids.sort()).toEqual(['mario', 'tank168']); // модель Mario остаётся в коде и в `public/brand/pack-mario` до включения
+    expect(TOYS.mario.pack).toBeNull();
   });
 
   it('грани не повторяются, картинки граней лежат в public/brand, тексты есть на обоих языках', () => {
@@ -48,54 +49,34 @@ describe('модели упаковок', () => {
     expect(PACKS.tank168.home).toEqual(HOME_VIEW);
   });
 
-  it('карточка Mario: спереди видны только лицевые плоскости (карточка, крышка и основание игрушки, пластик), сзади — только оборот', () => {
-    const front = facing('mario', { yaw: 0, pitch: 0 });
-    expect(front.sort()).toEqual(['bubble-front', 'card-front', 'toy-base-front', 'toy-lid-front']);
-    expect(facing('mario', { yaw: 180, pitch: 0 })).toEqual(['card-back']);
+  it('коробка Mario — шесть граней, как у «168 в 1 танк»: лицо и оборот с картинками, остальные четыре — картон без рисунка', () => {
+    const faces = PACKS.mario.faces;
+    expect(faces.map((face) => face.id).sort()).toEqual(['back', 'bottom', 'front', 'left', 'right', 'top']);
+    expect(faces.map((face) => face.id).sort()).toEqual(PACKS.tank168.faces.map((face) => face.id).sort());
+    expect(faces.filter((face) => face.image).map((face) => `${face.id}:${face.image}`).sort()).toEqual(['back:back.webp', 'front:front.webp']);
+    expect(PACKS.mario.size).toEqual({ w: 660, h: 1053 }); // лицо — выпрямленное фото карточки, оборот — инструкция того же размера
   });
 
-  it('блистер виден сбоку: при повороте направо к зрителю обращена часть стенок игрушки и пластика, но не все', () => {
-    const view = PACKS.mario.presets.find((preset) => preset.name === 'blister')?.view ?? HOME_VIEW;
-    const seen = facing('mario', view);
-    for (const kind of ['toy-lid-wall', 'toy-base-wall', 'bubble-wall']) {
-      const all = PACKS.mario.faces.filter((face) => face.id.startsWith(`${kind}-`));
-      const visible = seen.filter((id) => id.startsWith(`${kind}-`));
-      expect(visible.length, kind).toBeGreaterThan(0);
-      expect(visible.length, kind).toBeLessThan(all.length);
-    }
+  it('вид спереди показывает только лицо, сзади — только оборот; сбоку и сверху — боковые грани', () => {
+    expect(facing('mario', { yaw: 0, pitch: 0 })).toEqual(['front']);
+    expect(facing('mario', { yaw: 180, pitch: 0 })).toEqual(['back']);
+    expect(facing('mario', { yaw: 90, pitch: 0 })).toEqual(['left']);
+    expect(facing('mario', { yaw: -90, pitch: 0 })).toEqual(['right']);
+    expect(facing('mario', PACKS.mario.presets.find((preset) => preset.name === 'top')?.view ?? HOME_VIEW)).toContain('top');
   });
 
-  it('стенки идут по контуру: по одной на ребро, нормали единичные, горизонтальные и направлены наружу', () => {
-    for (const [part, prefix] of [['lid', 'toy-lid-wall'], ['base', 'toy-base-wall'], ['bubble', 'bubble-wall']] as const) {
-      const points = MARIO_OUTLINES[part].points;
-      const walls = PACKS.mario.faces.filter((face) => face.id.startsWith(`${prefix}-`));
-      expect(walls.length, part).toBe(points.length);
-      const cx = points.reduce((sum, p) => sum + p[0], 0) / points.length;
-      const cy = points.reduce((sum, p) => sum + p[1], 0) / points.length;
-      walls.forEach((wall, i) => {
-        const [nx, ny, nz] = wall.normal;
-        expect(Math.hypot(nx, ny), `${wall.id}`).toBeCloseTo(1, 5);
-        expect(nz).toBe(0);
-        // Наружу: нормаль смотрит от середины контура (контур выпуклый не везде, поэтому проверяем по ребру, обращённому к краю фигуры).
-        const m = wall.style?.['transform']?.match(/translate3d\((-?[\d.]+)px, (-?[\d.]+)px/);
-        expect(m, wall.id).not.toBeNull();
-        const mx = Number(m?.[1]);
-        const my = Number(m?.[2]);
-        if (Math.hypot(mx - cx, my - cy) > 150) expect(nx * (mx - cx) + ny * (my - cy), `${wall.id} (${i})`).toBeGreaterThan(0);
-      });
-    }
+  it('у обеих коробок те же четыре вида — «Лицо», «Оборот», «Бок», «Верх»; блистера больше нет', () => {
+    const names = (id: PackId): string[] => PACKS[id].presets.map((preset) => preset.name);
+    expect(names('mario')).toEqual(['front', 'back', 'side', 'top']);
+    expect(names('mario')).toEqual(names('tank168'));
+    expect(MESSAGES.ru).not.toHaveProperty('box.view.blister');
+    expect(existsSync('public/brand/pack-mario/bubble.svg')).toBe(false);
+    expect(existsSync('public/brand/pack-mario/toy-lid.webp')).toBe(false);
   });
 
-  it('основание толще крышки, пластик выше игрушки; вырезки лежат над картоном', () => {
-    const z = (id: string): number => Number(PACKS.mario.faces.find((face) => face.id === id)?.style?.['transform']?.match(/, (-?[\d.]+)px\)/)?.[1]);
-    expect(z('toy-base-front')).toBeGreaterThan(z('toy-lid-front'));
-    expect(z('toy-lid-front')).toBeGreaterThan(3);
-    expect(z('bubble-front')).toBeGreaterThan(z('toy-base-front'));
-  });
-
-  it('прозрачный пластик не затемняется: у всех его граней lit = false, у остальных — нет', () => {
-    for (const face of PACKS.mario.faces) expect(face.lit === false, face.id).toBe(face.id.startsWith('bubble-'));
-    for (const face of PACKS.tank168.faces) expect(face.lit, face.id).toBeUndefined();
+  it('картинки граней Mario — сплошные прямоугольники 660 × 1053 (лицо — сборка из фото карточки), оборот-инструкция на месте', () => {
+    for (const file of ['front.webp', 'back.webp']) expect(existsSync(`public/brand/pack-mario/${file}`), file).toBe(true);
+    expect(existsSync('tools/pack-mario/source/blister-front.webp')).toBe(true); // исходное фото, из которого `tools/pack-mario/build.py` собирает лицо
   });
 
   it('тёмный слой зависит от нормали: повёрнутая к свету грань светлее', () => {

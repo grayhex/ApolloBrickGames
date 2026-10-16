@@ -247,6 +247,18 @@ describe('shapes: фигуры и спуск', () => {
     }
   });
 
+  it('если поле расчищено, следующая фигура приходит на ближайшем шаге спуска, а не через пять', () => {
+    for (const mode of [0, 2]) {
+      const game = started(mode);
+      game.field().clear();
+      idle(game, STEP_1 - 1);
+      expect(game.field().total(), `вариант ${mode + 1}`).toBe(0);
+      idle(game);
+      expect(groups(game.cells()).length).toBe(1);
+      expect(rowCells(game.cells(), 0)).toBeGreaterThan(0);
+    }
+  });
+
   it('новая фигура сверху — каждые 5 шагов спуска; фигуры друг на друга не налезают', () => {
     const game = started(0);
     idle(game, 5 * STEP_1 - 1);
@@ -310,30 +322,24 @@ describe('shapes: отстрел фигур', () => {
     expect(game.bulletCount()).toBe(0);
   });
 
-  // НЕ ДОДЕЛАНО (исполнитель остановлен на полпути): ожидание теста и поведение игры расходятся, что из них верно — не выяснено; см. docs/brick/STATUS.md.
-
-  it.fails('пули разбирают колонку снизу вверх; соседние колонки не затрагиваются', () => {
+  it('пули разбирают колонку от ближней к пушке клетки к дальней, по клетке на пулю; соседние колонки не затрагиваются', () => {
     const game = bare(0);
-    game.figure(['###', '#.#'], 3, 12);
-    tap(game, 'fire', 10);
-    tap(game, 'fire', 10);
-    expect(game.field().get(4, 12)).toBe(1);
-    expect(game.field().get(4, 11)).toBe(0);
-    tap(game, 'fire', 10);
-    expect(game.field().get(4, 12)).toBe(0);
-    expect(game.field().total()).toBe(4);
+    game.figure(['###', '#.#'], 3, 12); // колонки 3 и 5: клетки на рядах 12 и 11, колонка 4: одна клетка на ряду 12
+    tap(game, ['left', 'fire'], 12); // пушка встаёт в колонку 3
+    expect(game.field().get(3, 11)).toBe(0);
+    expect(game.field().get(3, 12)).toBe(1);
     expect(game.score).toBe(1);
+    tap(game, 'fire', 12);
+    expect(game.field().get(3, 12)).toBe(0);
+    expect(game.score).toBe(2);
+    expect([...cellSet(game.field())].sort()).toEqual(['4,12', '5,11', '5,12']);
   });
 
-  // НЕ ДОДЕЛАНО (исполнитель остановлен на полпути): ожидание теста и поведение игры расходятся, что из них верно — не выяснено; см. docs/brick/STATUS.md.
-
-  it.fails('пробитая посередине фигура распадается, обломки продолжают падать вместе', () => {
+  it('пробитая посередине фигура распадается на части; обломки продолжают падать вместе со всем полем', () => {
     const game = started(0, { speed: 10 });
     game.field().clear();
     game.figure(['####'], 2, 15);
-    tap(game, ['left', 'fire']); // колонка 3 — вторая клетка линии
-    tap(game, 'fire');
-    idle(game, 8);
+    tap(game, ['left', 'fire'], 14); // колонка 3 — вторая клетка линии
     expect(game.field().get(3, 15)).toBe(0);
     expect(game.field().total()).toBe(3);
     const steps = (): number => STEP_10 - ((game.tick - INTRO) % STEP_10);
@@ -456,24 +462,33 @@ describe('shapes: достройка до прямоугольников', () =>
     expect(game.score).toBe(1 + 6 * 2);
   });
 
-  // НЕ ДОДЕЛАНО (исполнитель остановлен на полпути): ожидание теста и поведение игры расходятся, что из них верно — не выяснено; см. docs/brick/STATUS.md.
-
-  it.fails('фигура, не ставшая прямоугольником, остаётся и падает дальше; клетка, лишняя для прямоугольника, ломает его', () => {
+  it('лишняя клетка прямоугольник не ломает: он просто получается больше (и очков за него больше)', () => {
     const game = bare(2);
-    game.figure(['##', '#.'], 4, 15);
-    shootAt(game, 4);
-    shootAt(game, 4); // вторая клетка в колонке 4 уходит ниже рамки: прямоугольник уже сложился и исчез
+    game.figure(['##', '#.'], 4, 15); // колонка 4 высотой 2, колонка 5 высотой 1: не хватает одной клетки до квадрата 2 × 2
+    shootAt(game, 4); // клетка ушла в колонку 4: группа выше, прямоугольником по-прежнему не является
+    expect(game.field().total()).toBe(4);
+    expect(game.cells().filter((value) => value === 2).length).toBe(0);
+    shootAt(game, 5);
+    expect(game.field().total()).toBe(5);
+    expect(game.cells().filter((value) => value === 2).length).toBe(0);
+    shootAt(game, 5); // колонки сравнялись: 2 × 3
+    expect(game.score).toBe(3);
+    expect(game.cells().filter((value) => value === 2).length).toBe(6);
     idle(game, VANISH);
-    expect(game.field().total()).toBe(1);
-    expect(game.field().get(4, 13)).toBe(1);
-    expect(game.score).toBe(1 + 4 * 2 + 1);
+    expect(game.field().total()).toBe(0);
+    expect(game.score).toBe(3 + 6 * 2);
+  });
 
-    const odd = bare(2);
-    odd.figure(['###', '.#.'], 3, 15); // T: сверху три, снизу одна
-    shootAt(odd, 3);
-    expect(odd.field().total()).toBe(5);
-    expect(odd.bulletCount()).toBe(0);
-    expect(odd.cells().filter((value) => value === 2).length).toBe(0);
+  it('фигура, не ставшая прямоугольником, остаётся и падает дальше вместе с полем', () => {
+    const game = started(2, { speed: 10 });
+    game.field().clear();
+    game.figure(['###', '.#.'], 3, 15); // T: сверху три клетки, снизу одна
+    tap(game, ['left', 'fire'], 14); // одна клетка в колонке 3 прямоугольника не даёт: 5 клеток в рамке 3 × 2
+    expect(game.field().total()).toBe(5);
+    expect(game.bulletCount()).toBe(0);
+    expect(game.cells().filter((value) => value === 2).length).toBe(0);
+    idle(game, STEP_10 - ((game.tick - INTRO) % STEP_10));
+    expect([...cellSet(game.field())].sort()).toEqual(['3,13', '3,14', '4,13', '4,14', '5,14']);
   });
 
   it('пуля, не встретившая фигур, улетает и клетку не создаёт; дуло не даёт поставить клетку', () => {
@@ -719,8 +734,7 @@ function buildBot(game: TestShapes): BrickInput {
 }
 
 describe('shapes: бот', () => {
-  // НЕ ДОДЕЛАНО (исполнитель остановлен на полпути): ожидание теста и поведение игры расходятся, что из них верно — не выяснено; см. docs/brick/STATUS.md.
-  it.fails('бот отстрела уничтожает фигуры: очки растут, скорость повышается, жизни целы', () => {
+  it('бот отстрела уничтожает фигуры: очки растут, скорость повышается, жизни целы', () => {
     for (const mode of DESTROY) {
       const game = started(mode, { seed: 3, speed: 2 });
       const names = types(run(game, 3500, () => destroyBot(game)));

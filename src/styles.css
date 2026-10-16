@@ -4056,53 +4056,25 @@ body.route-editor .shell > :not(#fatal) {
 .box3d__face--top { transform: rotateX(90deg) translateZ(calc(var(--bh) / 2)); }
 .box3d__face--bottom { transform: rotateX(-90deg) translateZ(calc(var(--bh) / 2)); }
 
-/* Блистерная карточка Crocodile Mario: картон 660 × 1053 (по фото упаковки), игрушка и прозрачный пластик над ним. Размеры в условных пикселях сцены. */
+/* Коробка Crocodile Mario: лицо 660 × 1053 (по фото упаковки) и оборот с инструкцией; боковые грани — картон без рисунка. Толщина коробки и цвет картона —
+   допущение: на фото боков нет (цвет — по краям лица, `tools/pack-mario/build.py`). Под прозрачными углами и отверстием оборота виден тот же картон. */
 .box3d[data-pack='mario'] {
-  --cw: 660px;
-  --ch: 1053px;
-  --ct: 6px;
+  --bw: 660px;
+  --bh: 1053px;
+  --bd: 170px;
 }
 
-.box3d__face--card-front,
-.box3d__face--card-back {
-  width: var(--cw);
-  height: var(--ch);
-  margin: calc(var(--ch) / -2) 0 0 calc(var(--cw) / -2);
+.box3d[data-pack='mario'] .box3d__face {
+  background-color: #b99e84;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.3);
 }
 
-.box3d__face--card-front { transform: translateZ(calc(var(--ct) / 2)); }
-.box3d__face--card-back { transform: rotateY(180deg) translateZ(calc(var(--ct) / 2)); }
-
-/* Торцы картона: короче карточки на скруглённые углы. */
-.box3d__face--edge-left,
-.box3d__face--edge-right {
-  width: var(--ct);
-  height: calc(var(--ch) - 90px);
-  margin: calc((var(--ch) - 90px) / -2) 0 0 calc(var(--ct) / -2);
-  background: linear-gradient(90deg, #b9ad8c, #ddd3b8 50%, #b3a784);
+.box3d[data-pack='mario'] :is(.box3d__face--left, .box3d__face--right) {
+  background-image: linear-gradient(90deg, #a98f77, #c4a98f 45%, #b39980);
 }
 
-.box3d__face--edge-top,
-.box3d__face--edge-bottom {
-  width: calc(var(--cw) - 90px);
-  height: var(--ct);
-  margin: calc(var(--ct) / -2) 0 0 calc((var(--cw) - 90px) / -2);
-  background: linear-gradient(#b9ad8c, #ddd3b8 50%, #b3a784);
-}
-
-.box3d__face--edge-left { transform: rotateY(-90deg) translateZ(calc(var(--cw) / 2 - 3px)); }
-.box3d__face--edge-right { transform: rotateY(90deg) translateZ(calc(var(--cw) / 2 - 3px)); }
-.box3d__face--edge-top { transform: rotateX(90deg) translateZ(calc(var(--ch) / 2 - 3px)); }
-.box3d__face--edge-bottom { transform: rotateX(-90deg) translateZ(calc(var(--ch) / 2 - 3px)); }
-
-/* Раскрытая игрушка и блистер: размер и положение лицевых вырезок и боковых стенок задаёт модель (`PackFace.style`, контуры — в `packOutline.ts`).
-   Здесь только вид: у стенок игрушки вертикальный градиент (низ у картона темнее, верхняя кромка с бликом — скруглённое ребро), у блистера — светлая плёнка. */
-.box3d__face--toy-wall {
-  background: linear-gradient(180deg, #a89a22 0%, #d8c72f 30%, #efe047 72%, #fff6a8 94%, #f2e34e 100%);
-}
-
-.box3d__face--bubble-wall {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.2) 70%, rgba(255, 255, 255, 0.34));
+.box3d[data-pack='mario'] :is(.box3d__face--top, .box3d__face--bottom) {
+  background-image: linear-gradient(180deg, #a98f77, #c4a98f 45%, #b39980);
 }
 
 .box3d--live {
@@ -4235,8 +4207,8 @@ body.route-editor .shell > :not(#fatal) {
 }
 
 .gpanel {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   /* Длинное описание (тетрис с правилами и очками) прокручивается внутри, а не сдвигает остальную панель. */
   max-height: clamp(170px, calc(100dvh - 600px), 440px);
@@ -4247,6 +4219,8 @@ body.route-editor .shell > :not(#fatal) {
   border-radius: 10px;
   background: color-mix(in srgb, var(--text) 3%, transparent);
 }
+
+.gpanel > * { flex: none; }
 
 .gpanel__head {
   display: flex;
@@ -4306,6 +4280,81 @@ body.route-editor .shell > :not(#fatal) {
 @media (prefers-reduced-motion: reduce) {
   .boxbtn, .gtab { transition: none; }
 }
+
+/* ── Описание игры «по факту реализации» во вкладке (src/app/guidePanel.ts) ─────────────────────────── */
+.gtext { margin: 0; font-size: 0.72rem; line-height: 1.45; } /* не `.side__text`: тот на невысоком окне скрыт (справка Mario) */
+.gpanel__goal { margin: 0; }
+.gfacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gfacts li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--lcd, #bbb) 22%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.gfacts b { font: 800 0.8rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
+.gfacts span { font: 600 0.62rem/1.25 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--muted); }
+.gsec { border-top: 1px solid var(--line); padding-top: 4px; }
+.gsec__sum {
+  cursor: pointer;
+  padding: 2px 0;
+  font: 800 0.64rem/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gsec__sum:hover { color: var(--text); }
+.gsec__sum:focus-visible { outline: 2px solid var(--tone, currentColor); outline-offset: 2px; border-radius: 4px; }
+.gsec[open] > .gsec__sum { color: var(--text); }
+.grules, .gassume, .gmodes { display: grid; gap: 4px; margin: 4px 0 2px; padding-left: 16px; font-size: 0.7rem; line-height: 1.38; }
+.grules li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+.gassume { list-style: '– '; opacity: 0.85; }
+.gmodes { list-style: none; padding-left: 0; font-size: 0.66rem; }
+.gmodes li { display: flex; gap: 6px; align-items: baseline; }
+.gmodes__n { flex: none; min-width: 1.4em; font: 800 0.62rem/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+.gctl { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; margin: 4px 0 2px; font-size: 0.68rem; line-height: 1.35; }
+.gctl dt { margin: 0; }
+.gctl dd { margin: 0; }
+.gscore { display: grid; gap: 3px; margin: 4px 0; padding: 0; list-style: none; font-size: 0.7rem; }
+.gscore li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 8px; background: var(--chip); border: 1px solid var(--line); border-radius: 7px; }
+.gscore b { font-variant-numeric: tabular-nums; }
+.gscheme { display: grid; justify-items: start; gap: 3px; margin: 6px 0 2px; }
+.gscheme__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 8px);
+  gap: 1px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--lcd, #bbb) 26%, transparent);
+  border-radius: 6px;
+}
+.gscheme__grid i { width: 8px; height: 8px; border-radius: 1px; background: color-mix(in srgb, var(--text) 9%, transparent); }
+.gscheme__grid i[data-v='#'] { background: var(--text); }
+.gscheme__grid i[data-v='*'] { background: var(--text); animation: gblink 0.9s steps(1) infinite; }
+.gscheme__cap { font-size: 0.64rem; line-height: 1.3; color: var(--muted); }
+/* Панель консоли с играми занимает всю доступную высоту, а вкладка игры забирает остаток (прокрутка — внутри вкладки). Схема клавиш у консолей с меню — раскрывашка. */
+@media (min-width: 900px) {
+  .side--info[data-toy] { height: calc(100dvh - 100px); grid-template-rows: auto auto minmax(0, 1fr); }
+  .side--info[data-toy] .side__sec--games { display: flex; flex-direction: column; min-height: 0; }
+  .side--info[data-toy] .gpanel { flex: 1 1 auto; max-height: none; min-height: 150px; }
+}
+.side__sec--keys > summary { cursor: pointer; list-style: none; }
+.side__sec--keys > summary::-webkit-details-marker { display: none; }
+.side__sec--keys > summary::after { content: '▸'; margin-left: auto; font-size: 0.8rem; color: var(--muted); }
+.side__sec--keys[open] > summary::after { content: '▾'; }
+.side__sec--keys > summary:focus-visible { outline: 2px solid var(--tone, currentColor); outline-offset: 2px; border-radius: 4px; }
+.side__sec--keys:not([open]) { padding-bottom: 2px; }
+@keyframes gblink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.18; } }
+@media (prefers-reduced-motion: reduce) { .gscheme__grid i[data-v='*'] { animation: none; opacity: 0.55; } }
+
 
 /* ── Кнопка 3D-упаковки: размер по высоте окна (панель Mario должна помещаться без прокрутки) ─────────── */
 .side--info { position: relative; }

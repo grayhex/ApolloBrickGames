@@ -150,6 +150,17 @@ describe('основа игры: счёт, жизни, уровни', () => {
     expect(game.score).toBeGreaterThan(240);
   });
 
+  it('бонус за полные жизни входит в рекорд: рекорд не ниже счёта', () => {
+    const game = new DemoGame();
+    game.start();
+    for (let i = 0; i < 6; i++) game.step(makeBrickInput(['fire'])); // жизни полные (4), дальше каждые 50 очков — бонус 5 очков
+    expect(game.lives).toBe(4);
+    for (let i = 0; i < 12; i++) {
+      game.step(makeBrickInput(['fire']));
+      expect(game.hiScore, `шаг ${i}`).toBeGreaterThanOrEqual(game.score);
+    }
+  });
+
   it('потеря жизни: взрыв без ввода, затем игра продолжается; на последней жизни — конец игры', () => {
     const game = new DemoGame();
     game.start();
