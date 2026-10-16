@@ -1,4 +1,6 @@
-import './alibaba.css';
+import './exhibit.css';
+import './minibrick.css';
+import { applyMiniBrickModel, miniBrickMark } from './minibrickModel';
 import { browserGamepadProvider } from '../input/gamepad';
 import { browserStorage, musicVolumeOf } from '../input/settings';
 import { alibabaMark, applyAlibabaModel } from './alibabaModel';
@@ -15,13 +17,14 @@ import { parseView, type View } from './view';
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 /** An exhibit only: no BrickConsole, audio, simulated game, boot sequence or animation-frame loop. */
-export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
+export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry): Promise<AppHandle> {
   const life = new Lifecycle(),
     { signal } = life,
-    model = TOYS.alibaba;
+    model = TOYS[id];
   document.body.dataset['chrome'] = 'toy';
   document.body.dataset['motion'] = 'off';
-  applyAlibabaModel();
+  if (id === 'alibaba') applyAlibabaModel();
+  else applyMiniBrickModel();
   const toy = byId('toy'),
     arena = byId('arena'),
     area = byId('game-area'),
@@ -39,13 +42,13 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
   const lid = byId('lid');
   lid.style.setProperty('--lcd-bg', model.lcd.bg);
   lid.style.setProperty('--lcd-aspect', '254 / 314');
-  byId('stage').dataset['i18nAttrs'] = 'aria-label=stage.label.alibaba';
+  byId('stage').dataset['i18nAttrs'] = `aria-label=${model.stageLabel}`;
   const hub = new InputHub({ keyboardTarget: window, provider: browserGamepadProvider(), storage: browserStorage(), isKeyboardActive: () => false });
   setLang(hub.settings.display.lang);
   const focus = (): void => {
     if (view !== 'closed') area.focus({ preventScroll: true });
   };
-  const notice = h('dialog', { class: 'settings alibaba-notice', id: 'alibaba-notice', 'aria-labelledby': 'alibaba-notice-title' });
+  const notice = h('dialog', { class: 'settings alibaba-notice', id: `${id}-notice`, 'aria-labelledby': `${id}-notice-title` });
   document.body.append(notice);
   const help = byId<HTMLDialogElement>('help');
   const closeDialog = (dialog: HTMLDialogElement): void => {
@@ -56,12 +59,12 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
     const close = h('button', { class: 'btn btn--primary', type: 'button' }, t('common.close'));
     close.addEventListener('click', () => closeDialog(dialog), { signal });
     dialog.replaceChildren(
-      h('h2', { id: dialog === notice ? 'alibaba-notice-title' : 'alibaba-help-title' }, t('alibaba.unavailable')),
-      h('p', {}, t('alibaba.description')),
-      h('p', {}, t('alibaba.details')),
+      h('h2', { id: dialog === notice ? `${id}-notice-title` : `${id}-help-title` }, t('alibaba.unavailable')),
+      h('p', {}, t(`${id}.description`)),
+      h('p', {}, t(`${id}.details`)),
       close,
     );
-    dialog.setAttribute('aria-labelledby', dialog === notice ? 'alibaba-notice-title' : 'alibaba-help-title');
+    dialog.setAttribute('aria-labelledby', dialog === notice ? `${id}-notice-title` : `${id}-help-title`);
   };
   const showNotice = (): void => {
     if (notice.open) return;
@@ -96,8 +99,8 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
   };
   const none = (): void => {};
   const controls = new ControlPanel(byId('side-ctl'), {
-    toy: 'alibaba',
-    shells: ['white'],
+    toy: id,
+    shells: model.shells,
     slots: [],
     bundled: [],
     levelsDisabled: true,
@@ -141,7 +144,7 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
     corner.setPaused(false);
     corner.setDevices({ keyboard: 'ready', gamepad: 'hidden', padName: null });
     controls.update({
-      shell: 'white',
+      shell: model.defaultShell,
       sound: false,
       volume: display.volume,
       musicVolume: musicVolumeOf(display),
@@ -159,21 +162,21 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
     lang.setAttribute('aria-label', t('corner.lang'));
     lang.title = t('corner.langTitle');
     const info = byId('side-info');
-    info.dataset['toy'] = 'alibaba';
+    info.dataset['toy'] = id;
     info.replaceChildren(
-      h('div', { class: 'alibaba-info__mark' }, alibabaMark('dance')),
+      h('div', { class: 'alibaba-info__mark' }, id === 'alibaba' ? alibabaMark('dance') : miniBrickMark('label')),
       h(
         'section',
         { class: 'side__sec' },
         h('h2', { class: 'side__h', id: 'info-title' }, model.name),
         h('p', { class: 'alibaba-status' }, t('alibaba.unavailable')),
-        h('p', { class: 'gtext' }, t('alibaba.description')),
+        h('p', { class: 'gtext' }, t(`${id}.description`)),
       ),
       h(
         'section',
         { class: 'side__sec' },
         h('h3', { class: 'side__h' }, t('alibaba.reference')),
-        h('p', { class: 'gtext' }, t('alibaba.details')),
+        h('p', { class: 'gtext' }, t(`${id}.details`)),
         h('p', { class: 'gtext' }, t('alibaba.tip')),
       ),
     );
@@ -231,10 +234,14 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
   onLangChange(relabel, signal);
   for (const dialog of [notice, help]) {
     dialog.addEventListener('close', focus, { signal });
-    dialog.addEventListener('cancel', (event) => {
-      event.preventDefault();
-      closeDialog(dialog);
-    }, { signal });
+    dialog.addEventListener(
+      'cancel',
+      (event) => {
+        event.preventDefault();
+        closeDialog(dialog);
+      },
+      { signal },
+    );
   }
   life.onDispose(() => {
     settings.close();
@@ -263,5 +270,5 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
     },
     { signal },
   );
-  return { dispose: () => life.dispose(), carry: () => ({ view, shell: 'white', powered: false }) };
+  return { dispose: () => life.dispose(), carry: () => ({ view, shell: model.defaultShell, powered: false }) };
 }

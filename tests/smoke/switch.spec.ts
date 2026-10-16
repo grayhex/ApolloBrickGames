@@ -299,7 +299,7 @@ test.describe('переключение игрушек на месте', () => {
   test('щелчок с Ctrl или Shift и средняя кнопка не перехватываются (остаётся обычная навигация браузера); обычный — перехватывается', async ({ page }) => {
     await ready(page, '?power=on');
     const hrefs = await page.locator('.toysw__item').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-    expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual(['', '?toy=clock99', '?toy=seabattle', '?toy=tank168', '?toy=alibaba']);
+    expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual(['', '?toy=clock99', '?toy=seabattle', '?toy=tank168', '?toy=alibaba', '?toy=minibrick']);
     // Щелчок посылается событием: после обработчика переключателя фиксируем, отменено ли действие по умолчанию (и отменяем сами, чтобы страница не ушла).
     const prevented = await page.evaluate(() => {
       const link = document.querySelector<HTMLAnchorElement>('.toysw__item[data-toy="tank168"]');

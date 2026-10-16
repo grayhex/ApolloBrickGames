@@ -18,7 +18,7 @@ test('семейства сохраняют игру, ссылки перекл�
   await page.locator('#toy-family-other').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
-  await expect(page.locator('[data-family=other] .toysw__item')).toHaveCount(1);
+  await expect(page.locator('[data-family=other] .toysw__item')).toHaveCount(2);
   await page.locator('.toysw__item[data-toy=alibaba]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
@@ -107,9 +107,10 @@ test('на узких экранах оба семейства помещают�
   }
 });
 
-test('иная геометрия Alibaba сохраняет ось крышки и неподвижный шарнир во время открытия', async ({ page }) => {
+for (const id of ['alibaba', 'minibrick']) test(`геометрия ${id} сохраняет ось крышки и неподвижный шарнир во время открытия`, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await exhibit(page, '');
+  await page.goto(`./?toy=${id}`);
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
   await expect(page.locator('body')).not.toHaveAttribute('data-motion', 'off');
   const rows = await page.evaluate(
     () =>

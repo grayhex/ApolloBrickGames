@@ -6,13 +6,13 @@ import type { ToyKeyId } from './toy';
 
 /**
  * Коллекция: четыре складные игрушки Apollo на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
- * Alibaba — отдельный корпус без игрового движка, в группе «Другие».
+ * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка, в группе «Другие».
  * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» используют общий BrickConsole с меню игр. Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
  * цвет и вид (свёрнута / полная / только экран) сохраняются, страница не перезагружается (см. `host.ts`).
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -314,6 +314,16 @@ export const TOYS: Record<ToyId, ToyModel> = {
     lcd: { bg: '#8e9781', ink: '#303a30' }, stageLabel: 'stage.label.alibaba',
     labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'S/P'},{key:'sound',top:'MUTE'},{key:'fire',top:'QUIT'}],
       up: '', left: 'LEFT', right: 'RIGHT', down: 'DOWN', big: 'ROTATE' },
+    keyWhat: { onoff: 'alibaba.unavailable' },
+  },
+  minibrick: {
+    id: 'minibrick', family: 'other', name: 'Mini Brick Game B-S96',
+    shells: ['red'], defaultShell: 'red', games: [], defaultGame: null,
+    gamesCount: 96, menu: false, gameKeys: 'letters', glyph: 'square', panel: 'sea',
+    deco: 'frame', leds: false, info: true, pack: null, levels: false,
+    lcd: { bg: '#c6cfab', ink: '#303a30' }, stageLabel: 'stage.label.minibrick',
+    labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START',bottom:'PAUSE'},{key:'sound',top:'MUSIC',bottom:'VOICE'},{key:'fire',top:'RESET'}],
+      up: '', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'ROTATE' },
     keyWhat: { onoff: 'alibaba.unavailable' },
   },
 };

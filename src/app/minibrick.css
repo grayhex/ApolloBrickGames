@@ -1,0 +1,70 @@
+/* Same folding mechanism; B-S96 has its own two-colour mould and physical control layout. */
+.toy[data-model='minibrick'] {
+  --rim: #df3b24;
+  --rim-dark: #a6291b;
+  --lcd-dim: none;
+}
+.toy[data-model='minibrick'] .base {
+  aspect-ratio: 400 / 650;
+  background: #d6351e;
+}
+.toy[data-model='minibrick'] .lid__bezel {
+  left: 18%;
+  top: 12%;
+  width: 64%;
+  height: 79%;
+  padding: 1.6cqw;
+  border: 0.6cqw solid #125375;
+  background: #236f8f;
+  box-shadow:
+    inset 0.5cqw 0.6cqw 0.8cqw #0b3b52,
+    inset -0.3cqw -0.3cqw 0.4cqw #6aa0ac;
+}
+.toy[data-model='minibrick'] .lid__window {
+  background: linear-gradient(110deg, #a8b594, #d1d7b5 85%);
+  box-shadow: inset 0.7cqw 0.8cqw 1cqw #697c61;
+}
+.minibrick-lcd {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.toy[data-model='minibrick'] .toy__band::before {
+  background: linear-gradient(110deg, #141a1c, #343c3a, #171d1e);
+  border-radius: 0;
+  box-shadow: inset 0 -0.6cqw 0.8cqw #070b0a;
+}
+.minibrick-key {
+  border-color: #9a9d21;
+  background: radial-gradient(circle at 38% 26%, #fff366, #e6df29 65%, #b7b92b);
+  box-shadow:
+    inset 0.2cqw 0.3cqw 0.5cqw #fbf680,
+    inset -0.2cqw -0.2cqw 0.5cqw #9fa229,
+    0 0.45cqw 0.6cqw #183b46;
+}
+.minibrick-key[data-key='jump'] {
+  border-radius: 9cqw;
+  transform: rotate(-15deg);
+}
+.minibrick-key[data-key='jump']:active {
+  transform: rotate(-15deg) translateY(0.35cqw);
+}
+.minibrick-key:focus-visible {
+  outline-color: #fff4a2;
+}
+.toy[data-model='minibrick'] #game-area {
+  width: 100%;
+}
+@media (max-width: 899px) {
+  body[data-chrome='toy'] .arena[data-model='minibrick'] {
+    --toy-essential: 2.12;
+  }
+}
+.toy[data-model='minibrick'] #game-area {
+  min-width: 0;
+}
+.toy[data-model='minibrick'] #screen {
+  display: none;
+}

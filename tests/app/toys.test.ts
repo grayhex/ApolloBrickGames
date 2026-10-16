@@ -11,9 +11,9 @@ import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindin
 import { SHELLS } from '../../src/input/settings';
 
 describe('выбор игрушки', () => {
-  it('четыре Apollo и Alibaba: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
+  it('четыре Apollo и два экспоната: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
     expect([...APOLLO_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
-    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba']);
+    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick']);
     expect(parseToy('?toy=alibaba')).toBe('alibaba');
     expect(DEFAULT_TOY).toBe('mario');
     expect(parseToy('')).toBe('mario');
@@ -214,4 +214,10 @@ it('Alibaba — экспонат без игр и движка, отдельно
   expect(TOYS.alibaba).toMatchObject({family:'other', games:[], defaultGame:null, menu:false, shells:['white']});
   expect(engineOf(TOYS.alibaba)).toBe('exhibit');
   for (const id of APOLLO_IDS) expect(TOYS[id].family).toBe('apollo');
+});
+
+it('Mini Brick Game — отдельный красно-синий экспонат без игр', () => {
+  expect(parseToy('?toy=minibrick')).toBe('minibrick');
+  expect(TOYS.minibrick).toMatchObject({family:'other', games:[], defaultGame:null, menu:false, shells:['red']});
+  expect(engineOf(TOYS.minibrick)).toBe('exhibit');
 });
