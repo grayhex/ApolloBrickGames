@@ -11,8 +11,6 @@ const area = (page: Page, key: string): Promise<string> =>
     .catch(() => '');
 const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 
-type TetrisDebug = Window & { __tetris: { piece: { x: number; y: number; kind: string } | null; phase: string } };
-
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -34,19 +32,24 @@ const tabs = (page: Page) => page.locator('#side-info .gtab');
 const selected = (page: Page) => page.locator('#side-info .gtab[aria-selected="true"]');
 
 test.describe('вкладки игр', () => {
-  test('«168 в 1 танк»: девять игр 1–9 по списку владельца; открыт тетрис (8), играющий сейчас помечен', async ({ page }) => {
+  test('«168 в 1 танк»: девять игр 1–9 по списку владельца; открыта игра, выбранная в меню консоли (1, танки), она же помечена', async ({ page }) => {
     await open(page, 'toy=tank168');
     await expect(tabs(page)).toHaveText(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
     expect(await tabs(page).evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset['game']))).toEqual([
       'tank', 'frog', 'racing', 'racing-shooting', 'shooting-array', 'shooting-figures', 'construction', 'tetris', 'tetris-pentix',
     ]);
-    await expect(selected(page)).toHaveText('8');
-    await expect(page.locator('#side-info .gtab[data-playing]')).toHaveText('8');
+    await expect(selected(page)).toHaveText('1');
+    await expect(page.locator('#side-info .gtab[data-playing]')).toHaveText('1');
+    await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Танки');
+    await expect(page.locator('#gpanel .chip').first()).toHaveText('есть (приближённо)');
+    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 5');
+    await expect(page.locator('#gpanel .chip')).toHaveCount(2); // число вариантов — одним значком
+    await expect(page.locator('#side-info #keymap')).toContainText('ROTATE'); // управление — кнопки консоли с меню
+    // Тетрис (8) — 51 вариант; правил и очков заглушки у консоли с меню нет.
+    await tabs(page).nth(7).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Тетрис');
-    await expect(page.locator('#gpanel .chip').first()).toHaveText('пока обычный тетрис');
     await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 51');
-    await expect(page.locator('#gpanel #rules-title')).toHaveText('Как играть'); // у тетриса — правила и очки
-    await expect(page.locator('#side-info #keymap')).toContainText('Поворот'); // управление остаётся
+    await expect(page.locator('#gpanel #rules-title')).toHaveCount(0);
   });
 
   test('щелчок по вкладке открывает описание игры: что за игра, что известно, что не установлено, откуда сведения', async ({ page }) => {
@@ -54,7 +57,8 @@ test.describe('вкладки игр', () => {
     await tabs(page).nth(4).click();
     await expect(selected(page)).toHaveText('5');
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Стрельба по массиву и точкам');
-    await expect(page.locator('#gpanel .chip').first()).toHaveText('ещё не восстановлена');
+    await expect(page.locator('#gpanel .chip').first()).toHaveText('есть (приближённо)');
+    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 16');
     await expect(page.locator('#gpanel')).toContainText('отделяются'); // про отделяющиеся точки-враги
     await expect(page.locator('#gpanel .gpanel__open')).toContainText('Не установлено');
     await expect(page.locator('#gpanel .gpanel__src')).toContainText('Источник');
@@ -72,6 +76,8 @@ test.describe('вкладки игр', () => {
   test('стрелки, Home и End перебирают вкладки; выбранная вкладка и фокус совпадают', async ({ page }) => {
     await open(page, 'toy=tank168');
     await tabs(page).nth(7).focus();
+    await page.keyboard.press('Enter'); // выбранная вкладка — по Enter; стрелки идут от неё
+    await expect(selected(page)).toHaveText('8');
     await page.keyboard.press('ArrowRight');
     await expect(selected(page)).toHaveText('9');
     await page.keyboard.press('ArrowRight'); // по кругу
@@ -87,14 +93,17 @@ test.describe('вкладки игр', () => {
     expect(await tabs(page).evaluateAll((items) => items.filter((item) => (item as HTMLElement).tabIndex === 0).length)).toBe(1);
   });
 
-  test('«Морской бой»: режимы A–F по списку владельца, открыт E (обычный тетрис); арканоид с оговоркой про «теннис»; коробки нет', async ({ page }) => {
+  test('«Морской бой»: режимы A–F по списку владельца, открыта игра, выбранная в меню консоли (A); арканоид с оговоркой про «теннис»; коробки нет', async ({ page }) => {
     await open(page, 'toy=seabattle');
     await expect(tabs(page)).toHaveText(['A', 'B', 'C', 'D', 'E', 'F']);
     expect(await tabs(page).evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset['game']))).toEqual([
       'sea-battle', 'tank', 'romeo-juliet', 'tetris-big', 'tetris', 'arkanoid',
     ]);
-    await expect(selected(page)).toHaveText('E');
+    await expect(selected(page)).toHaveText('A');
+    await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Морской бой');
+    await tabs(page).nth(4).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Тетрис');
+    await expect(page.locator('#gpanel .chip').nth(1)).toHaveText('Вариантов: 20'); // у «Морского боя» — по списку владельца
     await tabs(page).nth(5).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Арканоид');
     await expect(page.locator('#gpanel .gpanel__open')).toContainText('теннис');
@@ -113,18 +122,16 @@ test.describe('вкладки игр', () => {
     await expect(page.locator('[data-box-open]')).toHaveCount(0);
   });
 
-  test('щелчок мышью по вкладке во время игры возвращает клавиатуру игре; с клавиатуры (Enter) фокус остаётся на вкладке', async ({ page }) => {
+  test('щелчок мышью по вкладке во время игры возвращает клавиатуру консоли; с клавиатуры (Enter) фокус остаётся на вкладке', async ({ page }) => {
     await open(page, 'toy=tank168');
     await page.keyboard.press('Enter');
     await expect.poll(phase(page)).toBe('playing');
-    const x = (): Promise<number> => page.evaluate(() => (window as unknown as TetrisDebug).__tetris.piece?.x ?? -1);
     await tabs(page).nth(2).click();
     await expect(selected(page)).toHaveText('3');
-    expect(await page.evaluate(() => document.activeElement?.id)).toBe('game-area'); // клавиши снова управляют игрой
-    const before = await x();
-    await page.keyboard.press('ArrowLeft');
-    await expect.poll(x).toBeLessThan(before);
-    // С клавиатуры фокус остаётся на вкладке: по стрелкам перебираются вкладки (игрой управлять с неё нельзя, пока фокус на вкладке).
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('game-area'); // клавиши снова идут консоли
+    await page.keyboard.press('p');
+    await expect.poll(phase(page)).toBe('paused'); // клавиша P дошла до консоли
+    // С клавиатуры фокус остаётся на вкладке: по стрелкам перебираются вкладки (консолью управлять с неё нельзя, пока фокус на вкладке).
     await tabs(page).nth(2).focus();
     await page.keyboard.press('Enter');
     expect(await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['game'])).toBe('racing');
@@ -149,7 +156,7 @@ test.describe('вкладки игр', () => {
     await page.locator('.toysw__item[data-toy="seabattle"]').click();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'seabattle');
     await expect(tabs(page)).toHaveText(['A', 'B', 'C', 'D', 'E', 'F']);
-    await expect(selected(page)).toHaveText('E');
+    await expect(selected(page)).toHaveText('A'); // открыта игра, выбранная в меню консоли
     await expect(page.locator('[data-box-open]')).toHaveCount(0);
     await page.locator('.toysw__item[data-toy="tank168"]').click();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'tank168');
@@ -298,13 +305,15 @@ test.describe('3D-коробка «168 в 1 танк»', () => {
     await open(page, 'toy=tank168');
     await page.keyboard.press('Enter');
     await expect.poll(phase(page)).toBe('playing');
-    const x = await page.evaluate(() => (window as unknown as TetrisDebug).__tetris.piece?.x ?? -1);
+    const state = (): Promise<string> => page.evaluate(() => JSON.stringify({ ...document.getElementById('game-area')?.dataset }));
     await page.locator('[data-box-open]').click();
     await expect.poll(phase(page)).toBe('paused');
+    const before = JSON.parse(await state()) as Record<string, string>;
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('Space');
-    expect(await page.evaluate(() => (window as unknown as TetrisDebug).__tetris.piece?.x ?? -1)).toBe(x);
+    const after = JSON.parse(await state()) as Record<string, string>;
+    for (const key of ['game', 'mode', 'level', 'speed', 'score', 'tick']) expect(after[key], key).toBe(before[key]); // клавиши в консоль не ушли
     expect(await phase(page)()).toBe('paused');
     await page.locator('#box-dialog .btn--primary').click(); // «Закрыть»
     await expect(dialog(page)).not.toHaveAttribute('open', '');
@@ -368,28 +377,30 @@ test.describe('3D-упаковка Crocodile Mario (блистерная кар�
     const fit = await fits(page);
     expect(fit.scroll).toBeLessThanOrEqual(fit.client + 1);
     // Мини-коробка внутри строки не пропала.
-    await expect(button(page).locator('.box3d__face')).toHaveCount(16);
+    expect(await button(page).locator('.box3d__face').count()).toBeGreaterThan(40); // карточка, игрушка со стенками по контуру и блистер
   });
 
-  test('диалог: карточка, игрушка и прозрачный блистер — 16 граней; картинки отдаются; блик пластика не затемняется', async ({ page }) => {
+  test('диалог: карточка, раскрытая игрушка со стенками и прозрачный блистер; картинки отдаются; пластик не затемняется', async ({ page }) => {
     await gotoMario(page, 1440, 900);
     await button(page).click();
     await expect(dialog(page)).toHaveAttribute('open', '');
     await expect(dialog(page).locator('h2')).toHaveText('Упаковка Crocodile Mario');
     await expect(viewer(page)).toHaveAttribute('data-pack', 'mario');
-    await expect(viewer(page).locator('.box3d__face')).toHaveCount(16);
+    expect(await viewer(page).locator('.box3d__face').count()).toBeGreaterThan(40);
     const urls = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
       faces.map((face) => /url\("?([^")]+)"?\)/.exec((face as HTMLElement).style.backgroundImage)?.[1] ?? '').filter(Boolean),
     );
-    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'front.webp', 'toy.webp']);
+    expect(urls.map((url) => url.replace(/^.*\/pack-mario\//, '')).sort()).toEqual(['back.webp', 'bubble.svg', 'front.webp', 'toy-base.webp', 'toy-lid.webp']);
     const statuses = await page.evaluate(async (list) => Promise.all(list.map(async (url) => (await fetch(url)).status)), urls);
-    expect(statuses).toEqual([200, 200, 200]);
+    expect(statuses).toEqual([200, 200, 200, 200, 200]);
     const dims = await viewer(page).locator('.box3d__face').evaluateAll((faces) =>
       Object.fromEntries(faces.map((face) => [(face as HTMLElement).dataset['face'], (face as HTMLElement).style.getPropertyValue('--dim')])),
     );
     expect(dims['bubble-front']).toBe(''); // прозрачный пластик не затемняется
     expect(dims['card-front']).not.toBe('');
-    expect(dims['toy-front']).not.toBe('');
+    expect(dims['toy-lid-front']).not.toBe('');
+    expect(dims['toy-base-front']).not.toBe('');
+    expect(dims['toy-base-wall-0']).not.toBe('');
     await expect(viewer(page)).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog(page)).not.toHaveAttribute('open', '');

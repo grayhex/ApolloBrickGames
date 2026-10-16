@@ -1,4 +1,4 @@
-import { GAMES, type GameEngine, type GameId, type GameStatus } from '../games/catalog';
+import { GAMES, type GameId, type GameStatus } from '../games/catalog';
 import { SHELLS, type Shell } from '../input/settings';
 import type { MsgKey } from './messages';
 import type { PackId } from './packs';
@@ -33,9 +33,11 @@ export interface ToyGame {
   id: GameId;
   /** Название так, как напечатано на наклейке или упаковке. */
   label: string;
-  /** Сколько вариантов (уровней) у игры по упаковке: `MARIO (9)`, `TETRIS (99)`. */
+  /** Сколько вариантов (уровней) у игры по упаковке или по наблюдениям владельца: `MARIO (9)`, `TETRIS (99)`, танки (5). */
   variants?: number;
   status: GameStatus;
+  /** Консоли с меню: какие варианты игры (индексы в её списке) показывает эта консоль; без поля — все реализованные. */
+  modes?: readonly number[];
 }
 
 export interface ToyModel {
@@ -52,6 +54,11 @@ export interface ToyModel {
   defaultGame: GameId;
   /** Сколько игр заявлено на наклейке в целом («168 в 1»), если больше названных. */
   gamesCount?: number;
+  /**
+   * Консоль с меню игр (`games` в порядке меню, знак — `gameKey`): после включения на экране знак игры, номер варианта и картинка (`src/brick/console.ts`);
+   * иначе — тетрис-заглушка. Игры без движка (`status: 'planned'`) в меню выбираются, но не запускаются.
+   */
+  menu: boolean;
   /** Чем отмечены игры в меню устройства: цифрами (1, 2, 3…) или буквами (A, B, C…, как у «Морского боя»). */
   gameKeys: 'digits' | 'letters';
   /** Рисунок ячейки матрицы: звёздочка или точка в прямоугольнике. */
@@ -104,6 +111,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
       { id: 'shooting', label: 'SHOOTING', variants: 1, status: 'planned' },
     ],
     defaultGame: 'mario',
+    menu: false,
     gameKeys: 'digits',
     glyph: 'square',
     panel: 'sea',
@@ -131,6 +139,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
       { id: 'racing', label: 'автогонка', status: 'planned' },
     ],
     defaultGame: 'tetris',
+    menu: false,
     gameKeys: 'digits',
     glyph: 'star',
     panel: 'clock',
@@ -174,15 +183,18 @@ export const TOYS: Record<ToyId, ToyModel> = {
     shells: ['red', 'blue'],
     defaultShell: 'red',
     // Режимы A–F — по списку владельца. На наклейке напечатаны «танк, тетрис, теннис, Ромео и Джульетта»: «теннис», видимо, и есть арканоид (F) — не подтверждено.
+    // Танки, оба тетриса и арканоид играют по правилам донора (`src/brick`), «Морской бой» и «Ромео и Джульетта» ещё не восстановлены.
     games: [
       { id: 'sea-battle', label: 'Морской бой', status: 'planned' },
-      { id: 'tank', label: 'Танки', status: 'planned' },
-      { id: 'romeo-juliet', label: 'Ромео и Джульетта', status: 'planned' },
-      { id: 'tetris-big', label: 'Тетрис с большими фигурами', status: 'planned' },
-      { id: 'tetris', label: 'Тетрис', status: 'placeholder' },
-      { id: 'arkanoid', label: 'Арканоид', status: 'planned' },
+      { id: 'tank', label: 'Танки', variants: 2, modes: [0, 1], status: 'ready' },
+      { id: 'romeo-juliet', label: 'Ромео и Джульетта (постройка лесенки)', status: 'planned' },
+      { id: 'tetris-big', label: 'Тетрис с большими фигурами', variants: 20, status: 'ready' },
+      // Заявлено 20 режимов, у игры ядра их 51: показываются первые 20 (какие именно режимы у устройства — допущение).
+      { id: 'tetris', label: 'Тетрис', variants: 20, modes: Array.from({ length: 20 }, (_, index) => index), status: 'ready' },
+      { id: 'arkanoid', label: 'Арканоид', variants: 32, status: 'ready' },
     ],
-    defaultGame: 'tetris',
+    defaultGame: 'tank',
+    menu: true,
     gameKeys: 'letters',
     glyph: 'square',
     panel: 'sea',
@@ -210,12 +222,12 @@ export const TOYS: Record<ToyId, ToyModel> = {
       onoff: 'help.row.onoff',
       sp: 'help.row.sp',
       sound: 'help.row.sound',
-      fire: 'help.row.reset',
-      left: 'help.t.left',
-      right: 'help.t.right',
-      up: 'help.t.rotate',
-      down: 'help.t.down',
-      jump: 'help.t.rotate',
+      fire: 'help.row.menu',
+      left: 'help.m.left',
+      right: 'help.m.right',
+      up: 'help.m.up',
+      down: 'help.m.down',
+      jump: 'help.m.rotate',
     },
   },
   // «168 в 1 танк»: красный и жёлтый корпуса (по фото); те же кнопки и надписи, что у «Морского боя», а рамка с завитками и светодиоды — как у «Часов+99».
@@ -228,18 +240,19 @@ export const TOYS: Record<ToyId, ToyModel> = {
     // Девять игр меню по наблюдениям владельца (порядок — как в меню); на упаковке и наклейке напечатаны «танк, автогонки, тетрис, стрельба, лягушка».
     // Из заявленных 168 — это игры, число вариантов у большинства не установлено.
     games: [
-      { id: 'tank', label: 'Танки', variants: 5, status: 'planned' },
-      { id: 'frog', label: 'Лягушка', status: 'planned' },
-      { id: 'racing', label: 'Гонки', status: 'planned' },
-      { id: 'racing-shooting', label: 'Гонки со стрельбой', status: 'planned' },
-      { id: 'shooting-array', label: 'Стрельба по массиву и точкам', status: 'planned' },
-      { id: 'shooting-figures', label: 'Стрельба по фигурам', status: 'planned' },
-      { id: 'construction', label: 'Строитель', status: 'planned' },
-      { id: 'tetris', label: 'Тетрис', variants: 51, status: 'placeholder' },
-      { id: 'tetris-pentix', label: 'Тетрис Pentix', status: 'planned' },
+      { id: 'tank', label: 'Танки', variants: 5, status: 'ready' },
+      { id: 'frog', label: 'Лягушка', status: 'ready' },
+      { id: 'racing', label: 'Гонки', status: 'ready' },
+      { id: 'racing-shooting', label: 'Гонки со стрельбой', status: 'ready' },
+      { id: 'shooting-array', label: 'Стрельба по массиву и точкам', status: 'ready' },
+      { id: 'shooting-figures', label: 'Стрельба по фигурам', status: 'ready' },
+      { id: 'construction', label: 'Строитель', status: 'ready' },
+      { id: 'tetris', label: 'Тетрис', variants: 51, status: 'ready' },
+      { id: 'tetris-pentix', label: 'Тетрис Pentix', status: 'ready' },
     ],
-    defaultGame: 'tetris',
+    defaultGame: 'tank',
     gamesCount: 168,
+    menu: true,
     gameKeys: 'digits',
     glyph: 'square',
     panel: 'tank',
@@ -267,12 +280,12 @@ export const TOYS: Record<ToyId, ToyModel> = {
       onoff: 'help.row.onoff',
       sp: 'help.row.sp',
       sound: 'help.row.sound',
-      fire: 'help.row.reset',
-      left: 'help.t.left',
-      right: 'help.t.right',
-      up: 'help.t.rotate',
-      down: 'help.t.down',
-      jump: 'help.t.rotate',
+      fire: 'help.row.menu',
+      left: 'help.m.left',
+      right: 'help.m.right',
+      up: 'help.m.up',
+      down: 'help.m.down',
+      jump: 'help.m.rotate',
     },
   },
 };
@@ -282,9 +295,9 @@ export function gameKey(model: ToyModel, index: number): string {
   return model.gameKeys === 'letters' ? String.fromCharCode(65 + index) : String(index + 1);
 }
 
-/** Движок, которым сейчас играет игрушка: оригинальный Mario или тетрис-заглушка. */
-export function engineOf(model: ToyModel): GameEngine {
-  return GAMES[model.defaultGame].engine ?? 'tetris';
+/** Оболочка, в которой играет игрушка: оригинальный Mario или оболочка «тетрисных» игрушек (тетрис-заглушка и консоли с меню игр). */
+export function engineOf(model: ToyModel): 'mario' | 'tetris' {
+  return GAMES[model.defaultGame].engine === 'mario' ? 'mario' : 'tetris';
 }
 
 /** Игрушка из адреса: `?toy=clock99`. Неизвестное значение — Crocodile Mario. */

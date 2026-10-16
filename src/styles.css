@@ -1032,8 +1032,8 @@ body[data-chrome='toy'] {
 
 .lid__cover {
   position: absolute;
-  /* Оборот чуть уже нижней половины: крышка сидит в корпусе, а не шире него (по фото). */
-  inset: 0 1.8cqw;
+  /* Оборот той же ширины, что и нижняя половина (по фото красной игрушки: бока складной игрушки ровные, без ступеньки на стыке). */
+  inset: 0;
   display: block;
   margin: 0;
   padding: 0;
@@ -1265,17 +1265,32 @@ body:not([data-chrome='toy']) .side {
   gap: 4px;
 }
 
+/* Индикаторы ввода и паузы — отдельные цветные таблетки (не одна общая плашка): у каждого свой цвет, погашенный тусклее и тоньше. */
 .dev {
+  --dev-c: #56b6ff;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  color: var(--corner-fg);
-  background: var(--corner-bg);
-  border: 1px solid var(--corner-line);
-  border-radius: 50%;
-  opacity: 0.55;
-  transition: color 120ms, background 120ms, border-color 120ms, opacity 120ms;
+  width: 38px;
+  height: 38px;
+  color: color-mix(in srgb, var(--dev-c) 62%, var(--corner-fg));
+  background: color-mix(in srgb, var(--dev-c) 11%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--dev-c) 34%, transparent);
+  border-radius: 13px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 12%), inset 0 1px rgb(255 255 255 / 5%);
+  opacity: 0.6;
+  transition: color 120ms, background 120ms, border-color 120ms, box-shadow 120ms, opacity 120ms;
+}
+
+.dev[data-device='keyboard'] {
+  --dev-c: #56b6ff;
+}
+
+.dev[data-device='gamepad'] {
+  --dev-c: #b48cff;
+}
+
+.dev[data-device='pause'] {
+  --dev-c: #ffb547;
 }
 
 .dev[hidden] {
@@ -1288,18 +1303,18 @@ body:not([data-chrome='toy']) .side {
 }
 
 .dev[data-state='on'] {
-  color: var(--text);
-  background: color-mix(in srgb, var(--hl, #fff) 10%, var(--corner-bg));
-  border-color: var(--hl, #fff);
-  box-shadow: 0 0 0 1px var(--hl-line, transparent);
+  color: var(--dev-c);
+  background: color-mix(in srgb, var(--dev-c) 20%, var(--panel));
+  border-color: var(--dev-c);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dev-c) 38%, transparent), 0 0 14px color-mix(in srgb, var(--dev-c) 34%, transparent);
   opacity: 1;
 }
 
 /* Индикатор паузы рядом с клавиатурой: тусклый, пока игра идёт; на паузе горит и мягко мигает (при «уменьшении движения» — просто горит). */
 .dev--pause[data-state='on'] {
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: #2a1a02;
+  background: var(--dev-c);
+  border-color: var(--dev-c);
   animation: pause-blink 1.4s ease-in-out infinite;
 }
 
@@ -2368,7 +2383,7 @@ body[data-chrome='toy'] .brand {
 }
 
 .brand__logo {
-  display: block;
+  display: none; /* на широком окне логотип стоит слева сверху (`.topleft__logo`); здесь он остаётся только на узком */
   height: 38px;
   width: auto;
   flex: none;
@@ -2484,9 +2499,12 @@ body:not([data-booting]) .chrome-dock {
   animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both;
 }
 .corner { top: 12px; right: 12px; }
-.devs.chrome-dock { position: fixed; top: 12px; left: 12px; z-index: 20; }
-body:not([data-chrome='toy']) .devs.chrome-dock { display: none; }
-:is(.chrome-dock .corner__btn, .chrome-dock .dev) {
+/* Слева сверху: индикаторы ввода и паузы (отдельные цветные таблетки) и логотип Apollo рядом с ними. */
+.topleft { position: fixed; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 14px; }
+body:not([data-chrome='toy']) .topleft { display: none; }
+body:not([data-booting]) .topleft { animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both; }
+.topleft__logo { display: block; height: 36px; width: auto; flex: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.32)); user-select: none; -webkit-user-drag: none; }
+:is(.chrome-dock .corner__btn) {
   width: 34px;
   height: 36px;
   border-radius: 12px;
@@ -2503,13 +2521,12 @@ body:not([data-chrome='toy']) .devs.chrome-dock { display: none; }
   color: var(--text);
 }
 .chrome-dock :is(.corner__btn, .toysw__item):active { transform: translateY(0) scale(.94); }
-.chrome-dock :is([aria-pressed='true'], .dev[data-state='on'], .toysw__item[aria-current='page']) {
+.chrome-dock :is([aria-pressed='true'], .toysw__item[aria-current='page']) {
   background: color-mix(in srgb, var(--accent) 12%, var(--panel));
   border-color: color-mix(in srgb, var(--accent) 36%, transparent);
   color: var(--text);
   box-shadow: inset 0 1px rgb(255 255 255 / 5%);
 }
-.chrome-dock .dev--pause[data-state='on'] { color: var(--accent); }
 .chrome-dock .toysw__item { border-radius: 12px; }
 body[data-chrome='toy'] { --head-h: 60px; }
 body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
@@ -2593,18 +2610,23 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   .toysw__item[aria-current='page'] .toysw__name { display: none; }
   .toysw__item { padding: 0 8px; }
 }
+/* Узкое окно: логотип не помещается рядом с индикаторами (справа угловое меню) — он возвращается в шапку к переключателю. */
+@media (max-width: 560px) {
+  .topleft__logo { display: none; }
+  .brand__logo { display: block; }
+}
 @media (max-width: 640px) {
   .corner { top: 10px; right: 10px; }
-  .devs.chrome-dock { top: 10px; left: 10px; }
+  .topleft { top: 10px; left: 10px; gap: 10px; }
+  .dev { width: 32px; height: 34px; border-radius: 11px; }
   .chrome-dock { padding: 4px; gap: 3px; border-radius: 16px; }
-  :is(.chrome-dock .corner__btn, .chrome-dock .dev) { width: 32px; height: 36px; border-radius: 11px; }
+  :is(.chrome-dock .corner__btn) { width: 32px; height: 36px; border-radius: 11px; }
   .chrome-dock .corner__btn--lang { width: 52px; padding: 0 4px; }
-  .devs.chrome-dock .dev { width: 28px; }
   .side--info[data-toy] .about__sticker { max-width: 240px; margin-inline: auto; }
 }
 @media (hover: none) { .side--info, .side--ctl { opacity: .9; } }
 @media (prefers-reduced-motion: reduce) {
-  body:not([data-booting]) .chrome-dock { animation: none; }
+  body:not([data-booting]) :is(.chrome-dock, .topleft) { animation: none; }
   .chrome-dock :is(.corner__btn, .toysw__item), .shellpick__btn, #view-state .seg__btn, .side--info, .side--ctl { transition: none; }
   .chrome-dock :is(.corner__btn, .toysw__item):is(:hover, :active), :is(#view-state .seg__btn, .shellpick__btn):hover { transform: none; }
 }
@@ -2671,10 +2693,18 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   pointer-events: none;
 }
 
-.toy[data-deco='flourish'] .lid__deco {
-  border: 0.5cqw solid var(--deco);
-  border-radius: 1.2cqw;
-  inset: 2.6cqw;
+/* Рамка из линий («скобки») рисуется SVG по всей крышке (начало координат — край крышки, а не панели: панель отступает на 4,4cqw). */
+.deco__frame {
+  position: absolute;
+  left: -4.4cqw;
+  top: -4.4cqw;
+  width: 100cqw;
+  height: 97.7cqw;
+  overflow: visible;
+  stroke: var(--deco);
+  stroke-width: 0.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
 }
 
 .deco__side {
@@ -2690,11 +2720,11 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
 }
 
 .deco__side[data-side='l'] {
-  left: 0;
+  left: 4.5cqw;
 }
 
 .deco__side[data-side='r'] {
-  right: 0;
+  right: 4.5cqw;
 }
 
 .deco__flourish {
@@ -4026,22 +4056,11 @@ body.route-editor .shell > :not(#fatal) {
 .box3d__face--top { transform: rotateX(90deg) translateZ(calc(var(--bh) / 2)); }
 .box3d__face--bottom { transform: rotateX(-90deg) translateZ(calc(var(--bh) / 2)); }
 
-/* Блистерная карточка Crocodile Mario: картон 660 × 1053 (по фото упаковки), игрушка и прозрачный пластик над ним. Размеры в условных пикселях сцены;
-   лицевые плоскости игрушки и блистера чуть уменьшены (на 1/(1 − z/2400)), чтобы при взгляде прямо они совпадали с рисунком на карточке. */
+/* Блистерная карточка Crocodile Mario: картон 660 × 1053 (по фото упаковки), игрушка и прозрачный пластик над ним. Размеры в условных пикселях сцены. */
 .box3d[data-pack='mario'] {
   --cw: 660px;
   --ch: 1053px;
   --ct: 6px;
-  --tx: 12px;
-  --ty: 137px;
-  --tw: 301px;
-  --th: 506px;
-  --td: 58px;
-  --bx: 19px;
-  --by: 128px;
-  --bwid: 353px;
-  --bhei: 555px;
-  --bz: 78px;
 }
 
 .box3d__face--card-front,
@@ -4076,71 +4095,15 @@ body.route-editor .shell > :not(#fatal) {
 .box3d__face--edge-top { transform: rotateX(90deg) translateZ(calc(var(--ch) / 2 - 3px)); }
 .box3d__face--edge-bottom { transform: rotateX(-90deg) translateZ(calc(var(--ch) / 2 - 3px)); }
 
-/* Игрушка: лицевая сторона — фото, стенки — жёлтый пластик. */
-.box3d__face--toy-front {
-  width: var(--tw);
-  height: var(--th);
-  margin: calc(var(--th) / -2) 0 0 calc(var(--tw) / -2);
-  transform: translate3d(var(--tx), var(--ty), calc(var(--ct) / 2 + var(--td)));
+/* Раскрытая игрушка и блистер: размер и положение лицевых вырезок и боковых стенок задаёт модель (`PackFace.style`, контуры — в `packOutline.ts`).
+   Здесь только вид: у стенок игрушки вертикальный градиент (низ у картона темнее, верхняя кромка с бликом — скруглённое ребро), у блистера — светлая плёнка. */
+.box3d__face--toy-wall {
+  background: linear-gradient(180deg, #a89a22 0%, #d8c72f 30%, #efe047 72%, #fff6a8 94%, #f2e34e 100%);
 }
 
-.box3d__face--toy-left,
-.box3d__face--toy-right {
-  width: var(--td);
-  height: calc(var(--th) - 80px);
-  margin: calc((var(--th) - 80px) / -2) 0 0 calc(var(--td) / -2);
-  background: linear-gradient(90deg, #cdbc2a, #ecdd3e 60%, #d7c730);
+.box3d__face--bubble-wall {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.2) 70%, rgba(255, 255, 255, 0.34));
 }
-
-.box3d__face--toy-top,
-.box3d__face--toy-bottom {
-  width: calc(var(--tw) - 80px);
-  height: var(--td);
-  margin: calc(var(--td) / -2) 0 0 calc((var(--tw) - 80px) / -2);
-  background: linear-gradient(#cdbc2a, #ecdd3e 60%, #d7c730);
-}
-
-.box3d__face--toy-left { transform: translate3d(calc(var(--tx) - var(--tw) / 2), var(--ty), calc(var(--ct) / 2 + var(--td) / 2)) rotateY(-90deg); }
-.box3d__face--toy-right { transform: translate3d(calc(var(--tx) + var(--tw) / 2), var(--ty), calc(var(--ct) / 2 + var(--td) / 2)) rotateY(90deg); }
-.box3d__face--toy-top { transform: translate3d(var(--tx), calc(var(--ty) - var(--th) / 2), calc(var(--ct) / 2 + var(--td) / 2)) rotateX(90deg); }
-.box3d__face--toy-bottom { transform: translate3d(var(--tx), calc(var(--ty) + var(--th) / 2), calc(var(--ct) / 2 + var(--td) / 2)) rotateX(-90deg); }
-
-/* Прозрачный блистер: светлые полупрозрачные стенки и блик на лицевой плоскости. */
-.box3d__face--bubble-front {
-  width: var(--bwid);
-  height: var(--bhei);
-  margin: calc(var(--bhei) / -2) 0 0 calc(var(--bwid) / -2);
-  transform: translate3d(var(--bx), var(--by), calc(var(--ct) / 2 + var(--bz)));
-  border-radius: 80px;
-  box-sizing: border-box;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  background: linear-gradient(118deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.03) 32%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.12) 86%);
-}
-
-.box3d__face--bubble-left,
-.box3d__face--bubble-right {
-  width: var(--bz);
-  height: calc(var(--bhei) - 150px);
-  margin: calc((var(--bhei) - 150px) / -2) 0 0 calc(var(--bz) / -2);
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06));
-}
-
-.box3d__face--bubble-top,
-.box3d__face--bubble-bottom {
-  width: calc(var(--bwid) - 150px);
-  height: var(--bz);
-  margin: calc(var(--bz) / -2) 0 0 calc((var(--bwid) - 150px) / -2);
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06));
-}
-
-.box3d__face--bubble-left { transform: translate3d(calc(var(--bx) - var(--bwid) / 2), var(--by), calc(var(--ct) / 2 + var(--bz) / 2)) rotateY(-90deg); }
-.box3d__face--bubble-right { transform: translate3d(calc(var(--bx) + var(--bwid) / 2), var(--by), calc(var(--ct) / 2 + var(--bz) / 2)) rotateY(90deg); }
-.box3d__face--bubble-top { transform: translate3d(var(--bx), calc(var(--by) - var(--bhei) / 2), calc(var(--ct) / 2 + var(--bz) / 2)) rotateX(90deg); }
-.box3d__face--bubble-bottom { transform: translate3d(var(--bx), calc(var(--by) + var(--bhei) / 2), calc(var(--ct) / 2 + var(--bz) / 2)) rotateX(-90deg); }
 
 .box3d--live {
   cursor: grab;

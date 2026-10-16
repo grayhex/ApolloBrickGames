@@ -75,9 +75,10 @@ export class BoxViewer {
     this.zoomValue = options.zoom ?? 1;
 
     const scene = h('div', { class: 'box3d__scene' });
-    for (const { id, image } of this.model.faces) {
-      const face = h('i', { class: `box3d__face box3d__face--${id}`, 'data-face': id });
+    for (const { id, image, kind, style } of this.model.faces) {
+      const face = h('i', { class: `box3d__face box3d__face--${id}${kind ? ` box3d__face--${kind}` : ''}`, 'data-face': id });
       if (image) face.style.backgroundImage = `url("${faceUrl(this.model, image)}")`;
+      if (style) for (const [name, value] of Object.entries(style)) face.style.setProperty(name, value);
       this.faces.set(id, face);
       scene.append(face);
     }

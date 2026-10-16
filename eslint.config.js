@@ -33,7 +33,7 @@ export default defineConfig(
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
-    files: ['src/core/**/*.ts', 'src/content/**/*.ts'],
+    files: ['src/core/**/*.ts', 'src/content/**/*.ts', 'src/brick/**/*.ts'],
     rules: {
       'no-restricted-globals': ['error', ...browserOnlyGlobals],
       'no-restricted-properties': [

@@ -185,27 +185,130 @@ describe('экран тетриса: перерисовка только при 
 });
 
 describe('значок игры в углу боковой панели', () => {
-  const draw = (panel: 'sea' | 'tank' | 'clock', phase: TetrisScene['phase']): { name: string; alpha: number }[] => {
+  const draw = (
+    panel: 'sea' | 'tank' | 'clock',
+    phase: TetrisScene['phase'],
+    patch: Partial<TetrisScene> = {},
+  ): { name: string; alpha: number }[] => {
     const { canvas, calls } = stubCanvas();
     const screen = new TetrisScreen(canvas, { glyph: 'square', panel, ink: '#000' });
     screen.resize(264, 320, 1);
     screen.setGhost(false);
-    screen.render(scene({ phase, sound: false }));
+    screen.render(scene({ phase, sound: false, ...patch }));
     return calls;
   };
 
-  it('«Морской бой» рисует чашку (блюдце — эллипс), «168 в 1 танк» — танк (гусеница — скруглённый прямоугольник); на экране ожидания они горят', () => {
+  it('«Морской бой» рисует чашку (блюдце — эллипс) на экране ожидания; «168 в 1 танк» — чашку паузы: только на паузе и при полной заливке, танка нет', () => {
     const cup = draw('sea', 'ready');
-    const tank = draw('tank', 'ready');
     expect(cup.filter((call) => call.name === 'ellipse' && call.alpha === 1)).toHaveLength(1);
     expect(cup.filter((call) => call.name === 'roundRect')).toHaveLength(0);
-    expect(tank.filter((call) => call.name === 'roundRect' && call.alpha === 1).length).toBeGreaterThanOrEqual(2); // гусеница и башня
-    expect(tank.filter((call) => call.name === 'ellipse')).toHaveLength(0); // чашки нет
+    for (const phase of ['ready', 'playing', 'over'] as const) {
+      const tank = draw('tank', phase);
+      expect(tank.filter((call) => call.name === 'ellipse')).toHaveLength(0);
+      expect(tank.filter((call) => call.name === 'roundRect')).toHaveLength(0);
+    }
+    const paused = draw('tank', 'paused');
+    expect(paused.filter((call) => call.name === 'ellipse' && call.alpha === 1)).toHaveLength(1);
+    expect(paused.filter((call) => call.name === 'roundRect')).toHaveLength(0);
+    // при полной заливке горит и нота звука (ещё один эллипс — головка ноты)
+    const full = draw('tank', 'playing', { allOn: true });
+    expect(full.filter((call) => call.name === 'ellipse' && call.alpha === 1)).toHaveLength(2);
+    expect(full.filter((call) => call.name === 'roundRect')).toHaveLength(0);
   });
 
-  it('в игре значок гаснет (как чашка у оригинала), а у «Часов+99» значка внизу нет вовсе', () => {
-    expect(draw('tank', 'playing').filter((call) => call.name === 'roundRect')).toHaveLength(0);
+  it('в игре значок «Морского боя» гаснет (как чашка у оригинала), а у «Часов+99» значка внизу нет вовсе', () => {
     expect(draw('sea', 'playing').filter((call) => call.name === 'ellipse')).toHaveLength(0);
     expect(draw('clock', 'ready').filter((call) => call.name === 'roundRect')).toHaveLength(0);
+  });
+
+  it('при слое сегментов чашка «168 в 1» бледная вне паузы', () => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel: 'tank', ink: '#000' });
+    screen.resize(264, 320, 1);
+    screen.setGhost(true);
+    screen.render(scene({ phase: 'playing' }));
+    const cups = calls.filter((call) => call.name === 'ellipse' && call.alpha > 0 && call.alpha < 1);
+    expect(cups.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('экран «168 в 1 танк»: сегменты по фотографии', () => {
+  const draw = (panel: 'sea' | 'tank' | 'clock', patch: Partial<TetrisScene>, ghost = false): { name: string; alpha: number }[] => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel, ink: '#000' });
+    screen.resize(264, 320, 1);
+    screen.setGhost(ghost);
+    screen.render(scene(patch));
+    return calls;
+  };
+  const count = (calls: { name: string; alpha: number }[], name: string, alpha?: number): number =>
+    calls.filter((call) => call.name === name && (alpha === undefined || call.alpha === alpha)).length;
+
+  it('при полной заливке старшая цифра счёта, SPEED и LEVEL — только «1» (два сегмента): 62 сегмента из 77, одинаково у «168 в 1» и «Морского боя»', () => {
+    const tank = draw('tank', { allOn: true, phase: 'ready' });
+    const sea = draw('sea', { allOn: true, phase: 'ready' });
+    expect(count(sea, 'fillRect', 1)).toBe(count(tank, 'fillRect', 1));
+    // матрица 200 ячеек + рамка NEXT 16 (по fillRect на точку) + разделитель 1 + сегменты цифр
+    expect(count(tank, 'fillRect', 1)).toBe(200 + 16 + 1 + 62);
+  });
+
+  it('счёт показывается до 1 999 999: старшая цифра гаснет вместо нуля и горит единицей', () => {
+    const low = draw('tank', { phase: 'playing', score: 0 });
+    const million = draw('tank', { phase: 'playing', score: 1_000_000 });
+    expect(count(million, 'fillRect', 1) - count(low, 'fillRect', 1)).toBeGreaterThan(0);
+    const capped = draw('tank', { phase: 'playing', score: 9_999_999 });
+    const max = draw('tank', { phase: 'playing', score: 1_999_999 });
+    expect(count(capped, 'fillRect', 1)).toBe(count(max, 'fillRect', 1));
+  });
+
+  it('NEXT — сегмент: подпись горит только при наличии превью; в меню (превью нет) её нет', () => {
+    const withPreview = draw('tank', { phase: 'playing', preview: new Uint8Array(16) });
+    const without = draw('tank', { phase: 'ready', preview: null });
+    expect(count(withPreview, 'fillText')).toBe(count(without, 'fillText') + 1);
+  });
+
+  it('превью рисуется по значениям клеток; мигающая клетка превью гаснет в тактах второй половины периода', () => {
+    const preview = new Uint8Array(16);
+    preview[0] = 1;
+    preview[5] = 1;
+    preview[10] = 2;
+    const on = draw('tank', { phase: 'playing', preview, blinkValue: 2, tick: 0 });
+    const off = draw('tank', { phase: 'playing', preview, blinkValue: 2, tick: 15 });
+    expect(count(on, 'strokeRect', 1)).toBe(3);
+    expect(count(off, 'strokeRect', 1)).toBe(2);
+  });
+
+  it('мигающие клетки матрицы гаснут и загораются; обычные горят всегда', () => {
+    const cells = new Uint8Array(FIELD_COLUMNS * FIELD_ROWS);
+    cells[0] = 1;
+    cells[1] = 2;
+    cells[2] = 2;
+    const on = draw('tank', { phase: 'playing', cells, blinkValue: 2, tick: 0 });
+    const off = draw('tank', { phase: 'playing', cells, blinkValue: 2, tick: 15 });
+    const again = draw('tank', { phase: 'playing', cells, blinkValue: 2, tick: 30 });
+    expect(count(on, 'strokeRect', 1)).toBe(3);
+    expect(count(off, 'strokeRect', 1)).toBe(1);
+    expect(count(again, 'strokeRect', 1)).toBe(3);
+  });
+
+  it('без blinkValue (тетрис-заглушка) значение 2 — обычная клетка (фигура O), не мигает', () => {
+    const cells = new Uint8Array(FIELD_COLUMNS * FIELD_ROWS);
+    cells[1] = 2;
+    expect(count(draw('sea', { phase: 'playing', cells, tick: 15 }), 'strokeRect', 1)).toBe(1);
+  });
+
+  it('повторный кадр с тем же превью и мигающей фазой не перерисовывается, смена фазы мигания — перерисовывается', () => {
+    const { canvas, calls } = stubCanvas();
+    const screen = new TetrisScreen(canvas, { glyph: 'square', panel: 'tank', ink: '#000' });
+    screen.resize(264, 320, 1);
+    const cells = new Uint8Array(FIELD_COLUMNS * FIELD_ROWS);
+    cells[1] = 2;
+    const frame = scene({ phase: 'playing', cells, blinkValue: 2, tick: 1, preview: null });
+    screen.render(frame);
+    calls.length = 0;
+    screen.render({ ...frame, tick: 2 });
+    expect(calls).toHaveLength(0);
+    screen.render({ ...frame, tick: 16 });
+    expect(calls.length).toBeGreaterThan(0);
   });
 });

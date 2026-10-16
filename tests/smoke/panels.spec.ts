@@ -514,7 +514,7 @@ test('индикатор паузы слева рядом с клавиатур�
   await expect.poll(phase(page)).toBe('paused');
   await expect(pause).toHaveAttribute('data-state', 'on');
   await expect(pause).toHaveAttribute('title', 'Игра на паузе');
-  await expect(pause).toHaveCSS('color', 'rgb(185, 211, 122)'); // акцентный значок в общем стиле меню
+  await expect(pause).toHaveCSS('background-color', 'rgb(255, 181, 71)'); // на паузе — отдельный янтарный значок (у клавиатуры свой цвет)
   await page.keyboard.press('Escape');
   await expect.poll(phase(page)).toBe('playing');
   await expect(pause).toHaveAttribute('data-state', 'off');

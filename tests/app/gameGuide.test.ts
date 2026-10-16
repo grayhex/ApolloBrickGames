@@ -42,8 +42,8 @@ describe('описания игр для вкладок левой панели'
     }
   });
 
-  it('у консолей с вкладками есть примечание к списку (кроме Mario)', () => {
-    for (const key of ['games.note.tank168', 'games.note.seabattle', 'games.note.clock99'] as const) {
+  it('у консолей с вкладками есть примечание к списку (кроме Mario и «168 в 1 танк»: там примечание убрано по просьбе владельца)', () => {
+    for (const key of ['games.note.seabattle', 'games.note.clock99'] as const) {
       expect(MESSAGES.ru[key]).toBeTruthy();
       expect(MESSAGES.en[key]).toBeTruthy();
     }

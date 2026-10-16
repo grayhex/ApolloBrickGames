@@ -38,6 +38,15 @@ function flourish(): SVGSVGElement {
 function deco(model: ToyModel): HTMLElement {
   const root = h('div', { class: 'lid__deco', 'aria-hidden': 'true' });
   if (model.deco === 'flourish') {
+    // Линия-рамка — не сплошной прямоугольник, а как на фото: угловые скобки сверху (не доходят до светодиодов) и «ковш» снизу; по бокам линия
+    // прерывается завитками и ромбиком. Размеры в cqw крышки (ширина 100, высота 97,7): ниже винтов и светодиодов, левее и правее экрана.
+    root.append(
+      svg(
+        'svg',
+        { class: 'deco__frame', viewBox: '0 0 100 97.7', 'aria-hidden': 'true', focusable: 'false' },
+        svg('path', { d: 'M32 14.6H15.4V25M68 14.6H84.6V25M15.4 72.5V91H84.6V72.5', fill: 'none' }),
+      ),
+    );
     for (const side of ['l', 'r'] as const) {
       root.append(
         h('div', { class: 'deco__side', 'data-side': side }, flourish(), h('i', { class: 'deco__gem' }), flourish()),

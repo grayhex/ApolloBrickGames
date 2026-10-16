@@ -33,10 +33,10 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
-  test('по центру сверху — рукописный логотип Apollo, рядом переключатель из четырёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
+  test('сверху слева — логотип Apollo рядом с раздельными цветными индикаторами, по центру — переключатель из четырёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
-    const logo = page.locator('.brand__logo');
+    const logo = page.locator('.topleft__logo');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const items = page.locator('.toysw__item');
@@ -44,14 +44,21 @@ test.describe('шапка и переключатель', () => {
     await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк']);
     await expect(items.locator('svg.toysw__icon')).toHaveCount(4); // миниатюры закрытых игрушек
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
-    // Шапка по центру игрушки (средняя колонка страницы) и над ней.
-    const brand = await page.locator('#brand').boundingBox();
-    const toy = await page.locator('#toy').boundingBox();
+    // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён), логотип правее них.
+    const dots = page.locator('#devices .dev:visible');
+    await expect(dots).toHaveCount(2);
+    const colors = await dots.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).getPropertyValue('--dev-c').trim()));
+    expect(new Set(colors).size).toBe(2);
+    const devicesBox = await page.locator('#devices').boundingBox();
     const logoBox = await logo.boundingBox();
     const switchBox = await page.locator('#toy-switch').boundingBox();
-    if (!brand || !toy || !logoBox || !switchBox) throw new Error('нет размеров');
-    expect(Math.abs((logoBox.x + switchBox.x + switchBox.width) / 2 - (toy.x + toy.width / 2))).toBeLessThan(2);
-    expect(brand.y + brand.height).toBeLessThanOrEqual(toy.y + 1);
+    const toy = await page.locator('#toy').boundingBox();
+    if (!devicesBox || !logoBox || !switchBox || !toy) throw new Error('нет размеров');
+    expect(devicesBox.x + devicesBox.width).toBeLessThanOrEqual(logoBox.x + 1);
+    expect(logoBox.x + logoBox.width).toBeLessThan(switchBox.x); // логотип левее переключателя
+    // Переключатель по центру игрушки и над ней.
+    expect(Math.abs(switchBox.x + switchBox.width / 2 - (toy.x + toy.width / 2))).toBeLessThan(2);
+    expect(switchBox.y + switchBox.height).toBeLessThanOrEqual(toy.y + 1);
     // Страница по высоте не вылезает за окно (шапка вычтена из размера игрушки).
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   });
@@ -201,35 +208,30 @@ test.describe('«Часы+99»', () => {
     await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false');
   });
 
-  test('рекорд хранится у каждой игрушки отдельно и виден на экране ожидания; конец игры сохраняет новый', async ({ page }) => {
+  test('рекорд хранится у каждой игрушки отдельно, у консолей с меню — у каждой игры и варианта; виден на экране ожидания', async ({ page }) => {
     await page.addInitScript(() => {
       if (!localStorage.getItem('seeded')) {
         localStorage.setItem('seeded', '1');
         localStorage.setItem('crocodile-mario:tetris:clock99:hi', '4321');
+        localStorage.setItem('crocodile-mario:brick:seabattle:tetris:0:hi', '777');
       }
     });
     await open(page, 'clock99');
     expect(await area(page, 'hiscore')).toBe('4321');
     await page.goto('./?toy=seabattle&power=on&debug&seed=7');
     await expect.poll(phase(page)).toBe('ready');
-    expect(await area(page, 'hiscore')).toBe('0'); // у «Морского боя» свой рекорд
-    // Играем до конца: фигуры бросаются в один столбец — стакан заполняется, игра заканчивается, рекорд сохраняется.
     await expect.poll(() => area(page, 'boot')).toBe('off');
-    await page.keyboard.press('Enter');
-    await expect.poll(phase(page)).toBe('playing');
-    for (let i = 0; i < 40 && (await area(page, 'phase')) === 'playing'; i++) {
-      await page.keyboard.press('KeyX');
-      await page.waitForTimeout(40);
-    }
-    await expect.poll(phase(page), { timeout: 8000 }).toBe('over');
-    const score = Number(await area(page, 'score'));
-    expect(score).toBeGreaterThan(0);
-    expect(Number(await area(page, 'hiscore'))).toBe(score);
-    expect(await page.evaluate(() => localStorage.getItem('crocodile-mario:tetris:seabattle:hi'))).toBe(String(score));
-    // Enter начинает новую игру, рекорд остаётся.
-    await page.keyboard.press('Enter');
-    await expect.poll(phase(page)).toBe('playing');
-    expect(Number(await area(page, 'hiscore'))).toBe(score);
+    const hi = (): Promise<string> => area(page, 'hiscore');
+    expect(await hi()).toBe('0'); // у «Морского боя» свой рекорд (игра A не играется)
+    for (let i = 0; i < 4; i++) await page.locator('[data-key="jump"]').click(); // ROTATE: A → E
+    await expect.poll(() => area(page, 'game')).toBe('tetris');
+    await expect.poll(hi).toBe('777'); // рекорд игры E (обычный тетрис, вариант 01)
+    await page.locator('[data-key="jump"]').click(); // F — арканоид
+    await expect.poll(() => area(page, 'game')).toBe('arkanoid');
+    await expect.poll(hi).toBe('0'); // у каждой игры свой
+    await page.goto('./?toy=tank168&power=on&debug&seed=7');
+    await expect.poll(phase(page)).toBe('ready');
+    expect(await hi()).toBe('0'); // у «168 в 1 танк» — свой
   });
 
   test('экран рисует матрицу: включённая игрушка — чернила на холсте, выключенная — пустой холст; звёздочка не пропадает при слое сегментов', async ({ page }) => {
@@ -289,21 +291,27 @@ test.describe('«Морской бой»', () => {
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
   });
 
-  test('RESET начинает партию заново; S./P. запускает; поворот — ROTATE и стрелка вверх', async ({ page }) => {
+  test('меню: RESET возвращает в меню; S./P. запускает выбранную игру; не восстановленная игра (A) выбирается, но не запускается', async ({ page }) => {
     await open(page, 'seabattle');
+    expect(await area(page, 'menu')).toBe('menu');
+    expect(await area(page, 'symbol')).toBe('A');
+    expect(await area(page, 'playable')).toBe('no');
+    await key(page, 'sp').click(); // игра A не восстановлена: не запускается
+    await page.waitForTimeout(150);
+    expect(await area(page, 'phase')).toBe('ready');
+    await key(page, 'jump').click(); // ROTATE — следующая игра: B (танки)
+    await expect.poll(() => area(page, 'symbol')).toBe('B');
+    expect(await area(page, 'playable')).toBe('yes');
     await key(page, 'sp').click();
     await expect.poll(phase(page)).toBe('playing');
-    await page.keyboard.press('KeyX');
-    await expect.poll(async () => Number(await area(page, 'score'))).toBeGreaterThan(0);
+    expect(await area(page, 'menu')).toBe('game');
     await key(page, 'fire').click(); // RESET
     await expect.poll(phase(page)).toBe('ready');
+    expect(await area(page, 'menu')).toBe('menu');
+    expect(await area(page, 'symbol')).toBe('B'); // выбор в меню сохранился
     expect(await area(page, 'score')).toBe('0');
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter'); // Enter запускает так же, как S./P.
     await expect.poll(phase(page)).toBe('playing');
-    const shape = () => page.evaluate(() => JSON.stringify((window as unknown as TetrisDebug).__tetris.piece));
-    const before = await shape();
-    await page.keyboard.press('ArrowUp');
-    await expect.poll(shape).not.toBe(before);
   });
 
   test('справка — свои кнопки и свой текст, без раздела об оригинальном устройстве Crocodile Mario', async ({ page }) => {
@@ -311,7 +319,7 @@ test.describe('«Морской бой»', () => {
     await page.locator('#corner-help').click();
     const dialog = page.locator('#help');
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('обычный тетрис');
+    await expect(dialog).toContainText('Включите игрушку');
     await expect(dialog.locator('th')).toContainText(['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'LEFT/LEVEL', 'RIGHT/SPEED', 'UP/MODE', 'DOWN', 'ROTATE']);
     await expect(dialog.locator('#original-device')).toHaveCount(0);
     await page.keyboard.press('Escape');
@@ -350,18 +358,22 @@ for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
     await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'false');
     await page.locator('#corner-lang').click();
     await expect(page.locator('#side-info #keys-title')).toHaveText('Controls');
-    if (toy !== 'mario') {
+    if (toy === 'clock99') {
+      // Тетрис-заглушка: правила и очки в левой панели; у консолей с меню правил заглушки нет — играют настоящие игры.
       await expect(page.locator('#rules-title')).toHaveText('How to play');
       await expect(page.locator('.tetris-rules li')).toHaveCount(4);
       await expect(page.locator('#side-info')).toContainText('Hard drop');
+    } else if (toy !== 'mario') {
+      await expect(page.locator('#rules-title')).toHaveCount(0);
     }
-    // All three docks use the same surface, and left indicators do not overlap the right menu.
+    // Both docks (toy switcher and service menu) use the same surface, and the left indicators do not overlap the right menu.
     const docks = await page.locator('.chrome-dock').evaluateAll(nodes => nodes.map(n => {
       const rect = n.getBoundingClientRect();
       return { id: n.id, left: rect.left, right: rect.right, radius: getComputedStyle(n).borderRadius, animation: getComputedStyle(n).animationName };
     }));
+    expect(docks.length).toBeGreaterThanOrEqual(2);
     expect(new Set(docks.map(d => d.radius)).size).toBe(1);
-    expect(docks.find(d => d.id === 'devices')!.right).toBeLessThan(docks.find(d => d.id === 'corner')!.left);
+    expect((await page.locator('#topleft').boundingBox())!.x + (await page.locator('#topleft').boundingBox())!.width).toBeLessThan(docks.find(d => d.id === 'corner')!.left);
     expect(docks.every(d => d.animation === 'none')).toBe(true); // reducedMotion from the shared Playwright config
     await page.setViewportSize({ width: 360, height: 800 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
