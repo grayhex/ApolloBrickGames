@@ -4443,3 +4443,8 @@ body.route-editor .shell > :not(#fatal) {
 @media (prefers-reduced-motion:reduce) { .toysw__items { animation:none; }.toysw__family { transition:none; } }
 
 .corner__btn[hidden] { display:none; }
+
+/* Flex children must shrink through the whole dock, including wide fallback fonts. */
+.toysw, .toysw__items, .toysw__item, .toysw__name { min-width:0; }
+.toysw__families { flex-shrink:0; }
+.toysw__name { overflow:hidden; text-overflow:ellipsis; }

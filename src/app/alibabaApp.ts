@@ -48,9 +48,13 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
   const notice = h('dialog', { class: 'settings alibaba-notice', id: 'alibaba-notice', 'aria-labelledby': 'alibaba-notice-title' });
   document.body.append(notice);
   const help = byId<HTMLDialogElement>('help');
+  const closeDialog = (dialog: HTMLDialogElement): void => {
+    dialog.close();
+    focus(); // Native close events are queued; keyboard input must work immediately after Escape.
+  };
   const populateDialog = (dialog: HTMLDialogElement): void => {
     const close = h('button', { class: 'btn btn--primary', type: 'button' }, t('common.close'));
-    close.addEventListener('click', () => dialog.close(), { signal });
+    close.addEventListener('click', () => closeDialog(dialog), { signal });
     dialog.replaceChildren(
       h('h2', { id: dialog === notice ? 'alibaba-notice-title' : 'alibaba-help-title' }, t('alibaba.unavailable')),
       h('p', {}, t('alibaba.description')),
@@ -225,7 +229,13 @@ export async function startAlibabaApp(carry?: Carry): Promise<AppHandle> {
     { signal },
   );
   onLangChange(relabel, signal);
-  for (const dialog of [notice, help]) dialog.addEventListener('close', focus, { signal });
+  for (const dialog of [notice, help]) {
+    dialog.addEventListener('close', focus, { signal });
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeDialog(dialog);
+    }, { signal });
+  }
   life.onDispose(() => {
     settings.close();
     if (help.open) help.close();

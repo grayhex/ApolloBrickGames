@@ -87,6 +87,7 @@ test('на узких экранах оба семейства помещают�
   for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 740 });
     await exhibit(page);
+    await page.addStyleTag({ content: "*{font-family:'DejaVu Sans',sans-serif !important}" });
     for (const family of ['apollo', 'other']) {
       await page.locator(`#toy-family-${family}`).click();
       const menu = (await page.locator('#toy-switch').boundingBox())!;
