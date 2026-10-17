@@ -51,8 +51,30 @@ test('корпус универсального Brick Game: без винтов,
   });
   expect(new Set(ring.slice(0, 4)).size).toBe(1);
   expect(ring[4]).toBe('rgb(239, 210, 60)');
-  const captions = await page.locator('.classic__key .classic__caption').evaluateAll((nodes) => nodes.map((node) => [(node.parentElement as HTMLElement).dataset['key'], node.textContent]));
-  expect(captions).toEqual([['up', 'MODE'], ['left', 'LEVEL'], ['right', 'SPEED'], ['down', 'MODE']]);
+  // Подписи кнопок — двустрочные и стоят рядом с кнопками, а не на них; на кнопках нет ни текста, ни треугольников.
+  const captions = await page.locator('.classic__key').evaluateAll((keys) =>
+    keys.map((key) => {
+      const cap = key.querySelector('.classic__cap')!;
+      const k = key.getBoundingClientRect(),
+        c = cap.getBoundingClientRect();
+      return { key: (key as HTMLElement).dataset['key'], lines: [...cap.children].map((line) => line.textContent), clear: (key as HTMLElement).dataset['key'] === 'up' ? c.bottom <= k.top + k.height * 0.15 : c.top >= k.top + k.height * 0.85, svg: key.querySelectorAll('svg').length };
+    }),
+  );
+  expect(captions).toEqual([
+    { key: 'up', lines: ['UP', 'MODE'], clear: true, svg: 0 },
+    { key: 'left', lines: ['LEFT', 'LEVEL'], clear: true, svg: 0 },
+    { key: 'right', lines: ['RIGHT', 'SPEED'], clear: true, svg: 0 },
+    { key: 'down', lines: ['DOWN', 'MODE'], clear: true, svg: 0 },
+    { key: 'jump', lines: ['ROTATE', 'DIRECTION'], clear: true, svg: 0 },
+    { key: 'fire', lines: ['FIRE'], clear: true, svg: 0 },
+  ]);
+  await expect(page.locator('.classic__pad')).toBeVisible(); // крест из четырёх стрелок между кнопками
+  // «DOT MATRIX» убрана; SUPER стоит в разрыве верхней линии жёлтой рамки тем же цветом, что и узор.
+  await expect(page.locator('.classic__edition')).toHaveCount(0);
+  await expect(page.locator('.classic__super')).toHaveText('SUPER');
+  const colours = await page.evaluate(() => [getComputedStyle(document.querySelector('.classic__super')!).color, getComputedStyle(document.querySelector('.classic__motif')!).color]);
+  expect(colours[0]).toBe(colours[1]);
+  await expect(page.locator('.classic__speaker')).toHaveCount(0); // линий динамика на корпусе нет
   // Надпись двумя строками под углом и число игр, назначенных приставке сейчас.
   const games = universalGames(validateConfig(defaults)).length;
   await expect(page.locator('.classic__count')).toHaveText(`${games} IN 1`);
@@ -62,21 +84,30 @@ test('корпус универсального Brick Game: без винтов,
 });
 
 test('число в «N IN 1» следует за настройкой: закреплённые в админке и оставшиеся без владельца игры', async ({ page }) => {
+  // По умолчанию универсальной модели закреплены все игры; чтобы число следовало за пересчётом, закрепляем только Tetris.
+  const reduce = (config: ReturnType<typeof validateConfig>): void => {
+    config.toys.brickgame.games = [{ id: 'tetris' }];
+    config.toys.brickgame.defaultGame = 'tetris';
+  };
+  const base = validateConfig(defaults);
+  reduce(base);
   const edited = validateConfig(defaults);
+  reduce(edited);
   edited.toys.clock99.games = [{ id: 'tetris' }];
   edited.toys.clock99.defaultGame = 'tetris';
   const expected = universalGames(edited).length;
-  expect(expected).toBeGreaterThan(universalGames(validateConfig(defaults)).length);
+  expect(expected).toBeGreaterThan(universalGames(base).length);
   await open(page, '?toy=brickgame', (config) => {
+    reduce(config);
     config.toys.clock99.games = [{ id: 'tetris' }];
     config.toys.clock99.defaultGame = 'tetris';
   });
   await expect(page.locator('.classic__count')).toHaveText(`${expected} IN 1`);
 });
 
-test('FIRE нарисована только там, где она нужна: Tetris — да, Snake — нет; в меню следует за выбранной игрой', async ({ page }) => {
+test('FIRE нарисована только у игры, без которой не обойтись (Jig Saw); у Tetris и Snake её нет и в меню она следует за выбранной игрой', async ({ page }) => {
   await open(page, '?toy=brickgame&power=on&debug', (config) => {
-    config.toys.brickgame.games = [{ id: 'snake' }, { id: 'tetris' }, { id: 'sokoban' }];
+    config.toys.brickgame.games = [{ id: 'snake' }, { id: 'jigsaw' }, { id: 'tetris' }];
     config.toys.brickgame.defaultGame = 'snake';
   });
   const fire = page.locator('[data-key=fire]');
@@ -84,15 +115,19 @@ test('FIRE нарисована только там, где она нужна: T
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'off');
   await expect(fire).toBeHidden();
   await page.locator('[data-key=jump]').click(); // ROTATE в меню: следующая игра
-  await expect.poll(() => area(page, 'game')).toBe('tetris');
+  await expect.poll(() => area(page, 'game')).toBe('jigsaw');
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'on');
   await expect(fire).toBeVisible();
   await page.locator('[data-key=jump]').click();
-  await expect.poll(() => area(page, 'game')).toBe('sokoban');
-  await expect(fire).toBeVisible();
+  await expect.poll(() => area(page, 'game')).toBe('tetris');
+  await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'off');
+  await expect(fire).toBeHidden();
+  // В левой справке у Tetris FIRE не упомянута.
+  await expect(page.locator('#gpanel .gctl')).not.toContainText('FIRE');
 });
 
 test('человечек: стоит, после конца игры огорчён, после RESET снова стоит', async ({ page }) => {
+  test.setTimeout(90_000);
   await open(page, '?toy=brickgame&power=on&debug&seed=7', (config) => {
     config.toys.brickgame.games = [{ id: 'tetris' }];
     config.toys.brickgame.defaultGame = 'tetris';
@@ -101,11 +136,9 @@ test('человечек: стоит, после конца игры огорч�
   await expect(page.locator('#game-area')).toHaveAttribute('data-mood', 'idle');
   await page.locator('[data-key=sp]').click();
   await expect.poll(() => area(page, 'phase')).toBe('playing');
-  for (let i = 0; i < 60 && (await area(page, 'phase')) !== 'over'; i++) {
-    await page.locator('[data-key=fire]').click(); // жёсткое падение, пока стакан не заполнится
-    await page.waitForTimeout(40);
-  }
-  await expect.poll(() => area(page, 'phase')).toBe('over');
+  await page.keyboard.down('ArrowDown'); // ускоренное падение, пока стакан не заполнится
+  await expect.poll(() => area(page, 'phase'), { timeout: 60_000 }).toBe('over');
+  await page.keyboard.up('ArrowDown');
   await expect(page.locator('#game-area')).toHaveAttribute('data-mood', 'sad');
   await page.locator('[data-action=reset]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-mood', 'idle');
@@ -187,3 +220,97 @@ for(const [width,height] of [[1280,720],[1440,900],[1920,1080],[2560,1440],[900,
     if(width!>=1200)expect(toy!.bottom).toBeLessThanOrEqual(height!+1);
     await page.locator('.toysw__universal').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','brickgame');
   });
+
+test('левая справка: рядом с полем в начале партии — зацикленный «геймплей» настоящей игры', async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: 'no-preference', viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await open(page, '?toy=brickgame', (config) => {
+    config.toys.brickgame.games = [{ id: 'tetris' }, { id: 'snake' }];
+    config.toys.brickgame.defaultGame = 'tetris';
+  });
+  const clip = page.locator('.gquick__schemes .gclip canvas');
+  await expect(clip).toBeVisible();
+  await expect(page.locator('.gquick__schemes .gscheme')).toHaveCount(2); // поле в начале партии + геймплей
+  await expect(page.locator('.gquick__schemes .gclip .gscheme__cap')).toHaveText('Геймплей');
+  const first = await clip.getAttribute('data-frame');
+  await expect.poll(() => clip.getAttribute('data-frame')).not.toBe(first); // кадры идут по кругу
+  const pixels = async (): Promise<string> => clip.evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL());
+  const before = await pixels();
+  await expect.poll(pixels).not.toBe(before);
+  await context.close();
+});
+
+test('«Игры на устройстве»: стрелки ‹ › листают игры (в меню — и на консоли), ▶ запускает выбранную', async ({ page }) => {
+  const config = validateConfig(defaults);
+  config.toys.brickgame.games = [{ id: 'tetris' }, { id: 'snake' }, { id: 'pong' }];
+  config.toys.brickgame.defaultGame = 'tetris';
+  const last = universalGames(config).at(-1)!.id; // остальные игры без владельца добавляются автоматически — в конец списка
+  await open(page, '?toy=brickgame&power=on&debug', (c) => {
+    c.toys.brickgame.games = [{ id: 'tetris' }, { id: 'snake' }, { id: 'pong' }];
+    c.toys.brickgame.defaultGame = 'tetris';
+  });
+  await expect.poll(() => area(page, 'boot')).toBe('off');
+  const select = page.locator('#guide-game');
+  await expect(select).toHaveValue('tetris');
+  await page.locator('.gnav__btn--next').click();
+  await expect(select).toHaveValue('snake');
+  await expect.poll(() => area(page, 'game')).toBe('snake'); // меню консоли за выбором в справке
+  await page.locator('.gnav__btn--prev').click();
+  await expect(select).toHaveValue('tetris');
+  await page.locator('.gnav__btn--prev').click(); // по кругу: с первой игры на последнюю
+  await expect(select).toHaveValue(last);
+  await expect.poll(() => area(page, 'game')).toBe(last);
+  await page.locator('.gnav__btn--launch').click();
+  await expect.poll(() => area(page, 'phase')).toBe('playing');
+  expect(await area(page, 'game')).toBe(last);
+  // Во время партии выбрать другую игру и запустить: возврат в меню и новая партия.
+  await page.locator('.gnav__btn--next').click(); // последняя → первая
+  await expect(select).toHaveValue('tetris');
+  await page.locator('.gnav__btn--launch').click();
+  await expect.poll(() => area(page, 'game')).toBe('tetris');
+  await expect.poll(() => area(page, 'phase')).toBe('playing');
+});
+
+test('«Игры на устройстве»: запуск включает выключенную игрушку и стартует выбранную игру', async ({ page }) => {
+  await open(page, '?toy=brickgame', (config) => {
+    config.toys.brickgame.games = [{ id: 'tetris' }, { id: 'snake' }];
+    config.toys.brickgame.defaultGame = 'tetris';
+  });
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
+  await page.locator('#guide-game').selectOption('snake');
+  await page.locator('.gnav__btn--launch').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
+  await expect.poll(() => area(page, 'phase'), { timeout: 15_000 }).toBe('playing');
+  expect(await area(page, 'game')).toBe('snake');
+});
+
+test('панель настроек сверху слева — над левой панелью справки: тот же центр и та же ширина', async ({ page }) => {
+  await open(page, '?toy=brickgame');
+  const boxes = await page.evaluate(() => {
+    const rect = (id: string) => {
+      const r = document.getElementById(id)!.getBoundingClientRect();
+      return { left: r.left, width: r.width, centre: r.left + r.width / 2 };
+    };
+    return { dock: rect('topleft'), panel: rect('side-info') };
+  });
+  expect(Math.abs(boxes.dock.centre - boxes.panel.centre)).toBeLessThan(2);
+  expect(Math.abs(boxes.dock.width - boxes.panel.width)).toBeLessThan(2);
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(page.locator('#topleft')).not.toHaveAttribute('data-aligned', ''); // на узком окне панель остаётся в углу
+});
+
+test('блок «Рекорды» не затемняется и всегда обведён', async ({ page }) => {
+  await open(page, '?toy=brickgame');
+  const card = page.locator('#leaderboard');
+  await expect(card).toBeVisible();
+  const style = async () =>
+    card.evaluate((node) => {
+      const column = node.parentElement!;
+      const cs = getComputedStyle(node);
+      return { column: getComputedStyle(column).opacity, card: cs.opacity, border: cs.borderTopWidth, style: cs.borderTopStyle };
+    });
+  expect(await style()).toEqual({ column: '1', card: '1', border: '1px', style: 'solid' });
+  await page.mouse.move(2, 2); // курсор вне панелей: затемняется только карточка пульта, а не рекорды
+  await page.waitForTimeout(400);
+  expect(await style()).toEqual({ column: '1', card: '1', border: '1px', style: 'solid' });
+});
