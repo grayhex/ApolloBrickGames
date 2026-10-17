@@ -98,8 +98,8 @@ export const PENTIX_GUIDE: GameGuideData = {
     { value: String(POINTS_PER_SPEED), label: gt('очков на ступень скорости', 'points per speed step') },
   ],
   progression: gt(
-    `Каждые ${POINTS_PER_SPEED} очков скорость +1 (падение ${FALL_FIRST_MS}→${FALL_TENTH_MS} мс). После десятой — снова первая, уровень +1 и столько новых случайных рядов снизу, какое число теперь на LEVEL.`,
-    `Every ${POINTS_PER_SPEED} points the speed goes up one step (fall ${FALL_FIRST_MS}→${FALL_TENTH_MS} ms). After the tenth it is speed 1 again, the level rises and as many new random rows appear at the bottom as the LEVEL number now shows.`,
+    `Каждые ${POINTS_PER_SPEED} очков скорость +1 (падение ${FALL_FIRST_MS}→${FALL_TENTH_MS} мс). На максимальной скорости темп сохраняется; LEVEL задаёт начальную высоту заполнения.`,
+    `Every ${POINTS_PER_SPEED} points the speed goes up one step (fall ${FALL_FIRST_MS}→${FALL_TENTH_MS} ms). At maximum speed the tempo stays fixed; LEVEL sets the initial stack height.`,
   ),
   lives: null,
   schemes: [
@@ -126,12 +126,12 @@ export const PENTIX_GUIDE: GameGuideData = {
       'One game on “168 in 1 Tank” (9) and “Sea Battle” (D): whether their rules match on the devices is not established.',
     ),
     gt(
-      'Очки, скорость падения и спецфигуры — правила донора; у Apollo они не проверены.',
-      'Scoring, fall speed and special pieces are the donor’s rules; they are not verified on Apollo.',
+      'Базовая скорость и рост темпа взяты из дампа Apollo B0202 по решению владельца. Варианты и надбавки скорости Pentix/смены фигур остаются реконструкцией.',
+      'Base timing and speed progression follow the Apollo B0202 dump by owner choice. Variants and Pentix/piece-swap timing offsets remain reconstructions.',
     ),
     gt(
-      '«Вверх» поворачивает (у донора — бросок); на Apollo мгновенного броска нет; ряды нового уровня не теряются (у донора теряются).',
-      'UP rotates (the donor drops); Apollo has no hard drop; new-level rows are kept (the donor loses them).',
+      '«Вверх» поворачивает (у донора — бросок); на Apollo мгновенного броска нет; автоматического добавления рядов при максимальной скорости нет.',
+      'UP rotates (the donor drops); Apollo has no hard drop; maximum speed does not add new rows.',
     ),
   ],
 };

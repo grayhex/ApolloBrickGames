@@ -1,6 +1,6 @@
 /**
  * Описание игры 8 «Тетрис» (`tetris`) по коду `games/tetris.ts`, `games/tetris/*` и документу `docs/brick/tetris.md`: числа берутся из констант игры.
- * Правила донора n0Live/BrickGame (`TetrisGameI…P`, MIT); таблица 51 варианта устройства неизвестна — соответствие номеров вариантов донора устройству допущение.
+ * Тайминги и рост скорости — эталон Apollo B0202; остальные правила донора n0Live/BrickGame (`TetrisGameI…P`, MIT); таблица 51 варианта устройства неизвестна — соответствие номеров вариантов донора устройству допущение.
  * Здесь же — общие части описания, которыми пользуется и Pentix (`guides/pentix.ts`): очки за ряды и кнопки.
  */
 import { gt, type GameGuideData, type GuideControl, type GuideScore, type GuideText } from '../guide';
@@ -123,8 +123,8 @@ export const TETRIS_GUIDE: GameGuideData = {
     { value: String(POINTS_PER_SPEED), label: gt('очков на ступень скорости', 'points per speed step') },
   ],
   progression: gt(
-    `Каждые ${POINTS_PER_SPEED} очков скорость +1 (падение ${FIRST_LEVEL_MS}→${TENTH_LEVEL_MS} мс). После десятой — снова первая, уровень +1 и столько новых случайных рядов снизу, какое число теперь на LEVEL.`,
-    `Every ${POINTS_PER_SPEED} points the speed goes up one step (fall ${FIRST_LEVEL_MS}→${TENTH_LEVEL_MS} ms). After the tenth it is speed 1 again, the level rises and as many new random rows appear at the bottom as the LEVEL number now shows.`,
+    `Каждые ${POINTS_PER_SPEED} очков скорость +1 (падение ${FIRST_LEVEL_MS}→${TENTH_LEVEL_MS} мс). На максимальной скорости темп сохраняется; LEVEL задаёт начальную высоту заполнения.`,
+    `Every ${POINTS_PER_SPEED} points the speed goes up one step (fall ${FIRST_LEVEL_MS}→${TENTH_LEVEL_MS} ms). At maximum speed the tempo stays fixed; LEVEL sets the initial stack height.`,
   ),
   lives: null,
   schemes: [
@@ -154,12 +154,12 @@ export const TETRIS_GUIDE: GameGuideData = {
       'On “Sea Battle” (E) the first 20 of 51 variants are shown; which 20 the device has is not established.',
     ),
     gt(
-      'Очки, скорость падения и спецфигуры — правила донора; у Apollo они не проверены.',
-      'Scoring, fall speed and special pieces are the donor’s rules; they are not verified on Apollo.',
+      'Базовая скорость и рост темпа взяты из дампа Apollo B0202 по решению владельца. Варианты и надбавки скорости Pentix/смены фигур остаются реконструкцией.',
+      'Base timing and speed progression follow the Apollo B0202 dump by owner choice. Variants and Pentix/piece-swap timing offsets remain reconstructions.',
     ),
     gt(
-      '«Вверх» поворачивает (у донора — бросок); на Apollo мгновенного броска нет; ряды нового уровня не теряются (у донора теряются).',
-      'UP rotates (the donor drops); Apollo has no hard drop; new-level rows are kept (the donor loses them).',
+      '«Вверх» поворачивает (у донора — бросок); на Apollo мгновенного броска нет; автоматического добавления рядов при максимальной скорости нет.',
+      'UP rotates (the donor drops); Apollo has no hard drop; maximum speed does not add new rows.',
     ),
   ],
 };

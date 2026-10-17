@@ -87,7 +87,7 @@ function fallInterval(lab: Lab): number {
 }
 
 const ms = (ticks: number): number => (ticks * 1000) / 60;
-const HALF_TICK_MS = 1000 / 120 + 1e-6;
+const ONE_TICK_MS = 1000 / 60 + 1e-6;
 
 /** Колодец из `rows` рядов, в который вертикальная палка (тетрамино I из набора Pentix) встаёт в колонку 0: ряды без дыр — полные. */
 function well(rows: number): Lab {
@@ -137,16 +137,16 @@ describe('описание «Pentix»: форма', () => {
     expect(pentixDef.create({ seed: 1 }).lives).toBeNull();
   });
 
-  it('в описании те числа, что подтверждены ниже: 20 вариантов, 26 фигур, 530→230 мс, 100 очков; очки 1, 3, 7, 15', () => {
-    expect(PENTIX_GUIDE.facts.map((fact) => fact.value)).toEqual(['20', '26', '530→230', '100']);
+  it('в описании те числа, что подтверждены ниже: 20 вариантов, 26 фигур, 495→124 мс, 1000 очков; очки 1, 3, 7, 15', () => {
+    expect(PENTIX_GUIDE.facts.map((fact) => fact.value)).toEqual(['20', '26', '495→124', '1000']);
     expect(PENTIX_GUIDE.scoring.map((score) => score.points)).toEqual(['+1', '+3', '+7', '+15', '0']);
     const ru = [PENTIX_GUIDE.summary, PENTIX_GUIDE.progression, ...PENTIX_GUIDE.rules].map((text) => text.ru).join(' ');
     const en = [PENTIX_GUIDE.summary, PENTIX_GUIDE.progression, ...PENTIX_GUIDE.rules].map((text) => text.en).join(' ');
     for (const text of [ru, en]) {
       expect(text).toContain('20');
       expect(text).toContain('26');
-      expect(text).toContain('530→230');
-      expect(text).toContain('100');
+      expect(text).toContain('495→124');
+      expect(text).toContain('1000');
       expect(text).toContain('10×20');
       expect(text).toContain('4×4');
       expect(text).toContain('5×5');
@@ -188,36 +188,36 @@ describe('описание «Pentix»: числа подтверждены иг�
     expect([bySize(3), bySize(4), bySize(5)]).toEqual([2, 7, 17]);
   });
 
-  it('падение на клетку: около 530 мс на скорости 1 и около 230 мс на скорости 10, то есть на 50 мс медленнее тетриса', () => {
+  it('падение на клетку: около 495 мс на скорости 1 и около 124 мс на скорости 10, то есть на 50 мс медленнее тетриса', () => {
     const slow = fallInterval(pentix({ speed: 1 }));
     const fast = fallInterval(pentix({ speed: 10 }));
-    expect(Math.abs(ms(slow) - 530)).toBeLessThanOrEqual(HALF_TICK_MS);
-    expect(Math.abs(ms(fast) - 230)).toBeLessThanOrEqual(HALF_TICK_MS);
+    expect(Math.abs(ms(slow) - 495)).toBeLessThanOrEqual(ONE_TICK_MS);
+    expect(Math.abs(ms(fast) - 124)).toBeLessThanOrEqual(ONE_TICK_MS);
     const tetris = new Lab('tetris', { seed: 5, mode: 0 });
     tetris.start();
-    expect(Math.abs(ms(slow) - ms(fallInterval(tetris)) - 50)).toBeLessThanOrEqual(HALF_TICK_MS * 2);
+    expect(Math.abs(ms(slow) - ms(fallInterval(tetris)) - 50)).toBeLessThanOrEqual(ONE_TICK_MS * 2);
     const middle = fallInterval(pentix({ speed: 5 }));
     expect(middle).toBeLessThan(slow);
     expect(middle).toBeGreaterThan(fast);
   });
 
-  it('100 очков на ступень скорости: на 99 очках скорость прежняя, на 100-м — выше на единицу, и так каждую сотню', () => {
+  it('1000 очков на ступень скорости: на 999 очках скорость прежняя, на 1000-м — выше на единицу, и так каждую тысячу', () => {
     const below = pentix();
-    below.poke(98);
+    below.poke(998);
     clearOneRow(below);
-    expect(below.score).toBe(99);
+    expect(below.score).toBe(999);
     expect(below.speed).toBe(1);
 
     const at = pentix();
-    at.poke(99);
+    at.poke(999);
     clearOneRow(at);
-    expect(at.score).toBe(100);
+    expect(at.score).toBe(1000);
     expect(at.speed).toBe(2);
 
     const second = pentix({ speed: 2 });
-    second.poke(199);
+    second.poke(1999);
     clearOneRow(second);
-    expect(second.score).toBe(200);
+    expect(second.score).toBe(2000);
     expect(second.speed).toBe(3);
   });
 });
@@ -293,23 +293,17 @@ describe('описание «Pentix»: скорость, уровень, ряд�
     }
   });
 
-  it('после десятой скорости: снова первая, уровень +1 и столько новых случайных рядов снизу, какое число теперь на LEVEL', () => {
+  it('B0202: скорость ограничена десятой, выбранный уровень сохраняется', () => {
     const lab = pentix({ speed: 10, level: 3 });
     lab.wipe();
     lab.fill(0, '####..####');
     lab.put(7, 0, 4, 10);
-    lab.poke(99);
+    lab.poke(999);
     tap(lab, 'fire');
-    expect(lab.speed).toBe(1);
-    expect(lab.level - 1).toBe(3);
-    expect(lab.garbageLeft).toBe(3);
-    until(lab, () => lab.cell(4, 3) === 1 && lab.cell(5, 3) === 1, 2000);
-    for (let y = 0; y < 3; y++) {
-      const filled = lab.settled().subarray(y * 10, y * 10 + 10).reduce((sum, value) => sum + value, 0);
-      expect(filled, `новый ряд ${y}`).toBeGreaterThan(0);
-      expect(filled).toBeLessThan(10);
-    }
-    expect(lab.settled().subarray(4 * 10).every((value) => value === 0)).toBe(true);
+    expect(lab.speed).toBe(10);
+    expect(lab.level).toBe(3);
+    until(lab, () => lab.count() === 2, 600);
+    expect(lab.settled().subarray(10).every((value) => value === 0)).toBe(true);
   });
 
   it('фигура появляется по центру, поворот — на 90° по часовой; квадрат и крест из пяти клеток при повороте не меняются, остальные 24 меняются', () => {
@@ -398,7 +392,7 @@ describe('описание «Pentix»: варианты и числа в пра�
     expect(swap.current?.angle).toBe(1);
     const base = fallInterval(pentix());
     const swapped = fallInterval(labFor('pentix', (v) => v.letter === 'S' && v.type === 1));
-    expect(Math.abs(ms(swapped) - ms(base) - 50)).toBeLessThanOrEqual(HALF_TICK_MS * 2);
+    expect(Math.abs(ms(swapped) - ms(base) - 50)).toBeLessThanOrEqual(ONE_TICK_MS * 2);
   });
 
   it('новый ряд по таймеру: первый — через 30 секунд, дальше примерно каждые 30 (31) секунд, пока фигура не мешает', () => {

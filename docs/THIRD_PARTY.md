@@ -29,3 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## BrickEmuPy — проверка поведения прошивок
+
+[azya52/BrickEmuPy](https://github.com/azya52/BrickEmuPy), ревизия `376cca92c6d000ffd6046e5491f2a1c3d1a5eab0`, используется как внешний исследовательский инструмент (репозиторий опубликован под CC0-1.0). В проект добавлены результаты измерений и адресные карты LCD, описанные в [ревью](brick/rom-review.md). ROM и исходники эмулятора в приложение не включены; лицензия репозитория не трактуется как отдельное разрешение на распространение ROM третьих лиц.

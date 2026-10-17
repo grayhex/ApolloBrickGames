@@ -1,4 +1,5 @@
-/** Synthesized transcription of n0Live/BrickGame cues (MIT; see docs/THIRD_PARTY.md).
+import { B0202_EFFECTS } from './b0202Effects';
+/** B0202 register traces plus synthesized transcription of other n0Live/BrickGame cues (MIT; see docs/THIRD_PARTY.md).
  * Frequencies retain the donor's tuning rather than imposing concert pitch.
  * No recording noise, codec padding or sampled waveforms are retained.
  */
@@ -7,11 +8,15 @@ export interface BrickTone {
   ms: number;
   to?: number;
   noise?: boolean;
+  gain?: number;
+  track?: number;
+  atMs?: number;
 }
 const tone = (hz: number, ms: number, to?: number): BrickTone => ({ hz, ms, ...(to === undefined ? {} : { to }) });
 const tune = (beat: number, notes: readonly (number | readonly [number, number])[]): BrickTone[] =>
   notes.map((note) => (typeof note === 'number' ? tone(note, beat) : tone(note[0], note[1] * beat)));
 export const BRICK_PHRASES = {
+  ...B0202_EFFECTS,
   select: [tone(1110, 45), tone(990, 45), tone(825, 45), tone(1560, 45)],
   move: [tone(620, 130, 1450)],
   turn: [tone(1350, 65, 800)],

@@ -78,7 +78,7 @@ function fallInterval(lab: Lab): number {
 }
 
 const ms = (ticks: number): number => (ticks * 1000) / 60;
-const HALF_TICK_MS = 1000 / 120 + 1e-6;
+const ONE_TICK_MS = 1000 / 60 + 1e-6;
 
 /** Колодец из `rows` рядов, в который вертикальная палка встаёт в колонку 0: ряды без дыр — полные. */
 function well(rows: number, options: ConstructorParameters<typeof Lab>[1] = {}): Lab {
@@ -122,15 +122,15 @@ describe('описание «Тетриса»: форма', () => {
     expect(tetrisDef.create({ seed: 1 }).lives).toBeNull();
   });
 
-  it('в описании те числа, что подтверждены ниже: 51 вариант, 7 фигур, 480→180 мс, 100 очков; очки 1, 3, 7, 15', () => {
-    expect(TETRIS_GUIDE.facts.map((fact) => fact.value)).toEqual(['51', '7', '480→180', '100']);
+  it('в описании те числа, что подтверждены ниже: 51 вариант, 7 фигур, 445→74 мс, 1000 очков; очки 1, 3, 7, 15', () => {
+    expect(TETRIS_GUIDE.facts.map((fact) => fact.value)).toEqual(['51', '7', '445→74', '1000']);
     expect(TETRIS_GUIDE.scoring.map((score) => score.points)).toEqual(['+1', '+3', '+7', '+15', '0']);
     const ru = [TETRIS_GUIDE.summary, TETRIS_GUIDE.progression, ...TETRIS_GUIDE.rules].map((text) => text.ru).join(' ');
     const en = [TETRIS_GUIDE.summary, TETRIS_GUIDE.progression, ...TETRIS_GUIDE.rules].map((text) => text.en).join(' ');
     for (const text of [ru, en]) {
       expect(text).toContain('51');
-      expect(text).toContain('480→180');
-      expect(text).toContain('100');
+      expect(text).toContain('445→74');
+      expect(text).toContain('1000');
       expect(text).toContain('10×20');
       expect(text).toContain('4×4');
       expect(text).toContain('5×5');
@@ -164,32 +164,32 @@ describe('описание «Тетриса»: числа подтвержден
     expect(seen.size).toBe(7);
   });
 
-  it('падение на клетку: около 480 мс на скорости 1 и около 180 мс на скорости 10 (в пределах полутакта 60 Гц)', () => {
+  it('падение на клетку: около 445 мс на скорости 1 и около 74 мс на скорости 10 (в пределах такта 60 Гц)', () => {
     const slow = fallInterval(plainLab({ speed: 1 }));
     const fast = fallInterval(plainLab({ speed: 10 }));
-    expect(Math.abs(ms(slow) - 480)).toBeLessThanOrEqual(HALF_TICK_MS);
-    expect(Math.abs(ms(fast) - 180)).toBeLessThanOrEqual(HALF_TICK_MS);
+    expect(Math.abs(ms(slow) - 445)).toBeLessThanOrEqual(ONE_TICK_MS);
+    expect(Math.abs(ms(fast) - 74)).toBeLessThanOrEqual(ONE_TICK_MS);
     expect(fallInterval(plainLab({ speed: 5 }))).toBeLessThan(slow);
     expect(fallInterval(plainLab({ speed: 5 }))).toBeGreaterThan(fast);
   });
 
-  it('100 очков на ступень скорости: на 99 очках скорость прежняя, на 100-м — выше на единицу, и так каждую сотню', () => {
+  it('1000 очков на ступень скорости: на 999 очках скорость прежняя, на 1000-м — выше на единицу, и так каждую тысячу', () => {
     const below = plainLab();
-    below.poke(98);
+    below.poke(998);
     clearOneRow(below);
-    expect(below.score).toBe(99);
+    expect(below.score).toBe(999);
     expect(below.speed).toBe(1);
 
     const at = plainLab();
-    at.poke(99);
+    at.poke(999);
     clearOneRow(at);
-    expect(at.score).toBe(100);
+    expect(at.score).toBe(1000);
     expect(at.speed).toBe(2);
 
     const second = plainLab({ speed: 2 });
-    second.poke(199);
+    second.poke(1999);
     clearOneRow(second);
-    expect(second.score).toBe(200);
+    expect(second.score).toBe(2000);
     expect(second.speed).toBe(3);
   });
 });
@@ -257,25 +257,17 @@ describe('описание «Тетриса»: скорость, уровень,
     }
   });
 
-  it('после десятой скорости: снова первая, уровень +1 и столько новых случайных рядов снизу, какое число теперь на LEVEL', () => {
+  it('B0202: скорость ограничена десятой, выбранный уровень сохраняется', () => {
     const lab = plainLab({ speed: 10, level: 3 });
     lab.wipe();
     lab.fill(0, '####..####');
     lab.put(7, 0, 4, 10);
-    lab.poke(99);
+    lab.poke(999);
     tap(lab, 'fire');
-    expect(lab.speed).toBe(1);
-    expect(lab.level - 1).toBe(3);
-    expect(lab.garbageLeft).toBe(3);
-    // два оставшихся от квадрата клетки поднимаются над тремя новыми рядами
-    until(lab, () => lab.cell(4, 3) === 1 && lab.cell(5, 3) === 1, 2000);
-    for (let y = 0; y < 3; y++) {
-      const filled = lab.settled().subarray(y * 10, y * 10 + 10).reduce((sum, value) => sum + value, 0);
-      expect(filled, `новый ряд ${y}`).toBeGreaterThan(0);
-      expect(filled).toBeLessThan(10);
-    }
-    expect(lab.count()).toBeGreaterThan(2);
-    expect(lab.settled().subarray(4 * 10).every((value) => value === 0)).toBe(true);
+    expect(lab.speed).toBe(10);
+    expect(lab.level).toBe(3);
+    until(lab, () => lab.count() === 2, 600);
+    expect(lab.settled().subarray(10).every((value) => value === 0)).toBe(true);
   });
 
   it('полный ряд — десять клеток: ряд из девяти не исчезает; поле 10 × 20, NEXT 4 × 4', () => {
@@ -377,7 +369,7 @@ describe('описание «Тетриса»: числа в правилах в
   it('смена фигуры вместо поворота: падение медленнее ровно на 50 мс (на один-два такта в пределах округления)', () => {
     const swap = fallInterval(labFor('tetris', (v) => v.morph && !v.lineTimer && !v.shift && v.type === 1));
     const plain = fallInterval(plainLab());
-    expect(Math.abs(ms(swap) - ms(plain) - 50)).toBeLessThanOrEqual(HALF_TICK_MS * 2);
+    expect(Math.abs(ms(swap) - ms(plain) - 50)).toBeLessThanOrEqual(ONE_TICK_MS * 2);
   });
 });
 

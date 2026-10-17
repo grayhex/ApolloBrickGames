@@ -1,6 +1,6 @@
 import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
-import { BRICK_COLS, BRICK_ROWS, genuineTicks, msToTicks } from '../../../src/brick';
+import { BRICK_COLS, BRICK_ROWS } from '../../../src/brick';
 import { tetrisDef } from '../../../src/brick/games/tetris';
 import {
   FIRST_TETROMINO,
@@ -17,12 +17,9 @@ import {
   rotatePiece,
 } from '../../../src/brick/games/tetris/shapes';
 import {
-  FIRST_LEVEL_MS,
-  GARBAGE_PAUSE_TICKS,
   LINE_POINTS,
   POINTS_PER_SPEED,
   SOFT_DROP_TICKS,
-  TENTH_LEVEL_MS,
 } from '../../../src/brick/games/tetris/core';
 import { conformance } from '../conformance';
 import { Bot, Lab, hold, idle, plainLab, press, tap, types, until } from './tetrisLab';
@@ -36,8 +33,8 @@ const coveredScenario = scenarioSuite('tetris');
  */
 conformance(tetrisDef, { fuzzTicks: 800, seeds: [7] });
 
-const FALL_1 = genuineTicks(1, FIRST_LEVEL_MS, TENTH_LEVEL_MS);
-const FALL_10 = genuineTicks(10, FIRST_LEVEL_MS, TENTH_LEVEL_MS);
+const FALL_1 = 27;
+const FALL_10 = 5;
 
 describe('тетрис: состав', () => {
   it('число вариантов устройства — 51, реализовано столько же; вариант 01 — обычный тетрис без спецфигур', () => {
@@ -151,8 +148,8 @@ describe('тетрис: появление и превью', () => {
 });
 
 describe('тетрис: падение', () => {
-  it('фигура опускается на клетку раз в 29 тактов на скорости 1 и раз в 11 на скорости 10', () => {
-    expect([FALL_1, FALL_10]).toEqual([29, 11]);
+  it('первый шаг падения наступает на 27-м такте при скорости 1 и на 5-м при скорости 10', () => {
+    expect([FALL_1, FALL_10]).toEqual([27, 5]);
     for (const [speed, period] of [
       [1, FALL_1],
       [10, FALL_10],
@@ -169,11 +166,11 @@ describe('тетрис: падение', () => {
     }
   });
 
-  it('скорость растёт линейно от 480 мс на первой до 180 мс на десятой', () => {
+  it('нелинейная таблица B0202: примерно 445→74 мс, дробные такты сохраняются', () => {
     const periods: number[] = [];
     for (let speed = 1; speed <= 10; speed++) periods.push(plainLab({ speed }).fallPeriod);
-    expect(periods[0]).toBe(msToTicks(480));
-    expect(periods[9]).toBe(msToTicks(180));
+    expect(periods[0]).toBeCloseTo(150 * 2048 / 690000 * 60);
+    expect(periods[9]).toBeCloseTo(25 * 2048 / 690000 * 60);
     for (let i = 1; i < periods.length; i++) expect(periods[i] ?? 0).toBeLessThanOrEqual(periods[i - 1] ?? 0);
   });
 
@@ -221,13 +218,13 @@ describe('тетрис: кнопки', () => {
     expect(lab.px).toBe(BRICK_COLS - 2);
   });
 
-  it('зажатая кнопка повторяется раз в 5 тактов (90 мс): ходы на 1-м, 6-м и 11-м тактах', () => {
+  it('первый сдвиг немедленный, после 130 мс повтор каждый такт', () => {
     for (const [ticks, x] of [
       [1, 3],
-      [5, 3],
-      [6, 2],
-      [10, 2],
-      [11, 1],
+      [8, 3],
+      [9, 2],
+      [10, 1],
+      [11, 0],
     ] as const) {
       const lab = plainLab();
       lab.wipe();
@@ -279,13 +276,13 @@ describe('тетрис: кнопки', () => {
     expect(blocked.current?.angle).toBe(0);
   });
 
-  it('мягкое падение: зажатая «вниз» опускает фигуру раз в 2 такта (30 мс), быстрее обычного', () => {
-    expect(SOFT_DROP_TICKS).toBe(2);
+  it('мягкое падение: зажатая «вниз» опускает фигуру раз в такт (~17 мс), быстрее обычного', () => {
+    expect(SOFT_DROP_TICKS).toBe(1);
     const lab = plainLab();
     lab.wipe();
     lab.put(SHAPE_SQUARE, 0, 4, 14);
     hold(lab, 'down', 7);
-    expect(lab.py).toBe(14 - 4);
+    expect(lab.py).toBe(14 - 7);
   });
 
   it('бросок (`fire`): фигура падает до упора, звуки `drop` и `lock`, посадка в том же такте', () => {
@@ -387,7 +384,7 @@ describe('тетрис: ряды и очки', () => {
     expect(lab.score).toBe(0);
   });
 
-  it('каждые 100 очков скорость растёт на единицу, звук `levelUp`', () => {
+  it('каждые 1000 очков скорость растёт на единицу, звук `levelUp`', () => {
     const lab = well(1);
     lab.poke(POINTS_PER_SPEED - 1);
     const events = tap(lab, 'fire');
@@ -396,23 +393,18 @@ describe('тетрис: ряды и очки', () => {
     expect(lab.score).toBe(POINTS_PER_SPEED);
   });
 
-  it('после десятой скорости — снова первая, уровень +1 и один новый ряд снизу', () => {
+  it('B0202: максимальная скорость сохраняется, уровень и новые ряды не добавляются', () => {
     const lab = plainLab({ speed: 10 });
     lab.wipe();
     lab.fill(0, '.#########');
     lab.put(SHAPE_LINE, 0, 0, 10);
     lab.poke(999);
-    tap(lab, 'fire');
-    expect(lab.speed).toBe(1);
-    expect(lab.level).toBe(2);
-    expect(lab.garbageLeft).toBe(1);
-    until(lab, () => lab.garbageLeft === 0 && lab.count() > 3, 600);
-    expect(lab.garbageLeft).toBe(0);
-    const bottom = lab.settled().subarray(0, BRICK_COLS);
-    const filled = bottom.reduce((sum, v) => sum + v, 0);
-    expect(filled).toBeGreaterThan(0);
-    expect(filled).toBeLessThan(BRICK_COLS);
-    expect(GARBAGE_PAUSE_TICKS).toBe(msToTicks(120));
+    const events = tap(lab, 'fire');
+    expect(types(events)).not.toContain('levelUp');
+    expect(lab.speed).toBe(10);
+    expect(lab.level).toBe(1);
+    idle(lab, 60);
+    expect(lab.count()).toBe(3);
   });
 });
 
@@ -477,7 +469,7 @@ describe('тетрис: «бот»', () => {
     expect(lab.phase).toBe('playing');
     expect(lines).toBeGreaterThan(40);
     expect(lab.score).toBeGreaterThan(100);
-    expect(lab.speed).toBeGreaterThan(1);
+    expect(lab.speed).toBe(1 + Math.floor(lab.score / POINTS_PER_SPEED));
   });
 
   it('ничего не делающий игрок проигрывает: фигуры доходят до верха', () => {

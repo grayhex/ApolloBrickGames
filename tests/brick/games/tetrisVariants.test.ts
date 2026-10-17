@@ -134,9 +134,9 @@ describe('варианты: класс K — смена фигуры вмест�
     expect(game.current?.angle).toBe(1);
   });
 
-  it('падение медленнее на 50 мс: 32 такта на первой скорости вместо 29', () => {
-    expect(lab((v) => v.morph && !v.lineTimer && !v.shift && v.type === 1).fallPeriod).toBe(32);
-    expect(plainLab().fallPeriod).toBe(29);
+  it('падение медленнее на 50 мс относительно таблицы B0202', () => {
+    expect(lab((v) => v.morph && !v.lineTimer && !v.shift && v.type === 1).fallPeriod).toBeCloseTo(plainLab().fallPeriod + 3);
+    expect(plainLab().fallPeriod).toBeCloseTo(150 * 2048 / 690000 * 60);
   });
 });
 
