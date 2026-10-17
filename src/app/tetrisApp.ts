@@ -1,3 +1,4 @@
+import { ACTIONS } from '../core/actions';
 import { BrickAudio } from '../audio/brick';
 import { actionBit, maskOf, type InputFrame, type Phase } from '../core';
 import { WebAudioPort } from '../audio/beeper';
@@ -40,7 +41,6 @@ const NAV_CONFIRM = actionBit('confirm');
 const NAV_BACK = actionBit('back');
 const START = actionBit('start');
 const PAUSE = actionBit('pause');
-const CONFIRM = actionBit('confirm');
 
 /**
  * Действия кнопок корпуса: FIRE-кнопка у них не стреляет (под ней TIME/GAME или RESET), поэтому в таблице её нет; UP — вверх (в тетрисе поворот, в меню следующий вариант),
@@ -285,7 +285,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
       bootTicks -= 1; // проверка экрана при включении: ввод не принимается
       return;
     }
-    const startCmd = (raw.pressed & (START | CONFIRM)) !== 0;
+    // CONFIRM относится к диалогам; Space / кнопка A геймпада здесь выполняют ROTATE и листают игры.
+    const startCmd = (raw.pressed & START) !== 0;
     const pauseCmd = (raw.pressed & PAUSE) !== 0;
     switch (cabinet.phase) {
       case 'ready':
@@ -324,6 +325,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
 
   const settingsDialog = new SettingsDialog(refs.settings, hub, {
+    actions: ACTIONS.filter((action) => action !== 'fire'),
     signal,
     onOpen: openMenu,
     onClose: closeMenu,

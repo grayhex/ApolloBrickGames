@@ -130,7 +130,7 @@ const CASES: readonly Case[] = [
       const before = await cells(page);
       await hold(page, 'ArrowRight', 400);
       expect(await cells(page)).not.toEqual(before); // танк повернулся и поехал
-      await page.keyboard.press('KeyX'); // огонь (снаряд танка — обычная горящая клетка, отличить её от врагов по картинке нельзя)
+      await page.keyboard.press('Space'); // ROTATE — огонь (снаряд танка — обычная горящая клетка, отличить её от врагов по картинке нельзя)
     },
   },
   {
@@ -211,7 +211,7 @@ const CASES: readonly Case[] = [
       await page.keyboard.press('Space'); // ROTATE
       await page.waitForTimeout(100);
       expect(await cells(page)).not.toEqual(before);
-      await page.keyboard.press('KeyX'); // бросок
+      await hold(page, 'ArrowDown', 1400); // посадка удержанием DOWN
       await expect.poll(async () => lit(await cells(page), [16, 20]), { timeout: 3000 }).toBeGreaterThan(0); // фигура легла на дно
     },
   },
@@ -221,7 +221,7 @@ const CASES: readonly Case[] = [
     name: 'Тетрис Pentix',
     async play(page) {
       await page.keyboard.press('ArrowRight');
-      await page.keyboard.press('KeyX');
+      await hold(page, 'ArrowDown', 1400);
       await expect.poll(async () => lit(await cells(page), [16, 20]), { timeout: 3000 }).toBeGreaterThanOrEqual(3);
     },
   },
@@ -258,7 +258,7 @@ test.describe('«Морской бой»: режимы A–F', () => {
       expect(lit(await cells(page))).toBeGreaterThan(0);
       const before = await cells(page);
       await hold(page, 'ArrowRight', 300);
-      await page.keyboard.press('KeyX');
+      await hold(page, 'ArrowDown', 1400);
       await page.waitForTimeout(150);
       expect(await cells(page)).not.toEqual(before);
       await pauseAndReset(page, 'ready');
@@ -280,7 +280,7 @@ test.describe('«Морской бой»: режимы A–F', () => {
     await expect.poll(() => area(page, 'game')).toBe('romeo-juliet');
     await key(page, 'sp').click();
     await expect.poll(() => area(page, 'phase')).toBe('playing');
-    await page.keyboard.press('KeyX');
+    await hold(page, 'ArrowDown', 1400);
     await expect.poll(() => page.evaluate(() => {
       const game = (window as unknown as { __brick: { game: { board: Uint8Array } } }).__brick.game;
       return [...game.board].filter(Boolean).length;

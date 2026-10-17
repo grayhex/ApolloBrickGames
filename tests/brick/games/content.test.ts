@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 /**
  * Содержание головоломок (R09) и решатели, исполняющие найденное решение на настоящем движке (R12): у каждой задачи есть решение, оно проходится кнопками
  * игры (стрелки и ROTATE), а наборы задач различаются и усложняются. Ожидаемые правила выписаны независимо от реализации.
@@ -7,6 +8,8 @@ import { QUARTH_LEVELS, QuarthGame } from '../../../src/brick/games/library/fall
 import { FillGame, LightsGame, MazeGame, PEG_HOLES, SokobanGame, SolitaireGame } from '../../../src/brick/games/library/puzzles';
 import { SOKOBAN_LEVELS } from '../../../src/brick/games/library/sokobanLevels';
 import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
+
+const coveredScenario = scenarioSuite('content');
 
 const tap = (g: BrickGame, action: BrickAction): BrickEvent[] => [...g.step(makeBrickInput([action])), ...g.step(NEUTRAL_BRICK_INPUT)];
 const run = (g: BrickGame, n: number): BrickEvent[] => {
@@ -80,7 +83,7 @@ describe('Sokoban: десять задач с проверенными реше�
     for (const [i, level] of SOKOBAN_LEVELS.entries()) expect(shortest(level.map), `задача ${i + 1}`).toBe(level.solution.length);
   });
 
-  it('решение каждой задачи проходится на движке: победа на последнем ходе, ни одного «заблокировано», уровень растёт', () => {
+  coveredScenario('sokoban', 'прогресс', 'решение каждой задачи проходится на движке: победа на последнем ходе, ни одного «заблокировано», уровень растёт', () => {
     for (const [i, level] of SOKOBAN_LEVELS.entries()) {
       const g = new SokobanGame({ level: i + 1 });
       g.start();
@@ -161,7 +164,7 @@ describe('Quarth: десять силуэтов, каждый решается �
     return { events, game: g };
   }
 
-  it('план каждого уровня на средней скорости проходится без потери жизни: силуэт убран, победа', () => {
+  coveredScenario('quarth', 'прогресс', 'план каждого уровня на средней скорости проходится без потери жизни: силуэт убран, победа', () => {
     for (let level = 1; level <= 10; level++) {
       const { events, game } = play(level, 5);
       expect(events.filter((e) => e.type === 'win'), `уровень ${level}`).toHaveLength(1);
@@ -173,7 +176,7 @@ describe('Quarth: десять силуэтов, каждый решается �
     for (let level = 1; level <= 4; level++) expect(play(level, 10).events.filter((e) => e.type === 'win'), `уровень ${level}`).toHaveLength(1);
   });
 
-  it('выстрел в столбец вне силуэта не очищает поле: клетка остаётся, силуэт не исчезает', () => {
+  coveredScenario('quarth', 'неудача', 'выстрел в столбец вне силуэта не очищает поле: клетка остаётся, силуэт не исчезает', () => {
     const g = new QuarthGame({ level: 1 });
     g.start();
     g.x = 9;
@@ -193,7 +196,7 @@ describe('решатели исполняют решение стрелками 
     while (y !== to[1]) { tap(g, y < to[1] ? 'down' : 'up'); y += y < to[1] ? 1 : -1; }
   };
 
-  it('Lights Out: решение методом Гаусса по GF(2) гасит все огни; задачи разных уровней и зёрен', () => {
+  coveredScenario('lights-out', 'прогресс', 'Lights Out: решение методом Гаусса по GF(2) гасит все огни; задачи разных уровней и зёрен', () => {
     for (const [seed, level] of [[1, 1], [2, 3], [3, 6], [4, 10]] as const) {
       const g = new LightsGame({ seed, level });
       g.start();
@@ -233,7 +236,7 @@ describe('решатели исполняют решение стрелками 
     }
   });
 
-  it('лабиринт: кратчайший путь поиском в ширину проходится стрелками до выхода (зёрна 0–9)', () => {
+  coveredScenario('maze', 'прогресс', 'лабиринт: кратчайший путь поиском в ширину проходится стрелками до выхода (зёрна 0–9)', () => {
     for (let seed = 0; seed < 10; seed++) {
       const g = new MazeGame({ seed });
       g.start();
@@ -255,7 +258,7 @@ describe('решатели исполняют решение стрелками 
     }
   });
 
-  it('Fill Connect: змейкой по строкам 8 × 8 за шестьдесят три шага — победа до конца таймера', () => {
+  coveredScenario('fill-connect', 'прогресс', 'Fill Connect: змейкой по строкам 8 × 8 за шестьдесят три шага — победа до конца таймера', () => {
     const g = new FillGame({ level: 1 });
     g.start();
     const events: BrickEvent[] = [];
@@ -267,7 +270,7 @@ describe('решатели исполняют решение стрелками 
     expect(g.score).toBeGreaterThan(0);
   });
 
-  it('Peg Solitaire: перебор находит решение крестового поля, оно проходится курсором и ROTATE — остаётся одна фишка, победа', () => {
+  coveredScenario('peg-solitaire', 'прогресс', 'Peg Solitaire: перебор находит решение крестового поля, оно проходится курсором и ROTATE — остаётся одна фишка, победа', () => {
     type Jump = [number, number];
     const holes = new Set(PEG_HOLES);
     const jumps = (pegs: Set<number>): Jump[] => {
@@ -310,5 +313,48 @@ describe('решатели исполняют решение стрелками 
     }
     expect(events).toContainEqual({ type: 'win' });
     expect(g.pegs.size).toBe(1);
+  });
+});
+
+
+describe('головоломки: ошибочный ход и исчерпание попытки', () => {
+  coveredScenario('maze', 'неудача', 'стена отклоняет шаг, не даёт очков и не переводит уровень', () => {
+    const g = new MazeGame({ seed: 7 }); g.start();
+    const start = g.player;
+    expect(tap(g, 'left')).toContainEqual({ type: 'blocked' });
+    expect(g.player).toBe(start); expect(g.score).toBe(0); expect(g.level).toBe(1);
+  });
+  coveredScenario('lights-out', 'неудача', 'неверное переключение не решает поле; повтор отменяет его', () => {
+    const g = new LightsGame({ seed: 7 }); g.start();
+    const before = g.board.slice();
+    expect(tap(g, 'rotate')).not.toContainEqual({ type: 'win' });
+    expect(g.board).not.toEqual(before); expect(g.board.some(Boolean)).toBe(true);
+    tap(g, 'rotate'); expect(g.board).toEqual(before);
+    expect(g.score).toBe(0); expect(g.level).toBe(1);
+  });
+  coveredScenario('sokoban', 'неудача', 'ящик упёрся в стену: ход и счёт не меняются', () => {
+    const g = new SokobanGame(); g.start();
+    g.player = 60; g.crates = new Set([61]); g.walls = new Set([62]); g.goals = new Set([63]);
+    expect(tap(g, 'right')).toContainEqual({ type: 'blocked' });
+    expect(g.player).toBe(60); expect([...g.crates]).toEqual([61]);
+    expect(g.score).toBe(0); expect(g.level).toBe(1);
+  });
+  coveredScenario('fill-connect', 'неудача', 'время вышло на незаполненном поле: завершение и новая попытка', () => {
+    const g = new FillGame({ level: 10 }); g.start();
+    const events = run(g, 2400);
+    expect(events).toContainEqual({ type: 'gameOver' });
+    expect(events).not.toContainEqual({ type: 'win' });
+    run(g, 80); expect(g.phase).toBe('over'); expect(g.score).toBe(0);
+    g.start(); expect(g.path).toEqual([0]); expect(g.phase).toBe('playing');
+  });
+  coveredScenario('peg-solitaire', 'неудача', 'два изолированных остатка после прыжка: проигрыш, не победа', () => {
+    const g = new SolitaireGame(); g.start();
+    g.pegs = new Set([22, 23, 2]); g.cursor = 22;
+    tap(g, 'rotate'); tap(g, 'right'); tap(g, 'right');
+    const events = tap(g, 'rotate');
+    expect(events).toContainEqual({ type: 'gameOver' });
+    expect(events).not.toContainEqual({ type: 'win' });
+    expect([...g.pegs].sort()).toEqual([2, 24]); expect(g.score).toBe(10);
+    run(g, 80); expect(g.phase).toBe('over'); expect(g.hiScore).toBe(10);
   });
 });

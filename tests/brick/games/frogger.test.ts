@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -26,6 +27,8 @@ import {
   type FrogPosition,
 } from '../../../src/brick/games/frogger';
 import { conformance } from '../conformance';
+
+const coveredScenario = scenarioSuite('frogger');
 
 // ---------------------------------------------------------------- помощники
 
@@ -597,7 +600,7 @@ describe('лягушка: потеря жизни', () => {
     expect(frogAt(game)).toEqual({ x: 4, row: 19 });
   });
 
-  it('четыре жизни — четыре гибели, затем конец игры: взрыв, снятие жизни, заливка поля, фаза `over`', () => {
+  coveredScenario('frog', 'неудача', 'четыре жизни — четыре гибели, затем конец игры: взрыв, снятие жизни, заливка поля, фаза `over`', () => {
     const game = froggerDef.create({ seed: 1, mode: 0 });
     game.start();
     const log: string[] = [];
@@ -835,7 +838,7 @@ function play(game: BrickGame, ticks: number, bot: (game: BrickGame) => BrickInp
 describe('лягушка: бот переходит дорогу', () => {
   const period = genuineTicks(1, 450, 120) * 3;
 
-  it('на каждом из шестнадцати вариантов бот набирает очки, не теряя жизней, и проходит уровень', () => {
+  coveredScenario('frog', 'прогресс', 'на каждом из шестнадцати вариантов бот набирает очки, не теряя жизней, и проходит уровень', () => {
     for (let mode = 0; mode < 16; mode++) {
       const game = froggerDef.create({ seed: 2, mode, speed: 1 });
       const events = play(game, 3000, botFor(period));

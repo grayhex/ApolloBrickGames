@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import { SeaBattleGame, seaBattleDef, placeFleet, FLEET } from '../../../src/brick/games/seaBattle';
 import { RomeoJulietGame, romeoJulietDef } from '../../../src/brick/games/romeoJuliet';
@@ -5,6 +6,8 @@ import { makePiece } from '../../../src/brick/games/tetris/shapes';
 import { makeBrickInput, NEUTRAL_BRICK_INPUT } from '../../../src/brick/types';
 import { Rng } from '../../../src/brick/rng';
 import { conformance } from '../conformance';
+
+const coveredScenario = scenarioSuite('approximations');
 conformance(seaBattleDef);
 conformance(romeoJulietDef);
 const run = (game: SeaBattleGame | RomeoJulietGame, ticks: number) => { for (let i = 0; i < ticks; i++) game.step(NEUTRAL_BRICK_INPUT); };
@@ -24,7 +27,7 @@ describe('Sea Battle', () => {
       });
     }
   });
-  it('hit scores, waits for exactly one enemy reply and rejects a repeated shot', () => {
+  coveredScenario('sea-battle', 'неудача', 'hit scores, waits for exactly one enemy reply and rejects a repeated shot', () => {
     const game = new SeaBattleGame(); game.start();
     const target = game['enemy'].findIndex(Boolean);
     game['x'] = target % 10; game['y'] = Math.floor(target / 10);
@@ -43,7 +46,7 @@ describe('Sea Battle', () => {
     a.step(NEUTRAL_BRICK_INPUT); b.step(NEUTRAL_BRICK_INPUT);
     expect(a['enemyShots']).toEqual(b['enemyShots']);
   });
-  it('destroying the last ship wins; losing your fleet ends the game', () => {
+  coveredScenario('sea-battle', 'прогресс', 'destroying the last ship wins; losing your fleet ends the game', () => {
     const game = new SeaBattleGame(); game.start();
     game['enemy'].fill(0); game['enemy'][0] = 1;
     expect(game.step(makeBrickInput(['rotate']))).toContainEqual({ type: 'win' });
@@ -67,7 +70,7 @@ describe('Romeo and Juliet', () => {
     game.step(makeBrickInput(['rotate'])); expect(game['piece'].angle).toBe(1);
     game.step(makeBrickInput(['fire'])); expect(game['board'].filter(Boolean).length).toBe(10);
   });
-  it('the dot waits for stairs and automatically climbs towards Juliet', () => {
+  coveredScenario('romeo-juliet', 'прогресс', 'the dot waits for stairs and automatically climbs towards Juliet', () => {
     const game = new RomeoJulietGame(); game.start();
     run(game, 12); expect(game['hero']).toEqual({ x: 0, y: 19 });
     // Six rises, then two level steps to the seven-cell target column.
@@ -89,7 +92,7 @@ describe('Romeo and Juliet', () => {
     const game = new RomeoJulietGame(); game.start(); game['board'][191] = game['board'][181] = 1;
     run(game, 12); expect(game['hero']).toEqual({ x: 0, y: 19 });
   });
-  it('burying the dot loses a life, and restart preserves the score but resets stairs', () => {
+  coveredScenario('romeo-juliet', 'неудача', 'burying the dot loses a life, and restart preserves the score but resets stairs', () => {
     const game = new RomeoJulietGame(); game.start();
     game['piece'] = makePiece(1); game['x'] = 0;
     game.step(makeBrickInput(['fire'])); expect(game.lives).toBe(3);

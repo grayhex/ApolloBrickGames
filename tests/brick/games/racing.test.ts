@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../../src/brick/rng';
 import { genuineTicks, msToTicks } from '../../../src/brick/timing';
@@ -38,6 +39,8 @@ import {
   PEDESTRIAN_ONE_IN,
 } from '../../../src/brick/games/racing/shoot';
 import { conformance, frameHash } from '../conformance';
+
+const coveredScenario = scenarioSuite('racing');
 
 conformance(racingDef);
 conformance(racingShootDef);
@@ -524,7 +527,7 @@ describe('гонки: аварии, жизни, очки, уровни', () => {
     expect(game['carX']).toBe(6);
   });
 
-  it('четыре аварии подряд — конец игры: жизни по одной, затем заливка поля и фаза `over`', () => {
+  coveredScenario('racing', 'неудача', 'четыре аварии подряд — конец игры: жизни по одной, затем заливка поля и фаза `over`', () => {
     for (const scheme of SCHEMES) {
       const game = racing(scheme.mode, { speed: 10 });
       game.start();
@@ -646,7 +649,7 @@ describe('гонки: аварии, жизни, очки, уровни', () => {
     expect(play()).toBe(play());
   });
 
-  it('«бот» по рисунку поля набирает очки на каждом варианте и доживает до роста скорости', () => {
+  coveredScenario('racing', 'прогресс', '«бот» по рисунку поля набирает очки на каждом варианте и доживает до роста скорости', () => {
     for (const scheme of SCHEMES) {
       const game = racing(scheme.mode, { seed: 5, speed: 4 });
       game.start();
@@ -844,7 +847,7 @@ describe('гонки со стрельбой: оружие и пешеходы',
     expect(cellAt(game, game['carX'], 16)).toBe(1); // нос больше не мигает
   });
 
-  it('четыре аварии — конец игры и у стрельбы', () => {
+  coveredScenario('racing-shooting', 'неудача', 'четыре аварии — конец игры и у стрельбы', () => {
     for (const mode of [0, 1, 2, 3]) {
       const game = shooter(mode, { speed: 10 });
       game.start();
@@ -885,7 +888,7 @@ describe('гонки со стрельбой: оружие и пешеходы',
     expect(spawned).toBeGreaterThan(5);
   });
 
-  it('«бот» собирает пешеходов, стреляет по машинам и набирает очки', () => {
+  coveredScenario('racing-shooting', 'прогресс', '«бот» собирает пешеходов, стреляет по машинам и набирает очки', () => {
     for (const mode of [0, 1, 2, 3]) {
       const game = shooter(mode, { seed: 3, speed: 4 });
       game.start();

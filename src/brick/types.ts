@@ -7,7 +7,7 @@
 export const BRICK_COLS = 10;
 export const BRICK_ROWS = 20;
 export const BRICK_CELLS = BRICK_COLS * BRICK_ROWS;
-/** Такты в секунду — как у `FixedStepper` оболочки (и у тетриса-заглушки). */
+/** Такты в секунду — как у `FixedStepper` оболочки (и у одиночного тетриса). */
 export const BRICK_TICK_HZ = 60;
 /** Превью («NEXT»): 4 × 4 клетки. */
 export const PREVIEW_COLS = 4;

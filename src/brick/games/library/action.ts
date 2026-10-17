@@ -119,6 +119,7 @@ export class RoadGame extends LibraryGame {
 
 /** Нижняя строка, до которой доходит строй в игре с ответным огнём. Пуля игрока рождается в строке 17 и проверяется после сдвига вверх, поэтому строй останавливается строкой выше: иначе его нижний ряд нельзя было бы подстрелить. */
 const TALKING_LOWEST_ROW = 16;
+// Один HP — одна клетка шкалы. Скорость меню задаёт темп атак; невидимого здоровья сверх десяти клеток нет.
 
 export class ShooterGame extends LibraryGame {
   readonly id: 'honeybee' | 'space-invaders' | 'ufo-raiders' | 'dual-shooting' | 'talking-shooting' | 'tetris-shooting' | 'meteor-fighter';
@@ -127,7 +128,7 @@ export class ShooterGame extends LibraryGame {
   constructor(id: ShooterGame['id'], o: BrickGameOptions = {}) { super(o); this.id = id; this.init(); }
   protected reset(): void { this.setLives(4); this.setup(); }
   private setup(): void {
-    this.x = 4; this.health = 3; this.timer = this.cooldown = 0; this.bullets = []; this.directionNow = 1; this.bossHP = this.id === 'dual-shooting' || this.id === 'meteor-fighter' ? 10 + this.level : 0; this.takeoff = this.id === 'meteor-fighter' ? 60 : 0;
+    this.x = 4; this.health = 3; this.timer = this.cooldown = 0; this.bullets = []; this.directionNow = 1; this.bossHP = this.id === 'dual-shooting' || this.id === 'meteor-fighter' ? 10 : 0; this.takeoff = this.id === 'meteor-fighter' ? 60 : 0;
     this.targets = []; this.bossStage = false; this.hazard = { x:9, y:0 };
     for (let y = 2; y <= 5; y++) for (let x = 2; x <= 7; x++) if (this.id !== 'honeybee' || (x + y) % 3 !== 0) this.targets.push({ x, y });
     if (this.id === 'tetris-shooting') this.targets = [{x:2,y:2},{x:3,y:2},{x:4,y:2},{x:3,y:3},{x:6,y:5},{x:6,y:6},{x:6,y:7},{x:7,y:7}];
@@ -158,7 +159,7 @@ export class ShooterGame extends LibraryGame {
       this.bullets = this.bullets.filter((b) => b.y >= 0 && b.y < 20);
     }
     if (!this.targets.length || this.id === 'ufo-raiders' && this.targets.length === 1 && this.targets[0] === this.protectedUfo) {
-      if (this.id === 'space-invaders' && !this.bossStage) { this.bossStage = true; this.bossHP = 8 + this.level; this.targets = [{x:3,y:2},{x:4,y:2},{x:5,y:2},{x:4,y:3}]; }
+      if (this.id === 'space-invaders' && !this.bossStage) { this.bossStage = true; this.bossHP = Math.min(10, 8 + this.level); this.targets = [{x:3,y:2},{x:4,y:2},{x:5,y:2},{x:4,y:3}]; }
       else { this.win(() => this.setup()); return; }
     }
     if (this.id === 'tetris-shooting' && this.timer % this.period(45, 16) === 0) {

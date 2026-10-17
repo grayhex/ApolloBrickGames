@@ -1,3 +1,4 @@
+import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
 /**
  * Сценарные тесты правил: мяч и ракетка (pong, pong-double, pneumatic-ball, arkanoid-dots), тетрис с мигающими клетками
  * и игры на поле 4 × 9 (columns, columns-flicker, dr-mario).
@@ -23,8 +24,10 @@ import { CapsuleGame, FlickerTetrisGame } from '../../../src/brick/games/library
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
 import { SHAPE_LINE, SHAPE_SQUARE, makePiece } from '../../../src/brick/games/tetris/shapes';
 
+const coveredScenario = scenarioSuite('scenarios.balls');
+
 /** Игры, у которых ниже есть и сценарий «прогресс» (очки, победа, следующий уровень), и сценарий «неудача» (жизнь, переполнение, завершение). */
-export const SCENARIO_GAMES = ['pong', 'pong-double', 'pneumatic-ball', 'arkanoid-dots', 'tetris-flicker', 'columns', 'columns-flicker', 'dr-mario'] as const;
+const SCENARIO_GAMES = SCENARIO_GROUPS['scenarios.balls'];
 
 type Kind = 'прогресс' | 'неудача';
 const registry = new Map<string, Set<Kind>>();
@@ -33,7 +36,7 @@ const scenario = (id: (typeof SCENARIO_GAMES)[number], kind: Kind, name: string,
   const kinds = registry.get(id) ?? new Set<Kind>();
   kinds.add(kind);
   registry.set(id, kinds);
-  it(`[${kind}] ${name}`, body);
+  coveredScenario(id, kind, name, body);
 };
 
 // ── общие помощники ──────────────────────────────────────────────────────────────────────────────────────────────────────

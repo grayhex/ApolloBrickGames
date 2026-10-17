@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import { BRICK_COLS, BRICK_ROWS, PREVIEW_COLS, PREVIEW_ROWS, genuineTicks } from '../../../src/brick';
 import { BRICK_GAMES } from '../../../src/brick/games';
@@ -18,6 +19,8 @@ import {
 import { describeVariant } from '../../../src/brick/games/tetris/variants';
 import { conformance } from '../conformance';
 import { Bot, Lab, idle, labFor, tap, types, until } from './tetrisLab';
+
+const coveredScenario = scenarioSuite('pentix');
 
 /**
  * Pentix («Тетрис Pentix» у «168 в 1 танк», «Тетрис с большими фигурами» у «Морского боя»): тот же тетрис, но фигуры из трёх, четырёх и пяти клеток.
@@ -241,7 +244,7 @@ describe('Pentix: класс S — смена фигуры вместо пово
 });
 
 describe('Pentix: «бот»', () => {
-  it('простой игрок складывает фигуры 3–5 клеток и собирает ряды, пока не заполнится стакан', () => {
+  coveredScenario(['tetris-big', 'tetris-pentix'], 'прогресс', 'простой игрок складывает фигуры 3–5 клеток и собирает ряды, пока не заполнится стакан', () => {
     for (const seed of [3, 4]) {
       const lab = pentix({ seed });
       const bot = new Bot(lab);
@@ -253,4 +256,13 @@ describe('Pentix: «бот»', () => {
       expect(lab.score).toBeGreaterThanOrEqual(lines);
     }
   });
+});
+
+coveredScenario(['tetris-big', 'tetris-pentix'], 'неудача', 'новая пентамино не помещается: проигрыш и сохранение рекорда', () => {
+  const lab = pentix(); lab.wipe(); lab.fill(BRICK_ROWS - 1, '#.#.#.#.#.'); lab.poke(42);
+  lab.respawn(SHAPE_PENTO_X);
+  expect(types(idle(lab, 1))).toContain('gameOver');
+  until(lab, () => lab.phase === 'over', 200);
+  expect(lab.phase).toBe('over'); expect(lab.hiScore).toBe(42);
+  lab.start(); expect(lab.score).toBe(0); expect(lab.hiScore).toBe(42);
 });

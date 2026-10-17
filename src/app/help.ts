@@ -1,3 +1,4 @@
+import { guideForBody } from './bodyButtons';
 import { BRICK_GAMES } from '../brick/games';
 import { BRICK_GUIDES } from '../brick/guides';
 import { GAME_GUIDE, SOURCE_KEYS } from './gameGuide';
@@ -72,7 +73,7 @@ export function gameRows(model: ToyModel): HTMLElement[] {
 }
 
 /** Build the full library only when opened; large LCD diagrams stay out of initial layout. */
-function libraryHelp(): HTMLElement {
+function libraryHelp(model: ToyModel): HTMLElement {
   const ru = getLang() === 'ru';
   const details = h('details', { class:'help__game' }, h('summary',{},ru ? 'Полный каталог движка и статус реконструкций' : 'Full engine catalog and reconstruction status'));
   let mounted = false;
@@ -84,7 +85,7 @@ function libraryHelp(): HTMLElement {
       if (game) select.append(h('option',{ value:id },game.names[getLang()]));
     }
     const body = h('div',{});
-    const render = (): void => { const guide = BRICK_GUIDES[select.value]; body.replaceChildren(...(guide ? guideBlocks(guide,BRICK_GAMES[select.value],undefined,getLang()) : [])); };
+    const render = (): void => { const guide = BRICK_GUIDES[select.value]; body.replaceChildren(...(guide ? guideBlocks(guideForBody(guide, model),BRICK_GAMES[select.value],undefined,getLang()) : [])); };
     select.addEventListener('change',render); render();
     details.append(select,body,h('p',{class:'gtext'},ru ? 'Не реализованы: Four Dice, Magic Slab, Flipull, Capture Prey, Fighting и два 3D-режима. Для них недостаточно подтверждённых правил.' : 'Not implemented: Four Dice, Magic Slab, Flipull, Capture Prey, Fighting and both 3D modes. Their confirmed rules are insufficient.'),h('a',{href:'https://github.com/grayhex/CrocodileMario/blob/main/docs/brick/library.md',target:'_blank',rel:'noopener noreferrer'},ru ? 'Таблица покрытия статьи и ограничения' : 'Article coverage and limitations'));
   });
@@ -107,17 +108,17 @@ export function gamesSection(model: ToyModel): HTMLElement {
       return h('details', { class: 'help__game', 'data-game': game.id },
         h('summary', {}, GAMES[game.id].names[getLang()]),
         h('p', { class: 'gtext' }, t(STATUS_KEYS[game.status])),
-        ...(model.menu && guide ? guideBlocks(guide, BRICK_GAMES[game.id], game.modes, getLang()) : detail ? [h('p', { class: 'gtext' }, t(detail.what)), h('p', { class: 'gtext' }, t(detail.open))] : []),
+        ...(model.menu && guide ? guideBlocks(guideForBody(guide, model), BRICK_GAMES[game.id], game.modes, getLang()) : detail ? [h('p', { class: 'gtext' }, t(detail.what)), h('p', { class: 'gtext' }, t(detail.open))] : []),
         h('p', { class: 'gtext' }, `${t('games.src.h')}: ${detail ? detail.sources.map((source) => t(SOURCE_KEYS[source])).join('; ') : 'Retro Consoles Wiki · Games · 2026-01-12'}`),
       );
     }),
-    libraryHelp(),
+    libraryHelp(model),
     ...(model.menu ? [h('p', { class: 'help__text' }, t('help.brick.audio'))] : []),
     ...(model.gamesCount ? [h('p', { class: 'help__text' }, t('help.games.count', { n: model.gamesCount }))] : []),
   );
 }
 
-/** Таблица кнопок игрушки с тетрисом («Часы+99», «Морской бой»): подписи напечатаны на корпусе, действия — у заглушки. */
+/** Таблица кнопок игрушки с тетрисом («Часы+99», «Морской бой»): подписи напечатаны на корпусе, RESET возвращает в меню. */
 export function toyHelpRows(model: ToyModel, bindings: Bindings): HelpRow[] {
   const order: ToyKeyId[] = ['onoff', 'sp', 'sound', 'fire', 'left', 'right', 'up', 'down', 'jump'];
   const keys: Record<ToyKeyId, string> = {
@@ -135,7 +136,7 @@ export function toyHelpRows(model: ToyModel, bindings: Bindings): HelpRow[] {
     const what = model.keyWhat[id];
     return what ? [{ button: keyLabel(model, id), what: t(what), keys: keys[id] }] : [];
   });
-  return [...rows, { button: '⌨ / 🎮', what: t(model.menu ? 'help.m.fire' : 'help.t.drop'), keys: keysOf(bindings, 'fire') }];
+  return rows;
 }
 
 export interface HelpDialogOptions {
