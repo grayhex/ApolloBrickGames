@@ -66,7 +66,9 @@ for (const width of [320, 360, 900, 1440])
             b = boxes[j]!;
           expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top).toBe(true);
         }
+      const scrollBefore = await page.evaluate(() => scrollY);
       await page.getByRole('button', { name: 'Следующие модели' }).click();
+      expect(await page.evaluate(() => scrollY)).toBe(scrollBefore);
       await expect(page.locator('.toysw__universal')).toHaveAttribute('aria-current', 'page');
       await page.locator('.toysw__item[data-toy=minibrick]').focus();
       await page.keyboard.press('Home');

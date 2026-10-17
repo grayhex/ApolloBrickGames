@@ -34,6 +34,13 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
       left: direction * shelf.clientWidth * 0.7,
       behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
     });
+  // Scroll only the shelf: scrollIntoView can also move the page underneath the fixed controls.
+  const reveal = (link: HTMLAnchorElement): void => {
+    const item = link.getBoundingClientRect(),
+      box = shelf.getBoundingClientRect();
+    const left = item.left < box.left ? item.left - box.left : item.right > box.right ? item.right - box.right : 0;
+    shelf.scrollBy({ left, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  };
   const updateArrows = (): void => {
     previous.disabled = shelf.scrollLeft < 2;
     next.disabled = shelf.scrollLeft + shelf.clientWidth >= shelf.scrollWidth - 2;
@@ -55,7 +62,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
           ? links.length - 1
           : Math.max(0, Math.min(links.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)));
     links[target]!.focus({ preventScroll: true });
-    links[target]!.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    reveal(links[target]!);
   });
   const setCurrent = (id: ToyId): void => {
     for (const item of items) {
@@ -63,14 +70,8 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
       else item.link.removeAttribute('aria-current');
     }
     requestAnimationFrame(() => {
-      if (id !== 'brickgame')
-        items
-          .find((item) => item.id === id)
-          ?.link.scrollIntoView({
-            block: 'nearest',
-            inline: 'nearest',
-            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-          });
+      const link = items.find((item) => item.id === id)?.link;
+      if (id !== 'brickgame' && link) reveal(link);
       updateArrows();
     });
   };

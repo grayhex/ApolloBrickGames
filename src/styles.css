@@ -4544,3 +4544,5 @@ body[data-toy='brickgame'] .view-layout { margin:0; border:0; padding-top:0; }
 }
 @media (min-width:1200px) { body[data-chrome='toy'] .side--ctl { align-self:start; } }
 body[data-toy='brickgame'] #blk-levels { display:none; }
+
+.toy[data-model='brickgame'] .classic__arrow { margin:auto; }
