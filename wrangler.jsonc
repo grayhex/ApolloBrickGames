@@ -1,11 +1,13 @@
 
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "crocodilemario",
+  "name": "apollobrickgames",
   "compatibility_date": "2026-10-13",
+  "keep_vars": true,
   "build": {
     "command": "npm run build"
   },
+  "main": "src/server/worker.ts",
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -16,12 +18,15 @@
     ]
   },
   "previews": {},
-  "main": "src/server/worker.ts",
   "durable_objects": {
     "bindings": [
       {
         "name": "CONFIG",
         "class_name": "ConfigurationStore"
+      },
+      {
+        "name": "LEADERBOARDS",
+        "class_name": "LeaderboardStore"
       }
     ]
   },
@@ -31,6 +36,22 @@
       "new_sqlite_classes": [
         "ConfigurationStore"
       ]
+    },
+    {
+      "tag": "leaderboards-v1",
+      "new_sqlite_classes": [
+        "LeaderboardStore"
+      ]
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "LEADERBOARD_WRITE_LIMIT",
+      "namespace_id": "482901",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
     }
   ],
   "observability": {
