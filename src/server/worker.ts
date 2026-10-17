@@ -1,3 +1,5 @@
+import { leaderboardRoute, type LeaderboardEnv } from './leaderboards';
+export { LeaderboardStore } from './leaderboardStore';
 import { validateConfig, type SiteConfig } from '../config/schema';
 import raw from '../config/default.json';
 interface Snapshot { revision: number; config: SiteConfig }
@@ -6,7 +8,7 @@ interface Storage {
   put(key: string, value: unknown): Promise<void>;
   transaction<T>(callback: (tx: Storage) => Promise<T>): Promise<T>;
 }
-interface Env {
+interface Env extends LeaderboardEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
   CONFIG: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
   ADMIN_TOKEN?: string;
@@ -49,6 +51,7 @@ export class ConfigurationStore {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/leaderboards/') || url.pathname.startsWith('/api/admin/leaderboards/')) return leaderboardRoute(request,env);
     if (url.pathname === '/api/config' && request.method === 'GET') return env.CONFIG.get(env.CONFIG.idFromName('site')).fetch(request);
     if (url.pathname === '/api/admin/config') {
       if (request.method !== 'PUT') return json({ error:'Method not allowed' },405);

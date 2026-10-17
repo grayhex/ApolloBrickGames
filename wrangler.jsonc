@@ -4,6 +4,10 @@
   "name": "apollobrickgames",
   "compatibility_date": "2026-10-13",
   "keep_vars": true,
+  "vars": {
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFZb-NymWO_lZdka",
+    "LEADERBOARD_ENV": "production"
+  },
   "build": {
     "command": "npm run build"
   },
