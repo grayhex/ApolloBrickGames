@@ -1,4 +1,5 @@
 import { LibraryGame, put } from './common';
+import { QUARTH_MODES } from './modes';
 import { TetrisCore } from '../tetris/core';
 import { variantOf } from '../tetris/variants';
 import type { BrickGameOptions, BrickInput } from '../../types';
@@ -39,7 +40,7 @@ export const QUARTH_LEVELS: readonly (readonly QuarthPiece[])[] = [
 ];
 export class QuarthGame extends LibraryGame {
   readonly id = 'quarth'; board = new Uint8Array(200); x = 4; private timer = 0; private cooldown = 0;
-  constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
+  constructor(o: BrickGameOptions = {}) { super(o, QUARTH_MODES.length); this.flipped = this.mode === 1; this.init(); } // вариант 02 — «invert»
   protected reset(): void { this.setLives(4); this.setup(); }
   private setup(): void {
     this.board.fill(0); this.timer = this.cooldown = 0; this.repeat.reset();

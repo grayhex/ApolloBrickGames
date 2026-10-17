@@ -80,6 +80,18 @@ export function flipSprite(sprite: Sprite): Sprite {
   return [...sprite].reverse();
 }
 
+/**
+ * Отразить поле по вертикали: строка `y` становится строкой `19 − y`, колонки не меняются («вверх дном»). Возвращает новую копию.
+ * Так рисуются перевёрнутые варианты библиотечных игр (`LibraryGame`): логика считается как обычно, переворачивается только готовый кадр.
+ */
+export function flipRows(cells: Uint8Array): Uint8Array {
+  const out = new Uint8Array(BRICK_CELLS);
+  for (let y = 0; y < BRICK_ROWS; y++) {
+    out.set(cells.subarray(y * BRICK_COLS, (y + 1) * BRICK_COLS), (BRICK_ROWS - 1 - y) * BRICK_COLS);
+  }
+  return out;
+}
+
 /** Строка поля `y` целиком горит? */
 export function rowFull(buffer: Uint8Array, y: number): boolean {
   for (let x = 0; x < BRICK_COLS; x++) if (buffer[cellIndex(x, y)] === 0) return false;
