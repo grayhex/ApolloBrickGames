@@ -193,3 +193,14 @@ for (const [key, sound] of [
     }
   });
 }
+
+it('a terminal game cue can interrupt a pad tone instead of being lost', () => {
+  const { port, voices, context, gains } = harness();
+  port.unlock();
+  port.play({ type: 'tone', pad: 0, ticks: 25 }, 'simon', false);
+  context.currentTime = 0.1;
+  port.play({ type: 'gameOver' }, 'simon', false);
+  expect(gains[1]?.disconnect).toHaveBeenCalledOnce();
+  expect(voices).toHaveLength(2);
+  expect(voices[1]?.frequency.setValueAtTime).toHaveBeenCalledWith(BRICK_PHRASES.game_over[0]!.hz, 0.1);
+});

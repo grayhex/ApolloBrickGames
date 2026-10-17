@@ -89,7 +89,7 @@ export class BrickAudio {
           ? BRICK_PHRASES[sound]
           : null;
     // A pad is gameplay information: startup music and reward jingles must not mask it.
-    const priority = event.type === 'tone' ? 4 : sound ? PRIORITY(sound) : 0;
+    const priority = event.type === 'tone' ? 3 : sound ? PRIORITY(sound) : 0;
     const context = this.context;
     // Allow the first gesture's cue while resume() settles, but never queue stale background events.
     if (

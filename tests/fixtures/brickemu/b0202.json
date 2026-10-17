@@ -277,7 +277,7 @@
       }
     ],
     "wellSetup": {
-      "description": "Inject bottom rows with a vertical I-shaped gap into LCD RAM; set decimal score digits only for boundary cases. ROM, CPU clock and gameplay code stay unchanged.",
+      "description": "Inject bottom rows with a vertical I-shaped gap into LCD RAM; set decimal score digits and the SPEED register for boundary cases. ROM, CPU clock and gameplay code stay unchanged.",
       "inputs": [
         [
           2070001,

@@ -133,7 +133,7 @@ def main():
     template.run(1.6)
     template.key('Rotate')
     assert len(template.cells()) == 4 and len({x for x, _ in template.cells()}) == 1
-    observations['wellSetup'] = {'description': 'Inject bottom rows with a vertical I-shaped gap into LCD RAM; set decimal score digits only for boundary cases. ROM, CPU clock and gameplay code stay unchanged.', 'inputs': template.inputs, 'initialCells': template.cells()}
+    observations['wellSetup'] = {'description': 'Inject bottom rows with a vertical I-shaped gap into LCD RAM; set decimal score digits and the SPEED register for boundary cases. ROM, CPU clock and gameplay code stay unchanged.', 'inputs': template.inputs, 'initialCells': template.cells()}
     clears = []
     for rows, score, speed in [(1, 0, 0), (2, 0, 0), (3, 0, 0), (4, 0, 0), (1, 99, 0), (1, 999, 0), (1, 999, 9)]:
         machine = copy.deepcopy(template)
