@@ -39,6 +39,7 @@ export { TetrisCore };
 
 export const tetrisDef: BrickGameDef = {
   id: 'tetris',
+  usesFire: true, // жёсткое падение
   declaredModes: 51,
   modes: TETRIS_VARIANTS.map(describeVariant),
   create: (options) => new TetrisGame(options),

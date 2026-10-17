@@ -11,24 +11,26 @@ import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindin
 import { APOLLO_SHELLS } from '../../src/input/settings';
 
 describe('выбор игрушки', () => {
-  it('четыре Apollo и два экспоната: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
+  it('четыре Apollo и два экспоната: универсальный Brick Game по умолчанию, остальные — по адресу ?toy=', () => {
     expect([...APOLLO_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
     expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame']);
     expect(parseToy('?toy=alibaba')).toBe('alibaba');
-    expect(DEFAULT_TOY).toBe('mario');
-    expect(parseToy('')).toBe('mario');
+    expect(DEFAULT_TOY).toBe('brickgame');
+    expect(parseToy('')).toBe('brickgame');
+    expect(parseToy('?toy=mario')).toBe('mario');
     expect(parseToy('?toy=clock99')).toBe('clock99');
     expect(parseToy('?power=on&toy=seabattle')).toBe('seabattle');
     expect(parseToy('?toy=tank168')).toBe('tank168');
-    expect(parseToy('?toy=tetris')).toBe('mario'); // неизвестное значение — Mario
-    expect(parseToy('?toy=')).toBe('mario');
+    expect(parseToy('?toy=tetris')).toBe('brickgame'); // неизвестное значение — универсальный Brick Game
+    expect(parseToy('?toy=')).toBe('brickgame');
   });
 
   it('ссылка переключателя: параметр игрушки меняется, отладка остаётся, уровень, вид, питание и зерно сбрасываются', () => {
     expect(toyHref('clock99', '', '/CrocodileMario/')).toBe('/CrocodileMario/?toy=clock99');
-    expect(toyHref('mario', '?toy=seabattle', '/CrocodileMario/')).toBe('/CrocodileMario/');
+    expect(toyHref('brickgame', '?toy=seabattle', '/CrocodileMario/')).toBe('/CrocodileMario/');
+    expect(toyHref('mario', '', '/CrocodileMario/')).toBe('/CrocodileMario/?toy=mario');
     expect(toyHref('seabattle', '?debug&level=3&view=full&power=on&seed=5', '/')).toBe('/?debug=&toy=seabattle');
-    expect(toyHref('mario', '?debug&toy=clock99&power=on', '/')).toBe('/?debug=');
+    expect(toyHref('brickgame', '?debug&toy=clock99&power=on', '/')).toBe('/?debug=');
     expect(toyHref('tank168', '', '/')).toBe('/?toy=tank168');
   });
 

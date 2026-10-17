@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Три игрушки Apollo на одной странице: шапка с логотипом и переключателем, «Часы+99» и «Морской бой» (аппаратная часть, цвета, тетрис-заглушка).
@@ -34,7 +35,7 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 
 test.describe('шапка и переключатель', () => {
   test('логотип Apollo внутри категории, слева управление; четыре белые миниатюры и текущая игрушка', async ({ page }) => {
-    await page.goto('./');
+    await page.goto(marioUrl(''));
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
     const logo = page.locator('.site-brand img');
     await expect(logo).toBeVisible();
@@ -63,10 +64,10 @@ test.describe('шапка и переключатель', () => {
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   });
 
-  test('переключатель — ссылки: «Часы+99» и «Морской бой» открывают свою игрушку, Crocodile Mario — страницу без параметра', async ({ page }) => {
+  test('переключатель — ссылки: «Часы+99» и «Морской бой» открывают свою игрушку, Crocodile Mario — ?toy=mario, универсальный Brick Game — страницу без параметра', async ({ page }) => {
     // Каждый переход ждёт готовности страницы: уйти, пока грузится пакет, значило бы оборвать запрос и получить ошибку в консоли.
     const loaded = (): Promise<void> => expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
-    await page.goto('./');
+    await page.goto(marioUrl(''));
     await loaded();
     await page.locator('.toysw__item[data-toy="clock99"]').click();
     await expect(page).toHaveURL(/\?toy=clock99$/);
@@ -79,14 +80,18 @@ test.describe('шапка и переключатель', () => {
     await loaded();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'seabattle');
     await page.locator('.toysw__item[data-toy="mario"]').click();
-    await expect(page).not.toHaveURL(/toy=/);
+    await expect(page).toHaveURL(/\?toy=mario$/);
     await loaded();
     await expect(page.locator('body')).not.toHaveAttribute('data-toy', /.+/);
     await expect(page).toHaveTitle('Crocodile Mario');
-    // Неизвестное значение — Crocodile Mario.
+    await page.locator('.toysw__universal').click();
+    await expect(page).not.toHaveURL(/toy=/);
+    await loaded();
+    await expect(page.locator('body')).toHaveAttribute('data-toy', 'brickgame');
+    // Неизвестное значение — универсальный Brick Game.
     await page.goto('./?toy=nope');
     await loaded();
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
+    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'brickgame');
   });
 
   for (const toy of ['mario', 'tank168']) {
@@ -337,7 +342,7 @@ test.describe('«Морской бой»', () => {
 });
 
 test('Crocodile Mario не изменился: свои подписи, логотип, левая панель и уровни; цвет жёлтый — тусклый, кремовый', async ({ page }) => {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
   const labels = await page.locator('.base__art text').allTextContents();
   for (const text of ['ON/OFF', 'S./P.', 'SOUND', 'FIRE', 'UP', 'LEFT', 'RIGHT', 'DOWN', 'JUMP']) expect(labels, text).toContain(text);

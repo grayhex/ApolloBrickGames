@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Девять уровней MARIO («геймплейное приближение», docs/video-observations.md §9) в браузере: каждый открывается по `?level=N`,
@@ -23,7 +24,7 @@ test.afterEach(async ({ page }) => {
 
 for (let n = 1; n <= 9; n++) {
   test(`уровень ${n}: открывается по ?level=${n}, яма и выход из неё, бег вправо с прокруткой, подпись 1-0${n}`, async ({ page }) => {
-    await page.goto(`./?level=${n}&power=on`);
+    await page.goto(marioUrl(`?level=${n}&power=on`));
     await expect.poll(phase(page)).toBe('ready');
     expect(await area(page, 'level')).toBe(`mario-${n}`);
     expect(await area(page, 'hud')).toBe(`1-0${n}`);

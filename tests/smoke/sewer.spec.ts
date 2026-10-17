@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Колодцы (видео геймплея 178–216 с): в уровнях 2–9 есть щель между двумя одиночными трубами с сердцем; провалившийся герой попадает в комнату —
@@ -32,7 +33,7 @@ test.afterEach(async ({ page }) => {
 
 /** Игра на уровне n началась и сценарий входа отыгран: герой под управлением. */
 async function play(page: Page, n: number): Promise<{ x: number; returnX: number }> {
-  await page.goto(`./?level=${n}&power=on&debug`);
+  await page.goto(marioUrl(`?level=${n}&power=on&debug`));
   await expect.poll(() => area(page, 'phase')).toBe('ready');
   await page.keyboard.press('Enter');
   await expect.poll(() => area(page, 'phase')).toBe('playing');

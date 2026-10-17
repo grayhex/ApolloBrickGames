@@ -91,7 +91,7 @@ export class RomeoJulietGame extends BrickBase {
   }
 }
 export const romeoJulietDef: BrickGameDef = {
-  id: 'romeo-juliet', declaredModes: null,
+  id: 'romeo-juliet', declaredModes: null, usesFire: true, // fire — сбросить фигуру
   modes: [{ name: { ru: 'Лестница из фигур', en: 'Falling-piece stairway' }, note: 'Падающие фигуры, автоматическая точка и столбик справа — по владельцу и фото. Высота шага, очки и темп — допущения.' }],
   create: (options) => new RomeoJulietGame(options),
 };

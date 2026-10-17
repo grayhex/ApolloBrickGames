@@ -1,35 +1,109 @@
 import { h, svg } from './dom';
 import type { ToyModelRefs } from './toyModel';
+import type { ToyModel } from './toys';
 import type { Shell } from '../input/settings';
 import type { View } from './view';
 
-/** A new universal design inspired by classic vertical Brick Games, not a replica of a firmware model. */
-export function applyBrickGame(refs: ToyModelRefs): void {
-  const { lid, base } = refs;
-  lid.querySelector('.lid__art')?.remove();
-  const face = lid.querySelector('.lid__face')!;
-  face.append(h('span', { class: 'classic__edition', 'aria-hidden': 'true' }, 'DOT MATRIX • 10 × 20'));
-  for (const side of ['left', 'right']) {
-    const motif = svg('svg', { class: `classic__motif classic__motif--${side}`, viewBox: '0 0 8 90', 'aria-hidden': 'true' });
-    const patterns = ['110110', '101011', '111100', '011110', '111001'];
-    patterns.forEach((pattern, index) =>
-      [...pattern].forEach((cell, i) => {
-        if (cell === '1')
-          motif.append(
-            svg('rect', {
-              x: String(1 + (i % 2) * 3),
-              y: String(2 + index * 17 + Math.floor(i / 2) * 3),
-              width: '2.2',
-              height: '2.2',
-              fill: 'none',
-              stroke: 'currentColor',
-              'stroke-width': '.45',
-            }),
-          );
+/**
+ * Узор по бокам экрана: группы вложенных квадратов в два столбца, как на фотографии оригинала (левая и правая стороны разные). Строка группы — два символа:
+ * слева направо по корпусу, `1` — квадрат есть. Смещения групп — в шагах решётки (между группами полтора шага).
+ */
+const SIDE_PATTERN: Readonly<Record<'left' | 'right', readonly { at: number; rows: readonly string[] }[]>> = {
+  left: [
+    { at: 0, rows: ['01', '11', '10'] },
+    { at: 3.45, rows: ['10', '11', '10'] },
+    { at: 6.9, rows: ['11', '11'] },
+    { at: 9.35, rows: ['10', '11', '10', '11'] },
+  ],
+  right: [
+    { at: 0, rows: ['11', '11'] },
+    { at: 2.45, rows: ['10', '11', '10', '11'] },
+    { at: 6.9, rows: ['10', '11', '10'] },
+    { at: 10.35, rows: ['01', '11', '10'] },
+  ],
+};
+/** Шаг решётки узора и сторона квадрата в единицах рисунка. */
+const PITCH = 10;
+const CELL = 7;
+/** Высота рисунка: нижний ряд последней группы — на 12,35 шага от верха, плюс сторона квадрата. */
+const MOTIF_HEIGHT = 12.35 * PITCH + CELL;
+
+function sideMotif(side: 'left' | 'right'): SVGSVGElement {
+  const motif = svg('svg', {
+    class: `classic__motif classic__motif--${side}`,
+    viewBox: `0 0 ${PITCH + CELL} ${MOTIF_HEIGHT}`,
+    'aria-hidden': 'true',
+  });
+  for (const group of SIDE_PATTERN[side])
+    group.rows.forEach((row, index) =>
+      [...row].forEach((cell, column) => {
+        if (cell !== '1') return;
+        const x = column * PITCH;
+        const y = (group.at + index) * PITCH;
+        motif.append(
+          svg('rect', { x: String(x + 0.35), y: String(y + 0.35), width: String(CELL - 0.7), height: String(CELL - 0.7), fill: 'none', stroke: 'currentColor', 'stroke-width': '.7' }),
+          svg('rect', { x: String(x + 1.85), y: String(y + 1.85), width: String(CELL - 3.7), height: String(CELL - 3.7), fill: 'currentColor' }),
+        );
       }),
     );
-    face.append(motif);
-  }
+  return motif;
+}
+
+/** Подпись кнопки направления: как у консоли — UP/DOWN листают варианты (MODE), LEFT — уровень (LEVEL), RIGHT — скорость (SPEED). */
+const DIRECTION_CAPTIONS: Readonly<Record<string, string>> = { up: 'MODE', left: 'LEVEL', right: 'SPEED', down: 'MODE' };
+
+/**
+ * Надпись на корпусе по снимку оригинала (серия E-S88): «BRICK» и «GAME» — две параллельные строки, поднимающиеся вправо под углом, ниже и правее —
+ * тонкое «N IN 1» (N — число игр, назначенных универсальной модели сейчас), рядом на корпусе — красный круглый знак с улыбкой и раскрытыми ладонями.
+ * Допущения: угол, кегль, межстрочное расстояние и размер знака — по пропорциям снимка; шрифт гротеск без засечек (на оригинале он геометрический),
+ * китайские иероглифы под знаком не воспроизводятся: что на них напечатано, не установлено.
+ */
+function wordmark(games: number): SVGSVGElement {
+  const mark = svg('svg', { class: 'classic__wordmark', viewBox: '0 0 100 60', 'aria-hidden': 'true' });
+  const count = `${games} IN 1`;
+  const text = (cls: string, x: number, y: number, length: number, content: string): SVGTextElement =>
+    svg('text', { class: cls, x: String(x), y: String(y), textLength: String(length), lengthAdjust: 'spacing' }, content);
+  const hand = (side: -1 | 1): SVGGElement => {
+    const palm = svg('ellipse', { cx: '0', cy: '0', rx: '3.3', ry: '3.9', fill: 'currentColor' });
+    const fingers = [-34, -12, 10, 32].map((angle) =>
+      svg('line', { x1: '0', y1: '-2', x2: '0', y2: '-7.6', stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', transform: `rotate(${angle} 0 1)` }),
+    );
+    return svg('g', { transform: `translate(${side * 11.6} 11.4) rotate(${side * 22})` }, palm, ...fingers);
+  };
+  mark.append(
+    svg(
+      'g',
+      { transform: 'translate(4 53) rotate(-38)', class: 'classic__lines' },
+      text('classic__brand', 0, 0, 42, 'BRICK'),
+      text('classic__brand', 22, 14.4, 37, 'GAME'),
+      text('classic__count', 46, 25.6, count.length * 4.5, count),
+    ),
+    svg(
+      'g',
+      { class: 'classic__face', transform: 'translate(80 41)' },
+      svg('circle', { r: '10.6', fill: 'currentColor' }),
+      svg('g', { fill: 'var(--classic-body)' },
+        svg('circle', { cx: '-3.6', cy: '-2.6', r: '1.3' }),
+        svg('circle', { cx: '3.6', cy: '-2.6', r: '1.3' }),
+        svg('path', { d: 'M-6 1.6Q0 11 6 1.6Z' }),
+      ),
+      hand(-1),
+      hand(1),
+    ),
+  );
+  return mark;
+}
+
+/** A new universal design inspired by classic vertical Brick Games, not a replica of a firmware model. */
+export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
+  const { lid, base } = refs;
+  lid.querySelector('.lid__art')?.remove();
+  // Вверху у корпуса винтов нет: остаются только нижние.
+  for (const screw of lid.querySelectorAll('.lid__screw--tl,.lid__screw--tr')) screw.remove();
+  const face = lid.querySelector('.lid__face')!;
+  face.append(h('span', { class: 'classic__edition', 'aria-hidden': 'true' }, 'DOT MATRIX • 10 × 20'));
+  const bezel = lid.querySelector('.lid__bezel');
+  for (const side of ['left', 'right'] as const) (bezel ?? face).append(sideMotif(side));
   const leds = lid.querySelector<HTMLElement>('.lid__leds');
   if (leds) leds.hidden = true;
   base.replaceChildren(
@@ -57,21 +131,24 @@ export function applyBrickGame(refs: ToyModelRefs): void {
       h(
         'button',
         { type: 'button', class: `key classic__key classic__key--${key}`, tabindex: '-1', 'data-key': key!, 'aria-label': label! },
-        ['up', 'left', 'right', 'down'].includes(key!)
-          ? svg(
-              'svg',
-              { viewBox: '0 0 20 20', class: 'classic__arrow', 'aria-hidden': 'true' },
-              svg('path', {
-                d: 'M10 4L16 15H4Z',
-                fill: 'currentColor',
-                transform: `rotate(${{ up: 0, right: 90, down: 180, left: 270 }[key!] ?? 0} 10 10)`,
-              }),
-            )
-          : h('span', {}, label!),
+        ...(DIRECTION_CAPTIONS[key!]
+          ? [
+              svg(
+                'svg',
+                { viewBox: '0 0 20 20', class: 'classic__arrow', 'aria-hidden': 'true' },
+                svg('path', {
+                  d: 'M10 4L16 15H4Z',
+                  fill: 'currentColor',
+                  transform: `rotate(${{ up: 0, right: 90, down: 180, left: 270 }[key!] ?? 0} 10 10)`,
+                }),
+              ),
+              h('i', { class: 'classic__caption', 'aria-hidden': 'true' }, DIRECTION_CAPTIONS[key!]!),
+            ]
+          : [h('span', {}, label!)]),
       ),
     ),
     h('div', { class: 'classic__speaker', 'aria-hidden': 'true' }, ...Array.from({ length: 5 }, () => h('i'))),
-    h('div', { class: 'classic__wordmark', 'aria-hidden': 'true' }, h('strong', {}, 'BRICK GAME'), h('span', {}, 'PLAY THE CLASSICS')),
+    wordmark(model.games.length),
   );
 }
 export function brickGameMini(view: View = 'full', shell?: Shell): SVGSVGElement {

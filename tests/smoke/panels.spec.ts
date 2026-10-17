@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Панели вокруг игрушки: слева справка по упаковке и схема управления (вся помещается в окне без прокрутки), справа «пульт» —
@@ -15,7 +16,7 @@ const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 const level = (page: Page) => (): Promise<string> => area(page, 'level');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
 }
 
@@ -203,10 +204,10 @@ test('пульт: звук следует за SOUND, музыка, сегмен
 });
 
 test('вид игрушки не запоминается: после перезагрузки она закрыта', async ({ page }) => {
-  await page.goto('./?view=screen');
+  await page.goto(marioUrl('?view=screen'));
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready'); // не уходить со страницы, пока грузится пакет: оборванный запрос — лишняя ошибка в консоли
-  await page.goto('./');
+  await page.goto(marioUrl(''));
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
   await expect(page.locator('#view-closed')).toHaveAttribute('aria-pressed', 'true');
 });
@@ -273,18 +274,18 @@ test('уровни: девять оригинальных открыты (гей
 });
 
 test('?level=custom-1 открывает готовый пользовательский уровень сразу', async ({ page }) => {
-  await page.goto('./?level=custom-1&power=on');
+  await page.goto(marioUrl('?level=custom-1&power=on'));
   await expect.poll(phase(page)).toBe('ready');
   expect(await level(page)()).toBe('custom-1');
   await expect(page.locator('#user-level')).toHaveValue('bundled:custom-1');
 });
 
 test('?level=N открывает уровень N сразу; неверное значение — уровень 1', async ({ page }) => {
-  await page.goto('./?level=7&power=on');
+  await page.goto(marioUrl('?level=7&power=on'));
   await expect.poll(phase(page)).toBe('ready');
   expect(await level(page)()).toBe('mario-7');
   await expect(page.locator('#original-levels .lv').nth(6)).toHaveAttribute('aria-current', 'true');
-  await page.goto('./?level=42&power=on');
+  await page.goto(marioUrl('?level=42&power=on'));
   await expect.poll(phase(page)).toBe('ready');
   expect(await level(page)()).toBe('mario-1');
 });
@@ -303,7 +304,7 @@ test('карты из редактора: попадают в выпадающи
     meta: { projectId: 'broken-1', name: 'Сломанная карта', levelId: 'broken', width: 3, height: 3, savedAt: 1 },
     doc: { мусор: true },
   });
-  await page.goto('./?power=on#/');
+  await page.goto('./?power=on&toy=mario#/');
   await expect.poll(phase(page)).toBe('ready');
 
   const select = page.locator('#user-level');

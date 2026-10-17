@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Музыка «Ремастер»: запись public/audio/remaster.m4a подменяет мелодию-пищалку; нет файла или он битый — звучит оригинал.
@@ -34,7 +35,7 @@ function wav(seconds = 1): Buffer {
 }
 
 async function startGame(page: Page): Promise<void> {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(() => area(page, 'phase')).toBe('ready');
 }
 

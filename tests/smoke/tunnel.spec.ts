@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Основной маршрут: тестовый уровень по видео «tunnel-run». Интро строит участок следом героя, S./P. запускает сценарий выхода
@@ -7,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 /** Тестовый уровень по видео открывается явно: страница по умолчанию начинается с `mario-1`. */
-const TUNNEL = './?level=tunnel-run&power=on';
+const TUNNEL = marioUrl('?level=tunnel-run&power=on');
 
 const area = (page: Page, key: string): Promise<string> =>
   page.evaluate((name) => document.getElementById('game-area')?.dataset[name] ?? '', key);

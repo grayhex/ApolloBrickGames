@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Игрушка целиком: корпус из двух половин, девять кнопок, логотип на нижней части, уголок с настройками, справкой и редактором.
@@ -16,7 +17,7 @@ const pressed = (page: Page, id: string) => expect(key(page, id)).toHaveAttribut
 const released = (page: Page, id: string) => expect(key(page, id)).not.toHaveAttribute('data-pressed', '');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
 }
 
@@ -488,7 +489,7 @@ test('«только экран»: нижняя половина скрывае�
   const back = await size();
   expect(Math.abs(back.lidW - whole.lidW)).toBeLessThan(2);
   await page.locator('#view-screen').click();
-  await page.goto('./');
+  await page.goto(marioUrl(''));
   await expect(toy).toHaveAttribute('data-view', 'closed');
   await expect(toy).not.toHaveAttribute('data-compact', '');
 });

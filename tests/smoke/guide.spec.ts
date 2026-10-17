@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Левая панель игрушек: у «168 в 1 танк» (игры 1–9), «Морского боя» (режимы A–F) и «Часов+99» — вкладки с описанием игр консоли; у Mario логотип по центру;
@@ -164,7 +165,7 @@ test.describe('логотип Mario в левой панели', () => {
   ] as const) {
     test(`по центру панели при окне ${width} × ${height}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await page.goto('./?view=full');
+      await page.goto(marioUrl('?view=full'));
       await expect(page.locator('#side-info .about__logo')).toBeVisible();
       const panel = (await page.locator('#side-info').boundingBox())!;
       const logo = (await page.locator('#side-info .about__logo').boundingBox())!;
@@ -331,7 +332,7 @@ test.describe('3D-коробка Crocodile Mario: вывод выключен', 
   ] as const) {
     test(`у Mario нет кнопки 3D, логотип по центру панели, справка помещается без прокрутки (${width} × ${height})`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await page.goto('./?view=full&power=on');
+      await page.goto(marioUrl('?view=full&power=on'));
       await expect.poll(phase(page)).toBe('ready');
       await expect(page.locator('#side-info [data-box-open]')).toHaveCount(0);
       await expect(page.locator('#side-info .box3d')).toHaveCount(0);
@@ -372,7 +373,7 @@ test('подробная справка содержит варианты и д�
 });
 test('фигуры Mario сохраняют квадратные рамки в невысоком окне', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 800 });
-  await page.goto('./?view=full');
+  await page.goto(marioUrl('?view=full'));
   await expect(page.locator('#side-info .fig__box')).toHaveCount(11);
   const sizes = await page.locator('#side-info .fig__box').evaluateAll((els) => els.map((el) => {
     const r = el.getBoundingClientRect(); return [r.width, r.height];

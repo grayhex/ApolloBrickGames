@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { test } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Снимки для PR и согласования с владельцем. Обычный прогон их пропускает:
@@ -14,7 +15,7 @@ const dir = 'docs/screenshots';
 test('игрушка: интро, выход из туннеля, стрельба, нажатые кнопки, режим «только экран»', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await page.waitForSelector('#game-area[data-phase="ready"]');
   const stage = (name: string): Promise<Buffer> => page.locator('#stage').screenshot({ path: `${dir}/${name}.png` });
   await page.waitForTimeout(750);
@@ -54,7 +55,7 @@ test('игрушка: интро, выход из туннеля, стрельб
 test('страница целиком: панели по бокам игрушки, светлый фон', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   await page.screenshot({ path: `${dir}/toy-panels.png` });
@@ -67,7 +68,7 @@ test('страница целиком: панели по бокам игрушк
 test('английский интерфейс и «сбой шлейфа»: экран рассыпается, пока держат шлейф', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   await page.locator('#corner-lang').click();
@@ -93,7 +94,7 @@ test('английский интерфейс и «сбой шлейфа»: эк
 test('закрытая игрушка с логотипом Apollo на крышке (четыре цвета)', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('./');
+  await page.goto(marioUrl(''));
   await page.waitForSelector('#toy[data-view="closed"]');
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${dir}/toy-closed-page.png` });
@@ -108,7 +109,7 @@ test('GAME OVER: бегущая надпись из блоков (три кад�
   test.setTimeout(120_000);
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   // Четыре раза: старт и бег вправо до первой пропасти.
@@ -131,7 +132,7 @@ test('GAME OVER: бегущая надпись из блоков (три кад�
 test('игрушка: четыре цвета корпуса', async ({ page }) => {
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await page.waitForSelector('#game-area[data-phase="ready"]');
   await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
   for (const shell of ['blue', 'red', 'yellow', 'white']) {
@@ -176,7 +177,7 @@ test.describe('телефон: игрушка во всю ширину экра�
 
   test('phone-toy: игра идёт, экран и все кнопки в окне', async ({ page }) => {
     mkdirSync(dir, { recursive: true });
-    await page.goto('./?power=on');
+    await page.goto(marioUrl('?power=on'));
     await page.waitForSelector('#game-area[data-phase="ready"]');
     await page.waitForSelector('#game-area[data-intro="off"]', { timeout: 8000 });
     await page.keyboard.press('Enter');
@@ -190,7 +191,7 @@ test('три игрушки: шапка с переключателем, «Ча�
   mkdirSync(dir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   const open = async (query: string): Promise<void> => {
-    await page.goto(`./${query}`);
+    await page.goto(marioUrl(query));
     await page.waitForSelector('#game-area[data-phase="ready"]');
     await page.waitForSelector('#game-area[data-boot="off"]', { state: 'attached' }).catch(() => undefined); // у Mario вспышки нет
     await page.waitForTimeout(900);

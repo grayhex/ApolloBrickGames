@@ -16,7 +16,8 @@ export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame'] as c
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
-export const DEFAULT_TOY: ToyId = 'mario';
+/** Что открывает сайт без параметра `toy`: универсальный Brick Game (Crocodile Mario — по адресу `?toy=mario`). */
+export const DEFAULT_TOY: ToyId = 'brickgame';
 
 /** Подписи кнопок на корпусе (как напечатано на устройстве) — по ним строится нижняя половина игрушки. */
 export interface ToyLabels {
@@ -52,6 +53,8 @@ export interface ToyModel {
   shells: readonly Shell[];
   /** Цвет по умолчанию, если сохранённый в настройках для этой игрушки не бывает. */
   defaultShell: Shell;
+  /** Цвет миниатюры в карусели переключателя игрушек (настраивается в админке); по умолчанию белый. */
+  thumbShell?: Shell;
   /** Набор игр консоли по наклейке или упаковке (порядок — как напечатано). Игры конкретной консоли настраиваются отдельно (позже — в «админке»). */
   games: readonly ToyGame[];
   /** Игра, которая запускается сейчас: у Mario своя, у остальных игра из общего Brick Game. Входит в `games`; null у экспонатов без движка. */
@@ -353,7 +356,7 @@ export function engineOf(model: ToyModel): 'mario' | 'tetris' | 'exhibit' {
   return GAMES[model.defaultGame].engine === 'mario' ? 'mario' : 'tetris';
 }
 
-/** Игрушка из адреса: `?toy=clock99`. Неизвестное значение — Crocodile Mario. */
+/** Игрушка из адреса: `?toy=clock99`. Без параметра и при неизвестном значении — универсальный Brick Game. */
 export function parseToy(search: string): ToyId {
   const value = new URLSearchParams(search).get('toy');
   return TOY_IDS.find((id) => id === value) ?? DEFAULT_TOY;

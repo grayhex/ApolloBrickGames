@@ -412,6 +412,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
       if (model.menu && powered && bootTicks === 0) restartGame();
       return true;
     },
+    onReset: () => { if (model.menu && powered && bootTicks === 0) restartGame(); },
   });
   refs.base.querySelector('[data-action=reset]')?.addEventListener('click', () => { if (powered && bootTicks === 0) restartGame(); }, { signal });
   const hotkeys: Record<string, 'onoff' | 'sound'> = { KeyO: 'onoff', KeyM: 'sound' };
@@ -527,8 +528,10 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     levelsDisabled: !model.levels,
     music: false,
     speedrun: false,
+    remote: ['onoff', 'sp', 'reset'],
     signal,
   });
+  toyPanel.bindRemote(refs.sideCtl);
   const corner = new CornerNav(
     { devices: refs.devices, theme: refs.cornerTheme },
     {
@@ -584,6 +587,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const updateUi = (): void => {
     setData('toy', model.id);
     infoPanel.setActive(cabinet.activeGame);
+    if (model.universal) refs.toy.dataset['fire'] = cabinet.usesFire ? 'on' : 'off'; // кнопка FIRE рисуется только у игр, где она нужна
     setData('phase', cabinet.phase);
     setData('score', cabinet.score);
     setData('hiscore', cabinet.hiScore);
@@ -647,7 +651,10 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   refocusGame();
   life.loop(frame);
   return {
-    dispose: () => life.dispose(),
+    dispose: () => {
+      life.dispose();
+      delete refs.toy.dataset['fire'];
+    },
     carry: () => ({ view, shell: currentShell, powered }),
   };
 }

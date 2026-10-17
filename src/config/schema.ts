@@ -12,14 +12,19 @@ export interface ConfigToy {
   defaultGame: GameId;
   shells: Shell[];
   defaultShell: Shell;
+  /** Цвет миниатюры игрушки в карусели переключателя: из палитры игрушки (у универсальной — ещё и белый). */
+  thumbShell: Shell;
 }
+/** Цвета миниатюры: у приставок Apollo — их палитра, у универсальной — серый, чёрный и белый (прежний вид переключателя). */
+export const thumbPalette = (id: ConfigToyId): readonly Shell[] => (id === 'brickgame' ? ['white', ...MONOBLOCK_SHELLS] : APOLLO_SHELLS);
+export const DEFAULT_THUMB_SHELL: Shell = 'white';
 export const CONFIG_TOY_IDS = [...APOLLO_IDS, 'brickgame'] as const;
 export type ConfigToyId = ApolloId | 'brickgame';
 export interface SiteConfig {
   version: 1;
   toys: Record<ConfigToyId, ConfigToy>;
 }
-const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['gray', 'black'], defaultShell: 'gray' };
+const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['gray', 'black'], defaultShell: 'gray', thumbShell: DEFAULT_THUMB_SHELL };
 /** Computed at load time: published four-toy documents remain valid, and orphan games never disappear. */
 export function universalGames(config: SiteConfig): ConfigGame[] {
   const assigned = new Set(APOLLO_IDS.flatMap((id) => config.toys[id].games.map((g) => g.id)));
@@ -76,9 +81,11 @@ export function validateConfig(value: unknown): SiteConfig {
     )
       throw new Error(`${id}: выберите допустимые цвета корпуса.`);
     if (!shells.includes(source['defaultShell'])) throw new Error(`${id}: основной цвет должен входить в доступные.`);
+    const thumbShell = source['thumbShell'] ?? DEFAULT_THUMB_SHELL;
+    if (typeof thumbShell !== 'string' || !thumbPalette(id).some((s) => s === thumbShell)) throw new Error(`${id}: недопустимый цвет миниатюры в карусели.`);
     if (typeof source['defaultGame'] !== 'string' || !seen.has(source['defaultGame']))
       throw new Error(`${id}: стартовая игра должна входить в меню.`);
-    toys[id] = { games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, defaultGame: source['defaultGame'] as GameId };
+    toys[id] = { games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, thumbShell: thumbShell as Shell, defaultGame: source['defaultGame'] as GameId };
   }
   return { version: 1, toys };
 }

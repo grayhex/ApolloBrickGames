@@ -40,6 +40,10 @@ export interface ControlPanelView {
   level: LevelRef | null;
 }
 
+/** Кнопки корпуса, которые дублирует пульт. */
+export type RemoteKey = 'onoff' | 'sp' | 'reset';
+const REMOTE_LABELS: Readonly<Record<RemoteKey, string>> = { onoff: 'ON/OFF', sp: 'START / PAUSE', reset: 'RESET' };
+
 export interface ControlPanelOptions {
   slots: readonly OriginalSlot[];
   /** Готовые пользовательские уровни пакета (их названия — из словаря). */
@@ -53,6 +57,8 @@ export interface ControlPanelOptions {
   toy?: ToyId;
   /** Какие цвета доступны игрушке (подтверждены фото оригинала); кнопок цвета всегда четыре, остальные недоступны. По умолчанию доступны все. */
   shells?: readonly Shell[];
+  /** Дубли кнопок корпуса в пульте (видны, пока виден только экран игрушки); по умолчанию нет. */
+  remote?: readonly RemoteKey[];
   /** Уровни выключены (у игры-заглушки их нет): плитки заперты, список карт недоступен. */
   levelsDisabled?: boolean;
   /** Выбор музыки и её громкость; у игры без мелодии скрыты. По умолчанию есть. */
@@ -316,7 +322,19 @@ export class ControlPanel {
     // Панель остаётся тем же элементом при смене игрушки на странице: признак игрушки ставится или снимается.
     if (options.toy) this.root.dataset['toy'] = options.toy;
     else delete this.root.dataset['toy'];
-    this.root.replaceChildren(top, sound, view, segments, levels, ...(options.speedrun === false ? [] : [this.runBox]));
+    const remote = options.remote?.length
+      ? h(
+          'section',
+          { class: 'side__sec remote', id: 'blk-remote', 'aria-labelledby': 'remote-title' },
+          this.label(h('h3', { class: 'side__h', id: 'remote-title' }), 'remote.h'),
+          h(
+            'div',
+            { class: 'remote__keys' },
+            ...options.remote.map((key) => h('button', { type: 'button', class: 'remote__key', 'data-remote': key }, REMOTE_LABELS[key])),
+          ),
+        )
+      : null;
+    this.root.replaceChildren(top, ...(remote ? [remote] : []), sound, view, segments, levels, ...(options.speedrun === false ? [] : [this.runBox]));
     this.setUserLevels([], null);
     this.relabel();
     onLangChange(() => this.relabel(), options.signal);
