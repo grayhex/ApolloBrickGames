@@ -1,3 +1,4 @@
+import { LeaderboardCard } from './leaderboard';
 import { ACTIONS } from '../core/actions';
 import { BrickAudio } from '../audio/brick';
 import { actionBit, maskOf, type InputFrame, type Phase } from '../core';
@@ -124,6 +125,12 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
 
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || (Date.now() % 0x7fffffff) || DEFAULT_SEED;
   const cabinet = createCabinet(model, { seed, loadHi, defs: BRICK_GAMES });
+  let leaderboard: LeaderboardCard | null = null;
+  let rankedPhase = cabinet.phase;
+  const selectRanking = (): void => {
+    const r=cabinet.ranking;
+    leaderboard?.select({gameId:cabinet.activeGame,mode:r.mode,toyId:model.id},r.speed===0&&r.level===0);
+  };
   if (params.has('debug')) Object.defineProperty(window, model.menu ? '__brick' : '__tetris', { configurable: true, get: () => cabinet.debugTarget() });
 
   const isKeyboardActive = (): boolean => {
@@ -268,6 +275,10 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     }
   };
   const emit = (events: readonly CabinetEvent[]): void => {
+    const started=events.some(event=>event.type==='started');
+    if(started){ selectRanking(); leaderboard?.begin(); }
+    if(cabinet.phase==='over'&&(rankedPhase!=='over'||started))leaderboard?.finish(cabinet.score);
+    rankedPhase=cabinet.phase;
     for (const event of events) {
       if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu);
       else { const cue = cabinetCue(cabinet, event); if (cue) audio.play(cue); }
@@ -372,6 +383,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
+    if(!on)leaderboard?.cancel();
     if (on && view === 'closed') {
       view = 'full';
       applyView();
@@ -392,6 +404,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const restartGame = (): void => {
+    leaderboard?.cancel();
     persistHi();
     brickAudio.silence();
     cabinet.restart();
@@ -532,6 +545,9 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     signal,
   });
   toyPanel.bindRemote(refs.sideCtl);
+  leaderboard=new LeaderboardCard(refs.sideCtl,signal);
+  selectRanking();
+
   const corner = new CornerNav(
     { devices: refs.devices, theme: refs.cornerTheme },
     {
@@ -585,6 +601,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   let lastStatus = '';
   const updateUi = (): void => {
+    selectRanking();
     setData('toy', model.id);
     infoPanel.setActive(cabinet.activeGame);
     if (model.universal) refs.toy.dataset['fire'] = cabinet.usesFire ? 'on' : 'off'; // кнопка FIRE рисуется только у игр, где она нужна

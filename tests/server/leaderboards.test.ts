@@ -305,4 +305,48 @@ describe('leaderboard Worker + actual SQLite transactions', () => {
     expect((await s.send('leaderboards/session', {})).status).toBe(503);
     expect((await s.top()).entries).toEqual([]);
   });
+  it('caches only public top responses, invalidates accepted writes, and uses the ordered SQL index', async () => {
+    const s = setup(),
+      responses = new Map<string, Response>();
+    const cache = {
+      match: vi.fn(async (request: Request) => responses.get(request.url)?.clone()),
+      put: vi.fn(async (request: Request, response: Response) => {
+        responses.set(request.url, response.clone());
+      }),
+      delete: vi.fn(async (request: Request) => responses.delete(request.url)),
+    };
+    vi.stubGlobal('caches', { default: cache });
+    await s.top();
+    await s.top();
+    expect(cache.put).toHaveBeenCalledTimes(1);
+    const plan = databases[0]!
+      .prepare('EXPLAIN QUERY PLAN SELECT nickname,score,toy_id FROM entries WHERE hidden=0 ORDER BY score DESC,accepted_seq ASC LIMIT 20')
+      .all();
+    expect(JSON.stringify(plan)).toContain('entries_top');
+    const cookie = await s.guest(),
+      run = await s.complete(cookie, 42);
+    await s.publish(cookie, run);
+    expect(cache.delete).toHaveBeenCalled();
+    expect((await s.top()).entries).toHaveLength(1);
+    const exported = (await (
+      await s.send(`admin/leaderboards/export?category=${encodeURIComponent(run.category)}`, undefined, { admin: ADMIN })
+    ).json()) as { entries: { entryId: string }[] };
+    await s.send('admin/leaderboards/hide', { category: run.category, entryId: exported.entries[0]!.entryId, hidden: true }, { admin: ADMIN });
+    expect((await s.top()).entries).toEqual([]);
+    for (const response of responses.values()) {
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(response.headers.get('cache-control')).toContain('public');
+      expect(await response.clone().text()).not.toMatch(/guest|siteKey|runId/);
+    }
+  });
+  it('bounds request bodies and allows safe punctuation without SQL interpolation', async () => {
+    const s = setup(),
+      cookie = await s.guest(),
+      run = await s.complete(cookie, 42);
+    expect((await s.send('leaderboards/publish', { ...run, nickname: 'x'.repeat(9000), token: 'bad' }, { cookie })).status).toBe(413);
+    expect((await s.send('leaderboards/session')).status).toBe(405);
+    const name = "a');DROP TABLE x;--";
+    expect((await s.publish(cookie, run, name)).status).toBe(200);
+    expect((await s.top()).entries[0]!.nickname).toBe(name);
+  });
 });

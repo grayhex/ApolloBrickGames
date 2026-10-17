@@ -181,10 +181,13 @@ export async function leaderboardRoute(request: Request, env: LeaderboardEnv): P
       }
       throw new HttpError(405, 'Method not allowed');
     }
+    if (!['/api/leaderboards/session', '/api/leaderboards/runs', '/api/leaderboards/finish', '/api/leaderboards/publish'].includes(path))
+      throw new HttpError(404, 'Not found');
     if (request.method !== 'POST') throw new HttpError(405, 'Method not allowed');
     sameOrigin(request, url);
     if (!configured(env)) return json({ enabled: false, error: 'Publication is not configured' }, 503);
     if (path === '/api/leaderboards/session') {
+      if (Object.keys(await readJson(request, 256)).length) throw new HttpError(400, 'Empty session body required');
       const existing = await readGuest(request, env),
         guest = existing ?? crypto.randomUUID();
       await limit(request, env, url, guest);
