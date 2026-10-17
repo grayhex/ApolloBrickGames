@@ -46,7 +46,7 @@ import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
-import { initialShell, shellFor, TOYS } from './toys';
+import { shellFor, TOYS } from './toys';
 import { parseView, type View } from './view';
 import {
   controlsHint,
@@ -330,17 +330,6 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     signal,
     onOpen: openMenu,
     onClose: closeMenu,
-    // В настройках игрушки — цвет по умолчанию: он же становится цветом текущей игры (у технических страниц своих настроек вида нет).
-    ...(route.lid
-      ? {
-          display: {
-            onChange: () => {
-              currentShell = shellFor(TOYS.mario, hub.settings.display.shell);
-              applyDisplay();
-            },
-          },
-        }
-      : {}),
   });
   const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, TOYS.mario, signal);
 
@@ -392,7 +381,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   // Источник правды — hub.settings.display; исключение — цвет: в настройках лежит цвет по умолчанию,
   // а выбор на странице действует только на текущую игру (до перезагрузки).
   // Цвет текущей игры: при переходе с другой игрушки — тот же, если у Crocodile Mario он есть (все четыре есть), иначе из настроек.
-  let currentShell: Shell = carryIn ? shellFor(TOYS.mario, carryIn.shell) : initialShell(TOYS.mario, hub.settings.display.shell);
+  let currentShell: Shell = carryIn ? shellFor(TOYS.mario, carryIn.shell) : TOYS.mario.defaultShell;
   const ghostOn = (): boolean => hub.settings.display.ghost ?? pack.screen.ghost?.enabled ?? false;
   const applyDisplay = (): void => {
     const { display } = hub.settings;
@@ -590,7 +579,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     })
     : null;
   // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
-  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, onPointerUse: refocusGame }, signal) : null;
+  const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, togglePause: () => { if (!powered) return; if (game.state.phase === 'playing') session.requestPause(); else if (game.state.phase === 'paused') session.requestStart(); }, onPointerUse: refocusGame }, signal) : null;
 
   // Шутка со шлейфом: пока шлейф между половинами держат курсором или пальцем, экран рассыпается и гаснет; отпустили — возвращается.
   const glitch = new CableGlitch();

@@ -49,7 +49,7 @@ test('ON/OFF показывает статус, включая клавиату�
   await exhibit(page, '&power=on&debug');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
   expect(await page.evaluate(() => '__brick' in window || '__tetris' in window)).toBe(false);
-  await expect(page.locator('#tgl-ghost')).toBeHidden();
+  await expect(page.locator('#segments-off')).toBeHidden();
   await expect(page.locator('#corner-editor')).toBeHidden();
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('#alibaba-notice')).toBeVisible();

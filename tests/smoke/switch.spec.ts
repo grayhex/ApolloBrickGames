@@ -265,9 +265,9 @@ test.describe('переключение игрушек на месте', () => {
     expect(await theme()).not.toBe(before);
     await page.locator('#corner-theme').click();
     expect(await theme()).toBe(before);
-    await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'true');
-    await page.locator('#tgl-ghost').click();
-    await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#segments-on')).toBeChecked();
+    await page.locator('#segments-off').click();
+    await expect(page.locator('#segments-off')).toBeChecked();
     await page.locator('#corner-lang').click();
     await expect(page.locator('#corner-lang')).toHaveAttribute('data-lang', 'en');
     await page.locator('#corner-lang').click();

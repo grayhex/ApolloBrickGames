@@ -161,7 +161,7 @@ test('включение сегментов и возврат на вкладк�
 
   // Сегменты: каждое переключение перерисовывает вид, но запись продолжает идти — без нового запуска.
   for (let i = 0; i < 4; i++) {
-    await page.locator('#tgl-ghost').click();
+    await page.locator(i % 2 ? '#segments-on' : '#segments-off').check();
     await page.waitForTimeout(120);
   }
   // Возврат на вкладку обновляет список карт (и вид) — запись по-прежнему не перезапускается.
@@ -173,7 +173,7 @@ test('включение сегментов и возврат на вкладк�
   // То же и под «Оригинал»: пищалка не обрывается переключением сегментов.
   await page.locator('#music [data-music="original"]').click();
   await expect.poll(() => area(page, 'musicSource')).toBe('original');
-  await page.locator('#tgl-ghost').click();
+  await page.locator('#segments-off').click();
   await page.waitForTimeout(200);
   expect(await trackStarts(page)).toHaveLength(1);
   expect(errors).toEqual([]);

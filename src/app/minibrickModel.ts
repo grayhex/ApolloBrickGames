@@ -193,7 +193,7 @@ export function applyMiniBrickModel(): void {
     base.append(button);
   }
 }
-export function miniBrickMini(view: View): SVGSVGElement {
+export function miniBrickMini(view: View, white = false): SVGSVGElement {
   const root = svg('svg', {
     viewBox: `0 0 400 ${view === 'full' ? 1098 : view === 'closed' ? 650 : 440}`,
     class: 'view-mini',
@@ -227,6 +227,15 @@ export function miniBrickMini(view: View): SVGSVGElement {
       root.append(
         svg('rect', { x: String(x), y: '426', width: '70', height: '28', rx: '8', fill: '#df3b24', stroke: '#9f2b21', 'stroke-width': '2' }),
       );
+  }
+  if (white) {
+    for (const stop of root.querySelectorAll('linearGradient stop')) {
+      const offset = Number(stop.getAttribute('offset'));
+      stop.setAttribute('stop-color', offset < .5 ? '#fffdf3' : offset < 1 ? '#e4e3d9' : '#b4b4aa');
+    }
+    for (const shape of root.querySelectorAll('[stroke]')) {
+      if (['#ac281c', '#ad291a', '#183f53', '#205774'].includes(shape.getAttribute('stroke')!)) shape.setAttribute('stroke', '#999a91');
+    }
   }
   return root;
 }

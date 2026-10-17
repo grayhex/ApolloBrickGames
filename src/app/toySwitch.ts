@@ -49,7 +49,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   }
   const items = TOY_IDS.map((id, index) => {
     const model = TOYS[id],
-      icon = miniConsole(model.defaultShell, 100 + index, id);
+      icon = miniConsole('white', 100 + index, id);
     icon.classList.add('toysw__icon');
     if (model.family !== active)
       for (const image of icon.querySelectorAll('image[href]')) {
@@ -58,7 +58,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
       }
     const link = h(
       'a',
-      { class: 'toysw__item', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': model.defaultShell, 'aria-label': model.name },
+      { class: 'toysw__item', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': 'white', 'aria-label': model.name },
       icon,
       h('span', { class: 'toysw__name' }, model.name),
     );
@@ -92,7 +92,13 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   const relabel = (): void => {
     nav.setAttribute('aria-label', t('toy.nav'));
     tabs.setAttribute('aria-label', t('toy.families'));
-    for (const family of families) buttons.get(family)!.textContent = t(`toy.family.${family}`);
+    for (const family of families) {
+      const button = buttons.get(family)!;
+      button.setAttribute('aria-label', t(`toy.family.${family}`));
+      button.replaceChildren(family === 'apollo'
+        ? h('img', { class: 'toysw__logo', src: `${import.meta.env.BASE_URL}brand/apollo-wordmark.svg`, alt: 'Apollo', width: '562', height: '266' })
+        : document.createTextNode(t(`toy.family.${family}`)));
+    }
     for (const { id, link } of items) link.title = t('toy.title', { name: TOYS[id].name });
   };
   relabel();

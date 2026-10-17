@@ -2374,22 +2374,12 @@ body[data-chrome='toy'] .brand {
   gap: 6px 22px;
   height: 42px;
   margin-bottom: 6px;
-  /* Шире средней колонки арены — не страшно: подписи сжимаются раньше, чем шапка дошла бы до панелей (см. ниже). */
+  /* Ширина переключателя задаётся независимо от корпуса (см. collection dock ниже). */
   width: max-content;
   max-width: 100%;
   justify-self: center;
   grid-column: 1 / -1;
   order: -1;
-}
-
-.brand__logo {
-  display: none; /* на широком окне логотип стоит слева сверху (`.topleft__logo`); здесь он остаётся только на узком */
-  height: 38px;
-  width: auto;
-  flex: none;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.32));
-  user-select: none;
-  -webkit-user-drag: none;
 }
 
 .toysw {
@@ -2444,38 +2434,9 @@ body[data-chrome='toy'] .brand {
   filter: saturate(0.75) brightness(0.92) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.3));
 }
 
-@media (max-width: 1179px) {
-  .toysw__item:not([aria-current='page']) {
-    padding: 0 8px;
-  }
-
-  .toysw__item:not([aria-current='page']) .toysw__name {
-    display: none;
-  }
-}
-
-/* Узкое окно рядом с угловым меню (справа сверху): остаются одни миниатюры, текущая отмечена рамкой. */
-@media (min-width: 900px) and (max-width: 999px) {
-  .toysw__item {
-    padding: 0 8px;
-  }
-
-  .toysw__item .toysw__name {
-    display: none;
-  }
-
-  .brand__logo {
-    height: 30px;
-  }
-}
-
 @media (max-width: 460px) {
   body[data-chrome='toy'] .brand {
     gap: 4px 12px;
-  }
-
-  .brand__logo {
-    height: 30px;
   }
 
   .toysw__name {
@@ -2499,11 +2460,11 @@ body:not([data-booting]) .chrome-dock {
   animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both;
 }
 .corner { top: 12px; right: 12px; }
-/* Слева сверху: индикаторы ввода и паузы (отдельные цветные таблетки) и логотип Apollo рядом с ними. */
+/* Слева сверху: индикаторы ввода, пауза и настройки управления. */
 .topleft { position: fixed; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 14px; }
 body:not([data-chrome='toy']) .topleft { display: none; }
 body:not([data-booting]) .topleft { animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both; }
-.topleft__logo { display: block; height: 36px; width: auto; flex: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.32)); user-select: none; -webkit-user-drag: none; }
+
 :is(.chrome-dock .corner__btn) {
   width: 34px;
   height: 36px;
@@ -2530,7 +2491,7 @@ body:not([data-booting]) .topleft { animation: dock-arrive 480ms cubic-bezier(.2
 .chrome-dock .toysw__item { border-radius: 12px; }
 body[data-chrome='toy'] { --head-h: 60px; }
 body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
-.brand__logo { height: 32px; }
+
 .side--info, .side--ctl { margin-top: 48px; max-height: calc(100dvh - 100px); }
 .side--info, .side--ctl {
   opacity: .55;
@@ -2592,29 +2553,16 @@ body[data-chrome='toy'] .brand { height: 48px; margin-bottom: 12px; gap: 14px; }
   clip-path: inset(1.2% round 13% / 24%);
 }
 @keyframes dock-arrive { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-/* Четыре игрушки с названиями не помещаются рядом с угловыми панелями на окне уже ≈ 1340 px: остаются одни миниатюры. */
-@media (max-width: 1339px) {
-  .toysw__item .toysw__name { display: none; }
-  .toysw__item { padding: 0 10px; }
-}
+
 @media (max-width: 899px) {
   .side--info, .side--ctl { max-height: none; margin-top: 0; }
   body[data-chrome='toy'] { --head-h: 48px; }
   body[data-chrome='toy'] .shell { padding-top: 64px; }
   body[data-chrome='toy'] .arena { --toy-top: calc(52px + var(--head-h)); }
   body[data-chrome='toy'] .brand { width: max-content; max-width: 100%; height: 42px; margin-bottom: 6px; }
-  .toysw__item[aria-current='page'] .toysw__name { display: inline; }
+
 }
-/* Телефон: четыре игрушки с названием текущей не помещаются рядом с логотипом (на 360 px — с запасным шрифтом, шире Inter): остаются миниатюры, текущая — в рамке, имя — в aria-label. */
-@media (max-width: 430px) {
-  .toysw__item[aria-current='page'] .toysw__name { display: none; }
-  .toysw__item { padding: 0 8px; }
-}
-/* Узкое окно: логотип не помещается рядом с индикаторами (справа угловое меню) — он возвращается в шапку к переключателю. */
-@media (max-width: 560px) {
-  .topleft__logo { display: none; }
-  .brand__logo { display: block; }
-}
+
 @media (max-width: 640px) {
   .corner { top: 10px; right: 10px; }
   .topleft { top: 10px; left: 10px; gap: 10px; }
@@ -4355,7 +4303,6 @@ body.route-editor .shell > :not(#fatal) {
 @keyframes gblink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.18; } }
 @media (prefers-reduced-motion: reduce) { .gscheme__grid i[data-v='*'] { animation: none; opacity: 0.55; } }
 
-
 /* ── Кнопка 3D-упаковки: размер по высоте окна (панель Mario должна помещаться без прокрутки) ─────────── */
 .side--info { position: relative; }
 .boxbtn__label { display: none; }
@@ -4432,7 +4379,7 @@ body.route-editor .shell > :not(#fatal) {
 .toysw__items { display:flex; align-items:center; gap:4px; animation:toy-family-enter .22s cubic-bezier(.2,.8,.2,1) both; }
 .toysw__items[hidden] { display:none; }
 @keyframes toy-family-enter { from {opacity:0;transform:translateY(5px) scale(.97)} to {opacity:1;transform:translateY(0) scale(1)} }
-@media (max-width:1399px) { .toysw__item:not([aria-current='page']) .toysw__name { display:none; } }
+
 .toysw__items[data-family='other'] .toysw__name { display:block; max-width:140px; }
 @media (max-width:480px) {
   .toysw__family { padding-inline:6px; font-size:9px; }
@@ -4453,6 +4400,43 @@ body.route-editor .shell > :not(#fatal) {
   .toysw__items[data-family=other] .toysw__item { flex:1 1 0; }
   .toysw__items[data-family=other] .toysw__name { white-space:normal; font-size:9px; line-height:1.2; max-width:80px; }
 }
-@media (min-width:900px) {
-  body[data-chrome='toy'] .brand:has([data-family='other']:not([hidden])) { max-width:min(560px, calc(100vw - 640px)); }
+
+/* Collection dock uses the available viewport, independent of the open case width. */
+body[data-chrome='toy'] .arena > .brand {
+  width: min(760px, calc(100vw - 400px));
+  max-width: none;
 }
+.toysw { width:100%; }
+.toysw__items { flex:1; }
+.toysw__item { flex:1 1 0; padding-inline:8px; height:40px; }
+.toysw .toysw__item .toysw__name { display:block; white-space:normal; line-height:1.2; overflow:visible; }
+.toysw__logo { display:block; width:49px; height:23px; object-fit:contain; }
+.toysw__family { min-height:20px; }
+.topleft { gap:6px; }
+.dev--pause { cursor:pointer; }
+.dev--pause:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.dev--pause:disabled { cursor:default; opacity:.4; }
+.segments { min-width:0; margin:0; padding-inline:0; border:0; }
+.segments[hidden] { display:none; }
+.segments legend { padding:0; }
+.segments__choices { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.segments__choice { position:relative; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 8px; border:1px solid var(--line); border-radius:12px; background:var(--chip); color:var(--muted); cursor:pointer; transition:background .18s,color .18s; }
+.segments__choice input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+.segments__choice:has(:checked) { color:var(--text); background:color-mix(in srgb,var(--accent) 16%,var(--chip)); border-color:var(--accent); }
+.segments__choice:has(:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
+.segments__choice:has([value='off']) .icon { opacity:.35; }
+.segments__choice .icon { width:22px; height:22px; }
+@media (max-width:899px) {
+  body[data-chrome='toy'] .arena > .brand { width:min(760px,calc(100vw - 24px)); height:auto; }
+}
+@media (max-width:480px) {
+  .toysw__items[data-family='apollo']:not([hidden]) { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+  .toysw .toysw__item .toysw__name { font-size:9px; }
+  .toysw__item { height:32px; gap:5px; padding-inline:4px; }
+  .toysw__icon { width:17px; }
+  body[data-chrome='toy'] { --head-h:82px; }
+}
+@media (min-width:900px) and (max-width:1100px) {
+  .toysw .toysw__item { gap:5px; padding-inline:6px; font-size:11px; }
+}
+.toysw .toysw__name { overflow-wrap:anywhere; }

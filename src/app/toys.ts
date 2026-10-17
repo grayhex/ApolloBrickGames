@@ -385,9 +385,3 @@ export function keyLabel(model: ToyModel, id: ToyKeyId): string {
     }
   }
 }
-
-/** A published default is used for a new visitor; a player's explicit saved choice takes precedence. */
-export function initialShell(model: ToyModel, preferred: Shell): Shell {
-  try { if (window.localStorage.getItem('crocodile-mario:settings:v1') !== null) return shellFor(model, preferred); } catch { /* storage disabled */ }
-  return model.defaultShell;
-}

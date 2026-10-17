@@ -334,8 +334,8 @@ test('карты из редактора: попадают в выпадающи
   await expect.poll(level(page)).toBe('mario-1');
   await expect(page.locator('#original-levels .lv').nth(0)).toHaveAttribute('aria-current', 'true');
 
-  // 4. Редактор открывается кнопкой в уголке (в пульте дубля нет) — на последней сохранённой карте.
-  await page.locator('#corner-editor').click();
+  // 4. Редактор сохраняет последнюю карту при переходе по служебному адресу — на последней сохранённой карте.
+  await page.goto('./#/editor');
   await page.waitForSelector('#editor-root[data-ready="true"]');
   await expect(page.locator('#editor-project')).toContainText('Моя карта');
 });
@@ -454,16 +454,23 @@ test('узкий экран: игрушка сверху во всю ширин�
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
 });
 
-test('сегменты — пиктограмма в системном меню рядом с фоном и языком', async ({ page }) => {
+test('сегменты — две взаимоисключающие кнопки на всю ширину подблока пульта', async ({ page }) => {
   await ready(page);
-  const box = async (selector: string) => (await page.locator(selector).boundingBox()) ?? { width: 0, height: 0 };
-  const ghost = await box('#tgl-ghost');
-  const panel = await box('#side-ctl');
-  expect(ghost.height).toBeLessThanOrEqual(40);
-  expect(ghost.width).toBeLessThan(panel.width * 0.6);
-  await expect(page.locator('#corner #tgl-ghost')).toHaveAccessibleName('Сегменты');
-  await expect(page.locator('#tgl-ghost svg')).toBeVisible();
-  await expect(page.locator('#side-ctl #tgl-ghost')).toHaveCount(0);
+  const section = page.locator('#side-ctl #segments-options');
+  await expect(section).toBeVisible();
+  await expect(section.getByRole('radio')).toHaveCount(2);
+  await expect(page.locator('#segments-on')).toBeChecked();
+  await page.locator('#segments-off').check();
+  await expect(page.locator('#segments-on')).not.toBeChecked();
+  await expect(page.locator('#segments-off')).toBeChecked();
+  await page.locator('#segments-off').check();
+  await expect(page.locator('#segments-off')).toBeChecked();
+  await page.locator('#segments-off').focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#segments-on')).toBeChecked();
+  const widths = await section.locator('label').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().width));
+  expect(Math.abs(widths[0]! - widths[1]!)).toBeLessThan(1);
+  await expect(page.locator('#corner input[type=radio]')).toHaveCount(0);
 });
 
 test('список пользовательских уровней оформлен как остальные элементы пульта, в обеих темах', async ({ page }) => {

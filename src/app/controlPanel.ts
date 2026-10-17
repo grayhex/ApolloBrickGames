@@ -245,6 +245,16 @@ export class ControlPanel {
         state),
     );
 
+    const segments = h('fieldset', { class: 'side__sec segments', id: 'segments-options' },
+      this.label(h('legend', { class: 'side__h' }), 'tgl.ghost'));
+    const choices = h('div', { class: 'segments__choices' });
+    for (const value of ['on', 'off'] as const) {
+      const input = h('input', { type: 'radio', name: 'segments', value, id: `segments-${value}` });
+      choices.append(h('label', { class: 'segments__choice' }, input, icon('segments'),
+        this.label(h('span'), value === 'on' ? 'segments.on' : 'segments.off')));
+    }
+    segments.append(choices);
+
     // ── Уровни ───────────────────────────────────────────────────────────
     const grid = this.label(h('div', { class: 'lvgrid', id: 'original-levels', role: 'group' }), 'lv.originalAria', 'aria-label');
     for (const slot of options.slots) {
@@ -306,7 +316,7 @@ export class ControlPanel {
     // Панель остаётся тем же элементом при смене игрушки на странице: признак игрушки ставится или снимается.
     if (options.toy) this.root.dataset['toy'] = options.toy;
     else delete this.root.dataset['toy'];
-    this.root.replaceChildren(top, sound, view, levels, ...(options.speedrun === false ? [] : [this.runBox]));
+    this.root.replaceChildren(top, sound, view, segments, levels, ...(options.speedrun === false ? [] : [this.runBox]));
     this.setUserLevels([], null);
     this.relabel();
     onLangChange(() => this.relabel(), options.signal);

@@ -160,7 +160,3 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
     --stage-w: clamp(240px, calc((100dvh - 90px - var(--head-h, 0px)) / 1.14), 700px);
   }
 }
-
-body:is([data-toy='alibaba'], [data-toy='minibrick']) #corner-editor {
-  display: none;
-}

@@ -397,7 +397,7 @@ test('горячие клавиши O и M работают как кнопки 
   await expect(page.locator('#tgl-sound')).toHaveAttribute('aria-pressed', 'false'); // кнопка звука на странице следует за SOUND
 });
 
-test('настройки — управление и цвет по умолчанию; справка: кнопки и клавиши; игра на паузе, пока окна открыты', async ({ page }) => {
+test('настройки — только управление; справка: кнопки и клавиши; игра на паузе, пока окна открыты', async ({ page }) => {
   await ready(page);
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
@@ -405,13 +405,11 @@ test('настройки — управление и цвет по умолча�
   await page.locator('#corner-settings').click();
   await expect(page.locator('dialog#settings')).toBeVisible();
   await expect.poll(phase(page)).toBe('paused');
-  // В настройках — цвет по умолчанию и управление; звук, сегменты и вид экрана вынесены на кнопки страницы.
-  await expect(page.locator('#settings-shell')).toBeVisible();
+  // В настройках — только управление; звук, сегменты и вид экрана вынесены на кнопки страницы.
+  await expect(page.locator('#settings-shell')).toHaveCount(0);
   await expect(page.locator('dialog#settings h3', { hasText: 'Клавиатура' })).toBeVisible();
   await expect(page.locator('dialog#settings h3', { hasText: 'Геймпад' })).toBeVisible();
   await expect(page.locator('#settings-sound, #settings-ghost')).toHaveCount(0);
-  await page.locator('#settings-shell [data-shell="yellow"]').click();
-  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
   await page.keyboard.press('Escape');
   await expect(page.locator('dialog#settings')).toBeHidden();
 
@@ -430,9 +428,9 @@ test('настройки — управление и цвет по умолча�
   await expect.poll(phase(page)).toBe('playing');
 });
 
-test('редактор — в уголке; технические страницы лежат внутри редактора', async ({ page }) => {
+test('технические страницы лежат внутри редактора', async ({ page }) => {
   await ready(page);
-  await page.locator('#corner-editor').click();
+  await page.goto('./#/editor');
   await expect(page.locator('#editor-root')).toBeVisible();
   await page.locator('#editor-pages summary').click();
   await expect(page.locator('#editor-link-tech')).toHaveAttribute('href', '#/tech');

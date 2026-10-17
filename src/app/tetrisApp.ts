@@ -25,7 +25,7 @@ import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
 import { applyToyModel, relabelKeys } from './toyModel';
 import { ToyPanel, type ToyKeyId } from './toy';
-import { initialShell, shellFor, TOYS, type ToyId } from './toys';
+import { shellFor, TOYS, type ToyId } from './toys';
 import { parseView, type View } from './view';
 import { deviceView } from './viewModel';
 
@@ -204,7 +204,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   resize();
 
   // ── Внешний вид: цвет, сегменты, звук, вид, фон ─────────────────────────
-  let currentShell: Shell = carryIn ? shellFor(model, carryIn.shell) : initialShell(model, hub.settings.display.shell);
+  let currentShell: Shell = carryIn ? shellFor(model, carryIn.shell) : model.defaultShell;
   const ghostOn = (): boolean => hub.settings.display.ghost ?? true;
   const applyDisplay = (): void => {
     const { display } = hub.settings;
@@ -321,6 +321,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     context = 'game';
     hub.tracker.reset();
     hub.resetDevices();
+    infoPanel.render();
     refocusGame();
   };
 
@@ -329,13 +330,6 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     signal,
     onOpen: openMenu,
     onClose: closeMenu,
-    display: {
-      onChange: () => {
-        infoPanel.render();
-        currentShell = shellFor(model, hub.settings.display.shell);
-        applyDisplay();
-      },
-    },
   });
   const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, model, signal);
 
@@ -496,6 +490,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     toggleSound: () => setSound(!hub.settings.display.sound),
     setVolume: (volume, commit) => {
       audio.setVolume(volume);
+      brickAudio.setVolume(volume);
       if (commit) {
         hub.updateSettings((s) => {
           s.display.volume = volume;
@@ -536,6 +531,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     { devices: refs.devices, theme: refs.cornerTheme },
     {
       toggleGhost: panelActions.toggleGhost,
+      togglePause: () => { if (powered) emit(cabinet.phase === 'paused' ? cabinet.resume() : cabinet.pause()); },
       toggleTheme: () => {
         hub.updateSettings((s) => {
           s.display.theme = THEMES.find((theme) => theme !== s.display.theme) ?? 'dark';

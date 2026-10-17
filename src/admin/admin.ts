@@ -67,6 +67,7 @@ export async function startAdmin(): Promise<void> {
       const guide = BRICK_GUIDES[game.id]; if (guide) { const details = el('details'); details.append(el('summary','Правила и статус'),el('p',guide.goal.ru),...guide.rules.map((r) => el('p',r.ru)),el('p','Реализована. Правила и допущения уточняются по источникам.')); row.append(details); }
       list.append(row);
     }); menu.append(list);
+    if (active === 'mario') { const editor = el('a','Открыть редактор уровней Mario ↗','admin__editor'); editor.href = `${import.meta.env.BASE_URL}?toy=mario#/editor`; appearance.append(editor); }
     if (active === 'mario') { const future = el('div','','admin__music'); future.append(el('h3','Оригинальные игры · позже'),el('p','TETRIS (99) — ожидает реализации'),el('p','SHOOTING (1) — ожидает реализации')); menu.append(future); }
     const add = el('select'); add.setAttribute('aria-label','Добавить игру'); const available = Object.values(GAMES).filter((g) => (active === 'mario' ? g.id === 'mario' : g.engine === 'brick' && BRICK_GAMES[g.id] && canAssign(BRICK_GAMES[g.id]!, TOYS[active])) && !toy.games.some((i) => i.id === g.id)); add.append(...available.map((g) => option(g.id,g.names.ru))); add.disabled = !available.length;
     menu.append(add,button('Добавить в меню',() => { if (!add.value) return; toy.games.push({ id:add.value as GameId }); changed(); render(); },!available.length)); content.append(menu);
