@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Питание и жизни по упаковке оригинала: игрушка при открытии страницы выключена и включается кнопкой ON/OFF;
@@ -39,7 +40,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('по умолчанию игрушка выключена: экран пуст, светодиоды погашены, время игры стоит; ON/OFF включает, Enter до этого ничего не запускает', async ({ page }) => {
-  await page.goto('./?view=full');
+  await page.goto(marioUrl('?view=full'));
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
   expect(await area(page, 'phase')).toBe('ready');
@@ -72,7 +73,7 @@ test('по умолчанию игрушка выключена: экран пу
 });
 
 test('клавиша O включает и выключает питание так же, как кнопка ON/OFF', async ({ page }) => {
-  await page.goto('./?view=full');
+  await page.goto(marioUrl('?view=full'));
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await page.keyboard.press('KeyO');
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
@@ -81,7 +82,7 @@ test('клавиша O включает и выключает питание т�
 });
 
 test('выбор уровня на пульте включает игрушку и запускает этот уровень', async ({ page }) => {
-  await page.goto('./?view=full');
+  await page.goto(marioUrl('?view=full'));
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await page.locator('#original-levels .lv').nth(2).click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
@@ -90,7 +91,7 @@ test('выбор уровня на пульте включает игрушку 
 });
 
 test('в режиме «только экран» кнопок нет: выключенную игрушку включает касание экрана', async ({ page }) => {
-  await page.goto('./?view=full');
+  await page.goto(marioUrl('?view=full'));
   await page.locator('#view-screen').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
   await page.locator('#game-area').click();
@@ -106,7 +107,7 @@ test('технические страницы всегда включены (к�
 });
 
 test('секрет: LEFT + DOWN вместе до выхода из колодца — 200 жизней (значки жизни мигают); одной клавишей нельзя', async ({ page }) => {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
   expect(await area(page, 'lives')).toBe('4');
 
@@ -128,7 +129,7 @@ test('секрет: LEFT + DOWN вместе до выхода из колодц
 });
 
 test('секрет во время сценария входа (герой бьётся головой о крышку колодца): аккорд засчитывается и не мешает выходу', async ({ page }) => {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
   await page.keyboard.press('Enter');
   await expect.poll(() => area(page, 'entry')).toBe('on');
@@ -144,7 +145,7 @@ test('секрет во время сценария входа (герой бь�
 });
 
 test('после выхода из колодца аккорд ничего не даёт', async ({ page }) => {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing'); // иначе «сценарий не идёт» увидится в тот такт, когда игра ещё не началась

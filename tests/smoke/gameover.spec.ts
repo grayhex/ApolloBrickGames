@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Конец игры: поле пустеет, и по нему справа налево плывёт «GAME OVER» блоками (как на раскадровке оригинала).
@@ -38,7 +39,7 @@ test('GAME OVER: после четвёртой потери жизни по пу
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(() => area(page, 'phase')).toBe('ready');
   await expect.poll(() => area(page, 'intro'), { timeout: 8000 }).toBe('off');
 

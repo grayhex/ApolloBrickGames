@@ -10,6 +10,7 @@ export function applyConfig(config: SiteConfig): void {
     const original = model.games;
     model.shells = settings.shells;
     model.defaultShell = settings.defaultShell;
+    model.thumbShell = settings.thumbShell;
     model.defaultGame = settings.defaultGame;
     model.games = (id === 'brickgame' ? universalGames(config) : settings.games).map((g) => ({
       ...original.find((old) => old.id === g.id),

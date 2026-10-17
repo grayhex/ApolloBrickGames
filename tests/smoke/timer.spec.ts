@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Таймер игры по видео геймплея: до старта на HUD подпись уровня, с первого S./P. — слово TIME и три цифры (400 единиц по ≈ 0,77 с);
@@ -38,7 +39,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('таймер: до старта подпись, после S./P. слово TIME и число, убывающее по ≈ 1,3 единицы в секунду; на паузе стоит', async ({ page }) => {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'intro'), { timeout: 9000 }).toBe('off');
   expect(await area(page, 'time')).toBe(''); // таймера на экране нет

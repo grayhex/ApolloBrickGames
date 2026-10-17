@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { marioUrl } from './url';
 
 test('Mini Brick Game: выключенный LCD, собственное управление и уведомление вместо запуска игры', async ({ page }) => {
   await page.goto('./?toy=minibrick&view=full&power=on&debug');
@@ -85,7 +86,7 @@ test('две модели в «Другие» доступны на телефо
 test('группа «Другие» не перекрывает системное меню запущенной Apollo', async ({ page }) => {
   for (const width of [900, 1024, 1200, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('./?power=on');
+    await page.goto(marioUrl('?power=on'));
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
     await page.getByRole('button',{name:'Следующие модели'}).click();
     const menu = (await page.locator('#toy-switch').boundingBox())!;

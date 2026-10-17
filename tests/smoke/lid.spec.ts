@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Закрытая раскладушка: игрушка при каждой загрузке закрыта, на крышке логотип Apollo; щелчок по крышке (или Enter / пробел)
@@ -25,7 +26,7 @@ test.use({ viewport: { width: 1440, height: 900 } });
 
 /** Страница загружена и приложение запущено (обработчики клавиш вешаются после загрузки данных). */
 async function load(page: Page, query = ''): Promise<void> {
-  await page.goto(`./${query}`);
+  await page.goto(marioUrl(query));
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
 }
 
@@ -230,7 +231,7 @@ test.describe('загрузка страницы', () => {
         };
         requestAnimationFrame(sample);
       });
-      await page.goto(`./${query}`, { waitUntil: 'commit' });
+      await page.goto(marioUrl(query), { waitUntil: 'commit' });
       await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
       await page.waitForTimeout(300);
       const shown = await page.evaluate(() => (window as unknown as { __shown: { view: string; closed: boolean; infoKids: number; ctlKids: number }[] }).__shown);
@@ -247,7 +248,7 @@ test.describe('загрузка страницы', () => {
 
   test('сбой запуска показывает страницу с блоком ошибки, а не пустой экран', async ({ page }) => {
     await page.route('**/content/room/pack.json', (route) => route.fulfill({ status: 404, body: 'нет' }));
-    await page.goto('./');
+    await page.goto(marioUrl(''));
     await expect(page.locator('#fatal')).toBeVisible();
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
     (page as Page & { __errors?: string[] }).__errors?.splice(0); // ошибки загрузки здесь ожидаемы

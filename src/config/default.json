@@ -14,6 +14,7 @@
         "white"
       ],
       "defaultShell": "blue",
+      "thumbShell": "white",
       "defaultGame": "mario"
     },
     "clock99": {
@@ -55,6 +56,7 @@
         "white"
       ],
       "defaultShell": "yellow",
+      "thumbShell": "white",
       "defaultGame": "tetris"
     },
     "seabattle": {
@@ -109,6 +111,7 @@
         "blue"
       ],
       "defaultShell": "red",
+      "thumbShell": "white",
       "defaultGame": "sea-battle"
     },
     "tank168": {
@@ -146,6 +149,7 @@
         "yellow"
       ],
       "defaultShell": "red",
+      "thumbShell": "white",
       "defaultGame": "tank"
     },
     "brickgame": {
@@ -159,7 +163,8 @@
         "gray",
         "black"
       ],
-      "defaultShell": "gray"
+      "defaultShell": "gray",
+      "thumbShell": "white"
     }
   }
 }

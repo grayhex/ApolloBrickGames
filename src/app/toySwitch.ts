@@ -15,11 +15,12 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   const real = h('div', { class: 'toysw__real' }, h('div', { class: 'toysw__heading' }, title, previous, next), shelf);
   const items = TOY_IDS.map((id, index) => {
     const model = TOYS[id],
-      icon = miniConsole('white', 100 + index, id);
+      shell = model.thumbShell ?? 'white',
+      icon = miniConsole(shell, 100 + index, id);
     icon.classList.add('toysw__icon');
     const link = h(
       'a',
-      { class: 'toysw__item', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': 'white', 'aria-label': model.name },
+      { class: 'toysw__item', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': shell, 'aria-label': model.name },
       icon,
       h('span', { class: 'toysw__name' }, model.name),
     );

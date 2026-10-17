@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
+import { marioUrl } from './url';
 
 for (const toy of ['clock99', 'seabattle', 'tank168']) {
   test(`${toy}: synthesized sound starts on input, without sample requests`, async ({ page }) => {
@@ -55,7 +56,7 @@ test('admin: Mario editor link and published default colour override old local p
   config.toys.mario.defaultShell = 'white';
   await context.route('**/api/config', (route) => route.fulfill({ json: { config, revision: 1 } }));
   await page.addInitScript(() => localStorage.setItem('crocodile-mario:settings:v1', JSON.stringify({ display: { shell: 'red' } })));
-  await page.goto('./');
+  await page.goto(marioUrl(''));
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
   await page.goto('./admin');
   const editor = page.getByRole('link', { name: 'Открыть редактор уровней Mario ↗' });
@@ -71,7 +72,7 @@ test('admin: Mario editor link and published default colour override old local p
 for (const width of [360, 900, 1440]) {
   test(`chooser at ${width}px: titles fit, white miniatures and Apollo category logo`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('./?view=full');
+    await page.goto(marioUrl('?view=full'));
     await expect(page.locator('.site-brand img')).toBeVisible();
     await expect(page.locator('#topleft img')).toHaveCount(0);
     await expect(page.locator('.toysw__item[data-shell=white]')).toHaveCount(7);

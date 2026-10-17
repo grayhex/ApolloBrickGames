@@ -12,7 +12,7 @@ import {
 import { GAMES, type GameId } from '../games/catalog';
 import { makeTetrisInput, TetrisGame, type TetrisAction, type TetrisEvent } from '../tetris';
 import { MAX_SCORE } from '../brick/types';
-import type { TetrisScene } from '../render/tetrisScreen';
+import type { Mood, TetrisScene } from '../render/tetrisScreen';
 import { gameKey, type ToyModel } from './toys';
 import { bodyActions } from './bodyButtons';
 
@@ -35,6 +35,8 @@ export interface Cabinet {
   readonly inMenu: boolean;
   /** Идентификатор игры каталога, выбранной в меню или играющей сейчас (у одиночного тетриса — тетрис). */
   readonly activeGame: GameId;
+  /** Нужна ли выбранной игре отдельная кнопка FIRE (не алиас ROTATE): только тогда универсальная приставка её рисует и принимает. */
+  readonly usesFire: boolean;
   /** Состояние для отладки и проверок: `data-*` игровой области. */
   readonly info: Readonly<Record<string, string | number>>;
   /** Ключ хранилища рекорда текущей игры (у консоли — игры и варианта); `null`, пока игра не выбрана. */
@@ -148,6 +150,7 @@ class TetrisCabinet implements Cabinet {
   }
   readonly inMenu = false;
   readonly activeGame: GameId = 'tetris';
+  readonly usesFire = false;
   get info(): Readonly<Record<string, string | number>> {
     return {};
   }
@@ -219,14 +222,34 @@ export function consoleEntries(model: ToyModel, defs: Readonly<Record<string, Br
 /** Игры с движением по клеткам, где звук каждого шага уместен (тетрис). */
 const STEP_SOUND_GAMES: ReadonlySet<string> = new Set([GAMES.tetris.id, GAMES['tetris-big'].id, GAMES['tetris-pentix'].id]);
 
+/** Что радует человечка (линии, бонус, победа, новый уровень) и что огорчает (авария, потеря жизни, конец игры). */
+const CHEER_EVENTS: ReadonlySet<CabinetEvent['type']> = new Set(['lines', 'bonus', 'win', 'levelUp']);
+const SAD_EVENTS: ReadonlySet<CabinetEvent['type']> = new Set(['crash', 'lifeLost', 'gameOver']);
+/** Сколько тактов человечек радуется и огорчается после события (такт — 1/30 с). */
+const CHEER_TICKS = 45;
+const SAD_TICKS = 60;
+
+/** Настроение по событиям такта: огорчение важнее радости; `null` — события настроения не меняют. */
+export function moodOf(events: readonly CabinetEvent[]): Mood | null {
+  if (events.some((event) => SAD_EVENTS.has(event.type))) return 'sad';
+  if (events.some((event) => CHEER_EVENTS.has(event.type))) return 'cheer';
+  return null;
+}
+
 class ConsoleCabinet implements Cabinet {
   private readonly console_: BrickConsole;
   private readonly toy: string;
   private readonly allowed: ReadonlySet<BrickAction>;
+  /** Игры, у которых FIRE делает своё действие (`usesFire`); у остальных приставка FIRE не принимает, как и не рисует. */
+  private readonly fireGames: ReadonlySet<string>;
+  private mood: Mood = 'idle';
+  private moodUntil = 0;
+  private clock = 0;
 
   constructor(model: ToyModel, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0) {
     this.toy = model.id;
     this.allowed = bodyActions(model);
+    this.fireGames = new Set(entries.filter((entry) => entry.def?.usesFire).map((entry) => entry.id));
     this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game });
   }
 
@@ -255,6 +278,9 @@ class ConsoleCabinet implements Cabinet {
   get activeGame(): GameId {
     return this.console_.gameId as GameId;
   }
+  get usesFire(): boolean {
+    return this.allowed.has('fire') && this.fireGames.has(this.console_.gameId);
+  }
   get info(): Readonly<Record<string, string | number>> {
     const c = this.console_;
     return {
@@ -264,6 +290,7 @@ class ConsoleCabinet implements Cabinet {
       mode: c.modeNumber,
       playable: c.playable ? 'yes' : 'no',
       lives: c.lives ?? '',
+      mood: this.currentMood(),
     };
   }
   hiKey(): string {
@@ -274,6 +301,7 @@ class ConsoleCabinet implements Cabinet {
     return this.console_.inMenu || STEP_SOUND_GAMES.has(this.console_.gameId);
   }
   start(): CabinetEvent[] {
+    this.mood = 'idle';
     return this.console_.start();
   }
   pause(): CabinetEvent[] {
@@ -283,13 +311,32 @@ class ConsoleCabinet implements Cabinet {
     return this.console_.resume();
   }
   restart(): CabinetEvent[] {
+    this.mood = 'idle';
     return this.console_.restart();
   }
+  /** Кнопки, доступные сейчас: FIRE — только в играх, где она нужна. */
+  private buttons(): ReadonlySet<BrickAction> {
+    if (!this.allowed.has('fire') || this.usesFire) return this.allowed;
+    const buttons = new Set(this.allowed);
+    buttons.delete('fire');
+    return buttons;
+  }
+  private react(events: CabinetEvent[]): CabinetEvent[] {
+    const mood = moodOf(events);
+    if (mood) {
+      this.mood = mood;
+      this.moodUntil = this.clock + (mood === 'sad' ? SAD_TICKS : CHEER_TICKS);
+    }
+    return events;
+  }
   step(frame: InputFrame): CabinetEvent[] {
-    return this.console_.step(makeBrickInput(brickActions(frame.pressed, this.allowed), brickActions(frame.held, this.allowed)));
+    this.clock++;
+    const buttons = this.buttons();
+    return this.react(this.console_.step(makeBrickInput(brickActions(frame.pressed, buttons), brickActions(frame.held, buttons))));
   }
   menu(frame: InputFrame): CabinetEvent[] {
-    return this.console_.menu(makeBrickInput(brickActions(frame.pressed, this.allowed), brickActions(frame.held, this.allowed)));
+    const buttons = this.buttons();
+    return this.console_.menu(makeBrickInput(brickActions(frame.pressed, buttons), brickActions(frame.held, buttons)));
   }
   scene(extra: { sound: boolean; allOn: boolean }): TetrisScene {
     const c = this.console_;
@@ -309,7 +356,14 @@ class ConsoleCabinet implements Cabinet {
       phase: c.phase,
       tick: c.tick,
       allOn: extra.allOn,
+      mood: this.currentMood(),
     };
+  }
+  /** Человечек: после события радуется или огорчается на время, при конце игры остаётся огорчённым, на паузе, в меню и без событий стоит. */
+  private currentMood(): Mood {
+    const phase = this.console_.phase;
+    if (phase === 'over') return 'sad';
+    return phase === 'playing' && this.clock < this.moodUntil ? this.mood : 'idle';
   }
   debugTarget(): object {
     return this.console_;

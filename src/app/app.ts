@@ -575,7 +575,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   };
   const controls = route.lid
     ? new ControlPanel(refs.sideCtl, {
-      shells: TOYS.mario.shells, slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame, signal,
+      shells: TOYS.mario.shells, slots, bundled, actions: panelActions, tickRateHz: ctx.rules.params.tickRateHz, onPointerUse: refocusGame, remote: ['onoff', 'sp'], signal,
     })
     : null;
   // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
@@ -713,6 +713,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     onPower: () => setPower(!powered),
     onSound: () => setSound(!hub.settings.display.sound),
   });
+  if (controls) toy.bindRemote(refs.sideCtl);
   // Горячие клавиши питания и звука (в настройках управления не переназначаются).
   const hotkeys: Record<string, 'onoff' | 'sound'> = { KeyO: 'onoff', KeyM: 'sound' };
   const hotkeyAllowed = (event: KeyboardEvent): 'onoff' | 'sound' | null => {

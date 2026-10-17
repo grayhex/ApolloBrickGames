@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 interface Beep {
   freq: number;
@@ -63,7 +64,7 @@ const lit = (page: Page): Promise<string> =>
   });
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await page.waitForSelector('#game-area[data-phase="ready"]');
 }
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Четвёртая игрушка «168 в 1 танк», переключение игрушек на месте (без перезагрузки страницы: цвет, вид и питание сохраняются, шапка и каркас
@@ -23,7 +24,7 @@ test.afterEach(async ({ page }) => {
 
 /** Страница игрушки загружена и ждёт старта (вспышка сегментов при включении у тетриса закончилась). */
 async function ready(page: Page, query: string): Promise<void> {
-  await page.goto(`./${query}`);
+  await page.goto(marioUrl(query));
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'boot').then((boot) => boot !== 'on')).toBe(true);
 }
@@ -216,7 +217,7 @@ test.describe('переключение игрушек на месте', () => {
     expect(await alive()).toEqual({ alive: 'да', brand: 'тот же', lid: 'тот же', loads: 1 });
     await switchTo(page, 'tank168');
     await switchTo(page, 'mario');
-    await expect(page).not.toHaveURL(/toy=/);
+    await expect(page).toHaveURL(/\?toy=mario$/);
     await expect(page).toHaveTitle('Crocodile Mario');
     expect(await alive()).toEqual({ alive: 'да', brand: 'тот же', lid: 'тот же', loads: 1 });
     // История: «назад» — к «168 в 1 танк», ещё раз — к «Часам+99», «вперёд» — снова к «168 в 1 танк»; всё без перезагрузки.
@@ -254,7 +255,7 @@ test.describe('переключение игрушек на месте', () => {
   });
 
   test('закрытая выключенная игрушка остаётся закрытой и выключенной; сменилась наклейка на подбородке', async ({ page }) => {
-    await page.goto('./');
+    await page.goto(marioUrl(''));
     await expect.poll(phase(page)).toBe('ready');
     await expect(page.locator('#toy')).toHaveAttribute('data-view', 'closed');
     await switchTo(page, 'tank168');
@@ -330,8 +331,8 @@ test.describe('переключение игрушек на месте', () => {
     await ready(page, '?power=on');
     const hrefs = await page.locator('.toysw__item').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
     expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual([
-      '?toy=brickgame',
-      '',
+      '', // универсальный Brick Game — страница без параметра
+      '?toy=mario',
       '?toy=clock99',
       '?toy=seabattle',
       '?toy=tank168',
@@ -362,7 +363,7 @@ test.describe('переключение игрушек на месте', () => {
     });
     expect(prevented).toEqual({ ctrl: false, shift: false, meta: false, middle: false });
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario'); // ничего не переключилось
-    await expect(page).not.toHaveURL(/toy=/);
+    await expect(page).toHaveURL(/toy=mario/);
     // Обычный щелчок переключатель перехватывает: игрушка меняется на месте.
     await switchTo(page, 'tank168');
   });

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Основной маршрут: игрушка, по умолчанию с уровнем `mario-1`; ходьба и рендер проверяются на тестовом уровне `tunnel-run` (`?level=tunnel-run`), один герой.
@@ -37,7 +38,7 @@ const entry = (page: Page) => (): Promise<string> => page.evaluate(() => documen
 
 /** Страница на тестовом уровне по видео (`tunnel-run`): на его геометрии выверены тесты ходьбы и рендера; по умолчанию страница начинается с `mario-1`. */
 async function ready(page: Page, query = '?level=tunnel-run&power=on'): Promise<void> {
-  await page.goto(`./${query}`);
+  await page.goto(marioUrl(query));
   await expect.poll(phase(page)).toBe('ready');
 }
 

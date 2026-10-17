@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { marioUrl } from './url';
 
 /**
  * Детали игрушки: язык интерфейса RU/EN, справка по упаковке, шутка со шлейфом, плавный переход «только экран».
@@ -12,7 +13,7 @@ const area = (page: Page, key: string): Promise<string> =>
 const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 
 async function ready(page: Page): Promise<void> {
-  await page.goto('./?power=on');
+  await page.goto(marioUrl('?power=on'));
   await expect.poll(phase(page)).toBe('ready');
 }
 
@@ -261,7 +262,7 @@ test.describe('плавный переход «только экран»', () =>
     await expect(page.locator('#base')).toBeVisible();
 
     // Вид, заданный адресом, при загрузке показывается сразу, без «выезда».
-    await page.goto('./?view=screen&power=on');
+    await page.goto(marioUrl('?view=screen&power=on'));
     await expect(page.locator('#toy')).toHaveAttribute('data-compact', '');
     expect((await size()).w).toBeGreaterThan(whole.w * 1.8);
     await expect.poll(() => page.evaluate(() => document.body.dataset['motion'] ?? 'on')).toBe('on'); // после первого кадра переходы включены

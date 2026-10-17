@@ -5,7 +5,7 @@ import { BRICK_GAMES } from '../brick/games';
 import { canAssign } from '../app/bodyButtons';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { defaultConfig } from '../config/runtime';
-import { validateConfig, universalGames, CONFIG_TOY_IDS, type ConfigToyId } from '../config/schema';
+import { validateConfig, universalGames, thumbPalette, CONFIG_TOY_IDS, type ConfigToyId } from '../config/schema';
 import { BRICK_GUIDES } from '../brick/guides';
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] { const e = document.createElement(tag); e.textContent = text; e.className = className; return e; }
 function button(text: string, fn: () => void, disabled = false): HTMLButtonElement { const b = el('button',text); b.type = 'button'; b.disabled = disabled; b.addEventListener('click',fn); return b; }
@@ -48,6 +48,8 @@ export async function startAdmin(): Promise<void> {
     }
     const defaultLabel = el('label','Основной цвет'); const defaultSelect = el('select'); defaultSelect.setAttribute('aria-label','Основной цвет'); defaultSelect.append(...toy.shells.map((s) => option(s,colors[s]))); defaultSelect.value = toy.defaultShell;
     defaultSelect.addEventListener('change',() => { toy.defaultShell = defaultSelect.value as Shell; changed(); }); defaultLabel.append(defaultSelect); appearance.append(swatches,defaultLabel);
+    const thumbLabel = el('label','Цвет миниатюры в карусели'); const thumbSelect = el('select'); thumbSelect.setAttribute('aria-label','Цвет миниатюры в карусели'); thumbSelect.append(...thumbPalette(active).map((s) => option(s,colors[s]))); thumbSelect.value = toy.thumbShell;
+    thumbSelect.addEventListener('change',() => { toy.thumbShell = thumbSelect.value as Shell; changed(); }); thumbLabel.append(thumbSelect); appearance.append(thumbLabel);
     const music = el('div','','admin__music'); const musicButton = button('Загрузка однобитной мелодии — позже',() => {},true); music.append(el('h3','Мелодия'),el('p','Здесь появится импорт простой однобитной мелодии для этой приставки.'),musicButton); appearance.append(music); content.append(appearance);
     const menu = el('section','','admin__card'); menu.append(el('h2',`Меню · ${toy.games.length}`));
     if (active === 'mario') menu.append(el('p','У Mario собственный сегментный экран. Сейчас доступен Mario; оригинальные Tetris и Shooting подключим позже. Игры матрицы 10×20 назначаются матричным приставкам.'));

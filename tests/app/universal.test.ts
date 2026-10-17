@@ -51,4 +51,20 @@ describe('universal Brick Game', () => {
     config.toys.brickgame.defaultGame = 'jigsaw';
     expect(validateConfig(config).toys.brickgame.defaultGame).toBe('jigsaw');
   });
+  it('colour of the carousel thumbnail is configurable per toy and defaults to the former white', () => {
+    const config = defaultConfig();
+    for (const id of [...APOLLO_IDS, 'brickgame'] as const) expect(config.toys[id].thumbShell).toBe('white');
+    const legacy = structuredClone(config) as unknown as { toys: Record<string, Record<string, unknown>> };
+    for (const toy of Object.values(legacy.toys)) delete toy['thumbShell'];
+    expect(validateConfig(legacy).toys.tank168.thumbShell).toBe('white');
+    config.toys.tank168.thumbShell = 'red';
+    config.toys.brickgame.thumbShell = 'black';
+    const loaded = validateConfig(config);
+    expect([loaded.toys.tank168.thumbShell, loaded.toys.brickgame.thumbShell]).toEqual(['red', 'black']);
+    config.toys.tank168.thumbShell = 'black';
+    expect(() => validateConfig(config)).toThrow(); // чёрный — не цвет Apollo
+    config.toys.tank168.thumbShell = 'red';
+    config.toys.brickgame.thumbShell = 'red';
+    expect(() => validateConfig(config)).toThrow();
+  });
 });

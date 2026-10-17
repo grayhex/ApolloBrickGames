@@ -47,7 +47,13 @@ export interface ToyHooks {
   keyActions?: Partial<Record<ToyKeyId, ActionMask>>;
   /** Нажатие кнопки без игрового действия, но со своим делом (RESET, TIME/GAME): `true` — обработано, действие не отправляется. */
   onPress?(id: ToyKeyId): boolean;
+  /** RESET из пульта (дубль кнопки корпуса): в игрушках, где корпус выходит в меню, — возврат в меню. */
+  onReset?(): void;
 }
+
+/** Идентификатор «указателя» для нажатия кнопки с клавиатуры и его длительность: хватает одного такта игры. */
+const KEYBOARD_POINTER = -7;
+const KEYBOARD_PRESS_MS = 90;
 
 /**
  * Кнопки корпуса: нажимаются мышью и пальцем (игровые — через общий слой ввода, как клавиши),
@@ -70,6 +76,29 @@ export class ToyPanel {
       if (!button) continue;
       this.buttons.set(id, button);
       this.bind(id, button);
+    }
+  }
+
+  /**
+   * Дубли кнопок корпуса в пульте справа (`data-remote`: onoff, sp, reset), когда видна только крышка с экраном: мышью включить игру и запустить её иначе нельзя.
+   * Работают так же, как кнопки на корпусе; с клавиатуры (`click` без указателя) нажимаются так же, как мышью, но коротко.
+   */
+  bindRemote(root: HTMLElement): void {
+    for (const button of root.querySelectorAll<HTMLElement>('[data-remote]')) {
+      const id = button.dataset['remote'];
+      if (id === 'reset') {
+        button.addEventListener('click', () => this.hooks.onReset?.());
+      } else if (id === 'onoff' || id === 'sp') {
+        this.bind(id, button);
+        button.addEventListener('click', (event) => {
+          if (event.detail !== 0) return; // мышь и палец уже отработали в pointerdown
+          if (id === 'onoff') this.hooks.onPower();
+          else if (this.hooks.powered()) {
+            this.hub.screen.press(KEYBOARD_POINTER, startPauseAction(this.hooks.phase()));
+            window.setTimeout(() => this.hub.screen.release(KEYBOARD_POINTER), KEYBOARD_PRESS_MS);
+          }
+        });
+      }
     }
   }
 

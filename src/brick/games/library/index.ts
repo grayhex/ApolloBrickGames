@@ -19,6 +19,8 @@ const factories: Record<LibraryId, (o: BrickGameOptions) => BrickGame> = {
 };
 /** Кнопки, без которых игра не проходится и которых нет на корпусе игрушек 1–4: такая игра не назначается игрушке (см. `needs` в `BrickGameDef`). */
 const NEEDS: Partial<Record<LibraryId, readonly BrickAction[]>> = { jigsaw: ['fire'] };
+/** Игры, где FIRE делает своё действие, отличное от ROTATE (см. `usesFire` в `BrickGameDef`): жёсткое падение, рестарт задачи, «поставить фигуру». */
+const USES_FIRE: ReadonlySet<LibraryId> = new Set<LibraryId>(['tetris-flicker', 'dr-mario', 'columns', 'columns-flicker', 'sokoban', 'peg-solitaire', 'jigsaw']);
 export const LIBRARY_GAMES: Readonly<Record<LibraryId, BrickGameDef>> = Object.fromEntries(LIBRARY_IDS.map((id): [LibraryId, BrickGameDef] => [id, {
-  id, declaredModes: null, ...(NEEDS[id] ? { needs: NEEDS[id] } : {}), modes: [{ name: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, note: 'Реконструкция по описанию правил; точная прошивка и варианты оригинала не подтверждены.' }], create: factories[id],
+  id, declaredModes: null, ...(NEEDS[id] ? { needs: NEEDS[id] } : {}), ...(USES_FIRE.has(id) ? { usesFire: true } : {}), modes: [{ name: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, note: 'Реконструкция по описанию правил; точная прошивка и варианты оригинала не подтверждены.' }], create: factories[id],
 }])) as Record<LibraryId, BrickGameDef>;

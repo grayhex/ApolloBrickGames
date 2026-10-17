@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCabinet } from '../../src/app/cabinet';
+import { createCabinet, moodOf } from '../../src/app/cabinet';
 import { bodyActions, canAssign, guideForBody } from '../../src/app/bodyButtons';
 import { TOYS, type ToyModel } from '../../src/app/toys';
 import { BRICK_GAMES } from '../../src/brick/games';
@@ -90,3 +90,67 @@ for (const toy of ['clock99', 'tank168', 'seabattle'] as const)
       expect(c.phase).toBe('ready');
     });
   });
+
+describe('универсальный Brick Game: кнопка FIRE и человечек', () => {
+  const universal = (id: GameId) => createCabinet(assign(TOYS.brickgame, id), options);
+  const scene = (c: ReturnType<typeof universal>) => c.scene({ sound: false, allOn: false });
+
+  it('FIRE нужна только играм, где она делает своё действие, а не повторяет ROTATE', () => {
+    const wanted = ['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker', 'dr-mario', 'columns', 'columns-flicker', 'sokoban', 'peg-solitaire', 'jigsaw', 'romeo-juliet'];
+    for (const id of Object.keys(BRICK_GAMES) as GameId[]) expect(universal(id).usesFire, id).toBe(wanted.includes(id));
+    for (const toy of ['clock99', 'tank168', 'seabattle'] as const) expect(createCabinet(TOYS[toy], options).usesFire).toBe(false);
+  });
+
+  it('там, где кнопка не нарисована, FIRE с клавиатуры не вводится; там, где нарисована, — работает', () => {
+    const idle = universal('snake'),
+      fired = universal('snake');
+    idle.start();
+    fired.start();
+    for (let t = 0; t < 60; t++) {
+      idle.step(NEUTRAL_FRAME);
+      fired.step(makeFrame({ pressed: t % 2 ? [] : ['fire'], held: ['fire'] }));
+    }
+    expect(scene(fired)).toEqual(scene(idle));
+    const drop = universal('tetris'),
+      still = universal('tetris');
+    drop.start();
+    still.start();
+    drop.step(makeFrame({ pressed: ['fire'] }));
+    still.step(NEUTRAL_FRAME);
+    expect(scene(drop).cells).not.toEqual(scene(still).cells); // жёсткое падение
+  });
+
+  it('человечек стоит; после победы радуется и через время снова стоит; в конце игры огорчён до новой партии', () => {
+    const c = universal('sokoban');
+    expect(scene(c).mood).toBe('idle');
+    c.start();
+    const dir = { l: 'left', r: 'right', u: 'up', d: 'down' } as const;
+    for (const move of SOKOBAN_LEVELS[0]!.solution.toLowerCase()) {
+      c.step(makeFrame({ pressed: [dir[move as keyof typeof dir]] }));
+      c.step(NEUTRAL_FRAME);
+    }
+    expect(scene(c).mood).toBe('cheer');
+    c.pause();
+    expect(scene(c).mood).toBe('idle'); // на паузе не радуется
+    c.resume();
+    for (let t = 0; t < 240; t++) c.step(NEUTRAL_FRAME); // победа, затем новый уровень — тоже радость, но и она проходит
+    expect(scene(c).mood).toBe('idle');
+
+    const over = universal('tetris');
+    over.start();
+    for (let t = 0; t < 2000 && over.phase !== 'over'; t++) over.step(makeFrame({ pressed: t % 2 ? [] : ['fire'] }));
+    expect(over.phase).toBe('over');
+    expect(scene(over).mood).toBe('sad');
+    over.restart();
+    expect(scene(over).mood).toBe('idle');
+  });
+
+  it('настроение по событиям: огорчение важнее радости, прочие события его не меняют', () => {
+    expect(moodOf([{ type: 'lines', count: 1 }])).toBe('cheer');
+    expect(moodOf([{ type: 'win' }, { type: 'bonus' }, { type: 'levelUp', speed: 2 }])).toBe('cheer');
+    expect(moodOf([{ type: 'lines', count: 4 }, { type: 'crash' }])).toBe('sad');
+    expect(moodOf([{ type: 'lifeLost' }])).toBe('sad');
+    expect(moodOf([{ type: 'gameOver' }])).toBe('sad');
+    expect(moodOf([{ type: 'move' }, { type: 'shot' }, { type: 'hit' }, { type: 'lock' }])).toBeNull();
+  });
+});

@@ -29,6 +29,9 @@ export interface TetrisScreenOptions {
   ink: string;
 }
 
+/** Настроение человечка на панели «Brick Game»: стоит, радуется (руки вверх, улыбка) или огорчён (руки опущены, грустное лицо, слезинка). */
+export type Mood = 'idle' | 'cheer' | 'sad';
+
 export interface TetrisScene {
   /** Поле с фигурой на нём: FIELD_COLUMNS × FIELD_ROWS, 0 — пусто. */
   cells: Uint8Array;
@@ -51,6 +54,8 @@ export interface TetrisScene {
   preview?: Uint8Array | null;
   /** Игры консоли с меню: значение клетки (матрицы и превью), которое мигает (у этих игр — 2). */
   blinkValue?: number;
+  /** Игры консоли с меню: настроение человечка (панель «classic»); по умолчанию — стоит. */
+  mood?: Mood;
 }
 
 /** Мигающие клетки: полпериода в тактах. */
@@ -148,8 +153,8 @@ export class TetrisScreen {
     const hi = scene.phase === 'over' && scene.overFill >= FIELD_ROWS ? Math.floor(scene.tick / 90) % 2 : 0;
     const blinkOn = scene.blinkValue === undefined || Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 0;
     const hasPreview = scene.preview !== undefined && scene.preview !== null;
-    const dance = this.options.panel === 'classic' && scene.phase === 'playing' ? Math.floor(scene.tick / 30) % 2 : 0;
-    const signature = `${dance}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}`;
+    const pose = this.options.panel === 'classic' ? (scene.mood ?? 'idle') : '';
+    const signature = `${pose}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}`;
     if (
       signature === this.signature &&
       scene.cells.length === this.previousCells.length &&
@@ -217,7 +222,6 @@ export class TetrisScreen {
 
   // ── Боковая панель ─────────────────────────────────────────────────────
   private drawPanel(scene: TetrisScene): void {
-    const ctx = this.ctx;
     const sea = this.options.panel !== 'clock'; // раскладка «Морского боя»: без значков сверху, внизу значок игры
     const tank = this.options.panel === 'tank'; // «168 в 1 танк»: чашка — значок паузы (по фотографиям оригинала)
     const lcd = sea && this.options.panel !== 'classic'; // «Морской бой» и «168 в 1 танк» — один LCD: старшие цифры только «1», NEXT — сегмент (по фотографиям обоих)
@@ -271,20 +275,148 @@ export class TetrisScreen {
 
     // Чашка в углу панели. У «Морского боя» — виден при включении и на экране ожидания; у «168 в 1» — значок паузы: горит на паузе и при полной заливке.
     if (this.options.panel === 'classic') {
-      const dancing = scene.phase === 'playing' && Math.floor(scene.tick / 30) % 2 === 1;
-      const pixels = dancing
-        ? ['001100', '001100', '101101', '011110', '001100', '010010', '100001']
-        : ['001100', '001100', '001101', '111110', '001100', '001010', '010010'];
-      ctx.globalAlpha = segmentAlpha(all || scene.phase !== 'over');
-      pixels.forEach((row, y) =>
-        [...row].forEach((pixel, x) => {
-          if (pixel === '1') ctx.fillRect(PANEL_CX - 9 + x * 3, 282 + y * 3, 3, 3);
-        }),
-      );
+      this.man(PANEL_CX, scene.mood ?? 'idle', all);
     } else if (sea) {
       const on = tank ? all || scene.phase === 'paused' : all || scene.phase === 'ready';
       this.cup(PANEL_CX, 296, segmentAlpha(on));
     }
+  }
+
+  /**
+   * Человечек — тонкий рисунок-сегмент, как на ЖК-панели оригинала (мальчик с хохолком, руки в стороны): в каждый момент горит одно из трёх положений
+   * (стоит, радуется, огорчён), остальные при включённом слое сегментов еле видны. Положения отличаются руками, ногами и лицом.
+   */
+  private man(cx: number, mood: Mood, all: boolean): void {
+    const ctx = this.ctx;
+    const hy = 264; // центр головы
+    const lit = (...moods: Mood[]): number => (all || moods.includes(mood) ? 1 : this.ghost ? GHOST_ALPHA : 0);
+    const segment = (alpha: number, paint: () => void): void => {
+      if (alpha <= 0) return;
+      ctx.globalAlpha = alpha;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      paint();
+      ctx.globalAlpha = 1;
+    };
+    /** Тонкая ломаная от плеча к кисти или от бедра к стопе. */
+    const poly = (width: number, ...points: [number, number][]): void => {
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      ctx.stroke();
+    };
+    const curve = (width: number, x1: number, y1: number, qx: number, qy: number, x2: number, y2: number): void => {
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(qx, qy, x2, y2);
+      ctx.stroke();
+    };
+    const dot = (x: number, y: number, rx: number, ry = rx): void => {
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    const sides = [-1, 1] as const;
+
+    // Голова, чёлка и хохолок.
+    segment(1, () => {
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, hy, 11, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 10.6, hy - 2.2);
+      ctx.quadraticCurveTo(cx - 9, hy - 10, cx - 1, hy - 10.9);
+      ctx.quadraticCurveTo(cx + 8, hy - 10, cx + 10.6, hy - 2.6);
+      ctx.quadraticCurveTo(cx + 6, hy - 6.4, cx + 2.4, hy - 3.4);
+      ctx.quadraticCurveTo(cx - 1.6, hy - 6.6, cx - 5, hy - 3.6);
+      ctx.quadraticCurveTo(cx - 8.4, hy - 5.6, cx - 10.6, hy - 2.2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx - 1.5, hy - 10.6);
+      ctx.bezierCurveTo(cx - 6.5, hy - 16.5, cx + 2, hy - 18.4, cx + 5.4, hy - 14.6);
+      ctx.bezierCurveTo(cx + 3.2, hy - 15.4, cx + 0.6, hy - 14, cx + 1.6, hy - 10.8);
+      ctx.fill();
+    });
+    // Лицо.
+    segment(lit('idle', 'sad'), () => {
+      for (const side of sides) dot(cx + side * 4.2, hy + (mood === 'sad' ? 2.4 : 1.2), 1.25);
+    });
+    segment(lit('cheer'), () => {
+      for (const side of sides) curve(1.3, cx + side * 6, hy + 2.2, cx + side * 4.2, hy - 1.6, cx + side * 2.4, hy + 2.2);
+    });
+    segment(lit('sad'), () => {
+      for (const side of sides) poly(1.2, [cx + side * 6.2, hy - 0.1], [cx + side * 2.3, hy - 2.2]);
+      ctx.beginPath();
+      ctx.ellipse(cx + 6.6, hy + 6.2, 0.9, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    segment(lit('idle'), () => curve(1.3, cx - 3.4, hy + 5.4, cx, hy + 8.2, cx + 3.4, hy + 5.4));
+    segment(lit('cheer'), () => {
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, hy + 4.4);
+      ctx.quadraticCurveTo(cx, hy + 5.4, cx + 5, hy + 4.4);
+      ctx.quadraticCurveTo(cx, hy + 13.4, cx - 5, hy + 4.4);
+      ctx.fill();
+    });
+    segment(lit('sad'), () => curve(1.3, cx - 3.6, hy + 9, cx, hy + 5.4, cx + 3.6, hy + 9));
+    // Рубашка и шорты.
+    segment(1, () => {
+      ctx.lineWidth = 1.4;
+      poly(1.4, [cx - 1.9, hy + 10.6], [cx - 1.9, hy + 13.6]);
+      poly(1.4, [cx + 1.9, hy + 10.6], [cx + 1.9, hy + 13.6]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, hy + 14);
+      ctx.lineTo(cx + 6, hy + 14);
+      ctx.lineTo(cx + 7, hy + 27);
+      ctx.lineTo(cx - 7, hy + 27);
+      ctx.closePath();
+      ctx.stroke();
+      poly(1.2, [cx - 2.6, hy + 14.2], [cx, hy + 17.4], [cx + 2.6, hy + 14.2]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 7, hy + 27);
+      ctx.lineTo(cx + 7, hy + 27);
+      ctx.lineTo(cx + 7.8, hy + 33.4);
+      ctx.lineTo(cx + 0.9, hy + 33.4);
+      ctx.lineTo(cx, hy + 30.4);
+      ctx.lineTo(cx - 0.9, hy + 33.4);
+      ctx.lineTo(cx - 7.8, hy + 33.4);
+      ctx.closePath();
+      ctx.fill();
+    });
+    // Руки: короткий рукав и тонкая рука с кистью.
+    const arm = (side: -1 | 1, elbow: [number, number], hand: [number, number]): void => {
+      const shoulder: [number, number] = [cx + side * 6, hy + 15.6];
+      const sleeve: [number, number] = [shoulder[0] + (elbow[0] - shoulder[0]) * 0.42, shoulder[1] + (elbow[1] - shoulder[1]) * 0.42];
+      poly(3.6, shoulder, sleeve);
+      poly(1.4, sleeve, elbow, hand);
+      dot(hand[0], hand[1], 1.7);
+    };
+    segment(lit('idle'), () => {
+      for (const side of sides) arm(side, [cx + side * 14, hy + 15.4], [cx + side * 22.4, hy + 19.4]);
+    });
+    segment(lit('cheer'), () => {
+      for (const side of sides) arm(side, [cx + side * 13, hy + 10.6], [cx + side * 16.4, hy - 0.4]);
+    });
+    segment(lit('sad'), () => {
+      for (const side of sides) arm(side, [cx + side * 9.4, hy + 22.6], [cx + side * 10, hy + 31]);
+    });
+    // Ноги в носках и ботинках.
+    const leg = (side: -1 | 1, knee: [number, number], foot: [number, number], toe: number): void => {
+      poly(1.5, [cx + side * 3.6, hy + 33.4], knee, foot);
+      dot(foot[0] + side * toe, foot[1] + 1.2, 3.2, 1.9);
+    };
+    segment(lit('idle'), () => {
+      leg(-1, [cx - 6.6, hy + 39.6], [cx - 9, hy + 45.6], 1);
+      leg(1, [cx + 7.4, hy + 39], [cx + 13.4, hy + 42.6], 1.6);
+    });
+    segment(lit('cheer'), () => {
+      for (const side of sides) leg(side, [cx + side * 8.2, hy + 38.6], [cx + side * 12.6, hy + 43.6], 1.4);
+    });
+    segment(lit('sad'), () => {
+      for (const side of sides) leg(side, [cx + side * 3.9, hy + 40], [cx + side * 4, hy + 46.2], 1.2);
+    });
   }
 
   private text(text: string, x: number, baseline: number, size: number, alpha: number, align: CanvasTextAlign): void {
