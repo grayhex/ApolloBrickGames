@@ -31,6 +31,8 @@ test('universal console boots, synthesizes a greeting, supports FIRE and returns
   await page.locator('#shell-picker [data-shell=gray]').click();
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('html')).toHaveAttribute('data-oscillators', /[1-9]/);
+  // Power changes are painted on the next frame; the initially powered-off LCD also has boot=off.
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
   await page.locator('[data-key=sp]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
