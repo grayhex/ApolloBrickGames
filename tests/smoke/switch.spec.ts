@@ -6,9 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const area = (page: Page, key: string): Promise<string> =>
-  page
-    .evaluate((name) => document.getElementById('game-area')?.dataset[name] ?? '', key)
-    .catch(() => '');
+  page.evaluate((name) => document.getElementById('game-area')?.dataset[name] ?? '', key).catch(() => '');
 const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 const key = (page: Page, id: string) => page.locator(`[data-key="${id}"]`);
 
@@ -43,17 +41,22 @@ async function switchTo(page: Page, toy: string): Promise<void> {
 
 const shell = (page: Page): Promise<string | null> => page.locator('#toy').getAttribute('data-shell');
 const pickerState = (page: Page): Promise<string[]> =>
-  page.locator('#shell-picker .shellpick__btn').evaluateAll((buttons) => buttons.map((b) => `${b.getAttribute('data-shell')}${b.getAttribute('aria-disabled') === 'true' ? ':off' : ''}`));
+  page
+    .locator('#shell-picker .shellpick__btn')
+    .evaluateAll((buttons) => buttons.map((b) => `${b.getAttribute('data-shell')}${b.getAttribute('aria-disabled') === 'true' ? ':off' : ''}`));
 
 test.describe('«168 в 1 танк»', () => {
-  test('аппаратная часть: кнопки как у «Морского боя», рамка с завитками и светодиоды как у «Часов+99», наклейка, танк на панели; красный по умолчанию', async ({ page }) => {
+  test('аппаратная часть: кнопки как у «Морского боя», рамка с завитками и светодиоды как у «Часов+99», наклейка, танк на панели; красный по умолчанию', async ({
+    page,
+  }) => {
     await ready(page, '?toy=tank168&power=on&seed=7');
     await expect(page.locator('#toy')).toHaveAttribute('data-model', 'tank168');
     await expect(page.locator('#toy')).toHaveAttribute('data-deco', 'flourish');
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red'); // синего у игрушки нет: из настроек (синий) берётся её цвет по умолчанию
-    await expect(page).toHaveTitle('168 в 1 танк — Apollo');
+    await expect(page).toHaveTitle('168 в 1 танк — Brick Game Online');
     const labels = await page.locator('.base__art text').allTextContents();
-    for (const text of ['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'UP/MODE', 'LEFT/LEVEL', 'RIGHT/SPEED', 'DOWN', 'ROTATE']) expect(labels, text).toContain(text);
+    for (const text of ['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'UP/MODE', 'LEFT/LEVEL', 'RIGHT/SPEED', 'DOWN', 'ROTATE'])
+      expect(labels, text).toContain(text);
     expect(labels).not.toContain('SOUND');
     await expect(page.locator('.lid__leds')).toBeVisible();
     await expect(page.locator('.deco__flourish')).toHaveCount(4);
@@ -67,9 +70,12 @@ test.describe('«168 в 1 танк»', () => {
     expect(win.width / win.height).toBeCloseTo(264 / 320, 1);
   });
 
-  test('меню консоли: ROTATE листает игры, UP/DOWN — варианты, LEFT — уровень, RIGHT — скорость; S./P. запускает, RESET возвращает в меню; на экране рисуется матрица', async ({ page }) => {
+  test('меню консоли: ROTATE листает игры, UP/DOWN — варианты, LEFT — уровень, RIGHT — скорость; S./P. запускает, RESET возвращает в меню; на экране рисуется матрица', async ({
+    page,
+  }) => {
     await ready(page, '?toy=tank168&power=on&seed=7');
-    const menu = async (): Promise<string> => (await Promise.all(['menu', 'symbol', 'mode', 'speed', 'level', 'phase'].map((name) => area(page, name)))).join(' ');
+    const menu = async (): Promise<string> =>
+      (await Promise.all(['menu', 'symbol', 'mode', 'speed', 'level', 'phase'].map((name) => area(page, name)))).join(' ');
     await expect.poll(menu).toBe('menu 1 1 0 0 ready'); // знак игры 1 (танки), вариант 01, скорость и уровень 0
     await key(page, 'jump').click(); // ROTATE — следующая игра
     await expect.poll(menu).toBe('menu 2 1 0 0 ready');
@@ -111,13 +117,23 @@ test.describe('«168 в 1 танк»', () => {
     expect(await label()).not.toBe('#2b8a4e');
   });
 
-  test('справка: набор игр «168 в 1 танк» по списку владельца (девять игр меню); восстановлены все девять, правила — по открытому симулятору', async ({ page }) => {
+  test('справка: набор игр «168 в 1 танк» по списку владельца (девять игр меню); восстановлены все девять, правила — по открытому симулятору', async ({
+    page,
+  }) => {
     await ready(page, '?toy=tank168&power=on');
     await page.locator('#corner-help').click();
     const games = page.locator('#help .games__row');
     await expect(games).toHaveCount(9);
     expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['game']))).toEqual([
-      'tank', 'frog', 'racing', 'racing-shooting', 'shooting-array', 'shooting-figures', 'construction', 'tetris', 'tetris-pentix',
+      'tank',
+      'frog',
+      'racing',
+      'racing-shooting',
+      'shooting-array',
+      'shooting-figures',
+      'construction',
+      'tetris',
+      'tetris-pentix',
     ]);
     expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['status']))).toEqual(Array(9).fill('ready'));
     await expect(page.locator('#help .games__row[data-game="tetris"]')).toContainText('есть (приближённо)');
@@ -178,17 +194,25 @@ test.describe('панель «Цвет»', () => {
 });
 
 test.describe('переключение игрушек на месте', () => {
-  test('страница не перезагружается: окно, шапка и каркас те же, адрес и заголовок меняются, «назад» возвращает прежнюю игрушку', async ({ page }) => {
+  test('страница не перезагружается: окно, шапка и каркас те же, адрес и заголовок меняются, «назад» возвращает прежнюю игрушку', async ({
+    page,
+  }) => {
     await ready(page, '?power=on&view=full');
     await page.evaluate(() => {
       (window as unknown as { __alive: string }).__alive = 'да';
       document.getElementById('brand')?.setAttribute('data-mark', 'тот же');
       document.getElementById('lid')?.setAttribute('data-mark', 'тот же');
     });
-    const alive = () => page.evaluate(() => ({ alive: (window as unknown as { __alive?: string }).__alive, brand: document.getElementById('brand')?.dataset['mark'], lid: document.getElementById('lid')?.dataset['mark'], loads: performance.getEntriesByType('navigation').length }));
+    const alive = () =>
+      page.evaluate(() => ({
+        alive: (window as unknown as { __alive?: string }).__alive,
+        brand: document.getElementById('brand')?.dataset['mark'],
+        lid: document.getElementById('lid')?.dataset['mark'],
+        loads: performance.getEntriesByType('navigation').length,
+      }));
     await switchTo(page, 'clock99');
     await expect(page).toHaveURL(/\?toy=clock99$/);
-    await expect(page).toHaveTitle('Часы+99 — Apollo');
+    await expect(page).toHaveTitle('Часы+99 — Brick Game Online');
     expect(await alive()).toEqual({ alive: 'да', brand: 'тот же', lid: 'тот же', loads: 1 });
     await switchTo(page, 'tank168');
     await switchTo(page, 'mario');
@@ -207,7 +231,9 @@ test.describe('переключение игрушек на месте', () => {
     expect((await alive()).alive).toBe('да');
   });
 
-  test('цвет, вид и питание сохраняются; цвета, которого нет у игрушки, выбор не теряет — следующая, где он есть, возвращает его', async ({ page }) => {
+  test('цвет, вид и питание сохраняются; цвета, которого нет у игрушки, выбор не теряет — следующая, где он есть, возвращает его', async ({
+    page,
+  }) => {
     await ready(page, '?power=on&view=screen');
     await page.locator('#shell-picker [data-shell="yellow"]').click();
     expect(await shell(page)).toBe('yellow');
@@ -241,7 +267,9 @@ test.describe('переключение игрушек на месте', () => {
     await expect(page.locator('.base__logo--color, .base__logo--white').first()).toBeAttached();
   });
 
-  test('игра у новой игрушки своя и свежая; управление не двоится: клавиша M, смена языка, фона и сегментов срабатывают по одному разу', async ({ page }) => {
+  test('игра у новой игрушки своя и свежая; управление не двоится: клавиша M, смена языка, фона и сегментов срабатывают по одному разу', async ({
+    page,
+  }) => {
     await ready(page, '?power=on&view=full');
     await page.keyboard.press('Enter');
     await expect.poll(phase(page)).toBe('playing');
@@ -296,10 +324,20 @@ test.describe('переключение игрушек на месте', () => {
     await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.id)).toBe('game-area'); // клавиатура вернулась игре
   });
 
-  test('щелчок с Ctrl или Shift и средняя кнопка не перехватываются (остаётся обычная навигация браузера); обычный — перехватывается', async ({ page }) => {
+  test('щелчок с Ctrl или Shift и средняя кнопка не перехватываются (остаётся обычная навигация браузера); обычный — перехватывается', async ({
+    page,
+  }) => {
     await ready(page, '?power=on');
     const hrefs = await page.locator('.toysw__item').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-    expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual(['', '?toy=clock99', '?toy=seabattle', '?toy=tank168', '?toy=alibaba', '?toy=minibrick']);
+    expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual([
+      '?toy=brickgame',
+      '',
+      '?toy=clock99',
+      '?toy=seabattle',
+      '?toy=tank168',
+      '?toy=alibaba',
+      '?toy=minibrick',
+    ]);
     // Щелчок посылается событием: после обработчика переключателя фиксируем, отменено ли действие по умолчанию (и отменяем сами, чтобы страница не ушла).
     const prevented = await page.evaluate(() => {
       const link = document.querySelector<HTMLAnchorElement>('.toysw__item[data-toy="tank168"]');

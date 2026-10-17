@@ -8,7 +8,7 @@ import { APOLLO_IDS, DEFAULT_TOY, engineOf, gameKey, hasReset, keyLabel, parseTo
 import { ILLUSTRATIONS } from '../../src/brick';
 import { GAME_IDS, GAMES } from '../../src/games/catalog';
 import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindings';
-import { SHELLS } from '../../src/input/settings';
+import { APOLLO_SHELLS } from '../../src/input/settings';
 
 describe('выбор игрушки', () => {
   it('четыре Apollo и два экспоната: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
@@ -33,7 +33,7 @@ describe('выбор игрушки', () => {
   });
 
   it('только подтверждённые фото цвета: у «Часов+99» жёлтый, красный и белый; у «Морского боя» красный и синий; у «168 в 1 танк» красный и жёлтый; у Mario — все четыре', () => {
-    expect(TOYS.mario.shells).toEqual(SHELLS);
+    expect(TOYS.mario.shells).toEqual(APOLLO_SHELLS);
     expect([...TOYS.clock99.shells].sort()).toEqual(['red', 'white', 'yellow']);
     expect([...TOYS.seabattle.shells].sort()).toEqual(['blue', 'red']);
     expect([...TOYS.tank168.shells].sort()).toEqual(['red', 'yellow']);

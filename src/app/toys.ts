@@ -6,7 +6,7 @@ import type { ToyKeyId } from './toy';
 
 /**
  * Коллекция: четыре складные игрушки Apollo на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
- * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка, в группе «Другие».
+ * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка. Универсальный Brick Game — нескладная приставка для всей матричной библиотеки.
  * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» используют общий BrickConsole с меню игр. Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
  * цвет и вид (свёрнута / полная / только экран) сохраняются, страница не перезагружается (см. `host.ts`).
  */
@@ -310,8 +310,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
   },
   brickgame: {
     id: 'brickgame', family: 'other', name: 'Brick Game', universal: true,
-    // White palette slot is retained for configuration compatibility; the fixed body is two-tone grey/black.
-    shells: ['white'], defaultShell: 'white',
+    shells: ['gray', 'black'], defaultShell: 'gray',
     games: [{ id: 'tetris', label: 'Tetris', status: 'ready' }], defaultGame: 'tetris',
     menu: true, gameKeys: 'digits', glyph: 'square', panel: 'classic',
     deco: 'frame', leds: false, info: true, pack: null, levels: false,

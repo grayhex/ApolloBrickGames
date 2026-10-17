@@ -4527,9 +4527,6 @@ body[data-toy='brickgame'] #view-state { grid-template-columns:repeat(2,minmax(0
 @media (prefers-reduced-motion:reduce) { .toysw__item { transition:none; } }
 
 .toy[data-model='brickgame'] .toy__hinge { display:none; }
-body[data-toy='brickgame'] #shell-picker { display:none; }
-body[data-toy='brickgame'] #view-title { display:none; }
-body[data-toy='brickgame'] .view-layout { margin:0; border:0; padding-top:0; }
 @media (min-width:1200px) { body[data-chrome='toy'] .arena > .brand { width:min(820px,calc(100vw - 650px)); } }
 @media (min-width:900px) and (max-width:1199px) {
   body[data-chrome='toy'] .arena > :is(.side--info,.side--ctl) { grid-row:2; margin-top:0; max-height:calc(100dvh - 170px); align-self:start; }
@@ -4546,3 +4543,19 @@ body[data-toy='brickgame'] .view-layout { margin:0; border:0; padding-top:0; }
 body[data-toy='brickgame'] #blk-levels { display:none; }
 
 .toy[data-model='brickgame'] .classic__arrow { margin:auto; }
+
+/* Two classic colourways, with the yellow keys and printed green cells of the references. */
+[data-shell='gray'] { --tone:#b8bdad; --classic-body:#cecec0; --classic-hi:#e0e0d5; --classic-lo:#9eaa99; --classic-print:#344b40; --classic-border:#929c8d; }
+[data-shell='black'] { --tone:#b5bd94; --classic-body:#222725; --classic-hi:#3b403c; --classic-lo:#0c100e; --classic-print:#e2e5d7; --classic-border:#0b100d; }
+.toy[data-model='brickgame'] { background:linear-gradient(110deg,var(--classic-hi),var(--classic-body) 70%,var(--classic-lo)); }
+.toy[data-model='brickgame'][data-shell='black'] { box-shadow:inset 1cqw 0 .7cqw #ffffff24,inset -1cqw 0 .8cqw #0008; }
+.toy[data-model='brickgame'] .lid__bezel { width:72cqw; border-color:var(--classic-body); outline:.55cqw solid #d5b945; outline-offset:.6cqw; box-shadow:inset .5cqw .8cqw 1cqw #0008,0 .4cqw .7cqw #ffffff28; }
+.classic__ridge { background:linear-gradient(var(--classic-body),var(--classic-hi) 25%,var(--classic-body) 60%,var(--classic-lo)); }
+.classic__edition,.classic__system button span,.classic__wordmark { color:var(--classic-print); }
+.toy[data-model='brickgame'] .key,.toy[data-model='brickgame'] .classic__reset { background:linear-gradient(145deg,#f8e58a,#e6cc56 60%,#b49c32); color:#625626; border-color:#84772b; box-shadow:inset .4cqw .5cqw .5cqw #fff8,0 .6cqw .5cqw #0006; }
+.toy[data-model='brickgame'] .classic__small,.toy[data-model='brickgame'] .classic__reset { width:6cqw; height:6cqw; border-radius:50%; }
+.classic__speaker i { background:var(--classic-lo); box-shadow:0 .3cqw .15cqw #ffffff38; }
+.classic__motif { position:absolute; top:13cqw; width:6cqw; height:67.5cqw; pointer-events:none; color:#416d52; }
+.classic__motif--left { left:0; }
+.classic__motif--right { right:0; }
+body[data-toy='brickgame'] #shell-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }

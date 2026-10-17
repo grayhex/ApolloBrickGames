@@ -3,13 +3,13 @@ import { TOYS } from '../app/toys';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { canAssign } from '../app/bodyButtons';
-import { SHELLS, type Shell } from '../input/settings';
+import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { defaultConfig } from '../config/runtime';
 import { validateConfig, universalGames, CONFIG_TOY_IDS, type ConfigToyId } from '../config/schema';
 import { BRICK_GUIDES } from '../brick/guides';
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] { const e = document.createElement(tag); e.textContent = text; e.className = className; return e; }
 function button(text: string, fn: () => void, disabled = false): HTMLButtonElement { const b = el('button',text); b.type = 'button'; b.disabled = disabled; b.addEventListener('click',fn); return b; }
-const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',yellow:'Жёлтый',white:'Белый' };
+const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',yellow:'Жёлтый',white:'Белый',gray:'Серый',black:'Чёрный' };
 export async function startAdmin(): Promise<void> {
   document.title = 'Apollo · Настройки коллекции'; document.body.dataset['chrome'] = 'tech'; delete document.body.dataset['booting'];
   const root = el('main','','admin'); document.body.replaceChildren(root);
@@ -42,12 +42,12 @@ export async function startAdmin(): Promise<void> {
     content.replaceChildren(); const toy = config.toys[active];
     const appearance = el('section','','admin__card'); appearance.append(el('h2',TOYS[active].name),el('p','Цвета корпуса','admin__eyebrow'));
     const swatches = el('div','','admin__swatches');
-    for (const color of active === 'brickgame' ? [] : SHELLS) {
+    for (const color of active === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS) {
       const label = el('label',colors[color]); const input = el('input'); input.type = 'checkbox'; input.checked = toy.shells.includes(color); input.setAttribute('aria-label',`Доступен цвет: ${colors[color]}`); label.dataset['color'] = color;
       input.addEventListener('change',() => { if (!input.checked && toy.shells.length === 1) { input.checked = true; message('Оставьте хотя бы один цвет.',true); return; } toy.shells = input.checked ? [...toy.shells,color] : toy.shells.filter((s) => s !== color); if (!toy.shells.includes(toy.defaultShell)) toy.defaultShell = toy.shells[0]!; changed(); render(); }); label.prepend(input); swatches.append(label);
     }
     const defaultLabel = el('label','Основной цвет'); const defaultSelect = el('select'); defaultSelect.setAttribute('aria-label','Основной цвет'); defaultSelect.append(...toy.shells.map((s) => option(s,colors[s]))); defaultSelect.value = toy.defaultShell;
-    defaultSelect.addEventListener('change',() => { toy.defaultShell = defaultSelect.value as Shell; changed(); }); defaultLabel.append(defaultSelect); if (active === 'brickgame') appearance.append(el('p','Серо-чёрный корпус')); else appearance.append(swatches,defaultLabel);
+    defaultSelect.addEventListener('change',() => { toy.defaultShell = defaultSelect.value as Shell; changed(); }); defaultLabel.append(defaultSelect); appearance.append(swatches,defaultLabel);
     const music = el('div','','admin__music'); const musicButton = button('Загрузка однобитной мелодии — позже',() => {},true); music.append(el('h3','Мелодия'),el('p','Здесь появится импорт простой однобитной мелодии для этой приставки.'),musicButton); appearance.append(music); content.append(appearance);
     const menu = el('section','','admin__card'); menu.append(el('h2',`Меню · ${toy.games.length}`));
     if (active === 'mario') menu.append(el('p','У Mario собственный сегментный экран. Сейчас доступен Mario; оригинальные Tetris и Shooting подключим позже. Игры матрицы 10×20 назначаются матричным приставкам.'));

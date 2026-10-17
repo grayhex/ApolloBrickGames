@@ -19,8 +19,16 @@ test('universal console boots, synthesizes a greeting, supports FIRE and returns
   await page.goto('./?toy=brickgame&view=closed&debug');
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'full');
   await expect(page.locator('#view-closed')).toHaveCount(0);
+  expect(await page.locator('#toy .key').evaluateAll((nodes) => nodes.every((node) => (node as HTMLElement).tabIndex === -1))).toBe(true);
   await expect(page.locator('.toy__hinge')).toBeHidden();
-  await expect(page.locator('#shell-picker')).toBeHidden();
+  await expect(page.locator('#shell-picker [role=radio]')).toHaveCount(2);
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'gray');
+  const gray = await page.locator('#toy').evaluate((node) => getComputedStyle(node).backgroundImage);
+  await page.locator('#shell-picker [data-shell=black]').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'black');
+  expect(await page.locator('#toy').evaluate((node) => getComputedStyle(node).backgroundImage)).not.toBe(gray);
+  await expect(page.locator('.toysw__universal')).toHaveAttribute('data-shell', 'white');
+  await page.locator('#shell-picker [data-shell=gray]').click();
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('html')).toHaveAttribute('data-oscillators', /[1-9]/);
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
@@ -28,7 +36,8 @@ test('universal console boots, synthesizes a greeting, supports FIRE and returns
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
   await page.locator('[data-key=fire]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
-  await page.locator('[data-action=reset]').click();
+  await page.locator('[data-action=reset]').focus();
+  await page.keyboard.press('Enter');
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
   await page.locator('#view-screen').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-view', 'screen');
@@ -84,7 +93,9 @@ test('admin exposes pinned and automatic menus without allowing unsupported FIRE
   await page.route('**/api/config', (route) => route.fulfill({ json: { config: defaults, revision: 1 } }));
   await page.goto('./admin');
   await page.getByRole('button', { name: 'Brick Game', exact: true }).click();
-  await expect(page.getByText('Серо-чёрный корпус')).toBeVisible();
+  await expect(page.getByLabel('Доступен цвет: Серый', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Доступен цвет: Чёрный', { exact: true })).toBeChecked();
+  await page.getByLabel('Основной цвет', { exact: true }).selectOption('black');
   await expect(page.locator('summary').filter({ hasText: 'Автоматически' })).toBeVisible();
   await page.getByLabel('Добавить игру', { exact: true }).selectOption('jigsaw');
   await page.getByRole('button', { name: 'Добавить в меню', exact: true }).click();

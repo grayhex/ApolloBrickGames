@@ -50,7 +50,7 @@ describe('справка', () => {
 
 describe('цвет корпуса и миграция настроек', () => {
   it('доступны четыре цвета; устаревший локальный цвет удаляется из настроек', () => {
-    expect([...SHELLS]).toEqual(['blue', 'red', 'yellow', 'white']);
+    expect([...SHELLS]).toEqual(['blue', 'red', 'yellow', 'white', 'gray', 'black']);
     const base = { version: 1, display: { ghost: null, sound: true } };
     expect(sanitizeSettings({ ...base, display: { ...base.display, shell: 'yellow' } }).display).not.toHaveProperty('shell');
     expect(sanitizeSettings({ ...base, display: { ...base.display, shell: 'green' } }).display).not.toHaveProperty('shell');

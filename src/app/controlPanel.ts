@@ -222,7 +222,6 @@ export class ControlPanel {
         if (byPointer) options.onPointerUse();
       },
     });
-    if (options.toy === 'brickgame') this.picker.root.hidden = true;
     const state = this.label(h('div', { class: 'seg seg--3', id: 'view-state', role: 'group' }), 'view.aria', 'aria-label');
     for (const view of VIEWS.filter(v => options.toy !== 'brickgame' || v !== 'closed')) {
       const button = h('button', { type: 'button', class: 'seg__btn', id: `view-${view}`, 'data-view': view, 'aria-pressed': 'false' });

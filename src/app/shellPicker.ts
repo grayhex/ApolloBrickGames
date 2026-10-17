@@ -1,7 +1,7 @@
 import { brickGameMini } from './brickGameModel';
 import { miniBrickMini } from './minibrickModel';
 import { alibabaMini } from './alibabaModel';
-import { SHELLS, type Shell } from '../input/settings';
+import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { h, svg } from './dom';
 import { t } from './i18n';
 import type { ToyId } from './toys';
@@ -17,16 +17,40 @@ let pickerSerial = 0;
  * печати берётся из палитры `[data-shell]` (CSS-переменные), поэтому совпадает с настоящей игрушкой.
  */
 export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'): SVGSVGElement {
-  if (toy === 'brickgame') { const icon = brickGameMini(); icon.classList.add('mini'); return icon; }
-  if (toy === 'alibaba' || toy === 'minibrick') { const icon = toy === 'alibaba' ? alibabaMini('closed') : miniBrickMini('closed', shell === 'white'); icon.classList.remove('view-mini'); icon.classList.add('mini'); return icon; }
+  if (toy === 'brickgame') {
+    const icon = brickGameMini('full', shell);
+    icon.classList.add('mini');
+    return icon;
+  }
+  if (toy === 'alibaba' || toy === 'minibrick') {
+    const icon = toy === 'alibaba' ? alibabaMini('closed') : miniBrickMini('closed', shell === 'white');
+    icon.classList.remove('view-mini');
+    icon.classList.add('mini');
+    return icon;
+  }
   const sheen = `sheen-${serial}-${shell}`;
   // Как на корпусе игрушки: на синем и красном — белая печать, на жёлтом и белом — красная.
   const logo = shell === 'blue' || shell === 'red' ? 'crocodile-mario-logo-white.png' : 'crocodile-mario-logo.png';
   // На подбородке — то, что наклеено на игрушку: у «Часов+99» и «Морского боя» это цветная наклейка, у Mario — логотип.
   const chin =
     toy === 'mario'
-      ? svg('image', { href: `${import.meta.env.BASE_URL}brand/${logo}`, x: '5.5', y: '38.6', width: '33', height: '14.6', preserveAspectRatio: 'xMidYMid meet' })
-      : svg('image', { class: `sticker--${toy}`, href: `${import.meta.env.BASE_URL}brand/sticker-${toy}.webp`, x: '5', y: '39.4', width: '34', height: '19', preserveAspectRatio: 'xMidYMid meet' });
+      ? svg('image', {
+          href: `${import.meta.env.BASE_URL}brand/${logo}`,
+          x: '5.5',
+          y: '38.6',
+          width: '33',
+          height: '14.6',
+          preserveAspectRatio: 'xMidYMid meet',
+        })
+      : svg('image', {
+          class: `sticker--${toy}`,
+          href: `${import.meta.env.BASE_URL}brand/sticker-${toy}.webp`,
+          x: '5',
+          y: '39.4',
+          width: '34',
+          height: '19',
+          preserveAspectRatio: 'xMidYMid meet',
+        });
   const root = svg('svg', { viewBox: '0 0 44 62', class: 'mini', 'aria-hidden': 'true', focusable: 'false' });
   root.append(
     svg(
@@ -53,8 +77,16 @@ export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'):
     // эмблема: белый круг, надпись по дуге, крокодил в красной шляпе, красная «подпись»
     svg('circle', { cx: '22', cy: '17', r: '9.4', fill: '#fbfaf4', stroke: 'rgba(30,30,30,.7)', 'stroke-width': '.55' }),
     svg('path', { class: 'mini__arc', d: 'M9.6 18A12.4 12.4 0 0 1 34.4 18', fill: 'none', 'stroke-width': '1', 'stroke-dasharray': '.9 .8' }),
-    svg('path', { d: 'M15 16.4C14.8 20 18.2 22.6 22.6 22.2C25.6 21.9 27.6 20 27.4 17.6C27 15.8 25 15 22.7 15Z', fill: '#efe3a4', stroke: '#8a7d46', 'stroke-width': '.3' }),
-    svg('path', { d: 'M15.4 15C16.2 10.8 19.4 9 22.6 9.2C25.4 9.4 27.2 11.2 27.8 14L30 14.6C29 16 26.6 15.4 25.6 15.2L16.8 15.8C16.2 15.8 15.6 15.6 15.4 15Z', fill: '#d63a30' }),
+    svg('path', {
+      d: 'M15 16.4C14.8 20 18.2 22.6 22.6 22.2C25.6 21.9 27.6 20 27.4 17.6C27 15.8 25 15 22.7 15Z',
+      fill: '#efe3a4',
+      stroke: '#8a7d46',
+      'stroke-width': '.3',
+    }),
+    svg('path', {
+      d: 'M15.4 15C16.2 10.8 19.4 9 22.6 9.2C25.4 9.4 27.2 11.2 27.8 14L30 14.6C29 16 26.6 15.4 25.6 15.2L16.8 15.8C16.2 15.8 15.6 15.6 15.4 15Z',
+      fill: '#d63a30',
+    }),
     svg('circle', { cx: '22.6', cy: '17.6', r: '.55', fill: '#2c2c2c' }),
     svg('path', { d: 'M16.4 19.6h2.4M17 20.5h1.8', fill: 'none', stroke: '#fff', 'stroke-width': '.5' }),
     svg('path', { d: 'M21.5 24.4Q26 22 31 24.8', fill: 'none', stroke: '#d63a30', 'stroke-width': '1.5', 'stroke-linecap': 'round' }),
@@ -95,10 +127,10 @@ export class ShellPicker {
   constructor(options: ShellPickerOptions) {
     this.options = options;
     this.value = options.value;
-    this.enabled = options.shells ?? SHELLS;
+    this.enabled = options.shells ?? APOLLO_SHELLS;
     const serial = ++pickerSerial;
     this.root = h('div', { class: 'shellpick', id: options.id, role: 'radiogroup', 'aria-label': options.label });
-    for (const shell of SHELLS) {
+    for (const shell of options.toy === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS) {
       const button = h(
         'button',
         { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },
@@ -149,7 +181,7 @@ export class ShellPicker {
     if (step === 0) return;
     event.preventDefault();
     // Стрелки обходят только доступные цвета.
-    const available = SHELLS.filter((shell) => this.enabled.includes(shell));
+    const available = [...this.buttons.keys()].filter((shell) => this.enabled.includes(shell));
     const next = available[(available.indexOf(from) + step + available.length) % available.length];
     if (!next) return;
     this.pick(next, false);

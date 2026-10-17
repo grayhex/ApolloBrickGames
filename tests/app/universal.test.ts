@@ -12,6 +12,8 @@ describe('universal Brick Game', () => {
     const loaded = validateConfig(legacy);
     for (const id of APOLLO_IDS) expect(loaded.toys[id]).toEqual(config.toys[id]);
     expect(loaded.toys.brickgame.defaultGame).toBe('tetris');
+    expect(loaded.toys.brickgame.shells).toEqual(['gray', 'black']);
+    expect(loaded.toys.brickgame.defaultShell).toBe('gray');
     expect(() => validateConfig({ ...legacy, toys: { ...legacy.toys, brickgame: {} } })).toThrow();
     expect(() => validateConfig({ ...legacy, toys: { ...legacy.toys, brickgame: null } })).toThrow();
   });
@@ -32,6 +34,13 @@ describe('universal Brick Game', () => {
     expect(universalGames(config).map((g) => g.id)).not.toContain('frog');
     config.toys.brickgame.games.push({ id: 'frog', modes: [0] });
     expect(universalGames(config).filter((g) => g.id === 'frog')).toEqual([{ id: 'frog', modes: [0] }]);
+  });
+  it('accepts both monoblock colours and keeps them out of original-model palettes', () => {
+    const config = defaultConfig();
+    config.toys.brickgame.defaultShell = 'black';
+    expect(validateConfig(config).toys.brickgame.defaultShell).toBe('black');
+    config.toys.mario.shells.push('black');
+    expect(() => validateConfig(config)).toThrow();
   });
   it('physically supports every matrix game without inventing FIRE on Apollo', () => {
     for (const game of Object.values(BRICK_GAMES)) expect(canAssign(game!, TOYS.brickgame)).toBe(true);

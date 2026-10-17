@@ -1,6 +1,6 @@
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
-import { SHELLS, type Shell } from '../input/settings';
+import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { APOLLO_IDS, TOYS, type ApolloId } from '../app/toys';
 import { missingButtons } from '../app/bodyButtons';
 export interface ConfigGame {
@@ -19,7 +19,7 @@ export interface SiteConfig {
   version: 1;
   toys: Record<ConfigToyId, ConfigToy>;
 }
-const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['white'], defaultShell: 'white' };
+const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['gray', 'black'], defaultShell: 'gray' };
 /** Computed at load time: published four-toy documents remain valid, and orphan games never disappear. */
 export function universalGames(config: SiteConfig): ConfigGame[] {
   const assigned = new Set(APOLLO_IDS.flatMap((id) => config.toys[id].games.map((g) => g.id)));
@@ -66,15 +66,15 @@ export function validateConfig(value: unknown): SiteConfig {
       return { id: gameId, modes: [...modes] as number[] };
     });
     const shells = source['shells'];
+    const palette: readonly Shell[] = id === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS;
     if (
       !Array.isArray(shells) ||
       !shells.length ||
       shells.length > 4 ||
       new Set(shells).size !== shells.length ||
-      shells.some((s) => !SHELLS.includes(s))
+      shells.some((s) => !palette.includes(s))
     )
       throw new Error(`${id}: выберите допустимые цвета корпуса.`);
-    if (id === 'brickgame' && (shells.length !== 1 || shells[0] !== 'white')) throw new Error('Brick Game: корпус серо-чёрный, палитра фиксирована.');
     if (!shells.includes(source['defaultShell'])) throw new Error(`${id}: основной цвет должен входить в доступные.`);
     if (typeof source['defaultGame'] !== 'string' || !seen.has(source['defaultGame']))
       throw new Error(`${id}: стартовая игра должна входить в меню.`);

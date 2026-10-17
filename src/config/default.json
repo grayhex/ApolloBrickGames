@@ -156,9 +156,10 @@
       ],
       "defaultGame": "tetris",
       "shells": [
-        "white"
+        "gray",
+        "black"
       ],
-      "defaultShell": "white"
+      "defaultShell": "gray"
     }
   }
 }
