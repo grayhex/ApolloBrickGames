@@ -74,17 +74,17 @@ test.describe('вкладки игр', () => {
     await tabs(page).nth(7).focus();
     await page.keyboard.press('Enter'); // выбранная вкладка — по Enter; стрелки идут от неё
     await expect(selected(page)).toHaveText('8');
-    await page.keyboard.press('ArrowRight');
-    await expect(selected(page)).toHaveText('9');
-    await page.keyboard.press('ArrowRight'); // по кругу
-    await expect(selected(page)).toHaveText('1');
-    await page.keyboard.press('End');
-    await expect(selected(page)).toHaveText('9');
-    await page.keyboard.press('Home');
-    await expect(selected(page)).toHaveText('1');
-    await page.keyboard.press('ArrowLeft');
-    await expect(selected(page)).toHaveText('9');
-    await expect(page.locator('#side-info .gtab[aria-selected="true"]')).toBeFocused();
+    // Следующая клавиша идёт после того, как выбранная вкладка получила фокус: стрелки действуют только внутри списка вкладок.
+    const step = async (key: string, text: string): Promise<void> => {
+      await page.keyboard.press(key);
+      await expect(selected(page)).toHaveText(text);
+      await expect(selected(page)).toBeFocused();
+    };
+    await step('ArrowRight', '9');
+    await step('ArrowRight', '1'); // по кругу
+    await step('End', '9');
+    await step('Home', '1');
+    await step('ArrowLeft', '9');
     // Из вкладок остаётся один пункт в порядке табуляции.
     expect(await tabs(page).evaluateAll((items) => items.filter((item) => (item as HTMLElement).tabIndex === 0).length)).toBe(1);
   });
@@ -356,7 +356,8 @@ test.describe('3D-коробка Crocodile Mario: вывод выключен', 
 test('подробная справка содержит варианты и допущения, левая панель — краткие правила и схемы', async ({ page }) => {
   await open(page, 'toy=seabattle');
   await expect(page.locator('#gpanel .gsec, #gpanel .chip')).toHaveCount(0);
-  await expect(page.locator('#gpanel .gscheme')).toBeVisible();
+  await expect(page.locator('#gpanel .gscheme:not(.gclip)')).toBeVisible();
+  await expect(page.locator('#gpanel .gclip canvas')).toBeVisible(); // рядом со схемой — зацикленный «геймплей»
   await expect(page.locator('#gpanel .grules li')).toHaveCount(3);
   await page.locator('#corner-help').click();
   const help = page.locator('#help');

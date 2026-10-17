@@ -97,7 +97,10 @@ for (const width of [320, 360, 900, 1440])
   });
 
 test('admin exposes pinned and automatic menus without allowing unsupported FIRE on Apollo', async ({ page }) => {
-  await page.route('**/api/config', (route) => route.fulfill({ json: { config: defaults, revision: 1 } }));
+  // В поставляемой конфигурации закреплены все игры каталога; чтобы проверить «Автоматически» и добавление, Jig Saw из списка убираем.
+  const config = validateConfig(defaults);
+  config.toys.brickgame.games = config.toys.brickgame.games.filter((game) => game.id !== 'jigsaw');
+  await page.route('**/api/config', (route) => route.fulfill({ json: { config, revision: 1 } }));
   await page.goto('./admin');
   await page.getByRole('button', { name: 'Brick Game', exact: true }).click();
   await expect(page.getByLabel('Доступен цвет: Серый', { exact: true })).toBeChecked();
