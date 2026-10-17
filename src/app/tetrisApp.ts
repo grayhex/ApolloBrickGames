@@ -298,7 +298,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
         if (startCmd || pauseCmd) emit(cabinet.resume());
         break;
       case 'playing':
-        if (pauseCmd) emit(cabinet.pause());
+        if (startCmd || pauseCmd) emit(cabinet.pause());
         else emit(cabinet.step(raw));
         break;
     }

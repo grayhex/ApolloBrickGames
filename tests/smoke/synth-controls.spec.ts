@@ -86,3 +86,54 @@ for (const width of [360, 900, 1440]) {
     }
   });
 }
+
+for (const toy of ['clock99', 'seabattle', 'tank168']) {
+  test(`${toy}: physical START/PAUSE mapping also pauses and resumes with Enter`, async ({ page }) => {
+    await page.goto(`./?toy=${toy}&power=on`);
+    const area = page.locator('#game-area');
+    await expect(area).toHaveAttribute('data-boot', 'off');
+    await area.focus();
+    for (const phase of ['playing', 'paused', 'playing']) {
+      await page.keyboard.press('Enter');
+      await expect(area).toHaveAttribute('data-phase', phase);
+    }
+  });
+}
+
+for (const game of ['simon', 'dance']) {
+  test(`${game}: gameplay pad tones reach Web Audio through the cabinet`, async ({ page, context }) => {
+    const config = structuredClone(defaults);
+    config.toys.clock99.games = [{ id: game }];
+    config.toys.clock99.defaultGame = game;
+    await context.route('**/api/config', (route) => route.fulfill({ json: { config, revision: 1 } }));
+    await page.addInitScript(() => {
+      const original = AudioContext.prototype.createOscillator;
+      Object.assign(window, { frequencies: [] });
+      AudioContext.prototype.createOscillator = function () {
+        const oscillator = original.call(this);
+        const set = oscillator.frequency.setValueAtTime.bind(oscillator.frequency);
+        oscillator.frequency.setValueAtTime = (value, time) => {
+          (window as unknown as { frequencies: number[] }).frequencies.push(value);
+          return set(value, time);
+        };
+        return oscillator;
+      };
+    });
+    await page.goto('./?toy=clock99&power=on&debug');
+    await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
+    await page.locator('#game-area').focus();
+    await page.keyboard.press('Enter');
+    if (game === 'dance') {
+      // Wait for an actual falling note to enter the hit window; do not invent a tone event.
+      const note = await page.waitForFunction(() => {
+        const game = (window as unknown as { __brick?: { game?: { notes?: { direction: number; y: number }[] } } }).__brick?.game;
+        return game?.notes?.find((note) => note.y >= 16 && note.y <= 18);
+      });
+      const direction = (await note.jsonValue())!.direction;
+      await page.keyboard.press(['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'][direction]!);
+    }
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { frequencies: number[] }).frequencies.some((hz) => [523, 659, 392, 330].includes(hz))))
+      .toBe(true);
+  });
+}

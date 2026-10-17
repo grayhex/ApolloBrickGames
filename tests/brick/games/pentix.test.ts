@@ -1,9 +1,8 @@
 import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
-import { BRICK_COLS, BRICK_ROWS, PREVIEW_COLS, PREVIEW_ROWS, genuineTicks } from '../../../src/brick';
+import { BRICK_COLS, BRICK_ROWS, PREVIEW_COLS, PREVIEW_ROWS } from '../../../src/brick';
 import { BRICK_GAMES } from '../../../src/brick/games';
 import { PENTIX_VARIANTS, pentixDef } from '../../../src/brick/games/pentix';
-import { FIRST_LEVEL_MS, TENTH_LEVEL_MS } from '../../../src/brick/games/tetris/core';
 import {
   FIGURES,
   FIRST_SUPER,
@@ -29,8 +28,8 @@ const coveredScenario = scenarioSuite('pentix');
  */
 conformance(pentixDef, { fuzzTicks: 800, seeds: [7] });
 
-const FALL_1 = genuineTicks(1, FIRST_LEVEL_MS + 50, TENTH_LEVEL_MS + 50);
-const FALL_10 = genuineTicks(10, FIRST_LEVEL_MS + 50, TENTH_LEVEL_MS + 50);
+const FALL_1 = 30;
+const FALL_10 = 8;
 
 const pentix = (options: ConstructorParameters<typeof Lab>[1] = {}): Lab => {
   const lab = new Lab('pentix', { seed: 5, ...options, mode: 0 });
@@ -175,8 +174,8 @@ describe('Pentix: появление и превью', () => {
 });
 
 describe('Pentix: падение и ряды', () => {
-  it('падает медленнее тетриса на 50 мс: 32 такта на скорости 1 и 14 на скорости 10', () => {
-    expect([FALL_1, FALL_10]).toEqual([32, 14]);
+  it('падает медленнее тетриса на 50 мс: 30 тактов на скорости 1 и 8 на скорости 10', () => {
+    expect([FALL_1, FALL_10]).toEqual([30, 8]);
     for (const [speed, period] of [
       [1, FALL_1],
       [10, FALL_10],
@@ -184,7 +183,7 @@ describe('Pentix: падение и ряды', () => {
       const lab = pentix({ speed });
       lab.wipe();
       lab.put(8, 0, 4, 12);
-      expect(lab.fallPeriod).toBe(period);
+      expect(Math.ceil(lab.fallPeriod)).toBe(period);
       idle(lab, period - 1);
       expect(lab.py, `скорость ${speed}`).toBe(12);
       idle(lab, 1);
@@ -239,7 +238,7 @@ describe('Pentix: класс S — смена фигуры вместо пово
       seen.push(lab.current?.shape ?? 0);
     }
     expect(seen).toEqual([FIRST_TROMINO + 1, FIRST_TROMINO + 2, FIRST_TROMINO + 3, FIRST_TROMINO + 4, FIRST_TROMINO + 5]);
-    expect(lab.fallPeriod).toBe(genuineTicks(1, FIRST_LEVEL_MS + 100, TENTH_LEVEL_MS + 100));
+    expect(lab.fallPeriod).toBeCloseTo((150 * 2048 / 690000 + 0.1) * 60);
   });
 });
 

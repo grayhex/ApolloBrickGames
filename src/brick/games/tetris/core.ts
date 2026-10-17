@@ -1,7 +1,7 @@
 /**
  * Ядро тетриса и Pentix: падение и повороты фигур, ряды, очки, скорость и уровень, спецфигуры и «особые» режимы — один класс
  * с переключателями правил (`TetrisVariant`), а не отдельная игра на вариант. Правила — `games/TetrisGameI.java` донора и семейство
- * `TetrisGameJ…P`, `PentixGameQ…X` (см. `docs/brick/tetris.md`).
+ * `TetrisGameJ…P`, `PentixGameQ…X`; базовые тайминги и рост скорости — Apollo B0202 (см. `docs/brick/rom-review.md`).
  *
  * Внутри поле хранится как у донора: `board[y * 10 + x]`, y = 0 — НИЗ стакана (высота над дном); на экран (`cells()`) оно
  * переводится в строки сверху вниз (`rowOf`): обычное поле — строка 19 - y, перевёрнутое — строка y. Фигуры появляются так, что нижний
@@ -11,7 +11,8 @@
  * Падение по таймеру считается по абсолютному такту (`lastFall`), как `elapsedTime` донора по часам: таймер идёт и во время сценок.
  */
 import { BrickBase } from '../../base';
-import { Countdown, Repeater, genuineTicks, msToTicks } from '../../timing';
+import { b0202FallMs } from '../../b0202';
+import { Countdown, Repeater, msToTicks } from '../../timing';
 import {
   BRICK_CELLS,
   BRICK_COLS,
@@ -19,9 +20,7 @@ import {
   BRICK_TICK_HZ,
   CELL_BLINK,
   CELL_ON,
-  MAX_LEVEL,
-  MIN_LEVEL,
-  MIN_SPEED,
+  MAX_SPEED,
   PREVIEW_CELLS,
   PREVIEW_COLS,
   PREVIEW_ROWS,
@@ -46,25 +45,24 @@ import {
 } from './shapes';
 import { speedPenaltyMs, type TetrisVariant } from './variants';
 
-/** Время падения на скорости 1 и 10 (`getSpeedOfFirstLevel/TenthLevel`), мс; надбавка за смену фигур и Pentix — `speedPenaltyMs`. */
-export const FIRST_LEVEL_MS = 480;
-export const TENTH_LEVEL_MS = 180;
+/** Время падения на скорости 1 и 10 (Apollo B0202), мс; надбавка за смену фигур и Pentix — `speedPenaltyMs`. */
+export const FIRST_LEVEL_MS = Math.round(b0202FallMs(1));
+export const TENTH_LEVEL_MS = Math.round(b0202FallMs(10));
 /** Очки за 1-й, 2-й, 3-й и 4-й ряд одной посадки (`removeFullLines`): 1, 2, 4, 8, то есть 1, 3, 7, 15 за 1–4 ряда; за пятый и далее — по 1. */
 export const LINE_POINTS: readonly number[] = [0, 1, 2, 4, 8];
-/** Каждые столько очков скорость растёт на единицу (`TetrisGameI.setScore`). */
-export const POINTS_PER_SPEED = 100;
+/** Каждые столько очков скорость растёт на единицу (B0202: перенос в разряд тысяч). */
+export const POINTS_PER_SPEED = 1000;
 /** Секунд между добавлениями ряда в классах J, L, N, P (`TIME_BETWEEN_ADDING_LINE`); в первый раз ряд приходит на секунду раньше. */
 export const LINE_TIMER_SECONDS = 30;
 /** Шанс особой (мигающей) фигуры — 1 из стольких (`CHANCE_FOR_SUPER_FIGURE`). */
 export const SPECIAL_CHANCE = 7;
-/** Автоповтор кнопок: сдвиг 90 мс, поворот 270 мс, мягкое падение 30 мс (`MOVEMENT_SPEED`, `ROTATION_SPEED`, `ANIMATION_DELAY`). */
-export const MOVE_REPEAT_TICKS = msToTicks(90);
-export const TURN_REPEAT_TICKS = msToTicks(270);
-export const SOFT_DROP_TICKS = msToTicks(30);
-/** Шаг анимации стирания ряда и стекания клеток — 60 мс (`ANIMATION_DELAY * 2`), пауза перед добавлением ряда на новом уровне — 120 мс. */
+/** Повтор B0202: после задержки ≈130 мс сдвиг и DOWN раз в кадр; ROTATE только по фронту. Первый сдвиг оставляем мгновенным. */
+export const MOVE_REPEAT_TICKS = 1;
+export const MOVE_DELAY_TICKS = msToTicks(130);
+export const SOFT_DROP_TICKS = 1;
+/** Шаг анимации стирания ряда и стекания клеток — 60 мс (`ANIMATION_DELAY * 2`). Тайминги сценок пока донорские. */
 export const CLEAR_STEP_TICKS = msToTicks(60);
 export const FLOW_STEP_TICKS = msToTicks(60);
-export const GARBAGE_PAUSE_TICKS = msToTicks(120);
 /** Сторона квадрата, который стирает супербомба (`EXPLODE_SIZE` в `Game.kaboom` донора); нечётное число. */
 export const BLAST_SIZE = 5;
 const BLAST_RADIUS = (BLAST_SIZE - 1) / 2;
@@ -98,8 +96,6 @@ export abstract class TetrisCore extends BrickBase {
   protected lastFall = 0;
   /** Игра окончена посадкой или появлением фигуры: сдвиг поля после этого не делается. */
   protected over = false;
-  /** Сколько рядов осталось добавить после повышения уровня. */
-  protected pendingGarbage = 0;
   /** Особые свойства текущей фигуры (для случайного семейства выбираются при появлении каждой мигающей фигуры). */
   protected liquidNow = false;
   protected acidNow = false;
@@ -109,8 +105,7 @@ export abstract class TetrisCore extends BrickBase {
   protected lineDue = false;
 
   private readonly lineClock = new Countdown(BRICK_TICK_HZ);
-  private readonly moveRepeat = new Repeater(MOVE_REPEAT_TICKS, MOVE_REPEAT_TICKS);
-  private readonly turnRepeat = new Repeater(TURN_REPEAT_TICKS, TURN_REPEAT_TICKS);
+  private readonly moveRepeat = new Repeater(MOVE_DELAY_TICKS, MOVE_REPEAT_TICKS);
   private readonly downRepeat = new Repeater(SOFT_DROP_TICKS, SOFT_DROP_TICKS);
 
   protected constructor(options: BrickGameOptions, variants: readonly TetrisVariant[]) {
@@ -130,7 +125,7 @@ export abstract class TetrisCore extends BrickBase {
   /** Время падения на одну клетку в тактах на текущей скорости. */
   protected fallTicks(): number {
     const extra = speedPenaltyMs(this.variant);
-    return genuineTicks(this.speed, FIRST_LEVEL_MS + extra, TENTH_LEVEL_MS + extra);
+    return ((b0202FallMs(this.speed) + extra) * BRICK_TICK_HZ) / 1000;
   }
 
   private cellAt(x: number, y: number): number {
@@ -195,7 +190,6 @@ export abstract class TetrisCore extends BrickBase {
     this.fallingFinished = false;
     this.lastFall = 0;
     this.over = false;
-    this.pendingGarbage = 0;
     this.lineClock.reset(BRICK_TICK_HZ);
     this.lineLeft = LINE_TIMER_SECONDS - 1;
     this.lineDue = false;
@@ -203,7 +197,6 @@ export abstract class TetrisCore extends BrickBase {
     this.acidNow = this.variant.family === 'acid';
     this.throughNow = this.variant.family === 'through';
     this.moveRepeat.reset();
-    this.turnRepeat.reset();
     this.downRepeat.reset();
     // уровень — число стартовых случайных рядов (на первом уровне их нет)
     for (let y = 0; y < this.startLevel - 1; y++) this.writeGarbageRow(y);
@@ -272,12 +265,15 @@ export abstract class TetrisCore extends BrickBase {
       this.lineDue = false;
       return;
     }
-    if (this.tick - this.lastFall >= this.fallTicks()) {
-      this.lastFall = this.tick;
+    const period = this.fallTicks();
+    if (this.tick - this.lastFall >= period) {
+      // Preserve sub-tick time: rounding every period would accumulate drift, especially at speed 10.
+      // A cutscene skips elapsed drops instead of replaying a burst on the next frames.
+      this.lastFall = this.tick - ((this.tick - this.lastFall) % period);
       if (this.fallingFinished) {
         this.fallingFinished = false;
         this.spawn();
-      } else {
+      } else if (!keys.down && !keys.drop) {
         this.oneLineDown();
       }
     }
@@ -292,8 +288,8 @@ export abstract class TetrisCore extends BrickBase {
     const inverted = this.variant.inverted;
     const soft: BrickAction = inverted ? 'up' : 'down';
     const alt: BrickAction = inverted ? 'down' : 'up';
-    const turnMain = this.turnRepeat.fire('rotate', input);
-    const turnAlt = this.turnRepeat.fire(alt, input);
+    const turnMain = input.pressed.has('rotate');
+    const turnAlt = input.pressed.has(alt);
     const left = this.moveRepeat.fire('left', input);
     const right = this.moveRepeat.fire('right', input);
     return {
@@ -311,7 +307,10 @@ export abstract class TetrisCore extends BrickBase {
     if (keys.turn) this.turn();
     if (alive() && keys.left) this.moveSideways(-1);
     if (alive() && keys.right) this.moveSideways(1);
-    if (alive() && keys.down) this.oneLineDown();
+    if (alive() && keys.down) {
+      this.oneLineDown();
+      this.lastFall = this.tick;
+    }
     if (alive() && keys.drop) this.dropDown();
   }
 
@@ -329,11 +328,7 @@ export abstract class TetrisCore extends BrickBase {
     if (piece.shape === SUPER_GUN) this.shoot(piece);
     else if (piece.shape === SUPER_MUD_GUN) this.mudShoot(piece);
     else if (!isSuperShape(piece.shape)) {
-      const turned = this.variant.morph
-        ? this.variant.pool === 'pentix'
-          ? nextShape(piece)
-          : nextTetromino(piece)
-        : rotatePiece(piece, 1);
+      const turned = this.variant.morph ? (this.variant.pool === 'pentix' ? nextShape(piece) : nextTetromino(piece)) : rotatePiece(piece, 1);
       const changed = turned.shape !== piece.shape || turned.angle !== piece.angle;
       if (this.tryMove(turned, this.pieceX, this.pieceY) && changed) this.emit({ type: 'rotate' });
     }
@@ -561,7 +556,7 @@ export abstract class TetrisCore extends BrickBase {
 
   /**
    * Снятие полных рядов (`removeFullLines`): ряды снимаются по одному снизу вверх; очки растут 1, 2, 4, 8 за ряд с первого по четвёртый;
-   * ряд стирается от столбца фигуры в обе стороны (`animatedClearLine`), затем всё выше опускается на клетку. После снятия — ряды нового уровня.
+   * ряд стирается от столбца фигуры в обе стороны (`animatedClearLine`), затем всё выше опускается на клетку.
    */
   private clearLines(anchorX: number, done: () => void): void {
     let removed = 0;
@@ -569,7 +564,7 @@ export abstract class TetrisCore extends BrickBase {
       const rows = this.fullRows();
       const y = rows[0];
       if (y === undefined) {
-        this.addPendingGarbage(done);
+        done();
         return;
       }
       removed++;
@@ -610,30 +605,14 @@ export abstract class TetrisCore extends BrickBase {
     this.board.fill(0, idx(0, BRICK_ROWS - 1), BRICK_CELLS);
   }
 
-  /** Очки и рост скорости: каждые 100 очков скорость +1, после десятой — снова первая, уровень +1 и новые ряды (`setScore`). */
+  /** B0202: carry into the thousands digit raises speed; maximum speed stays at 10. */
   private addPoints(points: number): void {
     const before = Math.floor(this.score / POINTS_PER_SPEED);
     this.addScore(points);
-    if (Math.floor(this.score / POINTS_PER_SPEED) <= before) return;
-    this.setSpeed(this.speed + 1);
+    const steps = Math.floor(this.score / POINTS_PER_SPEED) - before;
+    if (steps <= 0 || this.speed === MAX_SPEED) return;
+    this.setSpeed(Math.min(MAX_SPEED, this.speed + steps));
     this.emit({ type: 'levelUp', speed: this.speed });
-    if (this.speed === MIN_SPEED) {
-      this.level = this.level >= MAX_LEVEL ? MIN_LEVEL : this.level + 1;
-      this.pendingGarbage += this.level - 1;
-    }
-  }
-
-  /** Новые ряды нового уровня — по одному, с паузой 120 мс (допущение: у донора из-за гонки с копией поля эти ряды теряются). */
-  private addPendingGarbage(done: () => void): void {
-    if (this.pendingGarbage <= 0) {
-      done();
-      return;
-    }
-    this.pendingGarbage--;
-    this.cutscene(GARBAGE_PAUSE_TICKS, null, () => {
-      this.tryAddLine();
-      this.addPendingGarbage(done);
-    });
   }
 
   /**

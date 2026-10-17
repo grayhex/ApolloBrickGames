@@ -57,9 +57,6 @@ export class Lab extends TetrisCore {
   get timerDue(): boolean {
     return this.lineDue;
   }
-  get garbageLeft(): number {
-    return this.pendingGarbage;
-  }
   get fallPeriod(): number {
     return this.fallTicks();
   }
