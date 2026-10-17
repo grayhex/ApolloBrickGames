@@ -2482,7 +2482,7 @@ body:not([data-booting]) .topleft { animation: dock-arrive 480ms cubic-bezier(.2
   color: var(--text);
 }
 .chrome-dock :is(.corner__btn, .toysw__item):active { transform: translateY(0) scale(.94); }
-.chrome-dock :is([aria-pressed='true'], .toysw__item[aria-current='page']) {
+.chrome-dock :is(.corner__btn[aria-pressed='true'], .toysw__item[aria-current='page']) {
   background: color-mix(in srgb, var(--accent) 12%, var(--panel));
   border-color: color-mix(in srgb, var(--accent) 36%, transparent);
   color: var(--text);

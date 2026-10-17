@@ -80,7 +80,7 @@ test('по умолчанию открывается уровень 1 (mario-1) 
   for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'тестовая комната', 'Таймер']) {
     expect(text, word).not.toContain(word);
   }
-  await expect(page.locator('#corner button, #corner a')).toHaveCount(6); // сегменты, фон, язык, настройки, справка, редактор
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(3); // фон, язык, справка
   await expect(page.locator('#devices')).toBeVisible();
   await expect(page.locator('#corner-theme')).toBeVisible();
   await expect(page.locator('#corner-lang')).toBeVisible();
@@ -340,7 +340,7 @@ for (const n of [1, 2]) {
   });
 }
 
-test('корпус вокруг экрана: три светодиода; цвет текущей игры — на странице, цвет по умолчанию — в настройках', async ({ page }) => {
+test('корпус вокруг экрана: три светодиода; цвет текущей игры — на странице, цвет по умолчанию — из конфигурации', async ({ page }) => {
   await ready(page);
   await expect(page.locator('#lid .led')).toHaveCount(3);
   await expect(page.locator('#lid .lid__screw')).toHaveCount(4);

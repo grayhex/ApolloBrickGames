@@ -106,6 +106,7 @@ for (const size of [
         toy: { left: toy.left, right: toy.right, width: toy.width },
         lcd: { top: lcd.top, bottom: lcd.bottom },
         keys: keys.map((k) => ({ left: k.left, right: k.right, top: k.top, bottom: k.bottom })),
+        menuBottom: rect(document.getElementById('toy-switch') as HTMLElement).bottom,
         vw: innerWidth,
         vh: innerHeight,
         scrollW: document.documentElement.scrollWidth,
@@ -129,8 +130,8 @@ for (const size of [
     const fullHeight = lowest >= m.vh - 90 - 30;
     expect(fullWidth || fullHeight, `ширина игрушки ${m.toy.width} из ${m.vw}, низ кнопок ${lowest} из ${m.vh}`).toBe(true);
     // И заметно крупнее, чем когда игрушка целиком вписывалась в окно (ширина ≈ (высота − 24) / 2,6).
-    // Над игрушкой шапка с логотипом и переключателем (48 px): целиком в окне игрушка вписалась бы в оставшуюся высоту.
-    expect(m.toy.width).toBeGreaterThan(((m.vh - 24 - 48) / 2.6) * 1.15);
+    // Учитываем реальную высоту меню: на телефоне названия Apollo занимают два ряда.
+    expect(m.toy.width).toBeGreaterThan(((m.vh - m.menuBottom) / 2.6) * 1.15);
   });
 }
 
