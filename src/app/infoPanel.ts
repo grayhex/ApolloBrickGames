@@ -199,13 +199,12 @@ export class InfoPanel {
 
     if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
-      // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у тетрис-заглушки — только тетрис.
+      // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у модели без меню — только тетрис.
       const rows = model.menu
         ? [
             keyRow(`${t('info.m.leftRight')} (${t('info.m.leftRight.menu')})`, keys('left'), keys('right')),
             keyRow(`${t('info.m.upDown')} (${t('info.m.upDown.menu')})`, keys('up'), keys('down')),
             keyRow(`${t('info.m.rotate')} (${t('info.m.rotate.menu')})`, keys('jump')),
-            keyRow(t('info.m.fire'), keys('fire')),
           ]
         : [
             keyRow(t('info.t.move'), keys('left'), keys('right')),

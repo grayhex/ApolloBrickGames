@@ -94,7 +94,7 @@ export const SHAPES_GUIDE: GameGuideData = {
   controls: [
     { button: 'left', text: gt('Пушка на клетку влево; зажатая кнопка повторяется.', 'The gun one cell left; holding repeats.') },
     { button: 'right', text: gt('Пушка на клетку вправо; зажатая кнопка повторяется.', 'The gun one cell right; holding repeats.') },
-    { button: 'rotate', text: gt('Выстрел; зажатая кнопка стреляет очередью (клавиша «огонь» — то же).', 'Fire; holding fires a burst (the fire key does the same).') },
+    { button: 'rotate', text: gt('Выстрел; зажатая кнопка стреляет очередью.', 'Fire; holding fires a burst.') },
   ],
   scoring: [
     { what: gt('Клетка, сбитая пулей (отстрел)', 'A cell shot down (shooting)'), points: `+${CELL_POINTS}` },

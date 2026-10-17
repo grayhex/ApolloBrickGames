@@ -58,6 +58,8 @@ for (const toy of ['clock99', 'tank168', 'seabattle'] as const)
         const guide = guideForBody(BRICK_GUIDES[id]!, model);
         for (const action of guidedActions(guide.controls)) expect(bodyActions(model).has(action)).toBe(true);
         expect(guidedActions(guide.controls).has('fire')).toBe(false);
+        expect(guide.controls.some((control) => control.keyboardOnly)).toBe(false);
+        expect(guide.controls.map((control) => `${control.text.ru} ${control.text.en}`).join(' ')).not.toMatch(/клавиша «огонь»|the fire key/);
       });
     }
 

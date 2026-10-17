@@ -8,6 +8,8 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
     const area = page.locator('#game-area');
     await expect(area).toHaveAttribute('data-boot', 'off');
     await expect(area).toHaveAttribute('data-menu', 'menu');
+    await expect(page.locator('#keymap')).not.toContainText('Бросок');
+    await expect(page.locator('#keymap kbd').filter({ hasText: /^X$/ })).toHaveCount(0);
     const initial = await area.getAttribute('data-game');
     await page.keyboard.press('KeyX');
     await page.waitForTimeout(100);
@@ -29,6 +31,9 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
     await expect(tetris.locator('.gctl')).not.toContainText('Бросить');
     await expect(tetris.locator('.gctl')).toContainText('ROTATE');
     await expect(help).not.toContainText('левая — мгновенное падение');
+    expect(await help.locator('.help__game[data-game] .gctl').allTextContents()).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('клавиша «огонь»')]),
+    );
     await page.keyboard.press('Escape');
 
     await page.locator('#corner-settings').click();
