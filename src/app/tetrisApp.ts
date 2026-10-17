@@ -126,6 +126,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || (Date.now() % 0x7fffffff) || DEFAULT_SEED;
   const cabinet = createCabinet(model, { seed, loadHi, defs: BRICK_GAMES });
   let leaderboard: LeaderboardCard | null = null;
+  let rankedPartyStarted = false;
   let rankedPhase = cabinet.phase;
   const selectRanking = (): void => {
     const r=cabinet.ranking;
@@ -276,8 +277,15 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   const emit = (events: readonly CabinetEvent[]): void => {
     const started=events.some(event=>event.type==='started');
-    if(started){ selectRanking(); leaderboard?.begin(); }
-    if(cabinet.phase==='over'&&(rankedPhase!=='over'||started))leaderboard?.finish(cabinet.score);
+    if(started&&!rankedPartyStarted){
+      rankedPartyStarted = true;
+      selectRanking();
+      leaderboard?.begin();
+    }
+    if(cabinet.phase==='over'&&(rankedPhase!=='over'||started)){
+      leaderboard?.finish(cabinet.score);
+      rankedPartyStarted = false;
+    }
     rankedPhase=cabinet.phase;
     for (const event of events) {
       if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu);
@@ -383,6 +391,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
+    rankedPartyStarted = false;
     if(!on)leaderboard?.cancel();
     if (on && view === 'closed') {
       view = 'full';
@@ -404,6 +413,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const restartGame = (): void => {
+    rankedPartyStarted = false;
     leaderboard?.cancel();
     persistHi();
     brickAudio.silence();
