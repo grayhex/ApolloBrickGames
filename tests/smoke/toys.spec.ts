@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Три игрушки Apollo на одной странице: шапка с логотипом и переключателем, «Часы+99» и «Морской бой» (аппаратная часть, цвета, тетрис-заглушка).
@@ -16,6 +16,7 @@ const key = (page: Page, id: string) => page.locator(`[data-key="${id}"]`);
 type TetrisDebug = Window & { __brick: { game: { piece: { angle: number; shape: number } | null; pieceX: number; pieceY: number; board: Uint8Array } } };
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

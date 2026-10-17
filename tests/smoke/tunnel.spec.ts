@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Основной маршрут: тестовый уровень по видео «tunnel-run». Интро строит участок следом героя, S./P. запускает сценарий выхода
@@ -79,6 +79,7 @@ async function startAndEnter(page: Page): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

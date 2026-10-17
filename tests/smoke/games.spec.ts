@@ -1,3 +1,4 @@
+import { mockReadOnlyLeaderboard } from './url';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -44,6 +45,7 @@ async function hold(page: Page, code: string, ms: number): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

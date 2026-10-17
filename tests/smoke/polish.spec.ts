@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Детали игрушки: язык интерфейса RU/EN, справка по упаковке, шутка со шлейфом, плавный переход «только экран».
@@ -31,6 +31,7 @@ function litShare(page: Page): Promise<number> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

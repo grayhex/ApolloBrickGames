@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Панели вокруг игрушки: слева справка по упаковке и схема управления (вся помещается в окне без прокрутки), справа «пульт» —
@@ -44,6 +44,7 @@ async function putDraft(page: Page, record: { meta: Record<string, unknown>; doc
 }
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
@@ -107,8 +108,9 @@ test('слева справка, справа пульт; панели отод�
   await expect(info.locator('.kk, .kmap')).toHaveCount(0);
   const ctl = page.locator('#side-ctl');
   for (const name of ['Звук', 'Цвет', 'Уровни']) await expect(ctl.getByRole('heading', { name, exact: true })).toBeVisible();
-  // Спидран — последний блок; индикатор устройства и фон переехали в угловое меню.
-  expect(await ctl.evaluate((e) => (e.lastElementChild as HTMLElement).id)).toBe('run');
+  // Спидран завершает пульт; отдельная карточка рейтинга находится под ним.
+  expect(await ctl.locator('.ctl-card').evaluate((e) => (e.lastElementChild as HTMLElement).id)).toBe('run');
+  expect(await ctl.evaluate((e) => (e.lastElementChild as HTMLElement).id)).toBe('leaderboard');
   await expect(ctl.locator('#devices, #tgl-theme, #open-editor')).toHaveCount(0);
   await expect(page.locator('#devices')).toBeVisible();
   await expect(page.locator('#corner #corner-theme')).toBeVisible();

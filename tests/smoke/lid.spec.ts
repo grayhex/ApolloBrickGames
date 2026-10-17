@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Закрытая раскладушка: игрушка при каждой загрузке закрыта, на крышке логотип Apollo; щелчок по крышке (или Enter / пробел)
@@ -12,6 +12,7 @@ const area = (page: Page, key: string): Promise<string> =>
     .catch(() => '');
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

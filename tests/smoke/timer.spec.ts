@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Таймер игры по видео геймплея: до старта на HUD подпись уровня, с первого S./P. — слово TIME и три цифры (400 единиц по ≈ 0,77 с);
@@ -28,6 +28,7 @@ const inkIn = (page: Page, x: number, y: number, w: number, h: number): Promise<
   );
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

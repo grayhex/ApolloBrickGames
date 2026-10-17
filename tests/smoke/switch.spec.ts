@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Четвёртая игрушка «168 в 1 танк», переключение игрушек на месте (без перезагрузки страницы: цвет, вид и питание сохраняются, шапка и каркас
@@ -12,6 +12,7 @@ const phase = (page: Page) => (): Promise<string> => area(page, 'phase');
 const key = (page: Page, id: string) => page.locator(`[data-key="${id}"]`);
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
