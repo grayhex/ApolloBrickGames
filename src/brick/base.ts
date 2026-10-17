@@ -10,6 +10,7 @@ import { Rng } from './rng';
 import {
   BRICK_COLS,
   BRICK_ROWS,
+  BRICK_TICK_HZ,
   CELL_ON,
   DEFAULT_SEED,
   MAX_LEVEL,
@@ -28,9 +29,17 @@ import {
 
 /** Максимум жизней на индикаторе. */
 export const MAX_LIVES = 4;
-/** Анимация конца игры: тактов на заполненную строку и пауза после полного заполнения. */
-export const GAME_OVER_TICKS_PER_ROW = 2;
+/**
+ * Анимация конца игры: экран заливается снизу вверх по одному ряду за 127 мс, затем пауза. Темп — по трассе ROM двух прошивок HT943 в BrickEmuPy
+ * (E‑23 Plus Mark II 96 in 1 и E88 8 in 1 — прошивка референсной модели E‑S88): ряд полностью загорается каждые ≈127 мс, весь экран — за ≈2,5 с
+ * (`scripts/research/brickemu_gameover.py`, `tests/fixtures/brickemu/gameover.json`). Число тактов дробное: ряд считается по `floor`.
+ * Допущения: после заливки у оригинала идёт такая же поочерёдная очистка сверху вниз и экран счёта; здесь экран остаётся залитым до новой партии.
+ */
+export const GAME_OVER_ROW_MS = 127;
+export const GAME_OVER_TICKS_PER_ROW = (GAME_OVER_ROW_MS * BRICK_TICK_HZ) / 1000;
 export const GAME_OVER_HOLD_TICKS = 30;
+/** Сколько тактов от `gameOver` до фазы `over`: заливка всех рядов и пауза. */
+export const GAME_OVER_TICKS = Math.ceil(BRICK_ROWS * GAME_OVER_TICKS_PER_ROW + GAME_OVER_HOLD_TICKS);
 /** Очистка поля (вверх и вниз): тактов на потерю жизни и на победу в уровне. */
 export const CLEAR_LOSE_TICKS = 72;
 export const CLEAR_WIN_TICKS = 314;

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { QUARTH_LEVELS, QuarthGame } from '../../../src/brick/games/library/falling';
 import { FillGame, LightsGame, MazeGame, PEG_HOLES, SokobanGame, SolitaireGame } from '../../../src/brick/games/library/puzzles';
 import { SOKOBAN_LEVELS } from '../../../src/brick/games/library/sokobanLevels';
-import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
+import { GAME_OVER_TICKS, NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
 
 const coveredScenario = scenarioSuite('content');
 
@@ -344,7 +344,7 @@ describe('головоломки: ошибочный ход и исчерпан�
     const events = run(g, 2400);
     expect(events).toContainEqual({ type: 'gameOver' });
     expect(events).not.toContainEqual({ type: 'win' });
-    run(g, 80); expect(g.phase).toBe('over'); expect(g.score).toBe(0);
+    run(g, GAME_OVER_TICKS + 2); expect(g.phase).toBe('over'); expect(g.score).toBe(0);
     g.start(); expect(g.path).toEqual([0]); expect(g.phase).toBe('playing');
   });
   coveredScenario('peg-solitaire', 'неудача', 'два изолированных остатка после прыжка: проигрыш, не победа', () => {
@@ -355,6 +355,6 @@ describe('головоломки: ошибочный ход и исчерпан�
     expect(events).toContainEqual({ type: 'gameOver' });
     expect(events).not.toContainEqual({ type: 'win' });
     expect([...g.pegs].sort()).toEqual([2, 24]); expect(g.score).toBe(10);
-    run(g, 80); expect(g.phase).toBe('over'); expect(g.hiScore).toBe(10);
+    run(g, GAME_OVER_TICKS + 2); expect(g.phase).toBe('over'); expect(g.hiScore).toBe(10);
   });
 });

@@ -1,12 +1,16 @@
 import { LibraryGame, action, heldAction, DIRS, DX, DY, put } from './common';
+import { DANCE_MODES, SNAKE_MODES } from './modes';
 import type { BrickGameOptions, BrickInput } from '../../types';
 
 export class SnakeGame extends LibraryGame {
   readonly id = 'snake'; body = [104, 103, 102]; directionNow = 1; food = 0; eaten = 0; walls = new Set<number>(); private timer = 0; private queued = 1;
-  constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
+  /** Вариант 02 «Frame» (вики): по периметру поля горит рамка в одну клетку, игровая область 8 × 18. */
+  readonly frame: boolean;
+  constructor(o: BrickGameOptions = {}) { super(o, SNAKE_MODES.length); this.frame = this.mode === 1; this.init(); }
   protected reset(): void { this.setLives(4); this.setup(); }
   private setup(): void {
     this.body = [104, 103, 102]; this.directionNow = this.queued = 1; this.eaten = 0; this.timer = 0; this.walls.clear();
+    if (this.frame) for (let p = 0; p < 200; p++) { const x = p % 10, y = Math.floor(p / 10); if (x === 0 || x === 9 || y === 0 || y === 19) this.walls.add(p); }
     // Open-ended barriers keep both sides reachable and never cover the starting snake.
     for (let y = 3; y < 17; y += 4) if (this.level > 1) for (let x = 2; x < Math.min(7, 2 + this.level); x++) this.walls.add(y * 10 + x);
     this.spawnFood();
@@ -27,7 +31,11 @@ export class SnakeGame extends LibraryGame {
 export class PadsGame extends LibraryGame {
   readonly id: 'whack-a-mole' | 'simon' | 'dance'; target = 0; sequence: number[] = []; response = 0; showing = 0; timer = 0; hits = 0;
   notes: { direction: number; y: number }[] = []; private beat = 0;
-  constructor(id: PadsGame['id'], o: BrickGameOptions = {}) { super(o); this.id = id; this.init(); }
+  constructor(id: PadsGame['id'], o: BrickGameOptions = {}) {
+    super(o, id === 'dance' ? DANCE_MODES.length : 1); this.id = id;
+    this.flipped = id === 'dance' && this.mode === 1; // вариант 02 «Invert upside-down»
+    this.init();
+  }
   protected reset(): void { this.setLives(4); this.hits = 0; this.sequence = []; this.setup(); }
   private setup(): void {
     this.target = this.rng.int(4); this.timer = this.period(120, 35); this.response = 0; this.showing = 0; this.beat = 0; this.notes = [];

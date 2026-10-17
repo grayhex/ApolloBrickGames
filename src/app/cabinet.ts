@@ -43,6 +43,8 @@ export interface Cabinet {
   readonly info: Readonly<Record<string, string | number>>;
   /** Ключ хранилища рекорда текущей игры (у консоли — игры и варианта); `null`, пока игра не выбрана. */
   hiKey(): string;
+  /** Выбрать игру в меню (кнопка в левой справке); `false`, если игра идёт или такой игры в меню нет. */
+  selectGame(id: GameId): boolean;
   start(): CabinetEvent[];
   pause(): CabinetEvent[];
   resume(): CabinetEvent[];
@@ -153,6 +155,9 @@ class TetrisCabinet implements Cabinet {
   readonly inMenu = false;
   readonly activeGame: GameId = 'tetris';
   readonly usesFire = false;
+  selectGame(): boolean {
+    return false;
+  }
   get ranking(): {mode:number;speed:number;level:number} { return {mode:0,speed:0,level:0}; }
   get info(): Readonly<Record<string, string | number>> {
     return {};
@@ -303,6 +308,9 @@ class ConsoleCabinet implements Cabinet {
   /** Звук движения: в меню и в тетрисах — да; в остальных играх шаг каждый такт слушался бы как трещотка. */
   get moveSound(): boolean {
     return this.console_.inMenu || STEP_SOUND_GAMES.has(this.console_.gameId);
+  }
+  selectGame(id: GameId): boolean {
+    return this.console_.selectGame(id);
   }
   start(): CabinetEvent[] {
     this.mood = 'idle';

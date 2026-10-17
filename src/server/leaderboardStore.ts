@@ -124,7 +124,10 @@ export class LeaderboardStore {
           const score = validScore(body['score']);
           if (run.finish_score !== null && run.finish_score !== score) throw new HttpError(409, 'Score already final');
           this.sql.exec('UPDATE runs SET finish_score=?,finished_at=COALESCE(finished_at,?) WHERE run_id=?', score, Date.now(), run.run_id);
-          return json({ ok: true, score: run.finish_score ?? score, toyId: run.toy_id });
+          const final = run.finish_score ?? score;
+          // Предлагать публикацию имеет смысл, только если результат больше нуля и лучше уже опубликованного этим же игроком (гость — подписанная cookie).
+          const published = this.sql.exec<{ score: number }>('SELECT score FROM entries WHERE guest=?', guest).toArray()[0];
+          return json({ ok: true, score: final, toyId: run.toy_id, publishable: final > 0 && (!published || final > published.score), personalBest: published?.score ?? null });
         }
         if (op === '/status' || op === '/publish') {
           const name = nickname(body['nickname']);
@@ -134,6 +137,7 @@ export class LeaderboardStore {
             return json(receipt);
           }
           if (run.finish_score === null) throw new HttpError(409, 'Run not completed');
+          if (run.finish_score <= 0) throw new HttpError(409, 'Nothing to publish: the score is zero');
           if (op === '/status') return json({ pending: true });
           this.limit(guest, 'publish', 6);
           const previous = this.sql.exec<{ score: number }>('SELECT score FROM entries WHERE guest=?', guest).toArray()[0];

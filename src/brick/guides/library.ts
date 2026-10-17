@@ -1,12 +1,13 @@
 import { contentStatus, contentProgression } from './content';
 import { LIBRARY_FIELDS } from '../games/library/art';
+import { LIBRARY_GAMES } from '../games/library';
 import { LIBRARY_IDS, LIBRARY_NAMES, type LibraryId } from '../../games/library';
 import { gt, type GameGuideData, type GuideButton, type GuideControl, type GuideText } from '../guide';
 const tr = (s: string): GuideText => { const [ru, en] = s.split('|'); return gt(ru!, en ?? ru!); };
 // These rules describe the implementation, including deliberately explicit reconstruction choices.
 const RULES: Record<LibraryId, readonly string[]> = {
   maze: ['Найди выход из лабиринта.|Find the maze exit.', 'Стрелки двигают точку; через стену пройти нельзя.|Arrows move the dot; walls block movement.', 'Дойди до быстро мигающего выхода: +100. Каждый лабиринт связный и имеет решение.|Reach the fast-blinking exit: +100. Every maze is connected and solvable.'],
-  jigsaw: ['Уложи четыре фигуры в квадрат без перекрытий.|Pack four pieces into the square without overlaps.', 'Стрелки двигают фигуру, ROTATE поворачивает, «огонь» укладывает; «огонь» с DOWN — заново.|Arrows move the piece, ROTATE turns it, FIRE places it; FIRE with DOWN restarts.', 'Нужен отдельный «огонь» — на корпусе его нет, игрушке игра не назначается. Все задачи решаемы.|It needs a separate FIRE the body lacks, so no toy gets this game. Every puzzle is solvable.'],
+  jigsaw: ['Уложи четыре фигуры в квадрат без перекрытий.|Pack four pieces into the square without overlaps.', 'Стрелки двигают фигуру, ROTATE поворачивает, «огонь» укладывает; «огонь» с DOWN — заново.|Arrows move the piece, ROTATE turns it, FIRE places it; FIRE with DOWN restarts.', 'Нужен отдельный «огонь»: он есть только у универсального Brick Game, Apollo игра не назначается. Все задачи решаемы.|It needs a separate FIRE that only the universal Brick Game has; no Apollo model gets this game. Every puzzle is solvable.'],
   'meteor-fighter': ['После взлёта уничтожь самолёт-босс.|Destroy the boss plane after takeoff.', '← → двигают самолёт; ROTATE стреляет. Во время взлёта стрелять нельзя.|Left/right move the plane; ROTATE shoots. You cannot shoot during takeoff.', 'Верхняя шкала — босс; нижняя — игрок. Три попадания отнимают жизнь.|Top bar: boss health; bottom bar: player health. Three hits cost a life.'],
   'tetris-shooting': ['Разбей блоки, пока опасная точка не опустилась к пушке.|Clear the blocks before the danger dot reaches the gun.', '← → двигают пушку; ROTATE стреляет.|Left/right move the gun; ROTATE shoots.', 'Мигающая точка движется влево и вниз; её нельзя сбить. Попадание по блоку: +5.|The blinking dot moves left and down; it cannot be shot. A block hit: +5.'],
   snake: ['Съешь 13 плодов, избегая стен и своего тела.|Eat 13 fruits without hitting walls or yourself.', 'Стрелки задают курс; обратный разворот запрещён. ROTATE ускоряет.|Arrows steer; reversing is forbidden. ROTATE accelerates.', 'Плод: +10. После 13 плодов — новая карта и короткая змейка.|Fruit: +10. After 13 fruits, a new board and a short snake.'],
@@ -122,6 +123,19 @@ const CONTROLS: Record<LibraryId, readonly GuideControl[]> = {
   digger: [c('arrows', 'Копают и идут.|Dig and walk.'), c('rotate', 'Ракета в направлении взгляда.|A missile in the facing direction.')],
   'helicopter-bomber': [c('rotate', 'Сбросить одну бомбу.|Drop one bomb.'), c('right', 'Удержание ускоряет полёт.|Holding speeds up the flight.', { hold: true })],
 };
+/**
+ * Варианты игр, у которых вики retroconsoles (раздел Modes) их перечисляет: одна строка в допущениях справки. Тексты коротки (предел `GUIDE_LIMITS.assumption`) и честны:
+ * перечень — по вики (другая прошивка, не Apollo), а правила признаков — допущение проекта; подробности — `modes[].note` и `docs/brick/modes-reference.md`.
+ */
+const VARIANTS: Partial<Record<LibraryId, GuideText>> = {
+  dance: tr('Вариантов 2: 02 — вверх дном, ↑ и ↓ меняются. Перечень по вики retroconsoles; правила — допущение.|2 variants: 02 is upside down, up and down swap. List per the retroconsoles wiki; rules are an assumption.'),
+  'obstacle-race': tr('Вариантов 2: 02 — вверх дном: машина вверху, газ — ↓. Перечень по вики retroconsoles; правила — допущение.|2 variants: 02 is upside down: car on top, gas is down. List per the retroconsoles wiki; rules are an assumption.'),
+  quarth: tr('Вариантов 2: 02 — вверх дном. Перечень — со слов владельца (в тексте вики Quarth нет); правила — допущение.|2 variants: 02 is upside down. List from the owner (not in the wiki text for Quarth); rules are an assumption.'),
+  snake: tr('Вариантов 2: 02 — «Рамка»: стенка по периметру, поле 8×18. Что такое Frame, вики не раскрывает — допущение.|2 variants: 02 is Frame: a wall around the edge, 8×18 field. The wiki does not explain Frame, so this is an assumption.'),
+  'pneumatic-ball': tr('Вариантов 8: платформа 3, 2 или 1 клетка, вверх дном. Размер по умолчанию 3, поэтому 02 как 01. Перечень по вики; правила — допущение.|8 variants: paddle of 3, 2 or 1 cells, upside down. Default size is 3, so 02 equals 01. List per the wiki; rules are an assumption.'),
+  pong: tr('Вариантов 16: платформа 3, 2 или 1 у обеих ракеток, вверх дном, кирпичи едут. 02 как 01. Перечень по вики; правила — допущение.|16 variants: paddle 3, 2 or 1 on both sides, upside down, moving bricks. 02 equals 01. List per the wiki; rules are an assumption.'),
+  honeybee: tr('Вариантов 8: фигура идёт по диагонали, вверх дном, два ствола. Перечень по вики retroconsoles; правила — допущение.|8 variants: the figure moves diagonally, upside down, two shooters. List per the retroconsoles wiki; rules are an assumption.'),
+};
 const NO_LIVES = new Set<LibraryId>(['maze','jigsaw','lights-out','sokoban','peg-solitaire','reversi','2048','fill-connect','flappy-bird','dice','bowling','tetris-flicker','columns','columns-flicker','dr-mario']);
 export const LIBRARY_GUIDES: Readonly<Record<string, GameGuideData>> = Object.fromEntries(LIBRARY_IDS.map((id) => {
   const rules = RULES[id].map(tr);
@@ -129,10 +143,10 @@ export const LIBRARY_GUIDES: Readonly<Record<string, GameGuideData>> = Object.fr
     summary: gt(`${LIBRARY_NAMES[id][0]}. ${contentStatus(id).ru}`, `${LIBRARY_NAMES[id][1]}. ${contentStatus(id).en}`),
     goal: rules[0]!, rules,
     controls: [...CONTROLS[id], { button: 'start', text: gt('Старт / пауза / продолжение.', 'Start / pause / resume.') }],
-    scoring: [], facts: [{ value: '10×20', label: gt('матрица', 'display') }, { value: NO_LIVES.has(id) ? '—' : '4', label: gt('жизни', 'lives') }],
+    scoring: [], facts: [{ value: '10×20', label: gt('матрица', 'display') }, { value: NO_LIVES.has(id) ? '—' : '4', label: gt('жизни', 'lives') }, ...(VARIANTS[id] ? [{ value: String(LIBRARY_GAMES[id].modes.length), label: gt('вариантов', 'variants') }] : [])],
     progression: contentProgression(id),
     lives: NO_LIVES.has(id) ? null : gt('Четыре жизни, после потери — повтор поля. У пневматического мяча промах безопасен.', 'Four lives; losing one restarts the board. Pneumatic Ball misses are harmless.'),
     schemes: [{ cells: LIBRARY_FIELDS[id], caption: gt('Поле в начале партии', 'Initial playing field') }],
-    assumptions: [gt('Источник: Retro Consoles Wiki, раздел Games, архив 12.01.2026. Это не дамп прошивки Apollo.', 'Source: Retro Consoles Wiki, Games, archive 2026-01-12. This is not an Apollo firmware dump.'), gt('Карты, темп, очки и графика — реконструкция; точные варианты оригинального устройства не подтверждены.', 'Boards, pace, scoring and artwork are reconstructions; exact original device variants are unconfirmed.')],
+    assumptions: [gt('Источник: Retro Consoles Wiki, раздел Games, архив 12.01.2026. Это не дамп прошивки Apollo.', 'Source: Retro Consoles Wiki, Games, archive 2026-01-12. This is not an Apollo firmware dump.'), gt('Карты, темп, очки и графика — реконструкция; точные варианты оригинального устройства не подтверждены.', 'Boards, pace, scoring and artwork are reconstructions; exact original device variants are unconfirmed.'), ...(VARIANTS[id] ? [VARIANTS[id]] : [])],
   } satisfies GameGuideData];
 }));

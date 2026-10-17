@@ -28,3 +28,6 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 .admin__record span { overflow-wrap:anywhere; }
 .admin__leaderboards label { grid-template-columns:minmax(0,1fr); min-width:0; max-width:100%; }
 .admin__leaderboards select { width:100%; min-width:0; box-sizing:border-box; }
+.admin__general { display:grid; gap:10px; margin-bottom:18px; }
+.admin__general h2 { margin:0; }
+.admin__general label { display:grid; gap:6px; max-width:320px; }

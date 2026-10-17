@@ -1,4 +1,5 @@
 import { guideForBody } from './bodyButtons';
+import { BRICK_GAMES } from '../brick/games';
 import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
 import { BoxDialog, BoxViewer } from './boxViewer';
@@ -110,6 +111,10 @@ export interface InfoPanelBox {
   onOpen(): void;
   onClose(): void;
   onPointerUse(): void;
+  /** Игру выбрали в левой панели (список или стрелки): консоль в меню переключает выбор на неё. */
+  onChoose?(id: GameId): void;
+  /** Кнопка «запуск»: выбрать игру на консоли и начать партию. */
+  onLaunch?(id: GameId): void;
 }
 
 
@@ -120,6 +125,8 @@ export class InfoPanel {
   private readonly toy: ToyId;
   private readonly signal: AbortSignal | undefined;
   private readonly onPointerUse: (() => void) | undefined;
+  private readonly onChoose: ((id: GameId) => void) | undefined;
+  private readonly onLaunch: ((id: GameId) => void) | undefined;
   /** Модель упаковки игрушки (если есть) и диалог, где её можно рассмотреть. */
   private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
@@ -138,6 +145,8 @@ export class InfoPanel {
     this.hub = hub;
     this.signal = signal;
     this.onPointerUse = box?.onPointerUse;
+    this.onChoose = box?.onChoose;
+    this.onLaunch = box?.onLaunch;
     const first = TOYS[toy].defaultGame;
     if (first === null) throw new Error('A playable information panel requires a game.');
     this.selected = first;
@@ -363,6 +372,7 @@ export class InfoPanel {
       if (game.id === this.active) tab.dataset['playing'] = '';
       tab.addEventListener('click', (event) => {
         select(game.id);
+        this.onChoose?.(game.id);
         if (event.detail !== 0) this.onPointerUse?.(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на вкладке
       });
       tabs.set(game.id, tab);
@@ -376,14 +386,41 @@ export class InfoPanel {
       event.preventDefault();
       select(ids[next] ?? this.selected, true);
     });
-    chooser.addEventListener('change',()=>select(chooser.value as GameId));
+    chooser.addEventListener('change', () => {
+      select(chooser.value as GameId);
+      this.onChoose?.(this.selected);
+    });
+    // Стрелки и запуск рядом с заголовком: листать игры по кругу, не открывая список, и сразу запускать выбранную.
+    const step = (delta: number): void => {
+      const at = Math.max(0, ids.indexOf(this.selected));
+      select(ids[(at + delta + ids.length) % ids.length] ?? this.selected);
+      this.onChoose?.(this.selected);
+    };
+    const control = (kind: string, text: string, label: MsgKey, action: () => void): HTMLButtonElement => {
+      const button = h('button', { type: 'button', class: `gnav__btn gnav__btn--${kind}`, 'aria-label': t(label), title: t(label) }, text);
+      button.addEventListener('click', (event) => {
+        action();
+        if (event.detail !== 0) this.onPointerUse?.();
+      });
+      return button;
+    };
+    const nav = h(
+      'div',
+      { class: 'gnav', role: 'group', 'aria-label': t('games.tabs') },
+      control('prev', '‹', 'games.prev', () => step(-1)),
+      control('next', '›', 'games.next', () => step(1)),
+      control('launch', '▶', 'games.launch', () => {
+        this.onChoose?.(this.selected);
+        this.onLaunch?.(this.selected);
+      }),
+    );
     if (model.universal) panel.setAttribute('role','region');
     this.showTab = (id) => select(id);
     select(ids.includes(this.selected) ? this.selected : model.defaultGame);
     return h(
       'section',
       { class: 'side__sec side__sec--games', 'aria-labelledby': 'games-title' },
-      h('h3', { class: 'side__h', id: 'games-title' }, t('help.games.h')),
+      h('div', { class: 'side__hrow' }, h('h3', { class: 'side__h', id: 'games-title' }, t('help.games.h')), nav),
       model.universal ? chooser : list,
       panel,
     );
@@ -394,6 +431,6 @@ export class InfoPanel {
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
     const data = BRICK_GUIDES[id];
-    return [head, ...(data ? compactGuide(guideForBody(data, model), lang) : [])];
+    return [head, ...(data ? compactGuide(guideForBody(data, model, BRICK_GAMES[id]), lang, id) : [])];
   }
 }

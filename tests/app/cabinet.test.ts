@@ -95,8 +95,8 @@ describe('универсальный Brick Game: кнопка FIRE и челов
   const universal = (id: GameId) => createCabinet(assign(TOYS.brickgame, id), options);
   const scene = (c: ReturnType<typeof universal>) => c.scene({ sound: false, allOn: false });
 
-  it('FIRE нужна только играм, где она делает своё действие, а не повторяет ROTATE', () => {
-    const wanted = ['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker', 'dr-mario', 'columns', 'columns-flicker', 'sokoban', 'peg-solitaire', 'jigsaw', 'romeo-juliet'];
+  it('FIRE нарисована только у игры, без которой не обойтись (Jig Saw); у Tetris и остальных кнопки нет', () => {
+    const wanted = ['jigsaw'];
     for (const id of Object.keys(BRICK_GAMES) as GameId[]) expect(universal(id).usesFire, id).toBe(wanted.includes(id));
     for (const toy of ['clock99', 'tank168', 'seabattle'] as const) expect(createCabinet(TOYS[toy], options).usesFire).toBe(false);
   });
@@ -111,13 +111,24 @@ describe('универсальный Brick Game: кнопка FIRE и челов
       fired.step(makeFrame({ pressed: t % 2 ? [] : ['fire'], held: ['fire'] }));
     }
     expect(scene(fired)).toEqual(scene(idle));
-    const drop = universal('tetris'),
-      still = universal('tetris');
-    drop.start();
+    // Tetris: быстрое падение по FIRE не вводится (кнопки нет), как и на Apollo.
+    const tetris = universal('tetris'),
+      calm = universal('tetris');
+    tetris.start();
+    calm.start();
+    for (let t = 0; t < 40; t++) {
+      tetris.step(makeFrame({ pressed: t % 2 ? [] : ['fire'], held: ['fire'] }));
+      calm.step(NEUTRAL_FRAME);
+    }
+    expect(scene(tetris)).toEqual(scene(calm));
+    // Jig Saw: FIRE укладывает фигуру — игра без неё не проходится.
+    const puzzle = universal('jigsaw'),
+      still = universal('jigsaw');
+    puzzle.start();
     still.start();
-    drop.step(makeFrame({ pressed: ['fire'] }));
+    puzzle.step(makeFrame({ pressed: ['fire'] }));
     still.step(NEUTRAL_FRAME);
-    expect(scene(drop).cells).not.toEqual(scene(still).cells); // жёсткое падение
+    expect(scene(puzzle).cells).not.toEqual(scene(still).cells);
   });
 
   it('человечек стоит; после победы радуется и через время снова стоит; в конце игры огорчён до новой партии', () => {
@@ -138,7 +149,7 @@ describe('универсальный Brick Game: кнопка FIRE и челов
 
     const over = universal('tetris');
     over.start();
-    for (let t = 0; t < 2000 && over.phase !== 'over'; t++) over.step(makeFrame({ pressed: t % 2 ? [] : ['fire'] }));
+    for (let t = 0; t < 6000 && over.phase !== 'over'; t++) over.step(makeFrame({ held: ['down'] }));
     expect(over.phase).toBe('over');
     expect(scene(over).mood).toBe('sad');
     over.restart();

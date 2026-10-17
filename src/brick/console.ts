@@ -99,6 +99,15 @@ export class BrickConsole implements BrickGame {
     return this.gameIndex + 1;
   }
 
+  /** Выбрать игру в меню по идентификатору (кнопка в справке); вне меню или для чужой игры — `false`. Вариант сбрасывается на первый, как при листании. */
+  selectGame(id: string): boolean {
+    const index = this.catalog.findIndex((entry) => entry.id === id);
+    if (this.current || index < 0) return false;
+    this.gameIndex = index;
+    this.modeIndex = 0;
+    return true;
+  }
+
   /** Знак выбранной игры на экране: цифра или буква. */
   get symbol(): string {
     return this.selected.symbol;

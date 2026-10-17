@@ -28,6 +28,10 @@ describe('universal Brick Game', () => {
   });
   it('recomputes assignments and preserves explicitly pinned games and modes', () => {
     const config = defaultConfig();
+    // По умолчанию универсальной модели назначены все игры (кроме Mario), поэтому пересчёт проверяем на урезанном списке.
+    expect(universalGames(config)).toHaveLength(55);
+    config.toys.brickgame.games = [{ id: 'tetris' }];
+    config.toys.brickgame.defaultGame = 'tetris';
     for (const id of APOLLO_IDS) config.toys[id].games = config.toys[id].games.filter((g) => g.id !== 'frog');
     expect(universalGames(config).map((g) => g.id)).toContain('frog');
     config.toys.clock99.games.push({ id: 'frog' });

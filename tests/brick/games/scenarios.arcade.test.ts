@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { BowlingGame } from '../../../src/brick/games/library/action';
 import { BasketGame, BomberGame, DiggerGame, FlappyGame, SnakeGame } from '../../../src/brick/games/library/arcade';
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
-import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame, type BrickInput } from '../../../src/brick';
+import { GAME_OVER_TICKS, NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame, type BrickInput } from '../../../src/brick';
 
 const coveredScenario = scenarioSuite('scenarios.arcade');
 
@@ -50,7 +50,7 @@ function playUntil(g: BrickGame, stop: (last: BrickEvent[]) => boolean, limit: n
 /** Конец партии: событие gameOver уже было, дальше идёт анимация заливки поля тактами, затем фаза `over`; рекорд сохраняется, новый старт начинает партию с нуля. */
 function expectOverThenRestart(g: BrickGame, bestScore: number): void {
   expect(g.phase).toBe('playing');
-  const finished = playUntil(g, () => g.phase === 'over', 150);
+  const finished = playUntil(g, () => g.phase === 'over', GAME_OVER_TICKS + 10);
   expect(finished.reached).toBe(true);
   expect(g.overFill).toBe(20); // залиты все двадцать рядов
   expect(g.step(makeBrickInput(['rotate', 'left']))).toEqual([]); // после конца партии ввод ничего не делает

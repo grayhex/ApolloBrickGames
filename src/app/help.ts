@@ -92,7 +92,7 @@ function libraryHelp(model: ToyModel): HTMLElement {
     const body = h('div', {});
     const render = (): void => {
       const guide = BRICK_GUIDES[select.value];
-      body.replaceChildren(...(guide ? guideBlocks(guideForBody(guide, model), BRICK_GAMES[select.value], undefined, getLang()) : []));
+      body.replaceChildren(...(guide ? guideBlocks(guideForBody(guide, model, BRICK_GAMES[select.value]), BRICK_GAMES[select.value], undefined, getLang()) : []));
     };
     select.addEventListener('change', render);
     render();
@@ -137,7 +137,7 @@ export function gamesSection(model: ToyModel): HTMLElement {
         h('summary', {}, GAMES[game.id].names[getLang()]),
         h('p', { class: 'gtext' }, t(STATUS_KEYS[game.status])),
         ...(model.menu && guide
-          ? guideBlocks(guideForBody(guide, model), BRICK_GAMES[game.id], game.modes, getLang())
+          ? guideBlocks(guideForBody(guide, model, BRICK_GAMES[game.id]), BRICK_GAMES[game.id], game.modes, getLang())
           : detail
             ? [h('p', { class: 'gtext' }, t(detail.what)), h('p', { class: 'gtext' }, t(detail.open))]
             : []),

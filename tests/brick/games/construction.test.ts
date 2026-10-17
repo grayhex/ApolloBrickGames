@@ -1,6 +1,6 @@
 import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
-import {
+import { GAME_OVER_TICKS,
   BRICK_COLS,
   BRICK_ROWS,
   NEUTRAL_BRICK_INPUT,
@@ -720,7 +720,7 @@ describe('construction: очки, скорость, уровень, жизни',
     const events = idle(game, KABOOM);
     expect(types(events)).toEqual(['lifeLost', 'gameOver']);
     expect(game.lives).toBe(0);
-    for (let i = 0; i < 80 && game.phase !== 'over'; i++) idle(game);
+    for (let i = 0; i < GAME_OVER_TICKS + 2 && game.phase !== 'over'; i++) idle(game);
     expect(game.phase).toBe('over');
     expect(game.overFill).toBe(BRICK_ROWS);
     expect(game.hiScore).toBe(hi);

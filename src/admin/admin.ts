@@ -8,6 +8,7 @@ import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { defaultConfig } from '../config/runtime';
 import { validateConfig, universalGames, thumbPalette, CONFIG_TOY_IDS, type ConfigToyId } from '../config/schema';
 import { BRICK_GUIDES } from '../brick/guides';
+import type { Lang } from '../input/lang';
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] { const e = document.createElement(tag); e.textContent = text; e.className = className; return e; }
 function button(text: string, fn: () => void, disabled = false): HTMLButtonElement { const b = el('button',text); b.type = 'button'; b.disabled = disabled; b.addEventListener('click',fn); return b; }
 const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',yellow:'Жёлтый',white:'Белый',gray:'Серый',black:'Чёрный' };
@@ -18,6 +19,7 @@ export async function startAdmin(): Promise<void> {
   const header = el('header','','admin__header'); header.append(el('div','BRICK GAME / STUDIO','admin__eyebrow'),el('h1','Ваша коллекция. Ваши игры.'),el('p','Соберите меню каждой приставки, выберите доступные цвета и опубликуйте настройки для всех игроков.'));
   const back = el('a','Открыть коллекцию ↗'); back.href = import.meta.env.BASE_URL; header.append(back); root.append(header);
   const status = el('p','Загрузка конфигурации…','admin__status'); status.setAttribute('role','status'); root.append(status);
+  const general = el('section','','admin__card admin__general'); root.append(general);
   const tabs = el('nav','','admin__tabs'); tabs.setAttribute('aria-label','Приставки'); root.append(tabs);
   const content = el('section','','admin__content'); root.append(content);
   const footer = el('section','','admin__publish');
@@ -39,6 +41,9 @@ export async function startAdmin(): Promise<void> {
   function changed(): void { dirty = true; message('Есть неопубликованные изменения.'); }
   function option(value: string, text: string): HTMLOptionElement { const o = el('option',text); o.value = value; return o; }
   function render(): void {
+    const languageLabel = el('label','Язык по умолчанию'); const languageSelect = el('select'); languageSelect.setAttribute('aria-label','Язык по умолчанию'); languageSelect.append(option('ru','Русский'),option('en','English')); languageSelect.value = config.language;
+    languageSelect.addEventListener('change',() => { config.language = languageSelect.value as Lang; changed(); }); languageLabel.append(languageSelect);
+    general.replaceChildren(el('h2','Общие настройки'),el('p','Язык интерфейса для тех, кто ещё не выбирал его кнопкой RU / EN. Выбор игрока важнее.','admin__eyebrow'),languageLabel);
     tabs.replaceChildren(...CONFIG_TOY_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
     content.replaceChildren(); const toy = config.toys[active];
     const appearance = el('section','','admin__card'); appearance.append(el('h2',TOYS[active].name),el('p','Цвета корпуса','admin__eyebrow'));
