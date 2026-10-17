@@ -20,7 +20,6 @@ import { InputHub } from './hub';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import type { LedState } from './leds';
-import { ORIGINAL_LEVEL_COUNT, type OriginalSlot } from './levels';
 import { SettingsDialog } from './settingsUi';
 import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
@@ -505,8 +504,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   }, { signal });
 
   // ── Пульт справа и угловое меню ──────────────────────────────────────
-  // Уровней у заглушки нет: девять плиток заперты, список карт недоступен, спидрана и музыки нет.
-  const slots: OriginalSlot[] = Array.from({ length: ORIGINAL_LEVEL_COUNT }, (_, index) => ({ number: index + 1, levelId: null }));
+  // Уровень и скорость выбираются штатными кнопками игрушки; отдельного блока карт в пульте нет.
   const none = (): void => undefined;
   const panelActions: ControlPanelActions = {
     pickShell: (shell) => {
@@ -541,14 +539,14 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     pickUser: none,
   };
   const controls = new ControlPanel(refs.sideCtl, {
-    slots,
+    slots: [],
     bundled: [],
     actions: panelActions,
     tickRateHz: TETRIS_TICK_HZ,
     onPointerUse: refocusGame,
     toy: model.id,
     shells: model.shells,
-    levelsDisabled: !model.levels,
+    levels: false,
     music: false,
     speedrun: false,
     remote: ['onoff', 'sp', 'reset'],

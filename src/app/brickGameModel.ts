@@ -98,8 +98,7 @@ function wordmark(games: number): SVGSVGElement {
 export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
   const { lid, base } = refs;
   lid.querySelector('.lid__art')?.remove();
-  // Вверху у корпуса винтов нет: остаются только нижние.
-  for (const screw of lid.querySelectorAll('.lid__screw--tl,.lid__screw--tr')) screw.remove();
+  for (const screw of lid.querySelectorAll('.lid__screw')) screw.remove();
   const face = lid.querySelector('.lid__face')!;
   face.append(h('span', { class: 'classic__edition', 'aria-hidden': 'true' }, 'DOT MATRIX • 10 × 20'));
   const bezel = lid.querySelector('.lid__bezel');
@@ -107,7 +106,6 @@ export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
   const leds = lid.querySelector<HTMLElement>('.lid__leds');
   if (leds) leds.hidden = true;
   base.replaceChildren(
-    h('div', { class: 'classic__ridge', 'aria-hidden': 'true' }),
     h(
       'div',
       { class: 'classic__system' },
@@ -153,6 +151,7 @@ export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
 }
 export function brickGameMini(view: View = 'full', shell?: Shell): SVGSVGElement {
   const body = shell === 'white' ? '#eee' : shell === 'gray' ? '#cecec0' : shell === 'black' ? '#222725' : 'var(--classic-body, #cecec0)';
+  const ridge = shell === 'white' ? '#fafaf6' : shell === 'black' ? '#3b403c' : shell === 'gray' ? '#e0e0d5' : 'var(--classic-hi, #e0e0d5)';
   const screen = view === 'screen';
   const root = svg('svg', { class: 'view-mini', viewBox: `0 0 44 ${screen ? 52 : 100}`, 'aria-hidden': 'true', focusable: 'false' });
   root.append(
@@ -163,7 +162,8 @@ export function brickGameMini(view: View = 'full', shell?: Shell): SVGSVGElement
   );
   if (!screen)
     root.append(
-      svg('path', { d: 'M2 51Q22 58 42 51', fill: 'none', stroke: '#999', 'stroke-width': '2' }),
+      svg('path', { d: 'M2 46Q22 43 42 46V53Q22 59 2 53Z', fill: ridge }),
+      svg('path', { d: 'M2 53Q22 59 42 53', fill: 'none', stroke: '#111', opacity: '.3', 'stroke-width': '1.2' }),
       ...[9, 18, 27, 35].map((x) => svg('circle', { cx: String(x), cy: '60', r: '2', fill: '#e5cb52' })),
       svg('path', { d: 'M13 68h5v5h5v5h-5v5h-5v-5H8v-5h5Z', fill: '#e5cb52' }),
       svg('circle', { cx: '33', cy: '73', r: '5', fill: '#e5cb52' }),

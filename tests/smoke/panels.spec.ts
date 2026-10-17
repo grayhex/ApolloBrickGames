@@ -229,6 +229,7 @@ test('уровни: девять оригинальных открыты (гей
   await ready(page);
   const tiles = page.locator('#original-levels .lv');
   await expect(tiles).toHaveCount(9);
+  expect((await page.locator('#original-levels').boundingBox())!.height).toBeLessThanOrEqual(70);
   await expect(tiles.nth(0)).toHaveAttribute('aria-current', 'true');
   for (let i = 0; i < 9; i++) await expect(tiles.nth(i)).not.toHaveAttribute('aria-disabled', 'true');
   expect(await level(page)()).toBe('mario-1');
@@ -539,5 +540,14 @@ test('индикатор паузы слева рядом с клавиатур�
   await expect(pause).toHaveAttribute('data-state', 'off');
   await page.locator('#corner-lang').click();
   await expect(pause).toHaveAttribute('title', 'Game is not paused');
+});
+
+test('выбор уровней в пульте есть только у Mario', async ({ page }) => {
+  for (const toy of ['clock99', 'seabattle', 'tank168', 'alibaba', 'minibrick', 'brickgame']) {
+    await page.goto(`./?toy=${toy}&view=full`);
+    await page.locator('body:not([data-booting])').waitFor();
+    await expect(page.locator('#toy')).toHaveAttribute('data-model', toy);
+    await expect(page.locator('#blk-levels,#original-levels,#user-level')).toHaveCount(0);
+  }
 });
 
