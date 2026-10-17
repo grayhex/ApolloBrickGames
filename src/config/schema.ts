@@ -3,6 +3,7 @@ import { BRICK_GAMES } from '../brick/games';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { APOLLO_IDS, TOYS, type ApolloId } from '../app/toys';
 import { missingButtons } from '../app/bodyButtons';
+import { DEFAULT_LANG, isLang, type Lang } from '../input/lang';
 export interface ConfigGame {
   id: GameId;
   modes?: number[];
@@ -22,6 +23,8 @@ export const CONFIG_TOY_IDS = [...APOLLO_IDS, 'brickgame'] as const;
 export type ConfigToyId = ApolloId | 'brickgame';
 export interface SiteConfig {
   version: 1;
+  /** Язык интерфейса по умолчанию, пока игрок не выбрал свой (RU / EN); в старых документах нет — русский. */
+  language: Lang;
   toys: Record<ConfigToyId, ConfigToy>;
 }
 const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['gray', 'black'], defaultShell: 'gray', thumbShell: DEFAULT_THUMB_SHELL };
@@ -41,6 +44,8 @@ const record = (v: unknown): v is Record<string, unknown> => typeof v === 'objec
 /** Reject the whole document; never partly apply an invalid menu. Return a clean value without extra fields. */
 export function validateConfig(value: unknown): SiteConfig {
   if (!record(value) || value['version'] !== 1 || !record(value['toys'])) throw new Error('Нужна конфигурация версии 1 с настройками игрушек.');
+  const language = value['language'] ?? DEFAULT_LANG;
+  if (!isLang(language)) throw new Error('Язык по умолчанию: ru или en.');
   const toys = {} as SiteConfig['toys'];
   for (const id of CONFIG_TOY_IDS) {
     const source = id === 'brickgame' && !('brickgame' in value['toys']) ? UNIVERSAL_DEFAULT : value['toys'][id];
@@ -87,5 +92,5 @@ export function validateConfig(value: unknown): SiteConfig {
       throw new Error(`${id}: стартовая игра должна входить в меню.`);
     toys[id] = { games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, thumbShell: thumbShell as Shell, defaultGame: source['defaultGame'] as GameId };
   }
-  return { version: 1, toys };
+  return { version: 1, language, toys };
 }

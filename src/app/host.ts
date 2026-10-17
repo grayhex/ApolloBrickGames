@@ -1,6 +1,7 @@
 import { preloadRoom, startApp } from './app';
 import type { AppHandle, Carry } from './lifecycle';
 import { startTetrisApp } from './tetrisApp';
+import { alignDock } from './dockAlign';
 import { mountToySwitch } from './toySwitch';
 import { engineOf, parseToy, TOYS, toyHref, type ToyId } from './toys';
 
@@ -63,6 +64,7 @@ export async function startHost(initial: ToyId): Promise<void> {
     return engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry);
   };
 
+  alignDock();
   const toySwitch = mountToySwitch(nav, initial, (id) => void switchTo(id, true));
   let current: { id: ToyId; handle: AppHandle } = { id: initial, handle: await mount(initial) };
   // Цвет, который выбрал игрок: если у очередной игрушки его нет (она открывается другим), выбор не теряется — следующая, где он есть, снова его получит.

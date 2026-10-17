@@ -49,8 +49,24 @@ function sideMotif(side: 'left' | 'right'): SVGSVGElement {
   return motif;
 }
 
-/** Подпись кнопки направления: как у консоли — UP/DOWN листают варианты (MODE), LEFT — уровень (LEVEL), RIGHT — скорость (SPEED). */
-const DIRECTION_CAPTIONS: Readonly<Record<string, string>> = { up: 'MODE', left: 'LEVEL', right: 'SPEED', down: 'MODE' };
+/**
+ * Подписи кнопок — рядом с ними, а не на них, в две строки, как на оригинале: слово кнопки и её дело в меню (UP/DOWN листают варианты — MODE, LEFT — уровень,
+ * RIGHT — скорость, ROTATE — следующая игра). Название большой кнопки на оригинале — ROTATE / DIRECTION.
+ */
+const KEY_CAPTIONS: Readonly<Record<string, readonly [string, string?]>> = {
+  up: ['UP', 'MODE'],
+  left: ['LEFT', 'LEVEL'],
+  right: ['RIGHT', 'SPEED'],
+  down: ['DOWN', 'MODE'],
+  jump: ['ROTATE', 'DIRECTION'],
+  fire: ['FIRE'],
+};
+
+/** Крест из четырёх стрелок между кнопками направлений (печатный значок оригинала). */
+function padCross(): SVGSVGElement {
+  const arrow = (rotation: number): SVGPathElement => svg('path', { d: 'M12 1.2 15.6 6H13.2V10.8H10.8V6H8.4Z', transform: `rotate(${rotation} 12 12)`, fill: 'currentColor' });
+  return svg('svg', { class: 'classic__pad', viewBox: '0 0 24 24', 'aria-hidden': 'true' }, arrow(0), arrow(90), arrow(180), arrow(270));
+}
 
 /**
  * Надпись на корпусе по снимку оригинала (серия E-S88): «BRICK» и «GAME» — две параллельные строки, поднимающиеся вправо под углом, ниже и правее —
@@ -63,12 +79,14 @@ function wordmark(games: number): SVGSVGElement {
   const count = `${games} IN 1`;
   const text = (cls: string, x: number, y: number, length: number, content: string): SVGTextElement =>
     svg('text', { class: cls, x: String(x), y: String(y), textLength: String(length), lengthAdjust: 'spacing' }, content);
+  /** Рука с двумя пальцами «V» (на оригинале знак с раскрытыми ладонями показывает по два пальца каждая рука): ладонь, два пальца врозь и короткий большой палец. */
   const hand = (side: -1 | 1): SVGGElement => {
-    const palm = svg('ellipse', { cx: '0', cy: '0', rx: '3.3', ry: '3.9', fill: 'currentColor' });
-    const fingers = [-34, -12, 10, 32].map((angle) =>
-      svg('line', { x1: '0', y1: '-2', x2: '0', y2: '-7.6', stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', transform: `rotate(${angle} 0 1)` }),
+    const palm = svg('ellipse', { cx: '0', cy: '0', rx: '3.4', ry: '3.7', fill: 'currentColor' });
+    const fingers = [-15, 15].map((angle) =>
+      svg('line', { x1: '0', y1: '-1.6', x2: '0', y2: '-8.4', stroke: 'currentColor', 'stroke-width': '2.1', 'stroke-linecap': 'round', transform: `rotate(${angle} 0 0)` }),
     );
-    return svg('g', { transform: `translate(${side * 11.6} 11.4) rotate(${side * 22})` }, palm, ...fingers);
+    const thumb = svg('ellipse', { cx: String(-side * 3.5), cy: '1.2', rx: '1.3', ry: '2.1', fill: 'currentColor', transform: `rotate(${side * 28} ${-side * 3.5} 1.2)` });
+    return svg('g', { transform: `translate(${side * 12.2} 11.6) rotate(${side * 14})` }, palm, ...fingers, thumb);
   };
   mark.append(
     svg(
@@ -100,9 +118,10 @@ export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
   lid.querySelector('.lid__art')?.remove();
   for (const screw of lid.querySelectorAll('.lid__screw')) screw.remove();
   const face = lid.querySelector('.lid__face')!;
-  face.append(h('span', { class: 'classic__edition', 'aria-hidden': 'true' }, 'DOT MATRIX • 10 × 20'));
   const bezel = lid.querySelector('.lid__bezel');
   for (const side of ['left', 'right'] as const) (bezel ?? face).append(sideMotif(side));
+  // Надпись SUPER стоит в разрыве верхней линии жёлтой рамки, цветом узора (как на оригинале).
+  (bezel ?? face).append(h('span', { class: 'classic__super', 'aria-hidden': 'true' }, 'SUPER'));
   const leds = lid.querySelector<HTMLElement>('.lid__leds');
   if (leds) leds.hidden = true;
   base.replaceChildren(
@@ -114,38 +133,30 @@ export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
         ['sound', 'SOUND'],
         ['sp', 'START / PAUSE'],
       ].map(([key, label]) =>
-        h('button', { type: 'button', class: 'key classic__small', tabindex: '-1', 'data-key': key!, 'aria-label': label! }, h('span', {}, label!)),
+        h(
+          'button',
+          { type: 'button', class: 'key classic__small', tabindex: '-1', 'data-key': key!, 'aria-label': label! },
+          key === 'sp' ? h('span', { class: 'classic__two' }, h('b', {}, 'START'), h('i', {}, 'PAUSE')) : h('span', {}, label!),
+        ),
       ),
       h('button', { type: 'button', class: 'classic__reset', 'data-action': 'reset', 'aria-label': 'RESET — Menu' }, h('span', {}, 'RESET')),
     ),
+    padCross(),
     ...[
-      ['up', '▲'],
-      ['left', '◀︎'],
-      ['right', '▶︎'],
-      ['down', '▼'],
+      ['up', 'UP'],
+      ['left', 'LEFT'],
+      ['right', 'RIGHT'],
+      ['down', 'DOWN'],
       ['jump', 'ROTATE'],
       ['fire', 'FIRE'],
-    ].map(([key, label]) =>
-      h(
+    ].map(([key, label]) => {
+      const [first, second] = KEY_CAPTIONS[key!]!;
+      return h(
         'button',
         { type: 'button', class: `key classic__key classic__key--${key}`, tabindex: '-1', 'data-key': key!, 'aria-label': label! },
-        ...(DIRECTION_CAPTIONS[key!]
-          ? [
-              svg(
-                'svg',
-                { viewBox: '0 0 20 20', class: 'classic__arrow', 'aria-hidden': 'true' },
-                svg('path', {
-                  d: 'M10 4L16 15H4Z',
-                  fill: 'currentColor',
-                  transform: `rotate(${{ up: 0, right: 90, down: 180, left: 270 }[key!] ?? 0} 10 10)`,
-                }),
-              ),
-              h('i', { class: 'classic__caption', 'aria-hidden': 'true' }, DIRECTION_CAPTIONS[key!]!),
-            ]
-          : [h('span', {}, label!)]),
-      ),
-    ),
-    h('div', { class: 'classic__speaker', 'aria-hidden': 'true' }, ...Array.from({ length: 5 }, () => h('i'))),
+        h('span', { class: 'classic__cap', 'aria-hidden': 'true' }, h('b', {}, first), ...(second ? [h('i', {}, second)] : [])),
+      );
+    }),
     wordmark(model.games.length),
   );
 }

@@ -2455,6 +2455,8 @@ body:not([data-booting]) .chrome-dock {
 /* Слева сверху: индикаторы ввода, пауза и настройки управления. */
 .topleft { position: fixed; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 14px; }
 body:not([data-chrome='toy']) .topleft { display: none; }
+/* On wide windows the dock sits over the help panel: same centre, same width (set by dockAlign.ts). */
+.topleft[data-aligned] { left: var(--dock-left); width: var(--dock-width); box-sizing: border-box; justify-content: space-between; padding-inline: 10px; }
 body:not([data-booting]) .topleft { animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both; }
 
 :is(.chrome-dock .corner__btn) {
@@ -4488,7 +4490,6 @@ body[data-chrome='toy'] .arena[data-model='brickgame']:not([data-compact]) { --s
 .toy[data-model='brickgame'] .lid__face { padding:4cqw 0 0; align-content:start; }
 .toy[data-model='brickgame'] .lid__bezel { width:76cqw; border:3cqw solid #303734; border-radius:2cqw; padding:1cqw; background:#717b68; box-shadow:0 .8cqw 1cqw #fff8,inset 0 .7cqw .8cqw #0006; }
 .toy[data-model='brickgame'] .lid__bezel::before { display:none; }
-.classic__edition { font:600 2.4cqw/2 system-ui,sans-serif; letter-spacing:.35cqw; color:#3c4740; }
 .toy[data-model='brickgame'] .toy__lower { margin-top:0; margin-bottom:0; }
 .toy[data-model='brickgame'] .toy__lower-in { padding-bottom:0; }
 .toy[data-model='brickgame'] .base { aspect-ratio:400 / 490; background:transparent; box-shadow:none; border-radius:0 0 8cqw 8cqw; }
@@ -4504,14 +4505,20 @@ body[data-chrome='toy'] .arena[data-model='brickgame']:not([data-compact]) { --s
 .toy[data-model='brickgame'] .classic__key--jump { left:66cqw; top:43cqw; width:23cqw; height:23cqw; transform:rotate(-15deg); }
 .toy[data-model='brickgame'] .classic__key--fire { left:70cqw; top:74cqw; width:15cqw; height:15cqw; }
 .toy[data-model='brickgame'] .key[data-pressed],.classic__reset:active { box-shadow:inset 0 1cqw 1.2cqw #000b; filter:brightness(.85); }
-.classic__speaker { position:absolute; left:13cqw; top:88cqw; width:32cqw; display:grid; gap:1.4cqw; transform:rotate(-12deg); }
-.classic__speaker i { height:1cqw; border-radius:1cqw; background:#4b564d; box-shadow:0 .4cqw .2cqw #fff8; }
-.classic__wordmark { position:absolute; right:2.5cqw; bottom:2.5cqw; width:64cqw; height:38.4cqw; overflow:visible; pointer-events:none; color:#313a34; }
+.classic__wordmark { position:absolute; right:1.5cqw; bottom:1.5cqw; width:76cqw; height:45.6cqw; overflow:visible; pointer-events:none; color:#313a34; }
 .classic__brand { font:600 10.4px/1 'Century Gothic','Avenir Next',Futura,'Trebuchet MS',Verdana,sans-serif; fill:currentColor; }
 .classic__count { font:300 5.6px/1 'Century Gothic','Avenir Next',Futura,'Trebuchet MS',Verdana,sans-serif; fill:currentColor; }
 .classic__face { color:#d9524d; }
-.classic__caption { position:absolute; left:50%; top:calc(100% + .7cqw); transform:translateX(-50%); font:700 1.95cqw/1 system-ui,sans-serif; font-style:normal; letter-spacing:.12cqw; white-space:nowrap; color:var(--classic-print); pointer-events:none; }
-.toy[data-model='brickgame'] .classic__key--up .classic__caption { top:auto; bottom:calc(100% + .7cqw); }
+.classic__cap { position:absolute; left:50%; top:calc(100% + .9cqw); transform:translateX(-50%); display:grid; justify-items:center; gap:.15cqw; font:700 1.95cqw/1.1 system-ui,sans-serif; letter-spacing:.1cqw; white-space:nowrap; pointer-events:none; }
+.classic__cap b { font-weight:700; color:var(--classic-cap); }
+.classic__cap i { font-style:normal; color:var(--classic-print); }
+.toy[data-model='brickgame'] .classic__key--up .classic__cap { top:auto; bottom:calc(100% + .9cqw); }
+.toy[data-model='brickgame'] .classic__key--jump .classic__cap { top:calc(100% + 2.6cqw); font-size:2.3cqw; transform:translateX(-50%) rotate(15deg); }
+.classic__system button .classic__two { top:-7.3cqw; }
+.classic__two { display:grid; gap:.1cqw; justify-items:center; line-height:1.1; }
+.classic__two b { font-weight:700; color:var(--classic-cap); }
+.classic__two i { font-style:normal; }
+.classic__pad { position:absolute; left:27.2cqw; top:54.2cqw; width:7.6cqw; height:7.6cqw; color:var(--classic-cap); pointer-events:none; }
 .toy[data-model='brickgame']:not([data-fire='on']) .classic__key--fire { display:none; }
 .toy[data-model='brickgame'][data-compact] .toy__lower { margin-bottom:0; }
 body[data-toy='brickgame'] #view-state { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -4524,7 +4531,6 @@ body[data-toy='brickgame'] #view-state { grid-template-columns:repeat(2,minmax(0
   body[data-chrome='toy'] .arena > :is(.side--info,.side--ctl) { grid-row:2; margin-top:0; max-height:calc(100dvh - 170px); align-self:start; }
 }
 
-.toy[data-model='brickgame'] .classic__arrow { position:static; width:4cqw; height:4cqw; }
 @media (max-width:400px) {
   body[data-chrome='toy'] .site-brand { width:80px; top:10px; }
   .topleft .corner__btn { width:24px; }
@@ -4533,20 +4539,22 @@ body[data-toy='brickgame'] #view-state { grid-template-columns:repeat(2,minmax(0
 }
 @media (min-width:1200px) { body[data-chrome='toy'] .side--ctl { align-self:start; } }
 
-.toy[data-model='brickgame'] .classic__arrow { margin:auto; }
 
 /* Two classic colourways, with the yellow keys and printed green cells of the references. */
-[data-shell='gray'] { --classic-motif:#2c5a42; --tone:#b8bdad; --classic-body:#cecec0; --classic-hi:#e0e0d5; --classic-lo:#9eaa99; --classic-print:#344b40; --classic-border:#929c8d; }
-[data-shell='black'] { --classic-motif:#6fae8a; --tone:#b5bd94; --classic-body:#222725; --classic-hi:#3b403c; --classic-lo:#0c100e; --classic-print:#e2e5d7; --classic-border:#0b100d; }
+[data-shell='gray'] { --classic-cap:#a07f14; --classic-motif:#2c5a42; --tone:#b8bdad; --classic-body:#cecec0; --classic-hi:#e0e0d5; --classic-lo:#9eaa99; --classic-print:#344b40; --classic-border:#929c8d; }
+[data-shell='black'] { --classic-cap:#f0d34a; --classic-motif:#6fae8a; --tone:#b5bd94; --classic-body:#222725; --classic-hi:#3b403c; --classic-lo:#0c100e; --classic-print:#e2e5d7; --classic-border:#0b100d; }
 .toy[data-model='brickgame'] { background:linear-gradient(110deg,var(--classic-hi),var(--classic-body) 70%,var(--classic-lo)); }
 .toy[data-model='brickgame'][data-shell='black'] { box-shadow:inset 1cqw 0 .7cqw #ffffff24,inset -1cqw 0 .8cqw #0008; }
 .toy[data-model='brickgame'] .lid__bezel { position:relative; width:72cqw; border-color:var(--classic-body); box-shadow:inset .5cqw .8cqw 1cqw #0008,0 .4cqw .7cqw #ffffff28; }
 /* The yellow frame hugs the recessed glass like the original: a plain even rounded rectangle, not an outline drawn at an offset. */
-.toy[data-model='brickgame'] .lid__bezel::after { content:''; position:absolute; inset:-1.3cqw; border:1.3cqw solid #efd23c; border-radius:1.9cqw; pointer-events:none; box-shadow:inset 0 0 .3cqw #7a6a1466,0 .2cqw .3cqw #0003; }
-.classic__edition,.classic__system button span,.classic__wordmark { color:var(--classic-print); }
+.toy[data-model='brickgame'] .lid__bezel::after { content:''; position:absolute; inset:-1.3cqw; border:1.3cqw solid #efd23c; border-radius:1.9cqw; pointer-events:none; box-shadow:inset 0 0 .3cqw #7a6a1466,0 .2cqw .3cqw #0003;
+  /* The top edge is open in the middle, where the word SUPER is printed. */
+  -webkit-mask:linear-gradient(#000 0 0),linear-gradient(#000 0 0); -webkit-mask-size:100% 100%,27cqw 2.8cqw; -webkit-mask-position:0 0,50% 0; -webkit-mask-repeat:no-repeat; -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0),linear-gradient(#000 0 0); mask-size:100% 100%,27cqw 2.8cqw; mask-position:0 0,50% 0; mask-repeat:no-repeat; mask-composite:exclude; }
+.classic__super { position:absolute; left:50%; top:-3.1cqw; transform:translateX(-50%); font:800 4.3cqw/1 'Arial Black','Century Gothic',Arial,sans-serif; letter-spacing:.55cqw; color:var(--classic-motif); pointer-events:none; }
+.classic__system button span,.classic__wordmark { color:var(--classic-print); }
 .toy[data-model='brickgame'] .key,.toy[data-model='brickgame'] .classic__reset { background:linear-gradient(145deg,#f8e58a,#e6cc56 60%,#b49c32); color:#625626; border-color:#84772b; box-shadow:inset .4cqw .5cqw .5cqw #fff8,0 .6cqw .5cqw #0006; }
 .toy[data-model='brickgame'] .classic__small,.toy[data-model='brickgame'] .classic__reset { width:6cqw; height:6cqw; border-radius:50%; }
-.classic__speaker i { background:var(--classic-lo); box-shadow:0 .3cqw .15cqw #ffffff38; }
 .classic__motif { position:absolute; top:50%; width:8.8cqw; height:67.5cqw; transform:translateY(-50%); overflow:visible; pointer-events:none; color:var(--classic-motif); }
 .classic__motif--left { right:calc(100% + 3.7cqw); }
 .classic__motif--right { left:calc(100% + 3.7cqw); }
@@ -4567,7 +4575,13 @@ body[data-toy='brickgame'] #shell-picker { grid-template-columns:repeat(2,minmax
 .side--ctl:has(> .leaderboard) > .ctl-card { padding:16px; border:1px solid var(--line); border-radius:20px; background:linear-gradient(145deg,var(--card-hi),var(--card-lo)); box-shadow:var(--card-shadow); }
 .side--ctl:has(> .leaderboard) .side__sec { margin-block:8px; padding-block:8px; }
 .side--ctl:has(> .leaderboard) .vol { font-size:11px; }
-.leaderboard.side { display:block; width:100%; flex:none; padding:15px; border-radius:18px; overflow:visible; max-height:none; margin:0; opacity:1; }
+.leaderboard.side { display:block; width:100%; flex:none; padding:15px; border:1px solid var(--line); border-radius:18px; overflow:visible; max-height:none; margin:0; opacity:1; }
+/* The records card is never dimmed: the fading belongs to the control card, not to the column that also holds the records. */
+.side--ctl:has(> .leaderboard) { opacity:1; }
+.side--ctl:has(> .leaderboard) > .ctl-card { opacity:.55; transition:opacity 240ms ease; }
+.side--ctl:has(> .leaderboard):is(:hover,:focus-within) > .ctl-card { opacity:1; }
+@media (hover:none) { .side--ctl:has(> .leaderboard) > .ctl-card { opacity:.9; } }
+@media (prefers-reduced-motion:reduce) { .side--ctl:has(> .leaderboard) > .ctl-card { transition:none; } }
 .leaderboard__heading { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .leaderboard__heading h2 { margin:0; font-size:13px; letter-spacing:.06em; }
 .leaderboard__badge { font:700 9px/1.6 system-ui,sans-serif; letter-spacing:.1em; color:var(--accent); }
@@ -4608,3 +4622,17 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
   .side--ctl:has(> .leaderboard) > .ctl-card { flex:0 1 auto; min-height:0; overflow:auto; scrollbar-width:thin; }
   .side--ctl > .leaderboard { flex:0 0 auto; max-height:min(62dvh,calc(100dvh - 330px)); overflow:auto; }
 }
+
+/* Games block heading: previous / next / launch next to «Games on the device». */
+.side__hrow { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.side__hrow .side__h { margin:0; flex:1; min-width:0; }
+.gnav { display:flex; gap:4px; }
+.gnav__btn { display:grid; place-items:center; width:26px; height:24px; padding:0; border:1px solid var(--line); border-radius:8px; background:var(--chip); color:var(--text); font:700 15px/1 system-ui,sans-serif; cursor:pointer; transition:border-color .18s,background .18s; }
+.gnav__btn:hover { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,var(--chip)); }
+.gnav__btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.gnav__btn--launch { width:30px; font-size:11px; color:var(--accent); }
+@media (prefers-reduced-motion:reduce) { .gnav__btn { transition:none; } }
+/* Looped real gameplay next to the start field. */
+.gclip { color:var(--text); }
+.gclip__canvas { display:block; margin-inline:auto; padding:4px; background:color-mix(in srgb,var(--lcd,#bbb) 26%,transparent); border-radius:6px; }
+.gquick__schemes .gclip { max-width:145px; }

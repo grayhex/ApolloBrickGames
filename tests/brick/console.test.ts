@@ -1,6 +1,6 @@
 import { LIBRARY_IDS } from '../../src/games/library';
 import { describe, expect, it } from 'vitest';
-import {
+import { GAME_OVER_TICKS,
   BRICK_COLS,
   BRICK_ROWS,
   BrickBase,
@@ -268,7 +268,7 @@ describe('консоль: игра', () => {
     expect(console_.phase).toBe('paused');
     expect(console_.resume()).toEqual([{ type: 'resumed' }]);
     console_.step(press('up'));
-    for (let i = 0; i < 100; i++) console_.step(NEUTRAL_BRICK_INPUT);
+    for (let i = 0; i < GAME_OVER_TICKS + 2; i++) console_.step(NEUTRAL_BRICK_INPUT);
     expect(console_.phase).toBe('over');
     expect(console_.overFill).toBe(BRICK_ROWS);
     const first = console_.game;

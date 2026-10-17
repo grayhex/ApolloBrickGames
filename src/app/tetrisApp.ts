@@ -1,3 +1,4 @@
+import type { GameId } from '../games/catalog';
 import { LeaderboardCard } from './leaderboard';
 import { ACTIONS } from '../core/actions';
 import { BrickAudio } from '../audio/brick';
@@ -158,6 +159,11 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     onOpen: () => openMenu(),
     onClose: () => closeMenu(),
     onPointerUse: () => refocusGame(),
+    // Выбор игры в левой панели переключает меню консоли (пока она в меню); «запуск» выбирает игру и начинает партию.
+    onChoose: (id) => {
+      if (powered && bootTicks === 0 && cabinet.inMenu) cabinet.selectGame(id);
+    },
+    onLaunch: (id) => launchGame(id),
   });
   const applyLangUi = (): void => {
     const lang = getLang();
@@ -303,6 +309,12 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
       bootTicks -= 1; // проверка экрана при включении: ввод не принимается
       return;
     }
+    if (pendingLaunch) {
+      const id = pendingLaunch;
+      pendingLaunch = null;
+      launchGame(id);
+      return;
+    }
     // CONFIRM относится к диалогам; Space / кнопка A геймпада здесь выполняют ROTATE и листают игры.
     const startCmd = (raw.pressed & START) !== 0;
     const pauseCmd = (raw.pressed & PAUSE) !== 0;
@@ -387,6 +399,20 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     audio.unlock();
     audio.play('confirm');
   };
+  /** Кнопка «запуск» в левой панели: включить игрушку (если выключена), выбрать игру в меню и начать партию — как S./P. на корпусе. */
+  let pendingLaunch: GameId | null = null;
+  const launchGame = (id: GameId): void => {
+    if (!model.menu) return;
+    if (!powered) setPower(true);
+    if (bootTicks > 0) {
+      pendingLaunch = id; // проверка экрана при включении: запуск — сразу после неё
+      return;
+    }
+    if (!cabinet.inMenu || cabinet.phase !== 'ready') restartGame();
+    cabinet.selectGame(id);
+    emit(cabinet.start());
+    refocusGame();
+  };
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
@@ -469,6 +495,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length] ?? 'ru';
     hub.updateSettings((s) => {
       s.display.lang = next;
+      s.display.langSet = true;
     });
     setLang(next);
     applyLangUi();

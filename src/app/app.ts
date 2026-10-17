@@ -791,6 +791,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length] ?? 'ru';
     hub.updateSettings((s) => {
       s.display.lang = next;
+      s.display.langSet = true;
     });
     setLang(next); // панели и открытые диалоги перерисуются сами
     applyLangUi();

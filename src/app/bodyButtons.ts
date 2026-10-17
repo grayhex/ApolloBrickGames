@@ -26,9 +26,13 @@ export function missingButtons(def: BrickGameDef, model: ToyModel): BrickAction[
 /** Можно ли назначить игру игрушке: все нужные кнопки есть на корпусе. */
 export const canAssign = (def: BrickGameDef, model: ToyModel): boolean => missingButtons(def, model).length === 0;
 
-/** Справка приставки описывает только физически доступные действия, включая сочетания. */
-export function guideForBody(guide: GameGuideData, model: ToyModel): GameGuideData {
+/**
+ * Справка приставки описывает только физически доступные действия, включая сочетания. У универсальной приставки FIRE есть лишь в играх, которым она нужна
+ * (`BrickGameDef.usesFire`), поэтому описание остальных игр её не упоминает.
+ */
+export function guideForBody(guide: GameGuideData, model: ToyModel, def?: BrickGameDef): GameGuideData {
   const have = bodyActions(model);
+  if (!def?.usesFire) have.delete('fire');
   return {
     ...guide,
     controls: guide.controls

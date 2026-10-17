@@ -1,6 +1,6 @@
 import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
-import {
+import { GAME_OVER_TICKS_PER_ROW, GAME_OVER_HOLD_TICKS,
   BRICK_COLS,
   BRICK_ROWS,
   CLEAR_LOSE_TICKS,
@@ -41,7 +41,7 @@ const INTRO = msToTicks(1500);
 /** Взрыв: четыре прохода по семи волнам по 4 такта. */
 const KABOOM = 4 * 7 * 4;
 /** Столько тактов нужно, чтобы дойти от первой строки до конца игры: заливка рядов и пауза. */
-const GAME_OVER_TICKS = BRICK_ROWS * 2 + 30;
+const GAME_OVER_TICKS = Math.ceil(BRICK_ROWS * GAME_OVER_TICKS_PER_ROW + GAME_OVER_HOLD_TICKS);
 const SLOW = 1_000_000;
 
 const make = (mode = 0, options: BrickGameOptions = {}): InvadersGame => new InvadersGame({ seed: 7, mode, ...options });

@@ -4,7 +4,7 @@ import { validateConfig } from '../../src/config/schema';
 import { categoryFor, RULESET_VERSION, STANDARD_START } from '../../src/leaderboards/category';
 const category = categoryFor({ gameId: 'dance', mode: 0, toyId: 'brickgame', rulesetVersion: RULESET_VERSION, startProfile: STANDARD_START });
 const RUN = '12345678-1234-4123-8123-123456789abc';
-async function setup(page: Page, options: { offline?: boolean; finishFail?: boolean; publishFail?: boolean } = {}) {
+async function setup(page: Page, options: { offline?: boolean; finishFail?: boolean; publishFail?: boolean; unpublishable?: boolean } = {}) {
   const config = validateConfig(defaults);
   config.toys.brickgame.games = [{ id: 'dance' }];
   config.toys.brickgame.defaultGame = 'dance';
@@ -52,7 +52,8 @@ async function setup(page: Page, options: { offline?: boolean; finishFail?: bool
       await route.abort('failed');
       return;
     }
-    await route.fulfill({ json: path === 'publish' ? { ok: true, best: true } : { ok: true } });
+    // Сервер сам говорит, стоит ли предлагать публикацию: результат нулевой или не лучше опубликованного этим игроком — нет.
+    await route.fulfill({ json: path === 'publish' ? { ok: true, best: true } : path === 'finish' && options.unpublishable ? { ok: true, publishable: false, personalBest: 900 } : { ok: true, publishable: true, personalBest: null } });
   });
   // A fresh token is minted only by execute(), using the run's cData.
   await page.addInitScript(() => {
@@ -143,6 +144,15 @@ test('standard run registers canonical parameters, freezes score, publishes volu
   expect(published).toEqual({ category, runId: RUN, nickname: 'Игрок_42', token: `fresh-1-${RUN}` });
   const values = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.includes('leaderboard'))));
   expect(values).toEqual({ 'brick-game:leaderboard-nickname': 'Игрок_42' });
+});
+test('publication is not offered when the server says the result is zero or not better than the same player\'s published best', async ({ page }) => {
+  const requests = await setup(page, { unpublishable: true });
+  await boot(page);
+  await playAndLose(page);
+  await expect.poll(() => requests.filter((r) => r.path === 'finish').length).toBe(1);
+  await expect(page.locator('#leaderboard-nickname')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Опубликовать', exact: true })).toHaveCount(0);
+  expect(requests.filter((r) => r.path === 'publish')).toHaveLength(0);
 });
 test('failed finish can retry without changing score, and failed network never blocks gameplay', async ({ page }) => {
   const requests = await setup(page, { finishFail: true });

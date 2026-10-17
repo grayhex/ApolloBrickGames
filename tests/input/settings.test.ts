@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setDefaultLang } from '../../src/input/lang';
 import { ACTIONS, actionBit } from '../../src/core';
 import {
   compileBindings,
@@ -140,11 +141,11 @@ describe('сохранение настроек', () => {
   });
 
   it('настройки отображения: слой неактивных сегментов; старый цвет игнорируется, мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(defaultSettings().display).toEqual({ ghost: null, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru', langSet: false });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(saved.display).toEqual({ ghost: false, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru', langSet: false });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(junk.display).toEqual({ ghost: null, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru', langSet: false });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
     expect(sanitizeSettings({ version: 1, display: { music: 'remaster' } }).display.music).toBe('remaster');
@@ -167,9 +168,9 @@ describe('сохранение настроек', () => {
     expect(sanitizeSettings({ version: 1, display: { volume: 0.5, musicVolume: 'громко' } }).display.musicVolume).toBe(0.5);
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' };
+    settings.display = { ghost: true, sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en', langSet: true };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en', langSet: true });
   });
 });
 
@@ -178,5 +179,23 @@ describe('громкость музыки: ползунки «Звук» и «М
     const display = { ...defaultSettings().display, volume: 0.3, musicVolume: 0.8 };
     expect(musicVolumeOf({ ...display, music: 'original' })).toBe(0.3);
     expect(musicVolumeOf({ ...display, music: 'remaster' })).toBe(0.8);
+  });
+});
+
+describe('язык по умолчанию из админки', () => {
+  afterEach(() => setDefaultLang('ru'));
+  it('для тех, кто язык не выбирал, берётся язык по умолчанию; сделанный игроком выбор сильнее', () => {
+    setDefaultLang('en');
+    expect(defaultSettings().display).toMatchObject({ lang: 'en', langSet: false });
+    expect(sanitizeSettings({ version: 1 }).display.lang).toBe('en');
+    expect(sanitizeSettings({ version: 1, display: { lang: 'ru', langSet: false } }).display.lang).toBe('en'); // русский «по умолчанию» не выбор
+    expect(sanitizeSettings({ version: 1, display: { lang: 'ru', langSet: true } }).display).toMatchObject({ lang: 'ru', langSet: true });
+    expect(sanitizeSettings({ version: 1, display: { lang: 'de', langSet: true } }).display).toMatchObject({ lang: 'en', langSet: false });
+    setDefaultLang('ru');
+    // Старые сохранения без признака: нерусский язык выбрал сам игрок.
+    expect(sanitizeSettings({ version: 1, display: { lang: 'en' } }).display).toMatchObject({ lang: 'en', langSet: true });
+    setDefaultLang('en');
+    expect(sanitizeSettings({ version: 1, display: { lang: 'en' } }).display).toMatchObject({ lang: 'en', langSet: true });
+    expect(sanitizeSettings({ version: 1, display: { lang: 'ru' } }).display).toMatchObject({ lang: 'en', langSet: false });
   });
 });

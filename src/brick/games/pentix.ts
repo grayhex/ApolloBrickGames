@@ -41,7 +41,6 @@ export class PentixGame extends TetrisCore {
 
 export const pentixDef: BrickGameDef = {
   id: 'pentix',
-  usesFire: true, // жёсткое падение
   declaredModes: null,
   modes: PENTIX_VARIANTS.map(describeVariant),
   create: (options) => new PentixGame(options),

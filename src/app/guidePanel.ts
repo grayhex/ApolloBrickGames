@@ -1,6 +1,7 @@
 import type { GameGuideData, GuideButton, GuideControl, GuideScheme, GuideText } from '../brick/guide';
 import type { BrickGameDef } from '../brick/types';
 import type { Lang } from '../input/lang';
+import { clipCanvas, clipFor } from './demoClip';
 import { h } from './dom';
 import { t } from './i18n';
 
@@ -127,10 +128,16 @@ export function guideBlocks(guide: GameGuideData, def: BrickGameDef | undefined,
 }
 
 /** Always-visible essentials, with small LCD illustrations; development notes live in Help. */
-export function compactGuide(guide: GameGuideData, lang: Lang): HTMLElement[] {
+export function compactGuide(guide: GameGuideData, lang: Lang, gameId?: string): HTMLElement[] {
+  // Слева — поле в начале партии, справа — зацикленный фрагмент настоящей игры («геймплей»); остальные схемы — в справке.
+  const clip = gameId ? clipFor(gameId) : null;
+  const first = guide.schemes[0];
+  const schemes = clip
+    ? [...(first ? [schemeEl(first, lang)] : []), h('figure', { class: 'gscheme gclip' }, clipCanvas(clip, t('games.clip')), h('figcaption', { class: 'gscheme__cap' }, t('games.clip')))]
+    : guide.schemes.slice(0, 2).map((scheme) => schemeEl(scheme, lang));
   return [
     h('p', { class: 'gtext gpanel__goal' }, guide.goal[lang]),
-    h('div', { class: 'gquick__schemes' }, ...guide.schemes.slice(0, 2).map((scheme) => schemeEl(scheme, lang))),
+    h('div', { class: 'gquick__schemes' }, ...schemes),
     h('ul', { class: 'grules' }, ...guide.rules.slice(0, 3).map((rule) => h('li', {}, rule[lang]))),
     h('dl', { class: 'gctl' }, ...guide.controls.filter((control) => control.button !== 'start').flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, controlCap(control))), h('dd', {}, control.text[lang])])),
   ];

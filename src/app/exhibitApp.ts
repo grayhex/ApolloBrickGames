@@ -192,6 +192,7 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
     () => {
       hub.updateSettings((s) => {
         s.display.lang = getLang() === 'ru' ? 'en' : 'ru';
+        s.display.langSet = true;
       });
       setLang(hub.settings.display.lang);
     },

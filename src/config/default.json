@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "language": "ru",
   "toys": {
     "mario": {
       "games": [
@@ -156,6 +157,168 @@
       "games": [
         {
           "id": "tetris"
+        },
+        {
+          "id": "tetris-pentix"
+        },
+        {
+          "id": "tetris-big"
+        },
+        {
+          "id": "racing"
+        },
+        {
+          "id": "racing-shooting"
+        },
+        {
+          "id": "tank"
+        },
+        {
+          "id": "frog"
+        },
+        {
+          "id": "shooting"
+        },
+        {
+          "id": "shooting-array"
+        },
+        {
+          "id": "shooting-figures"
+        },
+        {
+          "id": "construction"
+        },
+        {
+          "id": "arkanoid"
+        },
+        {
+          "id": "sea-battle"
+        },
+        {
+          "id": "romeo-juliet"
+        },
+        {
+          "id": "2048"
+        },
+        {
+          "id": "meteor-fighter"
+        },
+        {
+          "id": "tetris-shooting"
+        },
+        {
+          "id": "snake"
+        },
+        {
+          "id": "maze"
+        },
+        {
+          "id": "jigsaw"
+        },
+        {
+          "id": "pong"
+        },
+        {
+          "id": "pong-double"
+        },
+        {
+          "id": "pneumatic-ball"
+        },
+        {
+          "id": "honeybee"
+        },
+        {
+          "id": "obstacle-race"
+        },
+        {
+          "id": "matching-blocks"
+        },
+        {
+          "id": "whack-a-mole"
+        },
+        {
+          "id": "simon"
+        },
+        {
+          "id": "dice"
+        },
+        {
+          "id": "dance"
+        },
+        {
+          "id": "quarth"
+        },
+        {
+          "id": "lights-out"
+        },
+        {
+          "id": "boat-racing"
+        },
+        {
+          "id": "talking-shooting"
+        },
+        {
+          "id": "ufo-raiders"
+        },
+        {
+          "id": "tetris-flicker"
+        },
+        {
+          "id": "super-tank"
+        },
+        {
+          "id": "racing-pickup"
+        },
+        {
+          "id": "punch-racing"
+        },
+        {
+          "id": "sokoban"
+        },
+        {
+          "id": "columns"
+        },
+        {
+          "id": "columns-flicker"
+        },
+        {
+          "id": "space-invaders"
+        },
+        {
+          "id": "peg-solitaire"
+        },
+        {
+          "id": "basket"
+        },
+        {
+          "id": "dr-mario"
+        },
+        {
+          "id": "bowling"
+        },
+        {
+          "id": "dual-shooting"
+        },
+        {
+          "id": "racing-four"
+        },
+        {
+          "id": "arkanoid-dots"
+        },
+        {
+          "id": "flappy-bird"
+        },
+        {
+          "id": "reversi"
+        },
+        {
+          "id": "fill-connect"
+        },
+        {
+          "id": "digger"
+        },
+        {
+          "id": "helicopter-bomber"
         }
       ],
       "defaultGame": "tetris",

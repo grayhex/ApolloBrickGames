@@ -178,6 +178,29 @@ describe('leaderboard Worker + actual SQLite transactions', () => {
     expect((await s.publish(cookie, run)).status).toBe(200);
     expect((await s.top(run.category)).entries[0]).toEqual({ rank: 1, nickname: 'Player', score: 123, toyId: 'tank168' });
   });
+  it('offers publication only for a positive score that beats the same guest\'s published best', async () => {
+    const s = setup(),
+      cookie = await s.guest();
+    const finish = async (score: number) => {
+      const run = await s.start(cookie);
+      const response = await s.send('leaderboards/finish', { ...run, score }, { cookie });
+      expect(response.status).toBe(200);
+      return { run, result: (await response.json()) as { publishable: boolean; personalBest: number | null } };
+    };
+    const zero = await finish(0);
+    expect(zero.result).toMatchObject({ publishable: false, personalBest: null });
+    expect((await s.publish(cookie, zero.run)).status).toBe(409); // нулевой результат опубликовать нельзя
+    const first = await finish(500);
+    expect(first.result).toMatchObject({ publishable: true, personalBest: null });
+    expect((await s.publish(cookie, first.run)).status).toBe(200);
+    expect((await finish(300)).result).toMatchObject({ publishable: false, personalBest: 500 });
+    expect((await finish(500)).result).toMatchObject({ publishable: false, personalBest: 500 }); // равный — не лучше
+    expect((await finish(501)).result).toMatchObject({ publishable: true, personalBest: 500 });
+    const other = await s.guest(); // другой игрок со своим результатом выше нуля — предложение ему положено
+    const run = await s.start(other);
+    const result = (await (await s.send('leaderboards/finish', { ...run, score: 100 }, { cookie: other })).json()) as { publishable: boolean };
+    expect(result.publishable).toBe(true);
+  });
   it('requires completion and fresh Siteverify with exact hostname/action/run binding', async () => {
     const s = setup(),
       cookie = await s.guest(),

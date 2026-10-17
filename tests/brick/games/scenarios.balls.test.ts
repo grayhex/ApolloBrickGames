@@ -9,7 +9,7 @@ import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
  * Ожидаемые числа выписаны по правилам (справка `src/brick/guides/library.ts`, `docs/brick/library.md`, `docs/brick/tetris.md`), а не взяты из констант игры.
  */
 import { describe, expect, it } from 'vitest';
-import {
+import { GAME_OVER_TICKS,
   BRICK_ROWS,
   NEUTRAL_BRICK_INPUT,
   makeBrickInput,
@@ -74,7 +74,7 @@ const dropToLock = (g: BrickGame): BrickEvent[] => untilEvent(g, 'lock', 300, ho
 
 /** Конец партии: заливка поля и удержание кадра, затем фаза `over`; после неё игра больше не отвечает на такты. */
 const expectFinished = (g: BrickGame): void => {
-  until(g, () => g.phase === 'over', 120);
+  until(g, () => g.phase === 'over', GAME_OVER_TICKS + 10);
   expect(g.step(makeBrickInput(['left', 'rotate']))).toEqual([]);
   expect(g.overFill).toBe(BRICK_ROWS);
 };

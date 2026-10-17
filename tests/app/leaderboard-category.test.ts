@@ -31,7 +31,9 @@ describe('stable leaderboard categories', () => {
   });
   it('merges only identical rules and effective controls', () => {
     expect(categoryFor(s('clock99', 'racing'))).toBe(categoryFor(s('brickgame', 'racing')));
-    expect(categoryFor(s('clock99'))).not.toBe(categoryFor(s('brickgame')));
+    // Tetris на универсальной модели без FIRE (кнопка нужна только Jig Saw): управление то же, что у Apollo, — рейтинг общий.
+    expect(categoryFor(s('clock99'))).toBe(categoryFor(s('brickgame')));
+    expect(categoryFor(s('brickgame', 'jigsaw'))).toMatch(/matrix-fire$/); // единственная игра, где FIRE необходима, рейтинг отдельный
     expect(categoryFor(s('clock99', 'tetris', 2))).not.toBe(categoryFor(s('clock99', 'tetris', 1)));
     for (const toy of ['clock99', 'seabattle', 'tank168', 'brickgame']) expect(validateCategory(categoryFor(s(toy)))).toBe(categoryFor(s(toy)));
     expect(() => validateCategory('tetris:01:r1:standard-v1:matrix')).toThrow();

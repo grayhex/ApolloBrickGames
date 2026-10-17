@@ -285,9 +285,10 @@ export class LeaderboardCard {
           }
           return;
         }
-        await api('finish', { category: ticket.category, runId: ticket.runId, score });
+        const result = await api('finish', { category: ticket.category, runId: ticket.runId, score });
         if (this.signal.aborted || generation !== this.generation) return;
-        this.finished = { ticket, score };
+        // Публикацию не предлагаем, если результат нулевой или не лучше уже опубликованного этим игроком (знает сервер: гость определяется подписанной cookie).
+        this.finished = result['publishable'] === false ? null : { ticket, score };
         this.status = null;
         this.render();
       } catch {

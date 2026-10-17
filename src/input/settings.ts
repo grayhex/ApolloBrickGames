@@ -9,7 +9,7 @@ import {
   type Bindings,
 } from './bindings';
 import type { PadInfo } from './gamepad';
-import { DEFAULT_LANG, isLang, type Lang } from './lang';
+import { DEFAULT_LANG, getDefaultLang, isLang, type Lang } from './lang';
 
 export const SETTINGS_KEY = 'crocodile-mario:settings:v1';
 export const SETTINGS_VERSION = 1;
@@ -57,6 +57,8 @@ export interface Settings {
     theme: Theme;
     /** Язык интерфейса игрушки: настройки, справка и панели. */
     lang: Lang;
+    /** Игрок сам выбрал язык (кнопка RU / EN): только тогда его выбор сильнее языка по умолчанию из админки. */
+    langSet: boolean;
   };
 }
 
@@ -70,7 +72,7 @@ export function defaultSettings(): Settings {
     version: SETTINGS_VERSION,
     keyboard: cloneBindings(DEFAULT_KEYBOARD_BINDINGS),
     gamepad: { byId: {}, stickThreshold: DEFAULT_STICK_THRESHOLD, preferredId: null },
-    display: { ghost: null, sound: true, volume: DEFAULT_VOLUME, musicVolume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: DEFAULT_LANG },
+    display: { ghost: null, sound: true, volume: DEFAULT_VOLUME, musicVolume: DEFAULT_VOLUME, music: 'original', theme: 'dark', lang: getDefaultLang(), langSet: false },
   };
 }
 
@@ -109,6 +111,8 @@ export function sanitizeSettings(raw: unknown): Settings {
   const level = (value: unknown, fallback: number): number =>
     typeof value === 'number' && Number.isFinite(value) ? clamp(value, 0, 1) : fallback;
   const volume = level(display['volume'], DEFAULT_VOLUME);
+  // Старые сохранения без признака: язык, отличный от русского, мог выбрать только игрок.
+  const langSet = display['langSet'] === true || (display['langSet'] === undefined && isLang(display['lang']) && display['lang'] !== DEFAULT_LANG);
 
   return {
     version: SETTINGS_VERSION,
@@ -128,7 +132,8 @@ export function sanitizeSettings(raw: unknown): Settings {
       musicVolume: level(display['musicVolume'], volume), // старые сохранения без музыки: связана со «Звуком»
       music: MUSICS.find((music) => music === display['music']) ?? 'original',
       theme: THEMES.find((theme) => theme === display['theme']) ?? 'dark',
-      lang: isLang(display['lang']) ? display['lang'] : DEFAULT_LANG,
+      lang: langSet && isLang(display['lang']) ? display['lang'] : getDefaultLang(),
+      langSet: langSet && isLang(display['lang']),
     },
   };
 }

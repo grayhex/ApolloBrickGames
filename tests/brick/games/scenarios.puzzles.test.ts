@@ -10,7 +10,7 @@ import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
  * присваиванием публичным полям (как в review.test.ts), но исход всегда получается настоящими тактами `step`.
  */
 import { describe, expect, it } from 'vitest';
-import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
+import { GAME_OVER_TICKS, NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame } from '../../../src/brick';
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
 import { MergeGame, ReversiGame } from '../../../src/brick/games/library/puzzles';
 import { DiceGame, MatchingGame, PadsGame } from '../../../src/brick/games/library/arcade';
@@ -45,9 +45,9 @@ const waitFor = (g: BrickGame, type: BrickEvent['type'], max: number): { ticks: 
 };
 /** Площадки Simon, танцев и «Крота»: номер 0–3 — вверх, вправо, вниз, влево (как в справке). */
 const KEYS = ['up', 'right', 'down', 'left'] as const;
-/** Конец партии: анимация заливки поля (по два такта на ряд и пауза) длится меньше 100 тактов; потом фаза `over`. */
+/** Конец партии: анимация заливки поля (по 127 мс на ряд и пауза) длится `GAME_OVER_TICKS` тактов; потом фаза `over`. */
 const finishAnimation = (g: BrickGame): void => {
-  run(g, 100);
+  run(g, GAME_OVER_TICKS + 2);
   expect(g.phase).toBe('over');
   expect(g.step(makeBrickInput(['left', 'rotate']))).toEqual([]);
 };

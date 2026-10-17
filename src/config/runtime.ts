@@ -2,8 +2,10 @@ import raw from './default.json';
 import { validateConfig, universalGames, CONFIG_TOY_IDS, type SiteConfig } from './schema';
 import { GAMES } from '../games/catalog';
 import { TOYS } from '../app/toys';
+import { setDefaultLang } from '../input/lang';
 export const defaultConfig = (): SiteConfig => validateConfig(raw);
 export function applyConfig(config: SiteConfig): void {
+  setDefaultLang(config.language);
   for (const id of CONFIG_TOY_IDS) {
     const model = TOYS[id],
       settings = config.toys[id];

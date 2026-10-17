@@ -4,6 +4,7 @@ import { SeaBattleGame, seaBattleDef, placeFleet, FLEET } from '../../../src/bri
 import { RomeoJulietGame, romeoJulietDef } from '../../../src/brick/games/romeoJuliet';
 import { makePiece } from '../../../src/brick/games/tetris/shapes';
 import { makeBrickInput, NEUTRAL_BRICK_INPUT } from '../../../src/brick/types';
+import { GAME_OVER_TICKS } from '../../../src/brick/base';
 import { Rng } from '../../../src/brick/rng';
 import { conformance } from '../conformance';
 
@@ -53,7 +54,7 @@ describe('Sea Battle', () => {
     expect(game.score).toBe(160); run(game, 120); expect(game.level).toBe(2);
     game['own'].fill(1); game['enemyShots'].fill(1); game['enemyShots'][0] = 0; game['reply'] = 1;
     expect(game.step(NEUTRAL_BRICK_INPUT)).toContainEqual({ type: 'gameOver' });
-    run(game, 80); expect(game.phase).toBe('over');
+    run(game, GAME_OVER_TICKS + 2); expect(game.phase).toBe('over');
   });
 });
 describe('Romeo and Juliet', () => {
