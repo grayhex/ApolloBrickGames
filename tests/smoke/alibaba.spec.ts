@@ -6,35 +6,32 @@ async function exhibit(page: Page, query = '&view=full'): Promise<void> {
   await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
 }
 
-test('семейства сохраняют игру, ссылки переключают корпус и работают с историей браузера', async ({ page }) => {
+test('прокрутка карусели сохраняет игру, ссылки переключают корпус и работают с историей браузера', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  const requests: string[] = [];
-  page.on('request', (request) => requests.push(request.url()));
   await page.goto('./?toy=clock99&power=on');
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
-  await expect(page.locator('[data-family=apollo] .toysw__item')).toHaveCount(4);
-  expect(requests.some((url) => url.includes('alibaba-logos'))).toBe(false);
-  await page.locator('#toy-family-other').click();
+  await expect(page.locator('#real-models .toysw__item')).toHaveCount(6);
+  await page.getByRole('button',{name:'Следующие модели'}).click();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
-  await expect(page.locator('[data-family=other] .toysw__item')).toHaveCount(2);
+  await expect(page.locator('#real-models .toysw__item')).toHaveCount(6);
   await page.locator('.toysw__item[data-toy=alibaba]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
   await expect(page.locator('.alibaba-key')).toHaveCount(8);
   await page.goBack();
-  await expect(page.locator('#toy-family-apollo')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.toysw__item[data-toy=clock99]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('.alibaba-key')).toHaveCount(0);
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
   await page.goForward();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'alibaba');
-  await expect(page.locator('#toy-family-other')).toHaveAttribute('aria-selected', 'true');
-  await page.locator('#toy-family-apollo').focus();
-  await page.keyboard.press('ArrowDown');
-  await expect(page.locator('#toy-family-other')).toBeFocused();
+  await expect(page.locator('.toysw__item[data-toy=alibaba]')).toHaveAttribute('aria-current', 'page');
+  await page.locator('.toysw__item[data-toy=alibaba]').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.toysw__item[data-toy=minibrick]')).toBeFocused();
   await page.keyboard.press('Home');
   await page.locator('.toysw__item[data-toy=mario]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
@@ -88,8 +85,8 @@ test('на узких экранах оба семейства помещают�
     await page.setViewportSize({ width, height: 740 });
     await exhibit(page);
     await page.addStyleTag({ content: "*{font-family:'DejaVu Sans',sans-serif !important}" });
-    for (const family of ['apollo', 'other']) {
-      await page.locator(`#toy-family-${family}`).click();
+    for (const direction of ['Следующие модели', 'Предыдущие модели']) {
+      await page.getByRole('button',{name:direction}).click();
       const menu = (await page.locator('#toy-switch').boundingBox())!;
       expect(menu.x).toBeGreaterThanOrEqual(0);
       expect(menu.x + menu.width).toBeLessThanOrEqual(width + 1);

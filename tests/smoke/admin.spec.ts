@@ -14,7 +14,7 @@ test('admin: edits, validates, publishes and loads a shared menu in a fresh page
     expect(route.request().headers()['authorization']).toBe('Bearer browser-test-key');
     expect(data.revision).toBe(revision); config = validateConfig(data.config); revision++; await route.fulfill({json:{revision,config}});
   });
-  await page.goto('./admin'); await expect(page.getByRole('heading',{name:'Четыре корпуса. Ваша коллекция.'})).toBeVisible();
+  await page.goto('./admin'); await expect(page.getByRole('heading',{name:'Ваша коллекция. Ваши игры.'})).toBeVisible();
   await expect(page.getByText('TETRIS (99) — ожидает реализации')).toBeVisible();
   await page.getByRole('button',{name:'Часы+99',exact:true}).click();
   await page.getByLabel('Добавить игру',{exact:true}).selectOption('snake'); await page.getByRole('button',{name:'Добавить в меню',exact:true}).click();

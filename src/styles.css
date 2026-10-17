@@ -4440,3 +4440,122 @@ body[data-chrome='toy'] .arena > .brand {
   .toysw .toysw__item { gap:5px; padding-inline:6px; font-size:11px; }
 }
 .toysw .toysw__name { overflow-wrap:anywhere; }
+
+/* Shared chrome: controls on the left, the illustrated collection mark above the remote. */
+.topleft #corner { position:static; display:flex; padding:0 0 0 5px; border-left:1px solid var(--line); gap:3px; }
+.site-brand { display:none; }
+body[data-chrome='toy'] .site-brand { display:block; position:absolute; top:12px; right:20px; width:240px; z-index:4; }
+.site-brand img { display:block; width:100%; height:auto; filter:drop-shadow(0 1px 1px #0003); }
+:root:not([data-theme='light']) .site-brand img { filter:drop-shadow(0 0 8px #cce4c01a); }
+body[data-chrome='toy'] { --head-h:82px; }
+body[data-chrome='toy'] .arena > .brand { height:76px; width:min(820px,calc(100vw - 580px)); }
+.toysw { display:flex; align-items:stretch; border-radius:20px; padding:5px; gap:8px; min-width:0; }
+.toysw__universal { flex:0 0 100px; flex-direction:column; justify-content:center; gap:4px; height:auto; border-radius:15px; }
+.toysw__universal .toysw__icon { width:20px; height:35px; }
+.toysw__real { flex:1; min-width:0; border-left:1px solid var(--line); padding-left:8px; }
+.toysw__heading { display:flex; align-items:center; gap:5px; height:20px; padding:0 5px; }
+.toysw__caption { flex:1; font-size:10px; font-weight:650; letter-spacing:.06em; color:var(--muted); }
+.toysw__arrow { border:0; background:transparent; color:var(--text); font-size:20px; line-height:18px; width:26px; cursor:pointer; border-radius:5px; }
+.toysw__arrow:hover { background:var(--chip); }
+.toysw__arrow:disabled { opacity:.25; cursor:default; }
+.toysw__carousel { display:flex; overflow-x:auto; scrollbar-width:none; scroll-snap-type:x proximity; gap:4px; }
+.toysw__carousel::-webkit-scrollbar { display:none; }
+.toysw__carousel .toysw__item { flex:0 0 135px; min-height:42px; height:auto; border-radius:12px; padding:5px 7px; scroll-snap-align:start; }
+.toysw__carousel .toysw__name { display:block; white-space:normal; max-width:none; font-size:11px; line-height:1.25; }
+.toysw__carousel .toysw__icon { flex:0 0 22px; width:22px; height:33px; }
+.toysw__item { transition:background .18s, border-color .18s, color .18s, box-shadow .18s; }
+@media (min-width:1200px) { body[data-chrome='toy'] .side--ctl { margin-top:112px; max-height:calc(100dvh - 150px); } }
+@media (max-width:1199px) {
+  body[data-chrome='toy'] { --head-h:134px; }
+  body[data-chrome='toy'] .arena > .brand { width:min(820px,calc(100vw - 32px)); margin-top:56px; }
+  body[data-chrome='toy'] .site-brand { width:155px; top:3px; right:14px; }
+}
+@media (max-width:899px) {
+  body[data-chrome='toy'] .arena > .brand { margin-top:0; height:76px; }
+  body[data-chrome='toy'] { --head-h:82px; }
+}
+@media (max-width:540px) {
+  body[data-chrome='toy'] .site-brand { width:112px; top:6px; right:8px; }
+  .topleft { gap:2px; padding:3px; }
+  .topleft #corner { padding-left:3px; gap:0; }
+  .topleft .corner__btn { width:27px; height:30px; }
+  .topleft .corner__btn--lang { width:42px; font-size:9px; }
+  .topleft .dev { width:25px; }
+  .toysw__universal { flex-basis:80px; }
+  .toysw__universal .toysw__name { display:block; font-size:10px; }
+  .toysw__carousel .toysw__item { flex-basis:128px; }
+}
+
+/* Universal grey/black monoblock. Its seam is moulded plastic, never a folding hinge. */
+body[data-chrome='toy'] .arena[data-model='brickgame']:not([data-compact]) { --stage-w:clamp(240px,calc((100dvh - 30px - var(--head-h)) / 2.43),520px); }
+.toy[data-model='brickgame'] { --label:#232927; --key:#303635; --key-lo:#111715; --rim:#c8cbc7; --rim-dark:#a0a6a1; --rim-hi:#e1e3df; --rim-lo:#666f69; --tone:#aebbb1; --flip:0s; border-radius:8cqw; background:linear-gradient(110deg,#d8dad6,#b9bdb8 70%,#939a94); box-shadow:inset 1cqw 0 .7cqw #fff8,inset -1cqw 0 .8cqw #0004; }
+.toy[data-model='brickgame'] .toy__lidslot { perspective:none; }
+.toy[data-model='brickgame'] .lid { transform:none; transition:none; }
+.toy[data-model='brickgame'] .lid__shell,
+.toy[data-model='brickgame'] .lid__cover,
+.toy[data-model='brickgame'] .toy__band,
+.toy[data-model='brickgame'] .hinge { display:none; }
+.toy[data-model='brickgame'] .lid__front { aspect-ratio:400 / 475; padding:6cqw; }
+.toy[data-model='brickgame'] .lid__face { padding:4cqw 0 0; align-content:start; }
+.toy[data-model='brickgame'] .lid__bezel { width:76cqw; border:3cqw solid #303734; border-radius:2cqw; padding:1cqw; background:#717b68; box-shadow:0 .8cqw 1cqw #fff8,inset 0 .7cqw .8cqw #0006; }
+.toy[data-model='brickgame'] .lid__bezel::before { display:none; }
+.classic__edition { font:600 2.4cqw/2 system-ui,sans-serif; letter-spacing:.35cqw; color:#3c4740; }
+.toy[data-model='brickgame'] .lid__screw { width:2.4cqw; height:2.4cqw; }
+.toy[data-model='brickgame'] .toy__lower { margin-top:0; margin-bottom:0; }
+.toy[data-model='brickgame'] .toy__lower-in { padding-bottom:0; }
+.toy[data-model='brickgame'] .base { aspect-ratio:400 / 490; background:transparent; box-shadow:none; border-radius:0 0 8cqw 8cqw; }
+.classic__ridge { height:11cqw; border-radius:0 0 50% 50%; background:linear-gradient(#c8cdc6,#e3e5df 25%,#b3bab1 60%,#858f85); box-shadow:0 1cqw 1cqw #414b4644; }
+.classic__system { display:flex; justify-content:space-evenly; position:absolute; inset:19cqw 6cqw auto; }
+.toy[data-model='brickgame'] .key,.classic__reset { position:relative; inset:auto; transform:none; padding:0; width:10cqw; height:6cqw; border-radius:3cqw; border:1px solid #161d19; background:linear-gradient(145deg,#535c56,#242c27); box-shadow:inset .4cqw .5cqw .4cqw #ffffff38,0 .8cqw .4cqw #0007; color:#e1e7df; font:650 2.3cqw/1.1 system-ui,sans-serif; cursor:pointer; }
+.classic__system button span { position:absolute; width:20cqw; left:50%; transform:translateX(-50%); top:-5cqw; color:#343e37; font-size:2.1cqw; }
+.toy[data-model='brickgame'] .classic__key { position:absolute; width:12cqw; height:12cqw; border-radius:50%; }
+.toy[data-model='brickgame'] .classic__key--up { left:25cqw; top:38cqw; }
+.toy[data-model='brickgame'] .classic__key--left { left:11cqw; top:52cqw; }
+.toy[data-model='brickgame'] .classic__key--right { left:39cqw; top:52cqw; }
+.toy[data-model='brickgame'] .classic__key--down { left:25cqw; top:66cqw; }
+.toy[data-model='brickgame'] .classic__key--jump { left:66cqw; top:43cqw; width:23cqw; height:23cqw; transform:rotate(-15deg); }
+.toy[data-model='brickgame'] .classic__key--fire { left:70cqw; top:74cqw; width:15cqw; height:15cqw; }
+.toy[data-model='brickgame'] .key[data-pressed],.classic__reset:active { box-shadow:inset 0 1cqw 1.2cqw #000b; filter:brightness(.85); }
+.classic__speaker { position:absolute; left:13cqw; top:88cqw; width:32cqw; display:grid; gap:1.4cqw; transform:rotate(-12deg); }
+.classic__speaker i { height:1cqw; border-radius:1cqw; background:#4b564d; box-shadow:0 .4cqw .2cqw #fff8; }
+.classic__wordmark { position:absolute; right:9cqw; bottom:7cqw; color:#313a34; display:grid; gap:1cqw; transform:rotate(-8deg); text-align:right; }
+.classic__wordmark strong { font:900 5.1cqw/1 system-ui,sans-serif; letter-spacing:-.2cqw; }
+.classic__wordmark span { font:600 1.8cqw/1 system-ui,sans-serif; letter-spacing:.5cqw; }
+.toy[data-model='brickgame'][data-compact] .toy__lower { margin-bottom:0; }
+body[data-toy='brickgame'] #view-state { grid-template-columns:repeat(2,minmax(0,1fr)); }
+@media (max-width:899px) { body[data-chrome='toy'] .arena[data-model='brickgame']:not([data-compact]) { --stage-w:clamp(240px,calc((100dvh - var(--toy-top) - 20px) / 2.15),400px); } }
+@media (prefers-reduced-motion:reduce) { .toysw__item { transition:none; } }
+
+.toy[data-model='brickgame'] .toy__hinge { display:none; }
+@media (min-width:1200px) { body[data-chrome='toy'] .arena > .brand { width:min(820px,calc(100vw - 650px)); } }
+@media (min-width:900px) and (max-width:1199px) {
+  body[data-chrome='toy'] .arena > :is(.side--info,.side--ctl) { grid-row:2; margin-top:0; max-height:calc(100dvh - 170px); align-self:start; }
+}
+
+.toy[data-model='brickgame'] .classic__arrow { position:static; width:4cqw; height:4cqw; }
+@media (max-width:400px) {
+  body[data-chrome='toy'] .site-brand { width:80px; top:10px; }
+  .topleft .corner__btn { width:24px; }
+  .topleft .corner__btn--lang { width:38px; }
+  .topleft .dev { width:22px; }
+}
+@media (min-width:1200px) { body[data-chrome='toy'] .side--ctl { align-self:start; } }
+body[data-toy='brickgame'] #blk-levels { display:none; }
+
+.toy[data-model='brickgame'] .classic__arrow { margin:auto; }
+
+/* Two classic colourways, with the yellow keys and printed green cells of the references. */
+[data-shell='gray'] { --tone:#b8bdad; --classic-body:#cecec0; --classic-hi:#e0e0d5; --classic-lo:#9eaa99; --classic-print:#344b40; --classic-border:#929c8d; }
+[data-shell='black'] { --tone:#b5bd94; --classic-body:#222725; --classic-hi:#3b403c; --classic-lo:#0c100e; --classic-print:#e2e5d7; --classic-border:#0b100d; }
+.toy[data-model='brickgame'] { background:linear-gradient(110deg,var(--classic-hi),var(--classic-body) 70%,var(--classic-lo)); }
+.toy[data-model='brickgame'][data-shell='black'] { box-shadow:inset 1cqw 0 .7cqw #ffffff24,inset -1cqw 0 .8cqw #0008; }
+.toy[data-model='brickgame'] .lid__bezel { width:72cqw; border-color:var(--classic-body); outline:.55cqw solid #d5b945; outline-offset:.6cqw; box-shadow:inset .5cqw .8cqw 1cqw #0008,0 .4cqw .7cqw #ffffff28; }
+.classic__ridge { background:linear-gradient(var(--classic-body),var(--classic-hi) 25%,var(--classic-body) 60%,var(--classic-lo)); }
+.classic__edition,.classic__system button span,.classic__wordmark { color:var(--classic-print); }
+.toy[data-model='brickgame'] .key,.toy[data-model='brickgame'] .classic__reset { background:linear-gradient(145deg,#f8e58a,#e6cc56 60%,#b49c32); color:#625626; border-color:#84772b; box-shadow:inset .4cqw .5cqw .5cqw #fff8,0 .6cqw .5cqw #0006; }
+.toy[data-model='brickgame'] .classic__small,.toy[data-model='brickgame'] .classic__reset { width:6cqw; height:6cqw; border-radius:50%; }
+.classic__speaker i { background:var(--classic-lo); box-shadow:0 .3cqw .15cqw #ffffff38; }
+.classic__motif { position:absolute; top:13cqw; width:6cqw; height:67.5cqw; pointer-events:none; color:#416d52; }
+.classic__motif--left { left:0; }
+.classic__motif--right { right:0; }
+body[data-toy='brickgame'] #shell-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }

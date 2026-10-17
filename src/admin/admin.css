@@ -22,3 +22,5 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 .admin__publish { margin-top:24px; }.admin__publish > button { margin:8px 8px 0 0; }.admin__publish label { max-width:520px; }.admin__import input { font-size:12px; }
 @media(max-width:720px) { .admin { padding:28px 16px; }.admin__content { grid-template-columns:1fr; }.admin__card { padding:18px; } }
 @media(prefers-reduced-motion:reduce) { .admin button { transition:none; } }
+.admin__swatches [data-color=gray]::after { background:#cecec0; }
+.admin__swatches [data-color=black]::after { background:#222725; }

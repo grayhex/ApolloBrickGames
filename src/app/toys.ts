@@ -6,13 +6,13 @@ import type { ToyKeyId } from './toy';
 
 /**
  * Коллекция: четыре складные игрушки Apollo на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
- * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка, в группе «Другие».
+ * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка. Универсальный Brick Game — нескладная приставка для всей матричной библиотеки.
  * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» используют общий BrickConsole с меню игр. Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
  * цвет и вид (свёрнута / полная / только экран) сохраняются, страница не перезагружается (см. `host.ts`).
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -68,7 +68,9 @@ export interface ToyModel {
   /** Рисунок ячейки матрицы: звёздочка или точка в прямоугольнике. */
   glyph: 'star' | 'square';
   /** Боковая панель экрана тетриса: у «Часов+99» значки режима, у «Морского боя» чашка, у «168 в 1 танк» танк. */
-  panel: 'clock' | 'sea' | 'tank';
+  panel: 'clock' | 'sea' | 'tank' | 'classic';
+  /** Universal console has a separate FIRE button and no hinge. */
+  universal?: boolean;
   /** Оформление рамки вокруг экрана: завитки и ромбик по бокам или цветная линия вплотную к экрану. */
   deco: 'flourish' | 'frame';
   /** Светодиоды над экраном (у «Морского боя» их нет). */
@@ -305,6 +307,18 @@ export const TOYS: Record<ToyId, ToyModel> = {
       down: 'help.m.down',
       jump: 'help.m.rotate',
     },
+  },
+  brickgame: {
+    id: 'brickgame', family: 'other', name: 'Brick Game', universal: true,
+    shells: ['gray', 'black'], defaultShell: 'gray',
+    games: [{ id: 'tetris', label: 'Tetris', status: 'ready' }], defaultGame: 'tetris',
+    menu: true, gameKeys: 'digits', glyph: 'square', panel: 'classic',
+    deco: 'frame', leds: false, info: true, pack: null, levels: false,
+    lcd: { bg: '#b8c397', ink: '#29352b' }, stageLabel: 'stage.label.brickgame',
+    labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START/PAUSE'},{key:'sound',top:'SOUND'},{key:'fire',top:'FIRE'}],
+      up: 'UP', left: 'LEFT', right: 'RIGHT', down: 'DOWN', big: 'ROTATE' },
+    keyWhat: { onoff:'help.row.onoff', sp:'help.row.sp', sound:'help.row.sound', fire:'key.fire',
+      left:'help.m.left', right:'help.m.right', up:'help.m.up', down:'help.m.down', jump:'help.m.rotate' },
   },
   alibaba: {
     id: 'alibaba', family: 'other', name: 'Alibaba Dance 99 in 1',

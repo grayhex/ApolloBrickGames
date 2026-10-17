@@ -14,7 +14,9 @@ import { DEFAULT_LANG, isLang, type Lang } from './lang';
 export const SETTINGS_KEY = 'crocodile-mario:settings:v1';
 export const SETTINGS_VERSION = 1;
 
-export const SHELLS = ['blue', 'red', 'yellow', 'white'] as const;
+export const APOLLO_SHELLS = ['blue', 'red', 'yellow', 'white'] as const;
+export const MONOBLOCK_SHELLS = ['gray', 'black'] as const;
+export const SHELLS = [...APOLLO_SHELLS, ...MONOBLOCK_SHELLS] as const;
 export type Shell = (typeof SHELLS)[number];
 
 /** Фон страницы: тёмный (по умолчанию) или светлый. */

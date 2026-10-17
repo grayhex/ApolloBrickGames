@@ -1,107 +1,96 @@
 import { h } from './dom';
 import { onLangChange, t } from './i18n';
 import { miniConsole } from './shellPicker';
-import { TOY_IDS, TOYS, toyHref, type ToyId, type ToyFamily } from './toys';
+import { TOY_IDS, TOYS, toyHref, type ToyId } from './toys';
 
 export interface ToySwitch {
   setCurrent(id: ToyId): void;
 }
-/** Family tabs keep the original Apollo collection together; console choices remain ordinary links. */
+/** Universal console stays pinned; the real models share one keyboard/touch-scrollable shelf. */
 export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: ToyId) => void): ToySwitch {
-  const families = ['apollo', 'other'] as const;
-  const tabs = h('div', { class: 'toysw__families', role: 'tablist' });
-  const panels = new Map<ToyFamily, HTMLElement>(),
-    buttons = new Map<ToyFamily, HTMLButtonElement>();
-  let active = TOYS[current].family;
-  const show = (family: ToyFamily): void => {
-    active = family;
-    for (const image of panels.get(family)!.querySelectorAll('image[data-src]')) {
-      image.setAttribute('href', image.getAttribute('data-src')!);
-      image.removeAttribute('data-src');
-    }
-    for (const id of families) {
-      const on = id === family;
-      const button = buttons.get(id)!;
-      button.setAttribute('aria-selected', String(on));
-      button.tabIndex = on ? 0 : -1;
-      panels.get(id)!.hidden = !on;
-    }
-  };
-  for (const family of families) {
-    const button = h('button', {
-      type: 'button',
-      class: 'toysw__family',
-      role: 'tab',
-      id: `toy-family-${family}`,
-      'aria-controls': `toy-family-panel-${family}`,
-    });
-    const panel = h('div', {
-      class: 'toysw__items',
-      role: 'tabpanel',
-      id: `toy-family-panel-${family}`,
-      'aria-labelledby': button.id,
-      'data-family': family,
-    });
-    button.addEventListener('click', () => show(family));
-    buttons.set(family, button);
-    panels.set(family, panel);
-    tabs.append(button);
-  }
+  const shelf = h('div', { class: 'toysw__carousel', id: 'real-models', role: 'group' });
+  const title = h('span', { class: 'toysw__caption' });
+  const previous = h('button', { type: 'button', class: 'toysw__arrow', 'aria-controls': 'real-models' }, '‹');
+  const next = h('button', { type: 'button', class: 'toysw__arrow', 'aria-controls': 'real-models' }, '›');
+  const real = h('div', { class: 'toysw__real' }, h('div', { class: 'toysw__heading' }, title, previous, next), shelf);
   const items = TOY_IDS.map((id, index) => {
     const model = TOYS[id],
       icon = miniConsole('white', 100 + index, id);
     icon.classList.add('toysw__icon');
-    if (model.family !== active)
-      for (const image of icon.querySelectorAll('image[href]')) {
-        image.setAttribute('data-src', image.getAttribute('href')!);
-        image.removeAttribute('href');
-      }
     const link = h(
       'a',
       { class: 'toysw__item', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': 'white', 'aria-label': model.name },
       icon,
       h('span', { class: 'toysw__name' }, model.name),
     );
-    panels.get(model.family)!.append(link);
+    if (id !== 'brickgame') shelf.append(link);
     return { id, link };
   });
-  nav.replaceChildren(tabs, ...panels.values());
-  tabs.addEventListener('keydown', (event) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+  const universal = items.find((item) => item.id === 'brickgame')!.link;
+  universal.classList.add('toysw__universal');
+  nav.replaceChildren(universal, real);
+  const scroll = (direction: number): void =>
+    shelf.scrollBy({
+      left: direction * shelf.clientWidth * 0.7,
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    });
+  // Scroll only the shelf: scrollIntoView can also move the page underneath the fixed controls.
+  const reveal = (link: HTMLAnchorElement): void => {
+    const item = link.getBoundingClientRect(),
+      box = shelf.getBoundingClientRect();
+    const left = item.left < box.left ? item.left - box.left : item.right > box.right ? item.right - box.right : 0;
+    shelf.scrollBy({ left, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  };
+  const updateArrows = (): void => {
+    previous.disabled = shelf.scrollLeft < 2;
+    next.disabled = shelf.scrollLeft + shelf.clientWidth >= shelf.scrollWidth - 2;
+  };
+  previous.addEventListener('click', () => scroll(-1));
+  next.addEventListener('click', () => scroll(1));
+  shelf.addEventListener('scroll', updateArrows, { passive: true });
+  new ResizeObserver(updateArrows).observe(shelf);
+  shelf.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const links = items.filter((item) => item.id !== 'brickgame').map((item) => item.link);
+    const index = links.indexOf(document.activeElement as HTMLAnchorElement);
+    if (index < 0) return;
     event.preventDefault();
-    const focused = (event.target as HTMLElement).id === 'toy-family-apollo' ? 'apollo' : 'other';
-    const next = event.key === 'Home' ? 'apollo' : event.key === 'End' ? 'other' : focused === 'apollo' ? 'other' : 'apollo';
-    show(next);
-    buttons.get(next)!.focus();
+    const target =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? links.length - 1
+          : Math.max(0, Math.min(links.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)));
+    links[target]!.focus({ preventScroll: true });
+    reveal(links[target]!);
   });
   const setCurrent = (id: ToyId): void => {
     for (const item of items) {
       if (item.id === id) item.link.setAttribute('aria-current', 'page');
       else item.link.removeAttribute('aria-current');
     }
-    show(TOYS[id].family);
+    requestAnimationFrame(() => {
+      const link = items.find((item) => item.id === id)?.link;
+      if (id !== 'brickgame' && link) reveal(link);
+      updateArrows();
+    });
   };
-  setCurrent(current);
   nav.addEventListener('click', (event) => {
     const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a.toysw__item');
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    const id = TOY_IDS.find((toy) => toy === link.dataset['toy']);
+    const id = TOY_IDS.find((id) => id === link.dataset['toy']);
     if (id) onSelect(id);
   });
   const relabel = (): void => {
     nav.setAttribute('aria-label', t('toy.nav'));
-    tabs.setAttribute('aria-label', t('toy.families'));
-    for (const family of families) {
-      const button = buttons.get(family)!;
-      button.setAttribute('aria-label', t(`toy.family.${family}`));
-      button.replaceChildren(family === 'apollo'
-        ? h('img', { class: 'toysw__logo', src: `${import.meta.env.BASE_URL}brand/apollo-wordmark.svg`, alt: 'Apollo', width: '562', height: '266' })
-        : document.createTextNode(t(`toy.family.${family}`)));
-    }
-    for (const { id, link } of items) link.title = t('toy.title', { name: TOYS[id].name });
+    title.textContent = t('toy.real');
+    shelf.setAttribute('aria-label', t('toy.real'));
+    previous.setAttribute('aria-label', t('toy.previous'));
+    next.setAttribute('aria-label', t('toy.next'));
   };
   relabel();
   onLangChange(relabel);
+  setCurrent(current);
   return { setCurrent };
 }

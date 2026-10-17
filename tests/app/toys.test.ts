@@ -8,12 +8,12 @@ import { APOLLO_IDS, DEFAULT_TOY, engineOf, gameKey, hasReset, keyLabel, parseTo
 import { ILLUSTRATIONS } from '../../src/brick';
 import { GAME_IDS, GAMES } from '../../src/games/catalog';
 import { cloneBindings, DEFAULT_KEYBOARD_BINDINGS } from '../../src/input/bindings';
-import { SHELLS } from '../../src/input/settings';
+import { APOLLO_SHELLS } from '../../src/input/settings';
 
 describe('выбор игрушки', () => {
   it('четыре Apollo и два экспоната: Crocodile Mario по умолчанию, остальные — по адресу ?toy=', () => {
     expect([...APOLLO_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
-    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick']);
+    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame']);
     expect(parseToy('?toy=alibaba')).toBe('alibaba');
     expect(DEFAULT_TOY).toBe('mario');
     expect(parseToy('')).toBe('mario');
@@ -33,7 +33,7 @@ describe('выбор игрушки', () => {
   });
 
   it('только подтверждённые фото цвета: у «Часов+99» жёлтый, красный и белый; у «Морского боя» красный и синий; у «168 в 1 танк» красный и жёлтый; у Mario — все четыре', () => {
-    expect(TOYS.mario.shells).toEqual(SHELLS);
+    expect(TOYS.mario.shells).toEqual(APOLLO_SHELLS);
     expect([...TOYS.clock99.shells].sort()).toEqual(['red', 'white', 'yellow']);
     expect([...TOYS.seabattle.shells].sort()).toEqual(['blue', 'red']);
     expect([...TOYS.tank168.shells].sort()).toEqual(['red', 'yellow']);
@@ -185,7 +185,7 @@ describe('набор игр у консоли', () => {
 
   it('игры консолей пересекаются: тетрис — у всех, стрельба — у Mario и «Часов+99», гонки — у «Часов+99» и «168 в 1», танк — у «Морского боя» и «168 в 1»', () => {
     const owners = (game: (typeof GAME_IDS)[number]): string[] => TOY_IDS.filter((id) => TOYS[id].games.some((slot) => slot.id === game));
-    expect(owners('tetris')).toEqual([...APOLLO_IDS]);
+    expect(owners('tetris')).toEqual([...APOLLO_IDS, 'brickgame']);
     expect(owners('shooting')).toEqual(['mario', 'clock99']);
     expect(owners('racing')).toEqual(['clock99', 'tank168']);
     expect(owners('tank')).toEqual(['clock99', 'seabattle', 'tank168']);

@@ -13,6 +13,7 @@ const GAME_KEYS: Readonly<Partial<Record<ToyKeyId, BrickAction>>> = { left: 'lef
 export function bodyActions(model: ToyModel): Set<BrickAction> {
   const actions = new Set<BrickAction>();
   for (const [key, action] of Object.entries(GAME_KEYS) as [ToyKeyId, BrickAction][]) if (model.keyWhat[key] !== undefined) actions.add(action);
+  if (model.universal) actions.add('fire');
   return actions;
 }
 
@@ -30,8 +31,19 @@ export function guideForBody(guide: GameGuideData, model: ToyModel): GameGuideDa
   const have = bodyActions(model);
   return {
     ...guide,
-    controls: guide.controls.filter((control) =>
-      [control.button, ...(control.with ?? [])].every((button) => BUTTON_ACTIONS[button].every((action) => have.has(action))),
-    ),
+    controls: guide.controls
+      .filter((control) => [control.button, ...(control.with ?? [])].every((button) => BUTTON_ACTIONS[button].every((action) => have.has(action))))
+      .map((control) =>
+        model.universal
+          ? {
+              ...control,
+              keyboardOnly: false,
+              text: {
+                ru: control.text.ru.replace(/^Клавиатура: /, '').replace(' (клавиатура, геймпад)', ''),
+                en: control.text.en.replace(/^Keyboard: /, '').replace(' (keyboard, gamepad)', ''),
+              },
+            }
+          : control,
+      ),
   };
 }

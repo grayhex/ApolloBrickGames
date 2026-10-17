@@ -16,6 +16,8 @@ const tone = (hz: number, ms: number, to?: number): BrickTone => ({ hz, ms, ...(
 const tune = (beat: number, notes: readonly (number | readonly [number, number])[]): BrickTone[] =>
   notes.map((note) => (typeof note === 'number' ? tone(note, beat) : tone(note[0], note[1] * beat)));
 export const BRICK_PHRASES = {
+  // Original short greeting for the universal console, not a firmware transcription.
+  welcome: [{hz:523,ms:100},{hz:659,ms:100},{hz:784,ms:100},{hz:0,ms:50},{hz:1047,ms:180},{hz:784,ms:100},{hz:1047,ms:220}],
   ...B0202_EFFECTS,
   select: [tone(1110, 45), tone(990, 45), tone(825, 45), tone(1560, 45)],
   move: [tone(620, 130, 1450)],

@@ -72,14 +72,14 @@ for (const width of [360, 900, 1440]) {
   test(`chooser at ${width}px: titles fit, white miniatures and Apollo category logo`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('./?view=full');
-    await expect(page.locator('#toy-family-apollo img')).toBeVisible();
+    await expect(page.locator('.site-brand img')).toBeVisible();
     await expect(page.locator('#topleft img')).toHaveCount(0);
-    await expect(page.locator('.toysw__item[data-shell=white]')).toHaveCount(6);
-    for (const group of ['apollo', 'other']) {
-      await page.locator(`#toy-family-${group}`).click();
-      for (const label of await page.locator('.toysw__items:not([hidden]) .toysw__name').all()) await expect(label).toBeVisible();
+    await expect(page.locator('.toysw__item[data-shell=white]')).toHaveCount(7);
+    for (const direction of ['Следующие модели','Предыдущие модели']) {
+      await page.getByRole('button',{name:direction}).click();
+      for (const label of await page.locator('.toysw__carousel .toysw__name').all()) await expect(label).toBeVisible();
       const fits = await page
-        .locator('.toysw__items:not([hidden]) .toysw__name')
+        .locator('.toysw__carousel .toysw__name')
         .evaluateAll((nodes) => nodes.every((n) => n.scrollWidth <= n.clientWidth + 1));
       expect(fits).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);

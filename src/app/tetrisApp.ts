@@ -117,7 +117,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   // Игрушка, на которую перешли с другой на странице, продолжает с тем же видом, цветом и питанием (`carryIn`).
   let view: View = carryIn?.view ?? parseView(params.get('view'), params.get('power') === 'on');
   let powered = carryIn ? carryIn.powered : params.get('power') === 'on';
-  if (powered && view === 'closed') view = 'full';
+  if ((powered || model.universal) && view === 'closed') view = 'full';
   let bootTicks = powered ? BOOT_TICKS : 0;
   let context: 'game' | 'menu' = 'game';
   let gamepadStatus: GamepadStatus = { kind: 'none' };
@@ -247,7 +247,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const refocusGame = (): void => refs.gameArea.focus({ preventScroll: true });
   const setView = (next: View): void => {
     if (next === view) return;
-    if (next === 'closed' && powered) return; // включённую игрушку не закрыть: сначала ON/OFF
+    if (next === 'closed' && (powered || model.universal)) return; // включённую игрушку не закрыть: сначала ON/OFF
     view = next;
     applyView();
     applyDisplay();
@@ -326,7 +326,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
 
   const settingsDialog = new SettingsDialog(refs.settings, hub, {
-    actions: ACTIONS.filter((action) => action !== 'fire'),
+    actions: ACTIONS.filter((action) => model.universal || action !== 'fire'),
     signal,
     onOpen: openMenu,
     onClose: closeMenu,
@@ -384,6 +384,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     if (on) {
       cabinet.restart();
       bootTicks = BOOT_TICKS;
+      if (model.universal) { brickAudio.unlock(); brickAudio.play({type:'started'}, 'brickgame', true); }
     } else {
       suspend();
       audio.play('powerOff');
@@ -404,14 +405,15 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     powered: () => powered,
     onPower: () => setPower(!powered),
     onSound: () => setSound(!hub.settings.display.sound),
-    keyActions: TETRIS_KEY_ACTIONS,
+    keyActions: model.universal ? {...TETRIS_KEY_ACTIONS, fire: maskOf('fire')} : TETRIS_KEY_ACTIONS,
     // TIME/GAME и RESET возвращают в меню; игровых действий у этих кнопок нет.
     onPress: (id) => {
-      if (id !== 'fire') return false;
+      if (id !== 'fire' || model.universal) return false;
       if (model.menu && powered && bootTicks === 0) restartGame();
       return true;
     },
   });
+  refs.base.querySelector('[data-action=reset]')?.addEventListener('click', () => { if (powered && bootTicks === 0) restartGame(); }, { signal });
   const hotkeys: Record<string, 'onoff' | 'sound'> = { KeyO: 'onoff', KeyM: 'sound' };
   const hotkeyAllowed = (event: KeyboardEvent): 'onoff' | 'sound' | null => {
     const id = hotkeys[event.code];

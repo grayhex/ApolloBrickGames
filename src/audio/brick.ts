@@ -7,7 +7,7 @@ const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker
 export function brickSound(event: BrickEvent, game: string, inMenu: boolean): BrickSound | null {
   switch (event.type) {
     case 'started':
-      return TETRIS.has(game) ? 'select' : 'start';
+      return game === 'brickgame' ? 'welcome' : TETRIS.has(game) ? 'select' : 'start';
     case 'move':
       return inMenu ? 'select' : TETRIS.has(game) ? 'b0202_move' : 'move';
     case 'rotate':
@@ -36,7 +36,7 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean): Br
   }
 }
 const PAD_HZ = [523, 659, 392, 330] as const;
-const MUSIC = new Set<BrickSound>(['start', 'win', 'game_over', 'kaboom', 'tetris']);
+const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>
   MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' ? 0 : sound === 'turn' || sound === 'b0202_turn' ? 1 : 2;
 

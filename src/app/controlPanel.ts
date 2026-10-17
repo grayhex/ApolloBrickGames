@@ -223,7 +223,7 @@ export class ControlPanel {
       },
     });
     const state = this.label(h('div', { class: 'seg seg--3', id: 'view-state', role: 'group' }), 'view.aria', 'aria-label');
-    for (const view of VIEWS) {
+    for (const view of VIEWS.filter(v => options.toy !== 'brickgame' || v !== 'closed')) {
       const button = h('button', { type: 'button', class: 'seg__btn', id: `view-${view}`, 'data-view': view, 'aria-pressed': 'false' });
       this.label(button, VIEW_LABELS[view].label, 'aria-label');
       button.append(miniView(view, options.toy ?? 'mario'));

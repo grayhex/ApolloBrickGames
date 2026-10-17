@@ -182,7 +182,7 @@ export class InfoPanel {
       { class: 'about__sticker' },
       h('img', {
         class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
-        src: `${import.meta.env.BASE_URL}brand/${this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
+        src: `${import.meta.env.BASE_URL}brand/${this.toy === 'brickgame' ? 'brick-game-wordmark.svg' : this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
         width: '1000',
         height: '443',
         alt: model.name,
@@ -334,17 +334,19 @@ export class InfoPanel {
     const lang = getLang();
     const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
     const panel = h('div', { class: 'gpanel', role: 'tabpanel', id: 'gpanel' });
+    const chooser = h('select', {class:'pick', id:'guide-game', 'aria-label':t('games.tabs')});
     const tabs = new Map<GameId, HTMLButtonElement>();
     this.tabEls = tabs;
     const ids = model.games.map((game) => game.id);
     const select = (id: GameId, focus = false): void => {
       this.selected = id;
+      chooser.value = id;
       for (const [gameId, tab] of tabs) {
         const on = gameId === id;
         tab.setAttribute('aria-selected', String(on));
         tab.tabIndex = on ? 0 : -1;
       }
-      panel.setAttribute('aria-labelledby', `gtab-${id}`);
+      panel.setAttribute('aria-labelledby', model.universal ? 'games-title' : `gtab-${id}`);
       panel.dataset['game'] = id;
       panel.replaceChildren(...this.gamePanel(model, id));
       if (focus) tabs.get(id)?.focus();
@@ -352,6 +354,7 @@ export class InfoPanel {
     model.games.forEach((game, index) => {
       const key = gameKey(model, index);
       const name = GAMES[game.id].names[lang];
+      chooser.append(h('option',{value:game.id},`${key}: ${name}`));
       const tab = h(
         'button',
         { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${game.id}`, 'data-game': game.id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
@@ -373,13 +376,15 @@ export class InfoPanel {
       event.preventDefault();
       select(ids[next] ?? this.selected, true);
     });
+    chooser.addEventListener('change',()=>select(chooser.value as GameId));
+    if (model.universal) panel.setAttribute('role','region');
     this.showTab = (id) => select(id);
     select(ids.includes(this.selected) ? this.selected : model.defaultGame);
     return h(
       'section',
       { class: 'side__sec side__sec--games', 'aria-labelledby': 'games-title' },
       h('h3', { class: 'side__h', id: 'games-title' }, t('help.games.h')),
-      list,
+      model.universal ? chooser : list,
       panel,
     );
   }
