@@ -19,29 +19,26 @@
   <body data-chrome="toy" data-motion="off" data-booting>
     <main class="shell">
       <h1 class="visually-hidden">Crocodile Mario</h1>
-        <div class="topleft" id="topleft">
-          <span class="devs" id="devices" role="status" aria-label="Устройство управления">
+        <div class="topleft chrome-dock" id="topleft">
+          <span class="devs" id="devices" role="group" aria-label="Устройство управления">
             <span class="dev" data-device="keyboard" data-state="ready" title="Клавиатура"></span>
             <span class="dev" data-device="gamepad" data-state="ready" title="Геймпад" hidden></span>
-            <span class="dev dev--pause" data-device="pause" data-state="off" title="Игра не на паузе"></span>
+            <button type="button" class="dev dev--pause" data-device="pause" data-state="off" title="Игра не на паузе" aria-pressed="false"></button>
           </span>
-          <img class="topleft__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="Apollo" />
+        <button type="button" class="corner__btn" id="corner-settings" title="Настройки" aria-label="Настройки" data-i18n-attrs="title=corner.settings;aria-label=corner.settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm8.2 4.4-.1-2 1.9-1.4-1.8-3.2-2.2.8a7.6 7.6 0 0 0-1.7-1l-.4-2.3h-3.6l-.4 2.3a7.6 7.6 0 0 0-1.7 1l-2.2-.8-1.8 3.2L6 11l-.1 2 .1 0-1.9 1.5 1.8 3.2 2.2-.9c.5.4 1.1.7 1.7 1l.4 2.3h3.6l.4-2.3c.6-.3 1.2-.6 1.7-1l2.2.9 1.8-3.2-1.9-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
         </div>
       <nav class="corner chrome-dock" id="corner" aria-label="Сервис" data-i18n-attrs="aria-label=corner.nav">
-        <button type="button" class="corner__btn" id="tgl-ghost" data-tgl="ghost" aria-pressed="false" aria-label="Сегменты"></button>
         <button type="button" class="corner__btn" id="corner-theme" data-theme="dark" aria-label="Светлый фон" title="Светлый фон"></button>
         <button type="button" class="corner__btn corner__btn--lang" id="corner-lang" data-lang="ru" aria-label="Язык интерфейса" title="Сменить язык на English">
           <span class="lang__opt" data-opt="ru">RU</span><span class="lang__sep" aria-hidden="true">/</span><span class="lang__opt" data-opt="en">EN</span>
         </button>
-        <button type="button" class="corner__btn" id="corner-settings" title="Настройки" aria-label="Настройки" data-i18n-attrs="title=corner.settings;aria-label=corner.settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm8.2 4.4-.1-2 1.9-1.4-1.8-3.2-2.2.8a7.6 7.6 0 0 0-1.7-1l-.4-2.3h-3.6l-.4 2.3a7.6 7.6 0 0 0-1.7 1l-2.2-.8-1.8 3.2L6 11l-.1 2 .1 0-1.9 1.5 1.8 3.2 2.2-.9c.5.4 1.1.7 1.7 1l.4 2.3h3.6l.4-2.3c.6-.3 1.2-.6 1.7-1l2.2.9 1.8-3.2-1.9-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        </button>
+
         <button type="button" class="corner__btn" id="corner-help" title="Справка" aria-label="Справка" data-i18n-attrs="title=corner.help;aria-label=corner.help">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.9 2.4c-.9.5-1.3 1-1.3 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg>
         </button>
-        <a class="corner__btn" id="corner-editor" href="#/editor" title="Редактор уровней" aria-label="Редактор уровней" data-i18n-attrs="title=corner.editor;aria-label=corner.editor">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20l1-4.2L16.4 4.4a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.2 19 4 20Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14.5 6.3l3.2 3.2" stroke="currentColor" stroke-width="1.6"/></svg>
-        </a>
+
       </nav>
 
       <header class="shell__header" id="tech-header">
@@ -51,7 +48,6 @@
 
       <div class="arena" id="arena" data-shell="blue" data-view="closed" data-closed>
         <header class="brand" id="brand">
-          <img class="brand__logo" src="/brand/apollo-wordmark.svg" width="562" height="266" alt="" aria-hidden="true" />
           <nav class="toysw chrome-dock" id="toy-switch" aria-label="Игрушки Apollo"></nav>
         </header>
       <aside class="side side--info" id="side-info" aria-labelledby="info-title"></aside>

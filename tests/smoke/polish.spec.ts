@@ -70,7 +70,7 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(page.locator('#user-level option').first()).toHaveText('Pick a level…');
   await expect(page.locator('#corner-theme')).toHaveAttribute('aria-label', 'Light theme');
   await expect(page.locator('#shell-picker [data-shell="red"]')).toHaveAccessibleName('red');
-  await expect(page.locator('#corner-settings')).toHaveAttribute('title', 'Settings');
+  await expect(page.locator('#corner-settings')).toHaveAttribute('title', 'Control settings');
   await expect(page.locator('#corner-help')).toHaveAttribute('aria-label', 'Help');
   await expect(page.locator('[data-key="up"]')).toHaveAttribute('aria-label', 'UP — jump');
   await expect(page.locator('#stage')).toHaveAttribute('aria-label', 'Crocodile Mario toy');
@@ -85,9 +85,9 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(help).toBeHidden();
   await page.locator('#corner-settings').click();
   const settings = page.locator('#settings');
-  await expect(settings.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(settings.getByRole('heading', { name: 'Control settings' })).toBeVisible();
   await expect(settings.getByRole('heading', { name: 'Keyboard' })).toBeVisible();
-  await expect(settings.getByRole('button', { name: 'Reset everything to defaults' })).toBeVisible();
+  await expect(settings.getByRole('button', { name: 'Reset controls' })).toBeVisible();
   await expect(settings.locator('tr', { hasText: 'Jump' }).first()).toContainText('Space');
   await page.keyboard.press('Escape');
 

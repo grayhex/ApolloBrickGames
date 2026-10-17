@@ -6,7 +6,7 @@
 const RU = {
   // ── Уголок страницы и подписи на корпусе ────────────────────────────────
   'corner.nav': 'Сервис',
-  'corner.settings': 'Настройки',
+  'corner.settings': 'Настройки управления',
   'corner.help': 'Справка',
   'corner.editor': 'Редактор уровней',
   'corner.lang': 'Язык интерфейса',
@@ -176,7 +176,9 @@ const RU = {
   'run.total': 'Всего',
   'run.progress': '{done} / {count}',
   'run.hint': 'Время идёт, пока игра запущена. Рестарт обнуляет счётчик.',
-  'tgl.ghost': 'Сегменты',
+  'tgl.ghost': 'Сегменты экрана',
+  'segments.on': 'Вкл',
+  'segments.off': 'Выкл',
   'tgl.ghostOn': 'Неактивные сегменты видны — скрыть',
   'tgl.ghostOff': 'Показать неактивные сегменты экрана',
   'tgl.themeLight': 'Тёмный фон',
@@ -344,9 +346,7 @@ const RU = {
     'Неофициальная браузерная реконструкция электронной игры Apollo Crocodile Mario по фотографиям, упаковке и видео устройства. Графика, звуки и правила приближены к оригиналу, но ещё уточняются.',
 
   // ── Диалог «Настройки» ──────────────────────────────────────────────────
-  'set.title': 'Настройки',
-  'set.def.h': 'Цвет игрушки по умолчанию',
-  'set.def.note': 'С него начинается каждая игра. Цвет текущей игры меняется переключателем справа от игрушки.',
+  'set.title': 'Настройки управления',
   'set.kb.h': 'Клавиатура',
   'set.kb.note': 'Клавиша назначается по её положению на клавиатуре — раскладка не важна. Esc отменяет назначение.',
   'set.kb.reset': 'Сбросить клавиатуру',
@@ -362,7 +362,7 @@ const RU = {
   'set.pad.noMapping': 'без mapping',
   'set.stored': 'Настройки сохраняются в этом браузере.',
   'set.notStored': 'Хранилище браузера недоступно: настройки действуют только до перезагрузки страницы.',
-  'set.resetAll': 'Сбросить всё к стандартному',
+  'set.resetAll': 'Сбросить управление',
   'set.table.kb': 'Привязки клавиатуры',
   'set.table.pad': 'Привязки геймпада',
   'set.press.key': 'Нажмите клавишу…',
@@ -385,7 +385,7 @@ export type MsgKey = keyof typeof RU;
 
 const EN: Record<MsgKey, string> = {
   'corner.nav': 'Tools',
-  'corner.settings': 'Settings',
+  'corner.settings': 'Control settings',
   'corner.help': 'Help',
   'corner.editor': 'Level editor',
   'corner.lang': 'Interface language',
@@ -553,7 +553,9 @@ const EN: Record<MsgKey, string> = {
   'run.total': 'Total',
   'run.progress': '{done} / {count}',
   'run.hint': 'The clock runs while the game is running. Restart resets it.',
-  'tgl.ghost': 'Segments',
+  'tgl.ghost': 'LCD segments',
+  'segments.on': 'On',
+  'segments.off': 'Off',
   'tgl.ghostOn': 'Inactive segments are visible — hide',
   'tgl.ghostOff': 'Show the inactive screen segments',
   'tgl.themeLight': 'Dark theme',
@@ -719,9 +721,7 @@ const EN: Record<MsgKey, string> = {
   'help.about.p':
     'An unofficial browser reconstruction of the Apollo Crocodile Mario electronic game, based on photos, the packaging and video of the device. Graphics, sounds and rules are close to the original but still being refined.',
 
-  'set.title': 'Settings',
-  'set.def.h': 'Default toy colour',
-  'set.def.note': 'Every game starts with it. The colour of the current game is changed with the picker to the right of the toy.',
+  'set.title': 'Control settings',
   'set.kb.h': 'Keyboard',
   'set.kb.note': 'A key is assigned by its position on the keyboard, so the layout does not matter. Esc cancels the assignment.',
   'set.kb.reset': 'Reset keyboard',
@@ -737,7 +737,7 @@ const EN: Record<MsgKey, string> = {
   'set.pad.noMapping': 'no mapping',
   'set.stored': 'Settings are saved in this browser.',
   'set.notStored': 'Browser storage is unavailable: settings last only until the page is reloaded.',
-  'set.resetAll': 'Reset everything to defaults',
+  'set.resetAll': 'Reset controls',
   'set.table.kb': 'Keyboard bindings',
   'set.table.pad': 'Gamepad bindings',
   'set.press.key': 'Press a key…',

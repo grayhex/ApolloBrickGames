@@ -139,12 +139,12 @@ describe('сохранение настроек', () => {
     expect(loadSettings(storage).keyboard.fire).toEqual([]);
   });
 
-  it('настройки отображения: слой неактивных сегментов и цвет корпуса; мусор заменяется значениями по умолчанию', () => {
-    expect(defaultSettings().display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+  it('настройки отображения: слой неактивных сегментов; старый цвет игнорируется, мусор заменяется значениями по умолчанию', () => {
+    expect(defaultSettings().display).toEqual({ ghost: null, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     const saved = sanitizeSettings({ version: 1, display: { ghost: false, shell: 'red' } });
-    expect(saved.display).toEqual({ ghost: false, shell: 'red', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(saved.display).toEqual({ ghost: false, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     const junk = sanitizeSettings({ version: 1, display: { ghost: 'да', shell: 'green' } });
-    expect(junk.display).toEqual({ ghost: null, shell: 'blue', sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
+    expect(junk.display).toEqual({ ghost: null, sound: true, volume: 0.25, musicVolume: 0.25, music: 'original', theme: 'dark', lang: 'ru' });
     expect(sanitizeSettings({ version: 1, display: { sound: false } }).display.sound).toBe(false);
     expect(sanitizeSettings({ version: 1, display: { sound: 'нет' } }).display.sound).toBe(true);
     expect(sanitizeSettings({ version: 1, display: { music: 'remaster' } }).display.music).toBe('remaster');
@@ -167,9 +167,9 @@ describe('сохранение настроек', () => {
     expect(sanitizeSettings({ version: 1, display: { volume: 0.5, musicVolume: 'громко' } }).display.musicVolume).toBe(0.5);
     const storage = memoryStorage();
     const settings = defaultSettings();
-    settings.display = { ghost: true, shell: 'white', sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' };
+    settings.display = { ghost: true, sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' };
     saveSettings(storage, settings);
-    expect(loadSettings(storage).display).toEqual({ ghost: true, shell: 'white', sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' });
+    expect(loadSettings(storage).display).toEqual({ ghost: true, sound: false, volume: 0.25, musicVolume: 0.6, music: 'remaster', theme: 'light', lang: 'en' });
   });
 });
 

@@ -3,7 +3,7 @@
 ## n0Live/BrickGame (правила игр «168 в 1 танк»)
 
 Правила, таблицы и последовательности игр в `src/brick/games/*` восстановлены по открытому симулятору
-[n0Live/BrickGame](https://github.com/n0Live/BrickGame) (Java). Код на TypeScript написан заново; игровой код донора не копируется. В `public/audio/brick/` добавлены 14 исходных M4A из `src/sounds` версии `6f58b1069cdddc1b7d1a3192783b9de9161cd0dc`; MIT-лицензия сохранена рядом. Назначения звуков и ограничения описаны в [brick/completion.md](brick/completion.md).
+[n0Live/BrickGame](https://github.com/n0Live/BrickGame) (Java). Код на TypeScript написан заново; игровой код донора не копируется. Прежние M4A из `src/sounds` версии `6f58b1069cdddc1b7d1a3192783b9de9161cd0dc` заменены тоновой транскрипцией в `src/audio/brickPhrases.ts`. Авторство и MIT-лицензия сохранены ниже. [Синтез и ограничения](brick/audio.md).
 Описание того, какие правила взяты и что в них допущение, — в [brick-games.md](brick-games.md) и в справке каждой игры.
 
 ```

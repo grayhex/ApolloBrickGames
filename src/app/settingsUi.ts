@@ -17,7 +17,6 @@ import {
 import { h } from './dom';
 import { getLang, onLangChange, t, type MsgKey } from './i18n';
 import type { InputHub } from './hub';
-import { ShellPicker } from './shellPicker';
 
 const ACTION_KEYS: Record<Action, MsgKey> = {
   left: 'act.left',
@@ -39,25 +38,18 @@ function describeList(sources: readonly string[]): string {
   return sources.length === 0 ? t('common.unset') : sources.map((source) => describeSource(source, lang)).join(' · ');
 }
 
-/** Раздел «Цвет по умолчанию» (только в игре, не в редакторе). Цвет текущей игры выбирается на самой странице. */
-export interface DisplayOptions {
-  /** Цвет по умолчанию изменён или настройки сброшены: применить к странице. */
-  onChange(): void;
-}
-
 export interface SettingsDialogOptions {
   /** Доступные действия текущей приставки; общие привязки Mario сохраняются. */
   actions?: readonly Action[];
   onOpen(): void;
   onClose(): void;
-  display?: DisplayOptions;
   /** Обработчики диалога (он остаётся тем же элементом страницы) снимаются, когда игрушка на странице меняется. */
   signal?: AbortSignal;
 }
 
 /**
  * Экран настроек: переназначение кнопок клавиатуры и геймпада, порог стика, выбор устройства, сброс к стандартному
- * профилю и (в игре) цвет игрушки по умолчанию. Звук, сегменты, вид экрана и фон — кнопки на самой странице. Пока диалог открыт, игра на паузе,
+ * профилю. Звук, сегменты, вид экрана и фон — кнопки на самой странице. Пока диалог открыт, игра на паузе,
  * а клавиатура игре не принадлежит (работают обычные Tab/Enter/Esc).
  */
 export class SettingsDialog {
@@ -229,35 +221,16 @@ export class SettingsDialog {
       'div',
       { class: 'settings__row settings__row--end' },
       this.button(t('set.resetAll'), () => {
+        const display = this.hub.settings.display;
         this.hub.resetSettings();
-        this.options.display?.onChange();
+        this.hub.updateSettings((s) => { s.display = display; });
         this.render();
       }),
       this.button(t('common.close'), () => this.close(), 'btn--primary'),
     );
 
-    const defaults = this.options.display ? this.defaultsSection(this.options.display) : null;
-    this.dialog.replaceChildren(...(defaults ? [title, defaults] : [title]), keyboard, gamepad, storage, actions);
+    this.dialog.replaceChildren(title, keyboard, gamepad, storage, actions);
     this.restoreFocus();
-  }
-
-  private defaultsSection(display: DisplayOptions): HTMLElement {
-    const picker = new ShellPicker({
-      id: 'settings-shell',
-      label: t('set.def.h'),
-      value: this.hub.settings.display.shell,
-      onPick: (shell) => {
-        this.hub.updateSettings((s) => void (s.display.shell = shell));
-        display.onChange();
-      },
-    });
-    return h(
-      'section',
-      { class: 'settings__section' },
-      h('h3', {}, t('set.def.h')),
-      h('p', { class: 'settings__note' }, t('set.def.note')),
-      picker.root,
-    );
   }
 
   private gamepadControls(pad: PadInfo | null): Node {

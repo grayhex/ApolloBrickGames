@@ -33,10 +33,10 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
-  test('сверху слева — логотип Apollo рядом с раздельными цветными индикаторами, по центру — переключатель из четырёх игрушек с миниатюрами; текущая отмечена', async ({ page }) => {
+  test('логотип Apollo внутри категории, слева управление; четыре белые миниатюры и текущая игрушка', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
-    const logo = page.locator('.topleft__logo');
+    const logo = page.locator('#toy-family-apollo .toysw__logo');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const items = page.locator('[data-family=apollo] .toysw__item');
@@ -55,7 +55,7 @@ test.describe('шапка и переключатель', () => {
     const toy = await page.locator('#toy').boundingBox();
     if (!devicesBox || !logoBox || !switchBox || !toy) throw new Error('нет размеров');
     expect(devicesBox.x + devicesBox.width).toBeLessThanOrEqual(logoBox.x + 1);
-    expect(logoBox.x + logoBox.width).toBeLessThan(switchBox.x); // логотип левее переключателя
+    expect(logoBox.x).toBeGreaterThan(switchBox.x); // логотип внутри категории Apollo
     // Переключатель по центру игрушки и над ней.
     expect(Math.abs(switchBox.x + switchBox.width / 2 - (toy.x + toy.width / 2))).toBeLessThan(2);
     expect(switchBox.y + switchBox.height).toBeLessThanOrEqual(toy.y + 1);
@@ -161,7 +161,7 @@ test.describe('«Часы+99»', () => {
     await expect(page.locator('#volume')).toBeVisible();
     await expect(page.locator('#music')).toHaveCount(0);
     await expect(page.locator('#run')).toHaveCount(0);
-    await expect(page.locator('#tgl-ghost')).toBeVisible();
+    await expect(page.locator('#segments-off')).toBeVisible();
     const tiles = page.locator('#original-levels .lv');
     await expect(tiles).toHaveCount(9);
     for (let i = 0; i < 9; i++) await expect(tiles.nth(i)).toHaveAttribute('aria-disabled', 'true');
@@ -278,11 +278,11 @@ test.describe('«Часы+99»', () => {
 });
 
 test.describe('«Морской бой»', () => {
-  test('аппаратная часть: подписи, без светодиодов, линия цвета корпуса вокруг экрана; сохранённый синий цвет имеет приоритет над общим', async ({ page }) => {
+  test('аппаратная часть: подписи, без светодиодов, линия цвета корпуса вокруг экрана; начальный цвет берётся из общей конфигурации', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('crocodile-mario:settings:v1', JSON.stringify({ version: 1, display: { shell: 'blue' } })));
     await open(page, 'seabattle');
     await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
-    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue'); // сохранённый выбор игрока важнее опубликованного основного цвета
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red'); // устаревший локальный цвет больше не перекрывает опубликованный
     const labels = await page.locator('.base__art text').allTextContents();
     for (const text of ['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'UP/MODE', 'LEFT/LEVEL', 'RIGHT/SPEED', 'DOWN', 'ROTATE']) expect(labels, text).toContain(text);
     expect(labels).not.toContain('SOUND');
@@ -293,10 +293,10 @@ test.describe('«Морской бой»', () => {
     const picks = page.locator('#shell-picker .shellpick__btn');
     expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['blue', 'red', 'yellow', 'white']);
     expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-disabled') === 'true'))).toEqual([false, false, true, true]);
-    await picks.nth(2).click({ force: true }); // жёлтого у «Морского боя» нет — остаётся синий
-    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
-    await picks.nth(1).click();
+    await picks.nth(2).click({ force: true }); // жёлтого у «Морского боя» нет — остаётся красный
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
+    await picks.nth(0).click();
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
   });
 
   test('меню: RESET возвращает в меню; S./P. запускает выбранную игру; игра A запускается и возвращается в меню', async ({ page }) => {
@@ -362,9 +362,9 @@ for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
     await expect(page.locator('#shell-picker .shellpick__name')).toHaveCount(0);
     await expect(page.locator('#view-state .view-mini')).toHaveCount(3);
     await expect(page.locator('#view-full')).toHaveAccessibleName('Полная');
-    await expect(page.locator('#corner #tgl-ghost')).toBeVisible();
-    await page.locator('#tgl-ghost').click();
-    await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#side-ctl #segments-off')).toBeVisible();
+    await page.locator('#segments-off').click();
+    await expect(page.locator('#segments-off')).toBeChecked();
     await page.locator('#corner-lang').click();
     await expect(page.locator('#side-info #keys-title')).toHaveText('Controls');
     if (toy !== 'mario') await expect(page.locator('#side-info .grules li')).toHaveCount(3);

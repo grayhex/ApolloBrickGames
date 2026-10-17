@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Реконструкция Apollo Crocodile Mario для браузера. Техническая демоверсия движка.",
+  "description": "Браузерная коллекция складных Apollo и Brick Games: Mario, аркады и головоломки.",
   "engines": {
     "node": "^22.13.0 || >=24"
   },

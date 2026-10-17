@@ -13,13 +13,13 @@ export interface CornerNavElements {
 export interface CornerNavActions {
   toggleTheme(): void;
   toggleGhost(): void;
+  togglePause?(): void;
   /** Клик мышью или касанием: вернуть клавиатуру игре. */
   onPointerUse(): void;
 }
 
 /**
- * Общие системные настройки справа и индикаторы ввода и паузы слева. Сегменты и фон стоят рядом
- * с языком, настройками и справкой — разметка лежит в index.html, значки и подписи ставятся здесь и обновляются при смене языка.
+ * Общие настройки фона справа, управление и пауза слева; состояние сегментов на пульте.
  */
 export class CornerNav {
   private readonly elements: CornerNavElements;
@@ -27,7 +27,7 @@ export class CornerNav {
   private paused = false;
   private lastDevice = '';
   private lastDeviceView: DeviceView | null = null;
-  private readonly ghost = document.getElementById('tgl-ghost');
+  private readonly ghost = document.getElementById('segments-options');
   private ghostOn: boolean | null = null;
   private theme: Theme = 'dark';
 
@@ -48,15 +48,21 @@ export class CornerNav {
       },
       { signal },
     );
-    this.ghost?.replaceChildren(icon('segments'));
-    this.ghost?.addEventListener(
-      'click',
-      (event) => {
-        actions.toggleGhost();
+    const pause = this.devices.get('pause') as HTMLButtonElement | undefined;
+    if (pause) {
+      pause.disabled = !actions.togglePause;
+      pause.addEventListener('click', (event) => {
+        actions.togglePause?.();
         if (event.detail !== 0) actions.onPointerUse();
-      },
-      { signal },
-    );
+      }, { signal });
+    }
+    this.ghost?.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.type === 'radio' && (input.value === 'on') !== this.ghostOn) actions.toggleGhost();
+    }, { signal });
+    this.ghost?.addEventListener('click', (event) => {
+      if (event.detail !== 0 && (event.target as HTMLElement).tagName === 'INPUT') actions.onPointerUse();
+    }, { signal });
     this.relabel();
     onLangChange(() => this.relabel(), signal);
   }
@@ -100,6 +106,7 @@ export class CornerNav {
     if (!element) return;
     const label = t(paused ? 'dev.paused' : 'dev.running');
     element.dataset['state'] = paused ? 'on' : 'off';
+    element.setAttribute('aria-pressed', String(paused));
     element.title = label;
     element.setAttribute('aria-label', label);
   }
@@ -108,9 +115,8 @@ export class CornerNav {
     this.ghostOn = on;
     if (!this.ghost) return;
     this.ghost.hidden = on === null;
-    this.ghost.setAttribute('aria-pressed', String(on === true));
-    this.ghost.setAttribute('aria-label', t('tgl.ghost'));
-    this.ghost.title = t(on ? 'tgl.ghostOn' : 'tgl.ghostOff');
+    for (const input of this.ghost.querySelectorAll<HTMLInputElement>('input')) input.checked = (input.value === 'on') === on;
+
   }
 
   /** Значки «клавиатура / геймпад»: геймпад появляется при подключении; подсвечено то, чем играют сейчас. */

@@ -80,13 +80,13 @@ test('по умолчанию открывается уровень 1 (mario-1) 
   for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'тестовая комната', 'Таймер']) {
     expect(text, word).not.toContain(word);
   }
-  await expect(page.locator('#corner button, #corner a')).toHaveCount(6); // сегменты, фон, язык, настройки, справка, редактор
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(3); // фон, язык, справка
   await expect(page.locator('#devices')).toBeVisible();
   await expect(page.locator('#corner-theme')).toBeVisible();
   await expect(page.locator('#corner-lang')).toBeVisible();
   await expect(page.locator('#corner-settings')).toBeVisible();
   await expect(page.locator('#corner-help')).toBeVisible();
-  await expect(page.locator('#corner-editor')).toBeVisible();
+  await expect(page.locator('#corner-editor')).toHaveCount(0);
   await expect(page.locator('#side-info')).toBeVisible();
   await expect(page.locator('#side-ctl')).toBeVisible();
 });
@@ -340,7 +340,7 @@ for (const n of [1, 2]) {
   });
 }
 
-test('корпус вокруг экрана: три светодиода; цвет текущей игры — на странице, цвет по умолчанию — в настройках', async ({ page }) => {
+test('корпус вокруг экрана: три светодиода; цвет текущей игры — на странице, цвет по умолчанию — из конфигурации', async ({ page }) => {
   await ready(page);
   await expect(page.locator('#lid .led')).toHaveCount(3);
   await expect(page.locator('#lid .lid__screw')).toHaveCount(4);
@@ -354,17 +354,11 @@ test('корпус вокруг экрана: три светодиода; цв�
   await expect(page.locator('#game-area')).toBeFocused(); // клавиатура осталась у игры
   await page.reload();
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
-  // Цвет по умолчанию — в настройках: запоминается и сразу применяется к текущей игре.
+  // Настройки управления больше не меняют назначенный администратором цвет.
   await page.locator('#corner-settings').click();
-  await expect(page.locator('#settings-shell [role="radio"]')).toHaveCount(4);
-  await page.locator('#settings-shell [data-shell="white"]').click();
-  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
+  await expect(page.locator('#settings-shell')).toHaveCount(0);
+  await expect(page.locator('#settings-title')).toHaveText('Настройки управления');
   await page.keyboard.press('Escape');
-  await page.reload();
-  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
-  await expect(page.locator('#shell-picker [data-shell="white"]')).toHaveAttribute('aria-checked', 'true');
-  await page.locator('#corner-settings').click();
-  await expect(page.locator('#settings-shell [data-shell="white"]')).toHaveAttribute('aria-checked', 'true');
   // Окно LCD сохраняет пропорции холста, Canvas целиком помещается в нём.
   const fits = await page.evaluate(() => {
     const win = (document.getElementById('lcd-window') as HTMLElement).getBoundingClientRect();
@@ -387,14 +381,14 @@ test('слой неактивных сегментов переключаетс�
       const [r = 0, g = 0, b = 0] = ctx.getImageData(x, y, 1, 1).data;
       return Math.abs(r - 173) + Math.abs(g - 179) + Math.abs(b - 140);
     });
-  await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#segments-on')).toBeChecked();
   const withGhost = await emptyCellInk();
-  await page.locator('#tgl-ghost').click();
-  await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#segments-off').click();
+  await expect(page.locator('#segments-off')).toBeChecked();
   await expect.poll(emptyCellInk).toBe(0); // чистая подложка
   expect(withGhost).toBeGreaterThan(0);
   await page.reload();
-  await expect(page.locator('#tgl-ghost')).toHaveAttribute('aria-pressed', 'false'); // выбор запомнен
+  await expect(page.locator('#segments-off')).toBeChecked(); // выбор запомнен
 });
 
 test('Canvas сохраняет пропорции при изменении окна', async ({ page }) => {

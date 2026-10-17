@@ -161,9 +161,10 @@ test('пульт: звук следует за SOUND, музыка, сегмен
   await expect(music('remaster')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#game-area')).toHaveAttribute('data-music', 'remaster');
 
-  await expect(toggle('ghost')).toHaveAttribute('aria-pressed', 'true');
-  await toggle('ghost').click();
-  await expect(toggle('ghost')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#segments-on')).toBeChecked();
+  await page.locator('#segments-off').check();
+  await expect(page.locator('#game-area')).toBeFocused();
+  await expect(page.locator('#segments-off')).toBeChecked();
 
   // Состояние игрушки: «Только экран» и «Свёрнута».
   const state = (id: string) => page.locator(`#view-${id}`);
@@ -195,7 +196,7 @@ test('пульт: звук следует за SOUND, музыка, сегмен
   await expect.poll(phase(page)).toBe('ready');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light'); // фон, музыка, сегменты и звук запомнены
   await expect(music('remaster')).toHaveAttribute('aria-pressed', 'true');
-  await expect(toggle('ghost')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#segments-off')).toBeChecked();
   await expect(toggle('sound')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#corner-theme').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -334,8 +335,8 @@ test('карты из редактора: попадают в выпадающи
   await expect.poll(level(page)).toBe('mario-1');
   await expect(page.locator('#original-levels .lv').nth(0)).toHaveAttribute('aria-current', 'true');
 
-  // 4. Редактор открывается кнопкой в уголке (в пульте дубля нет) — на последней сохранённой карте.
-  await page.locator('#corner-editor').click();
+  // 4. Редактор сохраняет последнюю карту при переходе по служебному адресу — на последней сохранённой карте.
+  await page.goto('./#/editor');
   await page.waitForSelector('#editor-root[data-ready="true"]');
   await expect(page.locator('#editor-project')).toContainText('Моя карта');
 });
@@ -430,7 +431,7 @@ test('значок устройства: клавиатура всегда, ге
   await expect(gamepad).toBeHidden();
 });
 
-test('узкий экран: игрушка сверху во всю ширину, панели под ней, горизонтальной прокрутки нет', async ({ page }) => {
+test('узкий экран: крупная игрушка сверху, панели под ней, горизонтальной прокрутки нет', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await ready(page);
   const m = await page.evaluate(() => {
@@ -440,11 +441,14 @@ test('узкий экран: игрушка сверху во всю ширин�
       ctl: rect('#side-ctl'),
       info: rect('#side-info'),
       innerH: window.innerHeight,
+      lowestKey: Math.max(...[...document.querySelectorAll('[data-key]')].map(key => key.getBoundingClientRect().bottom)),
       vw: window.innerWidth,
       scrollW: document.documentElement.scrollWidth,
     };
   });
-  expect(m.toy.width).toBeGreaterThanOrEqual(m.vw * 0.94); // оригинальная игрушка масштабируется на всю ширину экрана; подбородок ниже окна
+  // С двухрядным меню размер ограничивается высотой: кнопки остаются над панелью браузера.
+  expect(m.toy.width >= m.vw * 0.94 || m.lowestKey >= m.innerH - 120).toBe(true);
+  expect(m.lowestKey).toBeLessThanOrEqual(m.innerH - 80);
   expect(m.ctl.top).toBeGreaterThanOrEqual(m.toy.bottom - 1);
   expect(m.info.top).toBeGreaterThanOrEqual(m.ctl.bottom - 1);
   expect(m.ctl.right).toBeLessThanOrEqual(m.vw + 1);
@@ -454,16 +458,23 @@ test('узкий экран: игрушка сверху во всю ширин�
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'yellow');
 });
 
-test('сегменты — пиктограмма в системном меню рядом с фоном и языком', async ({ page }) => {
+test('сегменты — две взаимоисключающие кнопки на всю ширину подблока пульта', async ({ page }) => {
   await ready(page);
-  const box = async (selector: string) => (await page.locator(selector).boundingBox()) ?? { width: 0, height: 0 };
-  const ghost = await box('#tgl-ghost');
-  const panel = await box('#side-ctl');
-  expect(ghost.height).toBeLessThanOrEqual(40);
-  expect(ghost.width).toBeLessThan(panel.width * 0.6);
-  await expect(page.locator('#corner #tgl-ghost')).toHaveAccessibleName('Сегменты');
-  await expect(page.locator('#tgl-ghost svg')).toBeVisible();
-  await expect(page.locator('#side-ctl #tgl-ghost')).toHaveCount(0);
+  const section = page.locator('#side-ctl #segments-options');
+  await expect(section).toBeVisible();
+  await expect(section.getByRole('radio')).toHaveCount(2);
+  await expect(page.locator('#segments-on')).toBeChecked();
+  await page.locator('#segments-off').check();
+  await expect(page.locator('#segments-on')).not.toBeChecked();
+  await expect(page.locator('#segments-off')).toBeChecked();
+  await page.locator('#segments-off').check();
+  await expect(page.locator('#segments-off')).toBeChecked();
+  await page.locator('#segments-off').focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#segments-on')).toBeChecked();
+  const widths = await section.locator('label').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().width));
+  expect(Math.abs(widths[0]! - widths[1]!)).toBeLessThan(1);
+  await expect(page.locator('#corner input[type=radio]')).toHaveCount(0);
 });
 
 test('список пользовательских уровней оформлен как остальные элементы пульта, в обеих темах', async ({ page }) => {
