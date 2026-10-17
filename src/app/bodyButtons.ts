@@ -1,3 +1,4 @@
+import { BUTTON_ACTIONS, type GameGuideData } from '../brick/guide';
 import type { BrickAction, BrickGameDef } from '../brick/types';
 import type { ToyModel } from './toys';
 import type { ToyKeyId } from './toy';
@@ -23,3 +24,14 @@ export function missingButtons(def: BrickGameDef, model: ToyModel): BrickAction[
 
 /** Можно ли назначить игру игрушке: все нужные кнопки есть на корпусе. */
 export const canAssign = (def: BrickGameDef, model: ToyModel): boolean => missingButtons(def, model).length === 0;
+
+/** Справка приставки описывает только физически доступные действия, включая сочетания. */
+export function guideForBody(guide: GameGuideData, model: ToyModel): GameGuideData {
+  const have = bodyActions(model);
+  return {
+    ...guide,
+    controls: guide.controls.filter((control) =>
+      [control.button, ...(control.with ?? [])].every((button) => BUTTON_ACTIONS[button].every((action) => have.has(action))),
+    ),
+  };
+}

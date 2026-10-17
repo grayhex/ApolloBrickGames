@@ -7,7 +7,7 @@
 export const BRICK_COLS = 10;
 export const BRICK_ROWS = 20;
 export const BRICK_CELLS = BRICK_COLS * BRICK_ROWS;
-/** Такты в секунду — как у `FixedStepper` оболочки (и у тетриса-заглушки). */
+/** Такты в секунду — как у `FixedStepper` оболочки (и у одиночного тетриса). */
 export const BRICK_TICK_HZ = 60;
 /** Превью («NEXT»): 4 × 4 клетки. */
 export const PREVIEW_COLS = 4;
@@ -30,8 +30,9 @@ export const MAX_SCORE = 9_999_999;
 export const DEFAULT_SEED = 1;
 
 /**
- * Кнопки игры. `rotate` — большая кнопка ROTATE (в стрелялках — огонь), `fire` — отдельная клавиша «огонь» на клавиатуре
- * (в тетрисе — бросок; в остальных играх означает то же, что и `rotate`). Какая кнопка что делает — решает игра.
+ * Действия движка. `rotate` — большая кнопка ROTATE (в стрелялках — огонь). Значение `fire` задаёт игра:
+ * бросок, выстрел, повтор задачи или укладка фигуры. На текущих матричных Apollo отдельной FIRE нет; оболочка фильтрует
+ * это действие даже с клавиатуры/геймпада. RESET корпуса возвращает в меню.
  */
 export type BrickAction = 'left' | 'right' | 'up' | 'down' | 'rotate' | 'fire';
 

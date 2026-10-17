@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -14,6 +15,8 @@ import type { GunSpace } from '../../../src/brick/games/gun/space';
 import { SHAPES_MODES, ShapesGame, shapesDef } from '../../../src/brick/games/shapes';
 import { conformance, frameHash } from '../conformance';
 import { CLEAR_LOSE, CLEAR_WIN, INTRO, KABOOM, at, hold, idle, litRows, rowCells, run, skipIntro, tap, types } from './gunKit';
+
+const coveredScenario = scenarioSuite('shapes');
 
 /** Скорость спуска в тактах (допущение игры: 800 мс на скорости 1 и 300 мс на скорости 10). */
 const STEP_1 = genuineTicks(1, 800, 300);
@@ -601,7 +604,7 @@ describe('shapes: потеря жизни и конец игры', () => {
     expect(game.phase).toBe('playing');
   });
 
-  it('если не стрелять, фигуры доходят до пушки; четыре жизни кончаются, игра заканчивается, новая партия чистая', () => {
+  coveredScenario('shooting-figures', 'неудача', 'если не стрелять, фигуры доходят до пушки; четыре жизни кончаются, игра заканчивается, новая партия чистая', () => {
     for (const mode of [0, 3]) {
       const game = started(mode, { speed: 10 });
       const events = [] as ReturnType<typeof idle>;
@@ -734,7 +737,7 @@ function buildBot(game: TestShapes): BrickInput {
 }
 
 describe('shapes: бот', () => {
-  it('бот отстрела уничтожает фигуры: очки растут, скорость повышается, жизни целы', () => {
+  coveredScenario('shooting-figures', 'прогресс', 'бот отстрела уничтожает фигуры: очки растут, скорость повышается, жизни целы', () => {
     for (const mode of DESTROY) {
       const game = started(mode, { seed: 3, speed: 2 });
       const names = types(run(game, 3500, () => destroyBot(game)));

@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import { BRICK_COLS, BRICK_ROWS, genuineTicks, msToTicks } from '../../../src/brick';
 import { tetrisDef } from '../../../src/brick/games/tetris';
@@ -25,6 +26,8 @@ import {
 } from '../../../src/brick/games/tetris/core';
 import { conformance } from '../conformance';
 import { Bot, Lab, hold, idle, plainLab, press, tap, types, until } from './tetrisLab';
+
+const coveredScenario = scenarioSuite('tetris');
 
 /**
  * Правила тетриса (вариант 01 — обычный): появление, падение, повороты, ряды, очки, скорость, уровни, конец игры, превью.
@@ -433,7 +436,7 @@ describe('тетрис: уровень и случайные ряды', () => {
 });
 
 describe('тетрис: конец игры', () => {
-  it('новая фигура не поместилась — конец игры: заливка поля, фаза `over`, рекорд сохраняется', () => {
+  coveredScenario('tetris', 'неудача', 'новая фигура не поместилась — конец игры: заливка поля, фаза `over`, рекорд сохраняется', () => {
     const lab = plainLab({ hiScore: 5 });
     lab.wipe();
     lab.fill(BRICK_ROWS - 1, '#.#.#.#.#.');
@@ -464,7 +467,7 @@ describe('тетрис: конец игры', () => {
 });
 
 describe('тетрис: «бот»', () => {
-  it('простой игрок держится десятки фигур и собирает ряды: очки растут, скорость повышается, игра не заканчивается', () => {
+  coveredScenario('tetris', 'прогресс', 'простой игрок держится десятки фигур и собирает ряды: очки растут, скорость повышается, игра не заканчивается', () => {
     const lab = plainLab({ seed: 3 });
     const bot = new Bot(lab);
     let lines = 0;

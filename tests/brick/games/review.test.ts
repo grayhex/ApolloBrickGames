@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 /**
  * Регрессии по ревью Brick Game (R01–R14): каждый дефект сначала воспроизводится красным тестом на исходном SHA, затем исправляется.
  * Ожидаемые правила здесь записаны независимо от реализации (размеры, клетки, очки), а не выведены из её констант.
@@ -17,6 +18,8 @@ import { bodyActions, canAssign, missingButtons } from '../../../src/app/bodyBut
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
 import { solveJigsaw, type JigsawShape } from '../jigsawSolver';
 
+const coveredScenario = scenarioSuite('review');
+
 const run = (g: BrickGame, n: number): BrickEvent[] => {
   const events: BrickEvent[] = [];
   for (let i = 0; i < n; i++) events.push(...g.step(NEUTRAL_BRICK_INPUT));
@@ -27,7 +30,7 @@ const tap = (g: BrickGame, action: BrickAction): BrickEvent[] => [...g.step(make
 // ── R01: Jigsaw проходится кнопками корпуса (без отдельной клавиши «огонь») ───────────────────────────────────────────────────────
 
 describe('R01 Jigsaw: нужна кнопка «огонь», которой на корпусе нет, — игра не назначается игрушкам', () => {
-  it('правила не изменены: фигуры укладываются «огнём», игра решаема и ведёт на следующий уровень (проверка ядра, не корпуса)', () => {
+  coveredScenario('jigsaw', 'прогресс', 'правила не изменены: фигуры укладываются «огнём», игра решаема и ведёт на следующий уровень (проверка ядра, не корпуса)', () => {
     const g = new JigsawGame({ seed: 3 });
     g.start();
     const plan = solveJigsaw(g['pieces'] as JigsawShape[]);
@@ -44,7 +47,7 @@ describe('R01 Jigsaw: нужна кнопка «огонь», которой н�
     expect(g.level).toBe(2);
   });
 
-  it('без «огня» (только стрелки и ROTATE, как на корпусе) фигуру уложить нельзя — поэтому игра объявляет, что ей нужна эта кнопка', () => {
+  coveredScenario('jigsaw', 'неудача', 'без «огня» (только стрелки и ROTATE, как на корпусе) фигуру уложить нельзя — поэтому игра объявляет, что ей нужна эта кнопка', () => {
     const g = new JigsawGame({ seed: 3 });
     g.start();
     for (let i = 0; i < 400; i++) g.step(makeBrickInput([(['left', 'right', 'up', 'down', 'rotate'] as const)[i % 5]!]));

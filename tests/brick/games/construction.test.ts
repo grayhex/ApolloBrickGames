@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -29,6 +30,8 @@ import {
   tap,
   types,
 } from './gunKit';
+
+const coveredScenario = scenarioSuite('construction');
 
 /** Игра с доступом к внутренностям: поле пушки (донорские координаты), пушка, пули, начисление очков. */
 class TestConstruction extends ConstructionGame {
@@ -729,7 +732,7 @@ describe('construction: очки, скорость, уровень, жизни',
     expect(wallRows(game).length).toBe(1);
   });
 
-  it('если держать «вниз», стена быстро доходит до пушки: четыре жизни кончаются, игра заканчивается', () => {
+  coveredScenario('construction', 'неудача', 'если держать «вниз», стена быстро доходит до пушки: четыре жизни кончаются, игра заканчивается', () => {
     for (const mode of [0, 5]) {
       const game = started(mode);
       const key = mode === 5 ? 'up' : 'down';
@@ -806,7 +809,7 @@ describe('construction: бот', () => {
     }
   });
 
-  it('бот доходит до новой скорости: 500 очков и выше', () => {
+  coveredScenario('construction', 'прогресс', 'бот доходит до новой скорости: 500 очков и выше', () => {
     const game = started(0, { seed: 2, level: 4, speed: 10 });
     let reached = false;
     for (let t = 0; t < 12000 && !reached; t++) {

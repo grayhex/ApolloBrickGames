@@ -1,3 +1,4 @@
+import { guideForBody } from './bodyButtons';
 import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
 import { BoxDialog, BoxViewer } from './boxViewer';
@@ -198,19 +199,17 @@ export class InfoPanel {
 
     if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
-      // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у тетрис-заглушки — только тетрис.
+      // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у модели без меню — только тетрис.
       const rows = model.menu
         ? [
             keyRow(`${t('info.m.leftRight')} (${t('info.m.leftRight.menu')})`, keys('left'), keys('right')),
             keyRow(`${t('info.m.upDown')} (${t('info.m.upDown.menu')})`, keys('up'), keys('down')),
             keyRow(`${t('info.m.rotate')} (${t('info.m.rotate.menu')})`, keys('jump')),
-            keyRow(t('info.m.fire'), keys('fire')),
           ]
         : [
             keyRow(t('info.t.move'), keys('left'), keys('right')),
             keyRow(t('info.t.rotate'), keys('jump', 'up')),
             keyRow(t('info.t.down'), keys('down')),
-            keyRow(t('info.t.drop'), keys('fire')),
           ];
       const keyList = h(
         'ul',
@@ -390,6 +389,6 @@ export class InfoPanel {
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
     const data = BRICK_GUIDES[id];
-    return [head, ...(data ? compactGuide(data, lang) : [])];
+    return [head, ...(data ? compactGuide(guideForBody(data, model), lang) : [])];
   }
 }

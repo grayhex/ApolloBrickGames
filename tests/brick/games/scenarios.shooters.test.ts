@@ -1,3 +1,4 @@
+import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
 /**
  * Сценарные тесты правил стрелялок Brick Game (класс ShooterGame): honeybee, space-invaders, ufo-raiders, dual-shooting, talking-shooting, tetris-shooting, meteor-fighter.
  *
@@ -18,14 +19,16 @@ import { ShooterGame } from '../../../src/brick/games/library/action';
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
 import { NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickGame, type BrickInput } from '../../../src/brick';
 
+const coveredScenario = scenarioSuite('scenarios.shooters');
+
 /** Игры, для которых в этом файле есть и сценарий «прогресс», и сценарий «неудача» (проверяется в последнем тесте файла). */
-export const SCENARIO_GAMES = ['honeybee', 'space-invaders', 'ufo-raiders', 'dual-shooting', 'talking-shooting', 'tetris-shooting', 'meteor-fighter'] as const;
+const SCENARIO_GAMES = SCENARIO_GROUPS['scenarios.shooters'];
 
 type ShooterId = ShooterGame['id'];
 const covered: Record<'прогресс' | 'неудача', Set<string>> = { прогресс: new Set(), неудача: new Set() };
 const scenario = (kind: 'прогресс' | 'неудача') => (id: ShooterId, title: string, body: () => void): void => {
   covered[kind].add(id);
-  it(`${kind}: ${title}`, body);
+  coveredScenario(id, kind, title, body);
 };
 const progress = scenario('прогресс');
 const failure = scenario('неудача');
@@ -284,7 +287,7 @@ describe('space-invaders: сценарии', () => {
     expect(picture(g, 3, 5, 2, 3)).toEqual(['###', '.#.']);
     const hp = g.bossHP;
     expect(hp).toBeGreaterThan(1); // босс выдерживает несколько попаданий
-    expect(lit(g, 0, 0)).toBe(Math.min(10, hp));
+    expect(lit(g, 0, 0)).toBe(hp);
     expect(g.targets).toHaveLength(4);
 
     // Босс сбит настоящими выстрелами: каждое попадание в любую его клетку отнимает единицу здоровья и даёт +5.
@@ -492,7 +495,7 @@ describe('dual-shooting: сценарии', () => {
     expect(g.lives).toBe(3);
     expect(playerBar(g)).toBe(3); // здоровье игрока и босса восстановлены
     expect(g.bossHP).toBe(hp);
-    expect(bossBar(g)).toBe(Math.min(10, hp));
+    expect(bossBar(g)).toBe(hp);
     expect(g.targets).toHaveLength(24);
   });
 
@@ -722,7 +725,7 @@ describe('meteor-fighter: сценарии', () => {
     expect(picture(g, 2, 6, 2, 4)).toEqual(['..#..', '.###.', '#####']);
     const hp = g.bossHP;
     expect(hp).toBeGreaterThan(1);
-    expect(bossBar(g)).toBe(Math.min(10, hp));
+    expect(bossBar(g)).toBe(hp);
     run(g, TAKEOFF);
     expect(playerBar(g)).toBe(3);
     const events = runUntil(g, HOLD, (e) => has(e, 'win'), 400);
@@ -797,9 +800,8 @@ describe('meteor-fighter: сценарии', () => {
     expect(g.lives).toBe(0);
   });
 
-  // ИЗВЕСТНАЯ ОШИБКА (it.fails; описание в отчёте): шкала босса показывает не больше десяти клеток, а здоровья на уровне N — 10 + N.
-  // Первые N попаданий не меняют шкалу вовсе. Когда ошибку исправят, заменить it.fails на it.
-  it.fails('каждое попадание по боссу заметно на его шкале с самого первого', () => {
+  // Регрессия: первый же выстрел должен менять шкалу здоровья.
+  it('каждое попадание по боссу заметно на его шкале с самого первого', () => {
     const g = start('meteor-fighter');
     run(g, TAKEOFF);
     const before = bossBar(g);
@@ -821,4 +823,25 @@ describe('охват сценариев стрелялок', () => {
     expect([...covered.прогресс].sort()).toEqual([...SCENARIO_GAMES].sort());
     expect([...covered.неудача].sort()).toEqual([...SCENARIO_GAMES].sort());
   });
+});
+
+describe('шкала боссов на всех начальных уровнях', () => {
+  for (const id of ['meteor-fighter', 'dual-shooting', 'space-invaders'] as const) {
+    for (let level = 1; level <= 10; level++) it(`${id}, уровень ${level}: каждому HP соответствует клетка, каждый выстрел виден`, () => {
+      const g = new ShooterGame(id, { level }); g.start();
+      if (id === 'meteor-fighter') run(g, 60);
+      if (id === 'space-invaders') { g.targets = []; g.step(IDLE); }
+      const hp = g.bossHP;
+      expect(hp).toBe(id === 'space-invaders' && level === 1 ? 9 : 10);
+      for (let left = hp; left > 1; left--) {
+        expect(lit(g, 0, 0)).toBe(left);
+        const target = g.targets[0]!;
+        g.bullets = [{ x: target.x, y: target.y + 1, enemy: false }];
+        const events = run(g, 4);
+        expect(count(events, 'hit')).toBe(1);
+        expect(g.bossHP).toBe(left - 1);
+        expect(lit(g, 0, 0)).toBe(left - 1);
+      }
+    });
+  }
 });

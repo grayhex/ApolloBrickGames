@@ -46,6 +46,8 @@ export interface DisplayOptions {
 }
 
 export interface SettingsDialogOptions {
+  /** Доступные действия текущей приставки; общие привязки Mario сохраняются. */
+  actions?: readonly Action[];
   onOpen(): void;
   onClose(): void;
   display?: DisplayOptions;
@@ -319,7 +321,7 @@ export class SettingsDialog {
     const table = h('table', { class: 'settings__table' });
     table.append(h('caption', { class: 'visually-hidden' }, device === 'keyboard' ? t('set.table.kb') : t('set.table.pad')));
     const body = h('tbody');
-    for (const action of ACTIONS) {
+    for (const action of this.options.actions ?? ACTIONS) {
       const capturing = this.capture?.device === device && this.capture.action === action;
       const key = `${device === 'keyboard' ? 'kb' : 'pad'}:${action}`;
       const assign = this.button(

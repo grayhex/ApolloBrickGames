@@ -1,3 +1,4 @@
+import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
 /**
  * Сценарные тесты правил дорожных игр Brick Game — класс `RoadGame` (src/brick/games/library/action.ts):
  * obstacle-race, boat-racing, racing-four, super-tank, racing-pickup, punch-racing.
@@ -18,8 +19,10 @@ import { RoadGame, type RoadObstacle } from '../../../src/brick/games/library/ac
 import { CELL_BLINK, CELL_OFF, CELL_ON, NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction, type BrickEvent, type BrickInput } from '../../../src/brick';
 import { findSafePath } from '../safePath';
 
+const coveredScenario = scenarioSuite('scenarios.road');
+
 /** Игры, для которых в этом файле есть и сценарий «прогресс», и сценарий «неудача». */
-export const SCENARIO_GAMES = ['obstacle-race', 'boat-racing', 'racing-four', 'super-tank', 'racing-pickup', 'punch-racing'] as const;
+const SCENARIO_GAMES = SCENARIO_GROUPS['scenarios.road'];
 type RoadId = (typeof SCENARIO_GAMES)[number];
 
 // ── помощники: ввод, прогон тактов, учёт судьбы препятствий ───────────────────────────────────────────────────────────────────────
@@ -126,7 +129,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     return runUntil(g, () => g.score > score, hold('up'), 60).events;
   };
 
-  it('прогресс: безопасная езда — +1 за каждый шаг дороги, тридцатый шаг даёт победу (+100) и второй уровень', () => {
+  coveredScenario('obstacle-race', 'прогресс', 'прогресс: безопасная езда — +1 за каждый шаг дороги, тридцатый шаг даёт победу (+100) и второй уровень', () => {
     const make = (): RoadGame => begin('obstacle-race', { seed: 1 });
     const { steps, won } = route(make, ['up'], 400);
     expect(won, 'маршрут доходит до победы в уровне').toBe(true);
@@ -168,7 +171,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     expect(g.score).toBe(131); // счёт шагов нового уровня идёт заново
   });
 
-  it('прогресс: удержание ↑ ускоряет дорогу — шаг с газом короче шага без газа', () => {
+  coveredScenario('obstacle-race', 'прогресс', 'прогресс: удержание ↑ ускоряет дорогу — шаг с газом короче шага без газа', () => {
     const idle = begin('obstacle-race');
     const slow = runUntil(idle, () => idle.score >= 1, NEUTRAL_BRICK_INPUT, 100).ticks;
     const gas = begin('obstacle-race');
@@ -176,7 +179,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     expect(fast).toBeLessThan(slow);
   });
 
-  it('прогресс: поворот трассы, идущий на машину, объезжается рулём — стенка проходит строки 17–19, жизни целы, каждый шаг +1', () => {
+  coveredScenario('obstacle-race', 'прогресс', 'прогресс: поворот трассы, идущий на машину, объезжается рулём — стенка проходит строки 17–19, жизни целы, каждый шаг +1', () => {
     const g = begin('obstacle-race');
     tap(g, 'right');
     tap(g, 'right');
@@ -191,7 +194,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     expect(g.road.slice(15)).toEqual([2, 2, 2, 2, 2]); // стенка уже прошла нижние строки и ушла
   });
 
-  it('неудача: из пяти свободных клеток машине безопасны три положения (4, 5, 6); зацепить стенку — потерять жизнь', () => {
+  coveredScenario('obstacle-race', 'неудача', 'неудача: из пяти свободных клеток машине безопасны три положения (4, 5, 6); зацепить стенку — потерять жизнь', () => {
     expect([0, 1, 2, 3, 4, 5, 6, 7, 8].filter((x) => !touchesWall(x))).toEqual([4, 5, 6]);
     for (const target of [0, 1, 2, 3, 5, 6, 7, 8]) {
       const g = begin('obstacle-race');
@@ -207,7 +210,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     }
   });
 
-  it('неудача: стенка опасна ровно на строках 17–19 — на строке 16 безвредна, с очередным шагом на строке 17 стоит жизни', () => {
+  coveredScenario('obstacle-race', 'неудача', 'неудача: стенка опасна ровно на строках 17–19 — на строке 16 безвредна, с очередным шагом на строке 17 стоит жизни', () => {
     const g = begin('obstacle-race');
     tap(g, 'right');
     tap(g, 'right'); // x = 6: клетки (6,17), (6,18), (5,19), (7,19)
@@ -228,7 +231,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
 describe('boat-racing: три полосы (сценарии)', () => {
   const LANES = [1, 4, 7];
 
-  it('прогресс: лодка ходит по полосам 1, 4 и 7 и упирается в крайние', () => {
+  coveredScenario('boat-racing', 'прогресс', 'прогресс: лодка ходит по полосам 1, 4 и 7 и упирается в крайние', () => {
     const g = begin('boat-racing');
     expect(g.x).toBe(4);
     const path = [...'rrrlllll'].map((c) => {
@@ -238,7 +241,7 @@ describe('boat-racing: три полосы (сценарии)', () => {
     expect(path).toEqual([7, 7, 7, 4, 1, 1, 1, 1]);
   });
 
-  it('прогресс: уход с полосы спасает — препятствие проплывает мимо, пропущенное препятствие +1', () => {
+  coveredScenario('boat-racing', 'прогресс', 'прогресс: уход с полосы спасает — препятствие проплывает мимо, пропущенное препятствие +1', () => {
     const g = begin('boat-racing');
     const car = { x: 4, y: 8, kind: 0 };
     g.obstacles = [car];
@@ -251,7 +254,7 @@ describe('boat-racing: три полосы (сценарии)', () => {
     expect(count(events, 'lifeLost')).toBe(0);
   });
 
-  it('прогресс: препятствия соседних полос лодку не задевают — две машины рядом проплывают, +1 за каждую', () => {
+  coveredScenario('boat-racing', 'прогресс', 'прогресс: препятствия соседних полос лодку не задевают — две машины рядом проплывают, +1 за каждую', () => {
     const g = begin('boat-racing'); // лодка на полосе 4, препятствия на полосах 1 и 7 на одной высоте
     expect(contactRow((y) => carCells(1, y), playerCells(4))).toBeNull();
     expect(contactRow((y) => carCells(7, y), playerCells(4))).toBeNull();
@@ -262,7 +265,7 @@ describe('boat-racing: три полосы (сценарии)', () => {
     expect(g.lives).toBe(4);
   });
 
-  it('прогресс: безопасный заплыв — лодка всегда на полосе, счёт равен числу пропущенных препятствий, жизни целы', () => {
+  coveredScenario('boat-racing', 'прогресс', 'прогресс: безопасный заплыв — лодка всегда на полосе, счёт равен числу пропущенных препятствий, жизни целы', () => {
     const make = (): RoadGame => begin('boat-racing', { seed: 3 });
     const { steps } = route(make, ['up'], 400);
     expect(steps.some(Boolean), 'маршрут требует уворачиваться').toBe(true);
@@ -276,7 +279,7 @@ describe('boat-racing: три полосы (сценарии)', () => {
     expect(flow.destroyed).toBe(0);
   });
 
-  it('неудача: препятствие на своей полосе стоит жизни ровно в строке, где клетки спрайтов впервые совпадают', () => {
+  coveredScenario('boat-racing', 'неудача', 'неудача: препятствие на своей полосе стоит жизни ровно в строке, где клетки спрайтов впервые совпадают', () => {
     const row = contactRow((y) => carCells(4, y), playerCells(4));
     expect(row).toBe(16);
     const g = begin('boat-racing');
@@ -301,7 +304,7 @@ describe('racing-four: четыре полосы и узкие машины (с�
     return g;
   };
 
-  it('прогресс: рисунок узкий — машины в одну колонку, поэтому соседняя полоса через клетку не задевается', () => {
+  coveredScenario('racing-four', 'прогресс', 'прогресс: рисунок узкий — машины в одну колонку, поэтому соседняя полоса через клетку не задевается', () => {
     const g = onLane(3);
     g.obstacles = [{ x: 5, y: 5, kind: 0 }];
     expect([5, 6, 7].map((y) => lit(g, 5, y))).toEqual([CELL_ON, CELL_ON, CELL_ON]);
@@ -313,7 +316,7 @@ describe('racing-four: четыре полосы и узкие машины (с�
     expect(contactRow((y) => carCells(5, y, true), playerCells(3, true))).toBeNull();
   });
 
-  it('прогресс: полосы 1, 3, 5, 7 — машина шагает по одной и упирается в крайние', () => {
+  coveredScenario('racing-four', 'прогресс', 'прогресс: полосы 1, 3, 5, 7 — машина шагает по одной и упирается в крайние', () => {
     const g = onLane(1);
     const path = [...'rrrrrllllll'].map((c) => {
       tap(g, c === 'r' ? 'right' : 'left');
@@ -322,7 +325,7 @@ describe('racing-four: четыре полосы и узкие машины (с�
     expect(path).toEqual([3, 5, 7, 7, 7, 5, 3, 1, 1, 1, 1]);
   });
 
-  it('прогресс: две машины на соседних полосах проезжают мимо, не задев игрока, — +1 за каждую', () => {
+  coveredScenario('racing-four', 'прогресс', 'прогресс: две машины на соседних полосах проезжают мимо, не задев игрока, — +1 за каждую', () => {
     const g = onLane(3);
     g.obstacles = [{ x: 1, y: 13, kind: 0 }, { x: 5, y: 13, kind: 0 }];
     const flow = drive(g, 400, hold('up'), () => g.score >= 2);
@@ -331,7 +334,7 @@ describe('racing-four: четыре полосы и узкие машины (с�
     expect(g.lives).toBe(4);
   });
 
-  it('прогресс: безопасный заезд — машина всегда на полосе, счёт равен числу пропущенных машин, жизни целы', () => {
+  coveredScenario('racing-four', 'прогресс', 'прогресс: безопасный заезд — машина всегда на полосе, счёт равен числу пропущенных машин, жизни целы', () => {
     const make = (): RoadGame => onLane(3, 3);
     const { steps } = route(make, ['up'], 400);
     expect(steps.some(Boolean), 'маршрут требует менять полосу').toBe(true);
@@ -344,7 +347,7 @@ describe('racing-four: четыре полосы и узкие машины (с�
     expect(g.score).toBe(flow.passed);
   });
 
-  it('неудача: машина на своей полосе стоит жизни, когда общая клетка появляется впервые (узкая машина — строкой раньше широкой)', () => {
+  coveredScenario('racing-four', 'неудача', 'неудача: машина на своей полосе стоит жизни, когда общая клетка появляется впервые (узкая машина — строкой раньше широкой)', () => {
     const row = contactRow((y) => carCells(3, y, true), playerCells(3, true));
     expect(row).toBe(15);
     expect(contactRow((y) => carCells(3, y, false), playerCells(3, false))).toBe(16);
@@ -362,7 +365,7 @@ describe('racing-four: четыре полосы и узкие машины (с�
 // ── super-tank ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 describe('super-tank: стрельба по препятствиям (сценарии)', () => {
-  it('прогресс: выстрел разрушает машину в колонке танка — +10, событие попадания, машина пропадает и очков за проезд не даёт', () => {
+  coveredScenario('super-tank', 'прогресс', 'прогресс: выстрел разрушает машину в колонке танка — +10, событие попадания, машина пропадает и очков за проезд не даёт', () => {
     const g = begin('super-tank');
     const car = { x: 4, y: 3, kind: 0 };
     g.obstacles = [car];
@@ -374,7 +377,7 @@ describe('super-tank: стрельба по препятствиям (сцена
     expect(g.lives).toBe(4);
   });
 
-  it('прогресс: выстрел попадает по видимым клеткам — машины, у которых есть клетка в колонке танка, разрушаются, остальные едут дальше', () => {
+  coveredScenario('super-tank', 'прогресс', 'прогресс: выстрел попадает по видимым клеткам — машины, у которых есть клетка в колонке танка, разрушаются, остальные едут дальше', () => {
     for (let cx = 0; cx <= 8; cx++) {
       const g = begin('super-tank'); // танк в колонке 4
       const car = { x: cx, y: 10, kind: 0 }; // за 24 такта новая машина сверху до выстрела не доедет, а эта — до танка
@@ -387,7 +390,7 @@ describe('super-tank: стрельба по препятствиям (сцена
     }
   });
 
-  it('прогресс: выстрел в упор успевает — машина вплотную к носу (ещё без общих клеток) разрушается, а не стоит жизни', () => {
+  coveredScenario('super-tank', 'прогресс', 'прогресс: выстрел в упор успевает — машина вплотную к носу (ещё без общих клеток) разрушается, а не стоит жизни', () => {
     expect(touch(carCells(4, 15), playerCells(4))).toBe(false); // y = 15: вплотную, но не задевает
     expect(touch(carCells(4, 16), playerCells(4))).toBe(true); // следующий шаг дороги — уже столкновение
     const g = begin('super-tank');
@@ -401,7 +404,7 @@ describe('super-tank: стрельба по препятствиям (сцена
     expect(g.lives).toBe(4);
   });
 
-  it('прогресс: удержание — очередь выстрелов через равные промежутки, одиночное нажатие — один выстрел; FIRE стреляет так же, как ROTATE', () => {
+  coveredScenario('super-tank', 'прогресс', 'прогресс: удержание — очередь выстрелов через равные промежутки, одиночное нажатие — один выстрел; FIRE стреляет так же, как ROTATE', () => {
     const burst = begin('super-tank');
     const shotTicks: number[] = [];
     for (let t = 1; t <= 60; t++) if (has('shot')(burst.step(hold('rotate')))) shotTicks.push(t);
@@ -421,7 +424,7 @@ describe('super-tank: стрельба по препятствиям (сцена
     expect(Array.from(a.cells())).toEqual(Array.from(b.cells()));
   });
 
-  it('прогресс: танк в центре с зажатым огнём — каждая разрушенная машина +10, каждая пропущенная +1, жизни целы', () => {
+  coveredScenario('super-tank', 'прогресс', 'прогресс: танк в центре с зажатым огнём — каждая разрушенная машина +10, каждая пропущенная +1, жизни целы', () => {
     const g = begin('super-tank', { seed: 1 });
     const flow = drive(g, 400, hold('up', 'rotate'));
     expect(g.lives).toBe(4);
@@ -430,7 +433,7 @@ describe('super-tank: стрельба по препятствиям (сцена
     expect(g.score).toBe(10 * flow.destroyed + flow.passed);
   });
 
-  it('неудача: удар в препятствие на своей полосе без стрельбы стоит жизни ровно в строке общей клетки', () => {
+  coveredScenario('super-tank', 'неудача', 'неудача: удар в препятствие на своей полосе без стрельбы стоит жизни ровно в строке общей клетки', () => {
     const row = contactRow((y) => carCells(4, y), playerCells(4));
     expect(row).toBe(16);
     const g = begin('super-tank');
@@ -447,14 +450,14 @@ describe('super-tank: стрельба по препятствиям (сцена
 // ── racing-pickup ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 describe('racing-pickup: подбор оружия и стены (сценарии)', () => {
-  it('прогресс: две мигающие клетки — выстрел, три — ближний удар (рисунок бонусов)', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: две мигающие клетки — выстрел, три — ближний удар (рисунок бонусов)', () => {
     const g = begin('racing-pickup');
     g.obstacles = [{ x: 1, y: 5, kind: 1 }, { x: 7, y: 5, kind: 2 }];
     expect([5, 6, 7].map((y) => lit(g, 1, y))).toEqual([CELL_BLINK, CELL_BLINK, CELL_OFF]);
     expect([5, 6, 7, 8].map((y) => lit(g, 7, y))).toEqual([CELL_BLINK, CELL_BLINK, CELL_BLINK, CELL_OFF]);
   });
 
-  it('прогресс: бонус «выстрел» выдаёт стрельбу: до подбора огонь не стреляет, после подбора стреляет и разрушает машину (+10)', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: бонус «выстрел» выдаёт стрельбу: до подбора огонь не стреляет, после подбора стреляет и разрушает машину (+10)', () => {
     const g = begin('racing-pickup');
     const bonus = { x: 4, y: 6, kind: 1 };
     g.obstacles = [bonus];
@@ -477,7 +480,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.score).toBe(10);
   });
 
-  it('прогресс: бонус «удар» выдаёт ближний удар без выстрела: машина в трёх клетках перед носом разрушается (+10), дальняя — нет', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: бонус «удар» выдаёт ближний удар без выстрела: машина в трёх клетках перед носом разрушается (+10), дальняя — нет', () => {
     const g = begin('racing-pickup');
     const bonus = { x: 4, y: 6, kind: 2 };
     g.obstacles = [bonus];
@@ -503,7 +506,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.shots).toHaveLength(0);
   });
 
-  it('прогресс: выстрел бонус не задевает — бонус остаётся на дороге и подбирается, оружие меняется на выданное им', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: выстрел бонус не задевает — бонус остаётся на дороге и подбирается, оружие меняется на выданное им', () => {
     const g = begin('racing-pickup');
     g.hasGun = true;
     g.weapon = 1;
@@ -518,7 +521,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.lives).toBe(4);
   });
 
-  it('прогресс: ближний удар бонус не задевает — бонус проходит зону удара целым и подбирается', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: ближний удар бонус не задевает — бонус проходит зону удара целым и подбирается', () => {
     const g = begin('racing-pickup');
     g.weapon = 2;
     const bonus = { x: 4, y: 8, kind: 1 }; // «выстрел» едет в зону удара (строки 14–16), огонь зажат
@@ -531,7 +534,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.lives).toBe(4);
   });
 
-  it('прогресс: пока выстрел не выдан, стена не появляется ни в одной из партий; обычные машины и бонусы идут как обычно', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: пока выстрел не выдан, стена не появляется ни в одной из партий; обычные машины и бонусы идут как обычно', () => {
     let observedTicks = 0;
     let spawned = 0;
     for (let seed = 1; seed <= 12; seed++) {
@@ -548,7 +551,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(spawned).toBeGreaterThan(60);
   });
 
-  it('прогресс: после выданного выстрела стены появляются и рушатся выстрелом — игрок с зажатым огнём не теряет жизни', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: после выданного выстрела стены появляются и рушатся выстрелом — игрок с зажатым огнём не теряет жизни', () => {
     let wallsSeen = 0;
     for (let seed = 1; seed <= 12; seed++) {
       const g = begin('racing-pickup', { seed });
@@ -567,7 +570,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(wallsSeen).toBeGreaterThan(30);
   });
 
-  it('прогресс: если после выстрела подобран ещё и ближний удар, выстрел остаётся — стена по-прежнему разрушаема', () => {
+  coveredScenario('racing-pickup', 'прогресс', 'прогресс: если после выстрела подобран ещё и ближний удар, выстрел остаётся — стена по-прежнему разрушаема', () => {
     const g = begin('racing-pickup');
     g.obstacles = [{ x: 4, y: 8, kind: 1 }, { x: 4, y: 2, kind: 2 }];
     const bonuses = runUntil(g, () => g.weapon === 2 && g.hasGun, hold('up'), 300).events;
@@ -583,7 +586,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.lives).toBe(4);
   });
 
-  it('неудача: пока оружие не подобрано, огонь бесполезен — машина в зоне удара не разрушается и стоит жизни', () => {
+  coveredScenario('racing-pickup', 'неудача', 'неудача: пока оружие не подобрано, огонь бесполезен — машина в зоне удара не разрушается и стоит жизни', () => {
     const g = begin('racing-pickup');
     expect(g.weapon).toBe(0);
     expect(g.hasGun).toBe(false);
@@ -597,7 +600,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.lives).toBe(3);
   });
 
-  it('неудача: ближний удар стену не разрушает — стена доезжает до строки общей клетки и стоит жизни', () => {
+  coveredScenario('racing-pickup', 'неудача', 'неудача: ближний удар стену не разрушает — стена доезжает до строки общей клетки и стоит жизни', () => {
     const row = contactRow(wallCells, playerCells(4));
     expect(row).toBe(16);
     const g = begin('racing-pickup');
@@ -613,7 +616,7 @@ describe('racing-pickup: подбор оружия и стены (сценари
     expect(g.lives).toBe(3);
   });
 
-  it('неудача: оружие есть, но игрок не стреляет — стена и обычная машина всё равно стоят жизни', () => {
+  coveredScenario('racing-pickup', 'неудача', 'неудача: оружие есть, но игрок не стреляет — стена и обычная машина всё равно стоят жизни', () => {
     for (const kind of [-1, 0]) {
       const g = begin('racing-pickup');
       g.hasGun = true;
@@ -632,7 +635,7 @@ describe('punch-racing: ближний удар (сценарии)', () => {
   /** Три клетки перед носом: строки 14–16 в колонках носа и по соседству (x−1…x+1). */
   const zone = (x: number): Cell[] => [14, 15, 16].flatMap((y) => [x - 1, x, x + 1].map((cx): Cell => [cx, y]));
 
-  it('прогресс: удар достаёт машину, у которой есть клетка в трёх клетках перед носом, и только её: +10 и событие попадания', () => {
+  coveredScenario('punch-racing', 'прогресс', 'прогресс: удар достаёт машину, у которой есть клетка в трёх клетках перед носом, и только её: +10 и событие попадания', () => {
     for (const cx of [1, 2, 4, 6, 7]) {
       for (let y = 6; y <= 16; y++) {
         const g = begin('punch-racing'); // машина игрока в колонке 4
@@ -647,7 +650,7 @@ describe('punch-racing: ближний удар (сценарии)', () => {
     }
   });
 
-  it('прогресс: удар работает без выстрела — «дальнего выстрела нет»: ни событий, ни снарядов', () => {
+  coveredScenario('punch-racing', 'прогресс', 'прогресс: удар работает без выстрела — «дальнего выстрела нет»: ни событий, ни снарядов', () => {
     const g = begin('punch-racing');
     const events = run(g, 200, hold('up', 'rotate'));
     expect(count(events, 'shot')).toBe(0);
@@ -656,7 +659,7 @@ describe('punch-racing: ближний удар (сценарии)', () => {
     expect(run(viaFire, 200, hold('up', 'fire'))).toEqual(events); // FIRE ведёт себя как ROTATE
   });
 
-  it('прогресс: машина с зажатым ударом бьёт приближающиеся машины: +10 за разрушенную, +1 за проехавшую, жизни целы', () => {
+  coveredScenario('punch-racing', 'прогресс', 'прогресс: машина с зажатым ударом бьёт приближающиеся машины: +10 за разрушенную, +1 за проехавшую, жизни целы', () => {
     const g = begin('punch-racing', { seed: 1 });
     const flow = drive(g, 400, hold('up', 'rotate'));
     expect(g.lives).toBe(4);
@@ -665,7 +668,7 @@ describe('punch-racing: ближний удар (сценарии)', () => {
     expect(g.score).toBe(10 * flow.destroyed + flow.passed);
   });
 
-  it('неудача: без удара столкновение стоит жизни ровно в строке общей клетки; машина с другой стороны от зоны удара не мешает', () => {
+  coveredScenario('punch-racing', 'неудача', 'неудача: без удара столкновение стоит жизни ровно в строке общей клетки; машина с другой стороны от зоны удара не мешает', () => {
     const row = contactRow((y) => carCells(4, y), playerCells(4));
     expect(row).toBe(16);
     const g = begin('punch-racing');

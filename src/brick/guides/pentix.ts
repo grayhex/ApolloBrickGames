@@ -130,8 +130,8 @@ export const PENTIX_GUIDE: GameGuideData = {
       'Scoring, fall speed and special pieces are the donor’s rules; they are not verified on Apollo.',
     ),
     gt(
-      '«Вверх» поворачивает (у донора — бросок), бросок вынесен на «огонь»; ряды нового уровня не теряются (у донора теряются).',
-      'UP rotates (the donor drops), the drop moved to “fire”; new-level rows are kept (the donor loses them).',
+      '«Вверх» поворачивает (у донора — бросок); на Apollo мгновенного броска нет; ряды нового уровня не теряются (у донора теряются).',
+      'UP rotates (the donor drops); Apollo has no hard drop; new-level rows are kept (the donor loses them).',
     ),
   ],
 };

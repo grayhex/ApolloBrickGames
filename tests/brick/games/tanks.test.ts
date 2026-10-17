@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -60,6 +61,8 @@ import {
 } from '../../../src/brick/games/tanks/geometry';
 import { TANK_LEVELS, obstacleCells, presetObstacles, randomObstacles } from '../../../src/brick/games/tanks/levels';
 import { conformance, expectValid } from '../conformance';
+
+const coveredScenario = scenarioSuite('tanks');
 
 // ------------------------------------------------------------------ помощники
 
@@ -736,7 +739,7 @@ describe('танки: гибель игрока, жизни и конец игр
     expect(types(events)).toContain('crash');
   });
 
-  it('потеряв все жизни, игра заканчивается: конец игры, заливка поля, фаза over', () => {
+  coveredScenario('tank', 'неудача', 'потеряв все жизни, игра заканчивается: конец игры, заливка поля, фаза over', () => {
     const game = newGame();
     arrange(game, { enemyBullets: [killerBullet] });
     game['setLives'](1);
@@ -1097,7 +1100,7 @@ describe('танки: сценарии с ботом', () => {
     }
   });
 
-  it('бот проходит уровень: победа, переход на следующий и снова бой', () => {
+  coveredScenario('tank', 'прогресс', 'бот проходит уровень: победа, переход на следующий и снова бой', () => {
     const game = new TanksGame({ seed: 3, mode: 4, speed: 1 });
     game.start();
     const log: string[] = [];

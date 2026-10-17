@@ -170,7 +170,7 @@ test.describe('«Часы+99»', () => {
     expect(await area(page, 'phase')).toBe('ready'); // плитка уровня ничего не запускает
   });
 
-  test('игра — тетрис: старт, сдвиг, поворот, ускорение вниз, бросок, пауза и продолжение', async ({ page }) => {
+  test('игра — тетрис: старт, сдвиг, поворот, ускорение вниз без скрытого броска, пауза и продолжение', async ({ page }) => {
     await open(page, 'clock99');
     await page.keyboard.press('Enter');
     await expect.poll(phase(page)).toBe('playing');
@@ -182,9 +182,13 @@ test.describe('«Часы+99»', () => {
     await page.keyboard.press('ArrowRight');
     await expect.poll(async () => (await piece())?.x).toBe(x0);
     expect(Number(await area(page, 'score'))).toBe(0);
-    // Бросок (X): фигура падает и фиксируется, счёт растёт.
+    // Отдельной FIRE на корпусе нет: X не бросает фигуру. Вниз ускоряет до посадки.
     await page.keyboard.press('KeyX');
+    await page.waitForTimeout(100);
+    expect(await page.evaluate(() => [...(window as unknown as TetrisDebug).__brick.game.board].filter(Boolean).length)).toBe(0);
+    await page.keyboard.down('ArrowDown');
     await expect.poll(() => page.evaluate(() => [...(window as unknown as TetrisDebug).__brick.game.board].filter(Boolean).length)).toBeGreaterThan(0);
+    await page.keyboard.up('ArrowDown');
     // Пауза: P; продолжение — Enter.
     await page.keyboard.press('KeyP');
     await expect.poll(phase(page)).toBe('paused');

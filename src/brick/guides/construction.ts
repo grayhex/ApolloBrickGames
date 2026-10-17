@@ -90,7 +90,7 @@ export const CONSTRUCTION_GUIDE: GameGuideData = {
   controls: [
     { button: 'left', text: gt('Пушка на клетку влево: одно нажатие — один шаг, зажатая не повторяется.', 'The gun one cell left: one press, one step; holding does not repeat.') },
     { button: 'right', text: gt('Пушка на клетку вправо: одно нажатие — один шаг, зажатая не повторяется.', 'The gun one cell right: one press, one step; holding does not repeat.') },
-    { button: 'rotate', text: gt('Выстрел: одно нажатие — одна пуля (клавиша «огонь» — то же).', 'Fire: one press, one bullet (the fire key does the same).') },
+    { button: 'rotate', text: gt('Выстрел: одно нажатие — одна пуля.', 'Fire: one press, one bullet.') },
     { button: 'down', text: gt('Уронить стену на ряд сразу; зажатая повторяет.', 'Drop the wall one row at once; holding repeats.') },
     { button: 'up', text: gt('В вариантах «вверх ногами» роняет стену (вместо «вниз»).', 'In the “upside down” variants it drops the wall (instead of down).') },
   ],

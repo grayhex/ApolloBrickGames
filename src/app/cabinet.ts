@@ -14,10 +14,11 @@ import { makeTetrisInput, TetrisGame, type TetrisAction, type TetrisEvent } from
 import { MAX_SCORE } from '../brick/types';
 import type { TetrisScene } from '../render/tetrisScreen';
 import { gameKey, type ToyModel } from './toys';
+import { bodyActions } from './bodyButtons';
 
 /**
- * «Кабинет» игрушки с тетрисным экраном: что оболочка (`tetrisApp.ts`) знает об игре. Два вида: тетрис-заглушка («Часы+99») и консоль с меню игр
- * («168 в 1 танк», «Морской бой»). Оболочка работает только с этим интерфейсом: фаза, счёт, ввод такта, рисунок для экрана, звук и ключ рекорда.
+ * «Кабинет» игрушки с тетрисным экраном: что оболочка (`tetrisApp.ts`) знает об игре. Три матричные Apollo используют консоль с меню игр;
+ * прежний одиночный тетрис сохранён для совместимости модели без меню. Оболочка работает только с этим интерфейсом: фаза, счёт, ввод такта, рисунок для экрана, звук и ключ рекорда.
  */
 export type CabinetEvent = BrickEvent | TetrisEvent;
 
@@ -26,13 +27,13 @@ export interface Cabinet {
   readonly score: number;
   readonly hiScore: number;
   readonly lines: number;
-  /** Скорость и уровень так, как они стоят на экране (у консоли с меню 0..9, у тетриса-заглушки 1..10). */
+  /** Скорость и уровень так, как они стоят на экране (у консоли с меню 0..9, у одиночного тетриса 1..10). */
   readonly speed: number;
   readonly level: number;
   readonly tick: number;
   /** В игре сейчас меню (консоль ещё не запустила игру): ввод идёт в `menu`. */
   readonly inMenu: boolean;
-  /** Идентификатор игры каталога, выбранной в меню или играющей сейчас (у тетриса-заглушки — тетрис). */
+  /** Идентификатор игры каталога, выбранной в меню или играющей сейчас (у одиночного тетриса — тетрис). */
   readonly activeGame: GameId;
   /** Состояние для отладки и проверок: `data-*` игровой области. */
   readonly info: Readonly<Record<string, string | number>>;
@@ -41,7 +42,7 @@ export interface Cabinet {
   start(): CabinetEvent[];
   pause(): CabinetEvent[];
   resume(): CabinetEvent[];
-  /** Заново: у тетриса-заглушки — новая партия, у консоли — возврат в меню. */
+  /** Заново: у одиночного тетриса — новая партия, у консоли — возврат в меню. */
   restart(): CabinetEvent[];
   /** Один игровой такт. */
   step(frame: InputFrame): CabinetEvent[];
@@ -102,18 +103,18 @@ const FIRE = actionBit('fire');
 const JUMP = actionBit('jump');
 const ROTATE_MASK = maskOf('up', 'jump');
 
-function brickActions(mask: number): BrickAction[] {
+function brickActions(mask: number, allowed: ReadonlySet<BrickAction>): BrickAction[] {
   const actions: BrickAction[] = [];
-  if (mask & LEFT) actions.push('left');
-  if (mask & RIGHT) actions.push('right');
-  if (mask & UP) actions.push('up');
-  if (mask & DOWN) actions.push('down');
-  if (mask & JUMP) actions.push('rotate'); // большая кнопка ROTATE: в меню — выбор игры, в игре — поворот или огонь
-  if (mask & FIRE) actions.push('fire'); // клавиша «огонь» на клавиатуре (кнопка RESET корпуса её не посылает)
+  if ((mask & LEFT) && allowed.has('left')) actions.push('left');
+  if ((mask & RIGHT) && allowed.has('right')) actions.push('right');
+  if ((mask & UP) && allowed.has('up')) actions.push('up');
+  if ((mask & DOWN) && allowed.has('down')) actions.push('down');
+  if ((mask & JUMP) && allowed.has('rotate')) actions.push('rotate'); // большая кнопка ROTATE: в меню — выбор игры, в игре — поворот или огонь
+  if ((mask & FIRE) && allowed.has('fire')) actions.push('fire'); // действие движка; корпус без FIRE отфильтрует его до передачи игре
   return actions;
 }
 
-// ── Тетрис-заглушка («Часы+99») ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Одиночный тетрис (совместимость моделей без меню) ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 class TetrisCabinet implements Cabinet {
   private readonly game: TetrisGame;
@@ -172,7 +173,6 @@ class TetrisCabinet implements Cabinet {
       if (mask & RIGHT) actions.push('right');
       if (mask & DOWN) actions.push('down');
       if (mask & ROTATE_MASK) actions.push('rotate');
-      if (mask & FIRE) actions.push('drop');
       return actions;
     };
     return this.game.step(makeTetrisInput(pick(frame.pressed), pick(frame.held)));
@@ -203,7 +203,7 @@ class TetrisCabinet implements Cabinet {
   }
 }
 
-// ── Консоль с меню игр («168 в 1 танк», «Морской бой») ────────────────────────────────────────────────────────────────────────────
+// ── Консоль с меню игр («Часы+99», «168 в 1 танк», «Морской бой») ────────────────────────────────────────────────────────────────────────────
 
 /** Пункты меню консоли: игры игрушки по порядку (`ToyModel.games`) с восстановленными играми из `defs`. */
 export function consoleEntries(model: ToyModel, defs: Readonly<Record<string, BrickGameDef>>): BrickConsoleEntry[] {
@@ -222,9 +222,11 @@ const STEP_SOUND_GAMES: ReadonlySet<string> = new Set([GAMES.tetris.id, GAMES['t
 class ConsoleCabinet implements Cabinet {
   private readonly console_: BrickConsole;
   private readonly toy: string;
+  private readonly allowed: ReadonlySet<BrickAction>;
 
-  constructor(toy: string, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0) {
-    this.toy = toy;
+  constructor(model: ToyModel, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0) {
+    this.toy = model.id;
+    this.allowed = bodyActions(model);
     this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game });
   }
 
@@ -284,10 +286,10 @@ class ConsoleCabinet implements Cabinet {
     return this.console_.restart();
   }
   step(frame: InputFrame): CabinetEvent[] {
-    return this.console_.step(makeBrickInput(brickActions(frame.pressed), brickActions(frame.held)));
+    return this.console_.step(makeBrickInput(brickActions(frame.pressed, this.allowed), brickActions(frame.held, this.allowed)));
   }
   menu(frame: InputFrame): CabinetEvent[] {
-    return this.console_.menu(makeBrickInput(brickActions(frame.pressed), brickActions(frame.held)));
+    return this.console_.menu(makeBrickInput(brickActions(frame.pressed, this.allowed), brickActions(frame.held, this.allowed)));
   }
   scene(extra: { sound: boolean; allOn: boolean }): TetrisScene {
     const c = this.console_;
@@ -326,7 +328,7 @@ export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet
   if (model.defaultGame === null) throw new Error('This console has no game engine yet.');
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
   const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}:hi`;
-  return new ConsoleCabinet(model.id, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => g.id === model.defaultGame)));
+  return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => g.id === model.defaultGame)));
 }
 
 /** Звук события для кабинета: в консоли движение звучит только там, где оно уместно. */

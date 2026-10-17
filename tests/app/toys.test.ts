@@ -111,13 +111,13 @@ describe('подписи кнопок на корпусе', () => {
 });
 
 describe('справка игрушек с тетрисом', () => {
-  it('таблица: все девять кнопок с подписями корпуса и клавишами, плюс строка про бросок', () => {
+  it('таблица: только девять кнопок корпуса, без дополнительного броска', () => {
     setLang('ru');
     const bindings = cloneBindings(DEFAULT_KEYBOARD_BINDINGS);
     const rows = toyHelpRows(TOYS.clock99, bindings);
-    expect(rows.map((row) => row.button)).toEqual(['ON/OFF', 'START/PAUSE', 'MUTE', 'TIME/GAME', 'ALARM SET', 'TIME SET', '+ +', '−', 'ROTATE', '⌨ / 🎮']);
+    expect(rows.map((row) => row.button)).toEqual(['ON/OFF', 'START/PAUSE', 'MUTE', 'TIME/GAME', 'ALARM SET', 'TIME SET', '+ +', '−', 'ROTATE']);
     expect(rows.find((row) => row.button === 'ROTATE')?.keys).toContain('Пробел');
-    expect(rows.find((row) => row.button === 'TIME/GAME')?.keys).toBe('—'); // у кнопки нет клавиши: часов в заглушке нет
+    expect(rows.find((row) => row.button === 'TIME/GAME')?.keys).toBe('—'); // физическая кнопка возвращает в меню
     expect(rows.find((row) => row.button === 'ON/OFF')?.keys).toBe('O');
     const sea = toyHelpRows(TOYS.seabattle, bindings);
     expect(sea.map((row) => row.button)).toContain('RIGHT/SPEED');

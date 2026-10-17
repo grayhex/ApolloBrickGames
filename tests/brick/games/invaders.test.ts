@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -30,6 +31,8 @@ import {
   type Wall,
 } from '../../../src/brick/games/invaders/wall';
 import { conformance } from '../conformance';
+
+const coveredScenario = scenarioSuite('invaders');
 
 // ---------------------------------------------------------------- помощники
 
@@ -899,7 +902,7 @@ describe('игра 5: стена касается орудия', () => {
 // ---------------------------------------------------------------- победа, поражение
 
 describe('игра 5: победа в уровне и конец игры', () => {
-  it('последний кирпич выбит: очистка поля, `win`, следующий уровень с новой стеной и «мелодией»', () => {
+  coveredScenario(['shooting', 'shooting-array'], 'прогресс', 'последний кирпич выбит: очистка поля, `win`, следующий уровень с новой стеной и «мелодией»', () => {
     const game = frozen();
     game['addScore'](3);
     setBricks(game, [[4, 0]]);
@@ -963,7 +966,7 @@ describe('игра 5: победа в уровне и конец игры', () =
     }
   });
 
-  it('жизни кончились: `gameOver`, заливка рядов, фаза `over`, повторный старт начинает партию заново', () => {
+  coveredScenario(['shooting', 'shooting-array'], 'неудача', 'жизни кончились: `gameOver`, заливка рядов, фаза `over`, повторный старт начинает партию заново', () => {
     const game = frozen();
     game['addScore'](12);
     game['setLives'](1);

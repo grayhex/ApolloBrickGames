@@ -1,3 +1,4 @@
+import { scenarioSuite } from '../scenarioCoverage';
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_COLS,
@@ -19,6 +20,8 @@ import {
 import { ARKANOID_MODES, ArkanoidGame, arkanoidDef, arkanoidVariant } from '../../../src/brick/games/arkanoid';
 import { PRELOADED_WALLS, WALL_WIDTH, generatedWallHeight } from '../../../src/brick/games/arkanoid/wall';
 import { conformance } from '../conformance';
+
+const coveredScenario = scenarioSuite('arkanoid');
 
 // ---------------------------------------------------------------- помощники
 
@@ -728,7 +731,7 @@ describe('арканоид: потеря мяча, жизни, конец игр
     expect(game['ballY']).toBe(2);
   });
 
-  it('жизни кончились: конец игры с заливкой поля, затем `over`; новый старт — свежая партия с рекордом', () => {
+  coveredScenario('arkanoid', 'неудача', 'жизни кончились: конец игры с заливкой поля, затем `over`; новый старт — свежая партия с рекордом', () => {
     const game = still(0);
     game['setLives'](1);
     place(game, 8, 0, 1, -1);
@@ -910,7 +913,7 @@ describe('арканоид: бот', () => {
     expect(game['wall'].remaining).toBe(48 - game.score);
   });
 
-  it('бот проходит уровень в варианте со сдвигающейся стеной и доходит до следующего', () => {
+  coveredScenario('arkanoid', 'прогресс', 'бот проходит уровень в варианте со сдвигающейся стеной и доходит до следующего', () => {
     const game = make(4, { speed: 10 });
     game.start();
     const bot = makeBot();
