@@ -16,6 +16,10 @@
  * - клетка в ряду ствола (ряд 1) после шага спуска — потеря жизни, как у стены донора (проверяются ряды 0 и 1); скорость спуска — 800 мс на скорости 1 и 300 мс на
  *   скорости 10; на уровне стартует столько фигур, сколько уровней по четыре (1..3); скорость растёт каждые 100 очков;
  * - «подмога» (вторая пушка за потерянную жизнь) и вишенки-награды MT1997 не восстановлены.
+ *
+ * Варианты 05–08 — те же четыре, но поле «вверх дном» (пушка вверху, кнопки ↑ и ↓ меняются местами — в этой игре они не нужны). Источник — вики retroconsoles
+ * (Brick Game → Modes: у обеих стрелковых игр, Shooting Disappearing и Shooting Filling, есть «Invert upside-down»); это другая прошивка, не Apollo,
+ * и в MT1997 переворота нет, поэтому сами варианты — допущение. Они добавлены после четырёх прежних: номера 01–04 и их рекорды не изменились.
  */
 import { spriteWidth } from '../grid';
 import { CELL_BLINK, BRICK_COLS, type BrickGameDef, type BrickGameOptions, type BrickModeDef } from '../types';
@@ -50,25 +54,34 @@ interface ShapesTraits {
   readonly building: boolean;
   /** «Движение в бок»: поле сдвигается после каждого шага спуска. */
   readonly shifting: boolean;
+  /** Поле «вверх дном» (варианты 05–08): пушка вверху. */
+  readonly inverted: boolean;
 }
 
-const TRAITS: readonly ShapesTraits[] = [
+/** Сколько вариантов в описании MT1997 (они же — первые четыре варианта игры); дальше идут такие же вверх дном. */
+export const MT1997_VARIANTS = 4;
+
+const BASE_TRAITS: readonly Omit<ShapesTraits, 'inverted'>[] = [
   { building: false, shifting: false },
   { building: false, shifting: true },
   { building: true, shifting: false },
   { building: true, shifting: true },
 ];
+const TRAITS: readonly ShapesTraits[] = [
+  ...BASE_TRAITS.map((traits) => ({ ...traits, inverted: false })),
+  ...BASE_TRAITS.map((traits) => ({ ...traits, inverted: true })),
+];
 
 const CONFIGS: readonly GunGameConfig[] = TRAITS.map((traits) => ({
   barrels: 1,
-  inverted: false,
+  inverted: traits.inverted,
   shifting: traits.shifting,
   autoRepeat: true,
   speedStepScore: SPEED_STEP_SCORE,
   extraLifeScore: EXTRA_LIFE_SCORE,
 }));
 
-export const SHAPES_MODES: readonly BrickModeDef[] = [
+const BASE_MODES: readonly BrickModeDef[] = [
   {
     name: { ru: 'Отстрел фигур', en: 'Shoot the shapes' },
     note:
@@ -94,6 +107,18 @@ export const SHAPES_MODES: readonly BrickModeDef[] = [
       'Как вариант 03, но после каждого шага спуска всё поле сдвигается на клетку влево или вправо (случайно, без оборачивания): ' +
       'что именно «движется в бок» в MT1997 — допущение.',
   },
+];
+
+/** Варианты 05–08: те же, что 01–04, но поле вверх дном (источник — вики retroconsoles; MT1997 переворота не знает, потому допущение). */
+const FLIPPED_NOTE =
+  'Поле вверх дном: пушка вверху, фигуры спускаются снизу вверх, кнопки ↑ и ↓ меняются местами (в игре не нужны). Источник — вики retroconsoles (Brick Game → Modes: ' +
+  'у стрелковых игр есть «Invert upside-down»; это другая прошивка, не Apollo), в MT1997 переворота нет — допущение.';
+export const SHAPES_MODES: readonly BrickModeDef[] = [
+  ...BASE_MODES,
+  ...BASE_MODES.map((mode, index): BrickModeDef => ({
+    name: { ru: `${mode.name.ru}, вверх дном`, en: `${mode.name.en}, upside down` },
+    note: `Как вариант ${String(index + 1).padStart(2, '0')}. ${FLIPPED_NOTE}`,
+  })),
 ];
 
 // ---------------------------------------------------------------- игра

@@ -4,6 +4,7 @@ import {
   BRICK_COLS,
   BRICK_ROWS,
   NEUTRAL_BRICK_INPUT,
+  flipRows,
   genuineTicks,
   makeBrickInput,
   msToTicks,
@@ -132,29 +133,39 @@ function cellSet(space: GunSpace): Set<string> {
 conformance(shapesDef);
 
 describe('shapes: варианты', () => {
-  it('четыре варианта: два отстрела и две достройки (без сдвига и со сдвигом); всё, чего нет у донора, помечено допущением', () => {
+  it('восемь вариантов: два отстрела и две достройки (без сдвига и со сдвигом) и те же четыре вверх дном; всё, чего нет у донора, помечено допущением', () => {
     expect(shapesDef.id).toBe('shapes');
     expect(shapesDef.declaredModes).toBeNull();
-    expect(SHAPES_MODES.length).toBe(4);
+    expect(SHAPES_MODES.length).toBe(8);
     expect(SHAPES_MODES.map((mode) => mode.name.ru)).toEqual([
       'Отстрел фигур',
       'Отстрел фигур, движение в бок',
       'Достройка до прямоугольников',
       'Достройка, движение в бок',
+      'Отстрел фигур, вверх дном',
+      'Отстрел фигур, движение в бок, вверх дном',
+      'Достройка до прямоугольников, вверх дном',
+      'Достройка, движение в бок, вверх дном',
     ]);
     for (const mode of SHAPES_MODES) expect(mode.note).toContain('допущение');
     expect(SHAPES_MODES[0]?.note).toContain('MT1997');
     expect(SHAPES_MODES[2]?.note).toContain('GunGame');
+    SHAPES_MODES.slice(4).forEach((mode, index) => {
+      expect(mode.note, `вариант ${index + 5}`).toContain(`Как вариант 0${index + 1}.`);
+      expect(mode.note).toContain('вики retroconsoles');
+      expect(mode.note).toContain('не Apollo');
+      expect(mode.name.en).toBe(`${SHAPES_MODES[index]?.name.en}, upside down`);
+    });
   });
 
   it('варианты различаются: после одних и тех же действий картинка разная', () => {
     const signatures = new Set<string>();
-    for (let mode = 0; mode < 4; mode++) {
+    for (let mode = 0; mode < 8; mode++) {
       const game = started(mode);
       run(game, 400, (t) => (t % 7 === 0 ? makeBrickInput(['fire']) : t % 29 === 0 ? makeBrickInput(['left']) : NEUTRAL_BRICK_INPUT));
       signatures.add(frameHash(game));
     }
-    expect(signatures.size).toBe(4);
+    expect(signatures.size).toBe(8);
   });
 
   it('одно зерно и одни вводы — одна партия; другое зерно — другие фигуры', () => {
@@ -735,6 +746,81 @@ function buildBot(game: TestShapes): BrickInput {
   if (column > game.gunX()) return makeBrickInput(['right']);
   return makeBrickInput(['fire']);
 }
+
+/** Идёт ли полноэкранная сценка (очистка поля, взрыв): её кадры считает основа, а не поле игры, и они не отражаются. */
+const overlayOn = (game: TestShapes): boolean => (game as unknown as { overlay: Uint8Array | null }).overlay !== null;
+
+describe('shapes: варианты 05–08 — те же, но поле вверх дном', () => {
+  it('пушка вверху (строки 0–1), фигура появляется снизу; в обычном варианте — наоборот', () => {
+    for (let mode = 0; mode < 4; mode++) {
+      expect(litRows(make(mode).cells()), `вариант ${mode + 1}`).toEqual([18, 19]);
+      expect(litRows(make(mode + 4).cells()), `вариант ${mode + 5}`).toEqual([0, 1]);
+      const inverted = started(mode + 4);
+      expect(groups(flipRows(inverted.cells())).length).toBe(1); // отражённый кадр — обычное поле: одна фигура сверху
+      expect(rowCells(inverted.cells(), BRICK_ROWS - 1), `вариант ${mode + 5}: фигура внизу`).toBeGreaterThan(0);
+    }
+  });
+
+  it('кадр варианта 04 + n — зеркало кадра варианта n в каждом такте игры (кроме полноэкранных сценок): те же зерно, события и очки', () => {
+    for (let mode = 0; mode < 4; mode++) {
+      const plain = started(mode, { seed: 9, speed: 10 });
+      const inverted = started(mode + 4, { seed: 9, speed: 10 });
+      const script = (t: number): BrickInput => (t % 5 === 0 ? makeBrickInput(['fire']) : t % 17 === 0 ? makeBrickInput(['left']) : t % 23 === 0 ? makeBrickInput(['right']) : NEUTRAL_BRICK_INPUT);
+      for (let t = 0; t < 1500; t++) {
+        const input = script(t);
+        const eventsPlain = plain.step(input);
+        const eventsInverted = inverted.step(input);
+        expect(types(eventsInverted), `вариант ${mode + 5}, такт ${t}`).toEqual(types(eventsPlain));
+        if (!overlayOn(plain)) expect(inverted.cells(), `вариант ${mode + 5}, такт ${t}`).toEqual(flipRows(plain.cells()));
+        expect([inverted.score, inverted.lives, inverted.phase]).toEqual([plain.score, plain.lives, plain.phase]);
+      }
+    }
+  });
+
+  it('[shooting-figures · варианты 05 и 07 · прогресс] отстрел и достройка работают как в вариантах 01 и 03: события и очки те же, на экране — зеркально', () => {
+    for (const [mode, twin] of [[4, 0], [6, 2]] as const) {
+      const plain = bare(twin);
+      const inverted = bare(mode);
+      const stage = (game: TestShapes): void => game.figure(twin === 0 ? ['#', '#', '#'] : ['###', '#.#', '..#'], 4, 12);
+      stage(plain);
+      stage(inverted);
+      const eventsPlain = [...tap(plain, 'fire'), ...idle(plain, 14)];
+      const eventsInverted = [...tap(inverted, 'fire'), ...idle(inverted, 14)];
+      expect(types(eventsInverted), `вариант ${mode + 1}`).toEqual(types(eventsPlain));
+      expect(types(eventsInverted)).toContain(twin === 0 ? 'hit' : 'lock');
+      expect(inverted.score).toBe(plain.score);
+      expect(inverted.score).toBe(1);
+      expect(inverted.cells()).toEqual(flipRows(plain.cells()));
+    }
+  });
+
+  it('[shooting-figures · вариант 07 · прогресс] достройка вверх дном: фигура становится прямоугольником, он мигает и исчезает (+2 за клетку)', () => {
+    const game = bare(6);
+    game.figure(['##', '#.'], 4, 15);
+    tap(game, 'right');
+    tap(game, 'fire', 14);
+    expect(game.cells().filter((value) => value === 2).length).toBe(4);
+    idle(game, VANISH);
+    expect(game.field().total()).toBe(0);
+    expect(game.score).toBe(1 + 4 * 2);
+  });
+
+  coveredScenario('shooting-figures', 'неудача', 'вверх дном: если не стрелять, фигуры доходят до пушки; четыре жизни кончаются, игра заканчивается (варианты 05 и 08)', () => {
+    for (const mode of [4, 7]) {
+      const game = started(mode, { speed: 10 });
+      const events = [] as ReturnType<typeof idle>;
+      for (let t = 0; t < 6000 && game.phase !== 'over'; t++) events.push(...idle(game));
+      expect(game.phase, `вариант ${mode + 1}`).toBe('over');
+      const names = types(events);
+      expect(names.filter((name) => name === 'crash').length).toBe(4);
+      expect(names.filter((name) => name === 'lifeLost').length).toBe(4);
+      expect(names.filter((name) => name === 'gameOver').length).toBe(1);
+      expect(game.overFill).toBe(BRICK_ROWS);
+      game.start();
+      expect([game.score, game.lives]).toEqual([0, 4]);
+    }
+  });
+});
 
 describe('shapes: бот', () => {
   coveredScenario('shooting-figures', 'прогресс', 'бот отстрела уничтожает фигуры: очки растут, скорость повышается, жизни целы', () => {
