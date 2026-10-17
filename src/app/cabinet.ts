@@ -37,6 +37,8 @@ export interface Cabinet {
   readonly activeGame: GameId;
   /** Нужна ли выбранной игре отдельная кнопка FIRE (не алиас ROTATE): только тогда универсальная приставка её рисует и принимает. */
   readonly usesFire: boolean;
+  /** Canonical engine mode and menu start settings, never display/menu positions. */
+  readonly ranking: {mode:number;speed:number;level:number};
   /** Состояние для отладки и проверок: `data-*` игровой области. */
   readonly info: Readonly<Record<string, string | number>>;
   /** Ключ хранилища рекорда текущей игры (у консоли — игры и варианта); `null`, пока игра не выбрана. */
@@ -151,6 +153,7 @@ class TetrisCabinet implements Cabinet {
   readonly inMenu = false;
   readonly activeGame: GameId = 'tetris';
   readonly usesFire = false;
+  get ranking(): {mode:number;speed:number;level:number} { return {mode:0,speed:0,level:0}; }
   get info(): Readonly<Record<string, string | number>> {
     return {};
   }
@@ -278,6 +281,7 @@ class ConsoleCabinet implements Cabinet {
   get activeGame(): GameId {
     return this.console_.gameId as GameId;
   }
+  get ranking(): {mode:number;speed:number;level:number} { return {mode:this.console_.mode,...this.console_.startSettings}; }
   get usesFire(): boolean {
     return this.allowed.has('fire') && this.fireGames.has(this.console_.gameId);
   }

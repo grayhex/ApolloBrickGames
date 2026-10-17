@@ -4581,3 +4581,45 @@ body[data-toy='brickgame'] #shell-picker { grid-template-columns:repeat(2,minmax
 .remote__key:active,.remote__key[data-pressed] { background:color-mix(in srgb,var(--accent) 30%,var(--chip)); border-color:var(--accent); }
 .remote__key:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 @media (prefers-reduced-motion:reduce) { .remote__key { transition:none; } }
+
+/* A compact remote and an independent high-score card in the right column. */
+.side--ctl:has(> .leaderboard) { padding:0; border:0; background:none; box-shadow:none; gap:12px; overflow-x:hidden; }
+.side--ctl:has(> .leaderboard) > .ctl-card { padding:16px; border:1px solid var(--line); border-radius:20px; background:linear-gradient(145deg,var(--card-hi),var(--card-lo)); box-shadow:var(--card-shadow); }
+.side--ctl:has(> .leaderboard) .side__sec { margin-block:8px; padding-block:8px; }
+.side--ctl:has(> .leaderboard) .vol { font-size:11px; }
+.leaderboard.side { display:block; width:100%; flex:none; padding:15px; border-radius:18px; overflow:visible; max-height:none; margin:0; opacity:1; }
+.leaderboard__heading { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.leaderboard__heading h2 { margin:0; font-size:13px; letter-spacing:.06em; }
+.leaderboard__badge { font:700 9px/1.6 system-ui,sans-serif; letter-spacing:.1em; color:var(--accent); }
+.leaderboard__caption { margin:8px 0 10px; color:var(--muted); font-size:11px; line-height:1.4; }
+.leaderboard__table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:11px; }
+.leaderboard__table th { text-align:left; color:var(--muted); font-size:9px; font-weight:500; padding:4px 2px; }
+.leaderboard__table td { padding:3px 2px; border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent); vertical-align:middle; }
+.leaderboard__table :is(th,td):first-child { width:34px; }
+.leaderboard__table :is(th,td):nth-child(3) { width:66px; text-align:right; font-variant-numeric:tabular-nums; }
+.leaderboard__table :is(th,td):last-child { width:30px; text-align:center; }
+.leaderboard__nick { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.leaderboard__toy { display:inline-flex; width:18px; height:22px; vertical-align:middle; align-items:center; }
+.leaderboard__toy svg { height:22px; width:18px; max-width:18px; filter:none; }
+.leaderboard__status,.leaderboard__note { margin:8px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+.leaderboard__status:empty { display:none; }
+.leaderboard button { cursor:pointer; color:var(--text); border:1px solid var(--line); background:var(--chip); border-radius:8px; padding:7px 9px; font:600 10px/1.3 system-ui,sans-serif; }
+.leaderboard button:hover { border-color:var(--accent); }
+.leaderboard button:disabled { opacity:.5; cursor:wait; }
+.leaderboard__more { margin-top:9px; width:100%; }
+.leaderboard__publish { border-top:1px solid var(--line); margin-top:12px; padding-top:10px; font-size:11px; }
+.leaderboard__publish label { display:block; margin:9px 0 5px; color:var(--muted); font-size:10px; }
+.leaderboard__publish input { width:100%; min-width:0; padding:8px; border-radius:8px; border:1px solid var(--line); color:var(--text); background:var(--chip); font:inherit; }
+.leaderboard__actions { display:flex; gap:6px; margin-top:8px; }
+.leaderboard__actions button:first-child { flex:1; border-color:var(--accent); }
+.leaderboard__challenge { margin-top:8px; }
+@media(max-width:899px) { .side--ctl:has(> .leaderboard) { max-height:none; overflow:visible; } .leaderboard.side { display:block; width:100%; } }
+.leaderboard [hidden] { display:none!important; }
+
+/* The monoblock lid is 400×475, taller than an Apollo lid: fit its actual screen-only ratio. */
+body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w:clamp(240px,calc((100dvh - 30px - var(--head-h)) / 1.1875),1100px); }
+@media(min-width:900px) { body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] > .stage { align-self:start; margin-top:8px; } }
+.side--ctl:has(> .leaderboard) .shellpick__btn { padding:6px; }
+.side--ctl:has(> .leaderboard) #view-state .seg__btn { padding:6px; min-height:64px; }
+.side--ctl:has(> .leaderboard) .ctl-card .view-mini { height:56px; }
+.side--ctl:has(> .leaderboard) .segments__choice { padding:9px 8px; }

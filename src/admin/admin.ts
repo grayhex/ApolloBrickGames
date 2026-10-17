@@ -1,3 +1,4 @@
+import { adminLeaderboards } from './leaderboards';
 import './admin.css';
 import { TOYS } from '../app/toys';
 import { GAMES, type GameId } from '../games/catalog';
@@ -100,5 +101,6 @@ export async function startAdmin(): Promise<void> {
     } catch(error) { message(String(error),true); }
     finally { setBusy(false); }
   }
+  adminLeaderboards(root,key);
   render(); await load();
 }

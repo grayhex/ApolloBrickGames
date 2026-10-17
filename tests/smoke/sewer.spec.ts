@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Колодцы (видео геймплея 178–216 с): в уровнях 2–9 есть щель между двумя одиночными трубами с сердцем; провалившийся герой попадает в комнату —
@@ -21,6 +21,7 @@ type DebugWindow = Window & {
 };
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

@@ -1,3 +1,4 @@
+import { LeaderboardCard } from './leaderboard';
 import { screenSize, type ContentPack } from '../content/schema';
 import type { AudioPort } from '../audio/audio';
 import { WebAudioPort } from '../audio/beeper';
@@ -118,6 +119,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const route = GAME_ROUTES[routeName];
   const life = new Lifecycle();
   const { signal } = life;
+  let leaderboard: LeaderboardCard | null = null;
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
@@ -275,6 +277,12 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const stepper = new FixedStepper(1000 / ctx.rules.params.tickRateHz);
 
   const onEvents = (events: readonly GameEvent[]): void => {
+    if(events.some(event=>event.type==='phaseChanged'&&event.to==='playing'&&(event.from==='ready'||event.from==='gameOver'||event.from==='completed'))){
+      leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},currentLevel.kind==='original'&&game.state.levelId===slots.find(slot=>slot.number===1)?.levelId&&game.state.lives===ctx.rules.params.lives&&game.state.score===0);
+      leaderboard?.begin();
+    }
+    if(events.some(event=>event.type==='secretLives')){leaderboard?.cancel();leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},false);}
+    if(events.some(event=>event.type==='gameOver'||event.type==='gameCompleted'))leaderboard?.finish(game.state.score);
     for (const event of events) {
       if (event.type === 'levelStarted') {
         snapCamera = true;
@@ -483,6 +491,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
       if (level) source = userPack(pack, level);
     }
     if (!source) return false;
+    leaderboard?.cancel();
     const original = ref.kind !== 'user'; // интро и сценарий входа — у уровней пакета (оригинальных и готовых); карта из редактора стартует сразу
     session.suspend();
     ctx = createContext(source);
@@ -507,6 +516,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     refs.statusContent.textContent = contentLine(source);
     speedrun.reset(game.state.levelId);
     currentLevel = ref;
+    leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},ref.kind==='original'&&ref.number===1);
     applyDisplay();
     return true;
   }
@@ -579,6 +589,8 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     })
     : null;
   // Угловое меню: индикатор клавиатуры/геймпада и смена фона — рядом с языком, настройками и справкой.
+  if(route.lid){leaderboard=new LeaderboardCard(refs.sideCtl,signal);leaderboard.select({gameId:'mario',mode:0,toyId:'mario'},currentLevel.kind==='original'&&currentLevel.number===1);}
+
   const corner = route.lid ? new CornerNav({ devices: refs.devices, theme: refs.cornerTheme }, { toggleTheme, toggleGhost: panelActions.toggleGhost, togglePause: () => { if (!powered) return; if (game.state.phase === 'playing') session.requestPause(); else if (game.state.phase === 'paused') session.requestStart(); }, onPointerUse: refocusGame }, signal) : null;
 
   // Шутка со шлейфом: пока шлейф между половинами держат курсором или пальцем, экран рассыпается и гаснет; отпустили — возвращается.
@@ -618,6 +630,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     refocusGame();
   }, { signal });
   const restart = (): void => {
+    leaderboard?.cancel();
     suspendReason = null;
     director.reset(); // явный рестарт — не возрождение после гибели: обрывает звучащую гибель и снова с фанфары
     session.restart();
@@ -690,6 +703,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
+    leaderboard?.cancel();
     if (on && view === 'closed') {
       view = 'full';
       applyView();

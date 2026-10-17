@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Основной маршрут: игрушка, по умолчанию с уровнем `mario-1`; ходьба и рендер проверяются на тестовом уровне `tunnel-run` (`?level=tunnel-run`), один герой.
@@ -60,6 +60,7 @@ async function startOnFloor(page: Page): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));

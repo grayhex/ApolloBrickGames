@@ -23,7 +23,7 @@ test('admin: цвет миниатюры в карусели выбираетс�
   await universal.selectOption('black');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key');
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Опубликовано для всех игроков');
+  await expect(page.locator('.admin__status')).toContainText('Опубликовано для всех игроков');
   expect([config.toys.mario.thumbShell, config.toys.brickgame.thumbShell]).toEqual(['red', 'black']);
   const game = await context.newPage();
   await game.goto('./?toy=clock99');

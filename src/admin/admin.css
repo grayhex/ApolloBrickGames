@@ -24,3 +24,7 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 @media(prefers-reduced-motion:reduce) { .admin button { transition:none; } }
 .admin__swatches [data-color=gray]::after { background:#cecec0; }
 .admin__swatches [data-color=black]::after { background:#222725; }
+.admin__record { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid #2b3742; }
+.admin__record span { overflow-wrap:anywhere; }
+.admin__leaderboards label { grid-template-columns:minmax(0,1fr); min-width:0; max-width:100%; }
+.admin__leaderboards select { width:100%; min-width:0; box-sizing:border-box; }

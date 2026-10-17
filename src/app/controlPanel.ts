@@ -334,7 +334,7 @@ export class ControlPanel {
           ),
         )
       : null;
-    this.root.replaceChildren(top, ...(remote ? [remote] : []), sound, view, segments, levels, ...(options.speedrun === false ? [] : [this.runBox]));
+    this.root.replaceChildren(h('div', {class:'ctl-card'}, top, ...(remote ? [remote] : []), sound, view, segments, levels, ...(options.speedrun === false ? [] : [this.runBox])));
     this.setUserLevels([], null);
     this.relabel();
     onLangChange(() => this.relabel(), options.signal);

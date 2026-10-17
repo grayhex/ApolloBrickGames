@@ -124,6 +124,9 @@ export class BrickConsole implements BrickGame {
     return this.selectedMode;
   }
 
+  /** Frozen menu settings used for the next start, independent of progress inside the game. */
+  get startSettings(): {speed:number;level:number} { return {speed:this.menuSpeed,level:this.menuLevel}; }
+
   private get selectedMode(): number {
     return this.selected.modes?.[this.modeIndex] ?? this.modeIndex;
   }

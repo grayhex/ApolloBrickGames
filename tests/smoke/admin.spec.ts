@@ -20,7 +20,7 @@ test('admin: edits, validates, publishes and loads a shared menu in a fresh page
   await page.getByLabel('Добавить игру',{exact:true}).selectOption('snake'); await page.getByRole('button',{name:'Добавить в меню',exact:true}).click();
   await page.getByLabel('Выбрана при включении',{exact:true}).selectOption('snake'); await page.getByLabel('Основной цвет',{exact:true}).selectOption('white');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key'); await page.getByRole('button',{name:'Опубликовать',exact:true}).click();
-  await expect(page.getByRole('status')).toContainText('Опубликовано для всех игроков');
+  await expect(page.locator('.admin__status')).toContainText('Опубликовано для всех игроков');
   expect(config.toys.clock99.games.at(-1)?.id).toBe('snake');
   const game = await context.newPage(); await game.goto('./?toy=clock99&power=on&debug');
   await expect(game.locator('#toy')).toHaveAttribute('data-shell','white');

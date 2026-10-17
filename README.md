@@ -60,3 +60,5 @@ npx wrangler secret put ADMIN_TOKEN
 **Статический хостинг:** `npm run build`, затем разместите содержимое `dist`. Для подкаталога: `npm run build -- --base=/your-path/`. Без Worker настройки коллекции публикуются через `src/config/default.json` и повторную сборку.
 
 [Архитектура](docs/architecture.md) · [Настройка коллекции](docs/admin.md) · [Редактор Mario](docs/editor.md) · [Каталог и статус игр](docs/brick/library.md) · [Источники](docs/reference-status.md) · [Сторонние материалы](docs/THIRD_PARTY.md)
+
+Общие рекорды TOP-20 без регистрации: [настройка Cloudflare, категории и API](docs/leaderboards.md).

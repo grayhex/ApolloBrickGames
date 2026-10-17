@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marioUrl } from './url';
+import { marioUrl, mockReadOnlyLeaderboard } from './url';
 
 /**
  * Игрушка целиком: корпус из двух половин, девять кнопок, логотип на нижней части, уголок с настройками, справкой и редактором.
@@ -28,6 +28,7 @@ async function center(page: Page, id: string): Promise<{ x: number; y: number }>
 }
 
 test.beforeEach(async ({ page }) => {
+  await mockReadOnlyLeaderboard(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
