@@ -385,6 +385,7 @@ export class InfoPanel {
       if (next === undefined) return;
       event.preventDefault();
       select(ids[next] ?? this.selected, true);
+      this.onChoose?.(this.selected); // как при щелчке: меню консоли следует за открытой вкладкой
     });
     chooser.addEventListener('change', () => {
       select(chooser.value as GameId);

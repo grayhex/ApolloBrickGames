@@ -284,6 +284,23 @@ test('«Игры на устройстве»: запуск включает вы
   expect(await area(page, 'game')).toBe('snake');
 });
 
+test('«Игры на устройстве»: запуск, отложенный на время проверки экрана, не срабатывает после выключения', async ({ page }) => {
+  await open(page, '?toy=brickgame', (config) => {
+    config.toys.brickgame.games = [{ id: 'tetris' }, { id: 'snake' }];
+    config.toys.brickgame.defaultGame = 'tetris';
+  });
+  await page.locator('#guide-game').selectOption('snake');
+  await page.locator('.gnav__btn--launch').click(); // включает игрушку; проверка экрана ещё идёт
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
+  await page.locator('[data-key="onoff"]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'off');
+  await page.locator('[data-key="onoff"]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-power', 'on');
+  await expect.poll(() => area(page, 'boot')).toBe('off');
+  await page.waitForTimeout(500); // ошибочный запуск случился бы сразу после проверки экрана
+  expect(await area(page, 'phase')).toBe('ready');
+});
+
 test('панель настроек сверху слева — над левой панелью справки: тот же центр и та же ширина', async ({ page }) => {
   await open(page, '?toy=brickgame');
   const boxes = await page.evaluate(() => {
