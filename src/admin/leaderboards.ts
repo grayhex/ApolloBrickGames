@@ -56,6 +56,8 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
     }
     if ([...toy.options].some((o) => o.value === 'brickgame')) toy.value = 'brickgame';
     rows.replaceChildren();
+    nextCursor = null;
+    more.hidden = true;
     message('Выберите категорию и нажмите «Загрузить записи». Дополнительная FIRE образует отдельный рейтинг только у игр, использующих её.');
   };
   let nextCursor: number | null = null;

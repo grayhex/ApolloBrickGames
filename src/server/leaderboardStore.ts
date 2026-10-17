@@ -31,9 +31,11 @@ export class LeaderboardStore {
       'CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, guest TEXT NOT NULL, start_key TEXT NOT NULL, toy_id TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, finish_score INTEGER, finished_at INTEGER, receipt TEXT, UNIQUE(guest,start_key))',
       'CREATE INDEX IF NOT EXISTS runs_expiry ON runs(expires_at)',
       'CREATE TABLE IF NOT EXISTS receipts (seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT UNIQUE NOT NULL, created_at INTEGER NOT NULL)',
+      'CREATE INDEX IF NOT EXISTS receipts_expiry ON receipts(created_at)',
       'CREATE TABLE IF NOT EXISTS entries (guest TEXT PRIMARY KEY, run_id TEXT UNIQUE NOT NULL, nickname TEXT NOT NULL, score INTEGER NOT NULL, toy_id TEXT NOT NULL, accepted_seq INTEGER UNIQUE NOT NULL, accepted_at INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0 CHECK(hidden IN (0,1)))',
       'CREATE INDEX IF NOT EXISTS entries_top ON entries(score DESC,accepted_seq ASC) WHERE hidden=0',
       'CREATE TABLE IF NOT EXISTS limits (key TEXT PRIMARY KEY, window INTEGER NOT NULL, count INTEGER NOT NULL)',
+      'CREATE INDEX IF NOT EXISTS limits_window ON limits(window)',
     ])
       this.sql.exec(ddl);
   }

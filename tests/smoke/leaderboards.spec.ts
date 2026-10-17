@@ -247,3 +247,19 @@ test('Mario registers a standard full game without importing a local record', as
   expect(requests.find((r) => r.path === 'runs')!.data).toMatchObject({ gameId: 'mario', toyId: 'mario', mode: 0, startProfile: STANDARD_START });
   expect(requests.filter((r) => r.path === 'finish' || r.path === 'publish')).toHaveLength(0);
 });
+
+test('Mario bonus-lives secret keeps gameplay intact but opts the run out of global scores', async ({ page }) => {
+  const requests = await setup(page);
+  await page.goto('./?toy=mario&power=on');
+  await page.locator('body:not([data-booting])').waitFor();
+  await page.locator('#game-area').focus();
+  await page.keyboard.down('ArrowLeft');
+  await page.keyboard.down('ArrowDown');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-lives', '200');
+  await page.keyboard.up('ArrowDown');
+  await page.keyboard.up('ArrowLeft');
+  await page.locator('[data-key=sp]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
+  await expect(page.locator('#leaderboard')).toContainText('Вне рейтинга');
+  expect(requests.filter((r) => r.path === 'runs')).toHaveLength(0);
+});

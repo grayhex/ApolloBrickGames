@@ -42,6 +42,8 @@ describe('stable leaderboard categories', () => {
       expect(rankedPage(search, '')).toBe(false);
     expect(rankedPage('?toy=brickgame&power=on&view=screen', '')).toBe(true);
     expect(rankedPage('?toy=mario', '#/room')).toBe(true);
+    expect(rankedPage('?toy=mario&level=1', '')).toBe(true);
+    expect(rankedPage('?toy=mario&level=2', '')).toBe(false);
     for (const hash of ['#/editor', '#/tech', '#/sheet']) expect(rankedPage('', hash)).toBe(false);
     expect(() => selection({ ...s(), startProfile: 'speed-9' })).toThrow();
     expect(() => selection({ ...s(), seed: 7 })).toThrow();

@@ -278,9 +278,10 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
 
   const onEvents = (events: readonly GameEvent[]): void => {
     if(events.some(event=>event.type==='phaseChanged'&&event.to==='playing'&&(event.from==='ready'||event.from==='gameOver'||event.from==='completed'))){
-      leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},currentLevel.kind==='original'&&game.state.levelId===slots.find(slot=>slot.number===1)?.levelId);
+      leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},currentLevel.kind==='original'&&game.state.levelId===slots.find(slot=>slot.number===1)?.levelId&&game.state.lives===ctx.rules.params.lives&&game.state.score===0);
       leaderboard?.begin();
     }
+    if(events.some(event=>event.type==='secretLives')){leaderboard?.cancel();leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},false);}
     if(events.some(event=>event.type==='gameOver'||event.type==='gameCompleted'))leaderboard?.finish(game.state.score);
     for (const event of events) {
       if (event.type === 'levelStarted') {

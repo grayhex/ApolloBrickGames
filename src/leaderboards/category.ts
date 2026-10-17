@@ -93,6 +93,7 @@ export function validScore(value: unknown): number {
 /** No URL/debug/editor/custom starts enter the common table. Presentation, sound and language do not change rules. */
 export function rankedPage(search: string, hash: string): boolean {
   const params = new URLSearchParams(search);
-  const allowed = new Set(['toy', 'view', 'power']);
+  const allowed = new Set(['toy', 'view', 'power', 'level']);
+  if (params.has('level') && (params.get('toy') !== 'mario' || !['1', 'mario-1'].includes(params.get('level') ?? ''))) return false;
   return [...params.keys()].every((k) => allowed.has(k)) && (!hash || hash === '#' || hash === '#/' || hash === '#/room' || hash === '#room');
 }
