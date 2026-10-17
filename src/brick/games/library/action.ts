@@ -1,13 +1,72 @@
 import { LibraryGame, action, heldAction, put } from './common';
 import type { BrickGameOptions, BrickInput } from '../../types';
 
+/** Препятствие, бонус или стена на дороге: `kind` 0 — машина, 1 и 2 — бонусы (дальняя и ближняя атака), −1 — стена во всю ширину. */
+export interface RoadObstacle {
+  x: number;
+  y: number;
+  kind: number;
+}
+type RoadId = 'obstacle-race' | 'boat-racing' | 'racing-four' | 'super-tank' | 'racing-pickup' | 'punch-racing';
+/** Клетка спрайта: смещение от опорной точки и яркость (1 горит, 2 мигает). */
+type Pixel = readonly [dx: number, dy: number, value: number];
+
+/**
+ * Геометрия дороги: один источник и для рисунка, и для столкновений — у спрайтов, которые игрок видит, нет «невидимых» зон и нет проходов сквозь клетки.
+ * Игрок стоит на строках 17–19 (опорная точка — нос); машина-препятствие — от своей верхней клетки. Узкие спрайты (одна колонка) у четырёх полос:
+ * полосы стоят через одну колонку (1, 3, 5, 7), и машины шириной три клетки соседних полос перекрывали бы друг друга.
+ */
+export const ROAD_PLAYER_ROW = 17;
+const PLAYER_WIDE: readonly Pixel[] = [[0, 0, 2], [0, 1, 1], [-1, 2, 1], [1, 2, 1]];
+const PLAYER_SLIM: readonly Pixel[] = [[0, 0, 2], [0, 1, 1], [0, 2, 1]];
+const CAR_WIDE: readonly Pixel[] = [[0, 0, 1], [-1, 1, 1], [0, 1, 1], [1, 1, 1]];
+const CAR_SLIM: readonly Pixel[] = [[0, 0, 1], [0, 1, 1], [0, 2, 1]];
+const BONUS_GUN: readonly Pixel[] = [[0, 0, 2], [0, 1, 2]];
+const BONUS_PUNCH: readonly Pixel[] = [[0, 0, 2], [0, 1, 2], [0, 2, 2]];
+/** Ширина стены дорожного барьера — всё поле: обойти нельзя, разрушить можно только выстрелом. */
+const WALL: readonly Pixel[] = Array.from({ length: 20 }, (_, i): Pixel => [i % 10, Math.floor(i / 10), 1]);
+/** Полоса дороги шириной в коридор: стенки по краям, свободны колонки между ними. */
+export const ROAD_CORRIDOR = 6;
+const ROAD_LEFT_MAX = 3;
+const cellKey = (x: number, y: number): number => y * 10 + x;
+
+export function roadPlayerPixels(slim: boolean, x: number): { x: number; y: number; value: number }[] {
+  return (slim ? PLAYER_SLIM : PLAYER_WIDE).map(([dx, dy, value]) => ({ x: x + dx, y: ROAD_PLAYER_ROW + dy, value }));
+}
+export function roadObstaclePixels(slim: boolean, o: RoadObstacle): { x: number; y: number; value: number }[] {
+  const sprite = o.kind < 0 ? WALL : o.kind === 1 ? BONUS_GUN : o.kind === 2 ? BONUS_PUNCH : slim ? CAR_SLIM : CAR_WIDE;
+  return sprite.map(([dx, dy, value]) => ({ x: (o.kind < 0 ? 0 : o.x) + dx, y: o.y + dy, value }));
+}
+
 export class RoadGame extends LibraryGame {
-  readonly id: 'obstacle-race' | 'boat-racing' | 'racing-four' | 'super-tank' | 'racing-pickup' | 'punch-racing';
-  x = 4; road = Array<number>(20).fill(2); obstacles: { x: number; y: number; kind: number }[] = []; shots: { x: number; y: number }[] = [];
-  weapon = 0; private timer = 0; private cooldown = 0; private passed = 0;
+  readonly id: RoadId;
+  x = 4; road = Array<number>(20).fill(2); obstacles: RoadObstacle[] = []; shots: { x: number; y: number }[] = [];
+  /** Последнее подобранное оружие (1 — дальняя атака, 2 — ближняя) и признак, что дальняя атака уже была выдана: стены появляются только после неё. */
+  weapon = 0; hasGun = false; private timer = 0; private cooldown = 0; private passed = 0;
   constructor(id: RoadGame['id'], o: BrickGameOptions = {}) { super(o); this.id = id; this.init(); }
-  protected reset(): void { this.setLives(4); this.passed = 0; this.weapon = 0; this.setup(); }
+  protected reset(): void { this.setLives(4); this.passed = 0; this.weapon = 0; this.hasGun = false; this.setup(); }
   private setup(): void { this.x = 4; this.road.fill(2); this.obstacles = []; this.shots = []; this.timer = 0; this.cooldown = 0; this.repeat.reset(); }
+  private get slim(): boolean { return this.id === 'racing-four'; }
+  private get canShoot(): boolean { return this.id === 'super-tank' || this.id === 'racing-pickup' && (this.weapon === 1 || this.hasGun); }
+  private get canPunch(): boolean { return this.id === 'punch-racing' || this.id === 'racing-pickup' && this.weapon === 2; }
+  private obstacleKeys(o: RoadObstacle): Set<number> { return new Set(roadObstaclePixels(this.slim, o).filter((c) => c.x >= 0 && c.x < 10).map((c) => cellKey(c.x, c.y))); }
+  /** Выстрелы попадают в клетку препятствия (машина или стена); бонус выстрел не задевает. */
+  private resolveShots(): void {
+    for (const s of this.shots) {
+      const hit = this.obstacles.find((o) => o.kind <= 0 && this.obstacleKeys(o).has(cellKey(s.x, s.y)));
+      if (hit) { this.obstacles.splice(this.obstacles.indexOf(hit), 1); s.y = -1; this.addScore(10); this.emit({ type: 'hit' }); }
+    }
+    this.shots = this.shots.filter((s) => s.y >= 0);
+  }
+  /** Ближний удар: машины, клетки которых лежат в трёх клетках перед носом (строки 14–16, колонки x−1…x+1); стену он не разрушает. */
+  private punch(): void {
+    this.obstacles = this.obstacles.filter((o) => {
+      if (o.kind !== 0) return true;
+      const near = roadObstaclePixels(this.slim, o).some((c) => c.y >= 14 && c.y <= 16 && Math.abs(c.x - this.x) <= 1);
+      if (near) { this.addScore(10); this.emit({ type: 'hit' }); }
+      return !near;
+    });
+  }
   protected update(input: BrickInput): void {
     if (this.id === 'racing-four' || this.id === 'boat-racing') {
       const lanes = this.id === 'racing-four' ? [1,3,5,7] : [1,4,7];
@@ -16,48 +75,50 @@ export class RoadGame extends LibraryGame {
     if (this.cooldown) this.cooldown--;
     if (heldAction(input) && !this.cooldown) {
       this.cooldown = 12;
-      if (this.id === 'super-tank' || this.id === 'racing-pickup' && this.weapon === 1) { this.shots.push({ x: this.x, y: 16 }); this.emit({ type: 'shot' }); }
-      if (this.id === 'punch-racing' || this.id === 'racing-pickup' && this.weapon === 2) {
-        this.obstacles = this.obstacles.filter((p) => { if (p.kind === 0 && p.y >= 14 && Math.abs(p.x - this.x) <= 1) { this.addScore(10); this.emit({ type: 'hit' }); return false; } return true; });
-      }
+      if (this.canShoot) { this.shots.push({ x: this.x, y: 16 }); this.emit({ type: 'shot' }); }
+      if (this.canPunch) this.punch();
     }
     this.timer++;
-    if (this.timer % 3 === 0) for (const s of this.shots) {
-      s.y--; const hit = this.obstacles.find((p) => p.kind <= 0 && p.y === s.y && (p.kind < 0 || Math.abs(p.x - s.x) <= 1));
-      if (hit) { this.obstacles.splice(this.obstacles.indexOf(hit), 1); s.y = -1; this.addScore(10); }
-    }
-    this.shots = this.shots.filter((s) => s.y >= 0);
+    if (this.timer % 3 === 0) { for (const s of this.shots) s.y--; this.resolveShots(); }
     if (this.timer % (input.held.has('up') ? 5 : this.period(25, 7)) === 0) {
-      if (this.id === 'obstacle-race') { const next = Math.max(0, Math.min(4, this.road[0]! + this.rng.range(-1, 1))); this.road.unshift(next); this.road.pop(); }
+      if (this.id === 'obstacle-race') { const next = Math.max(0, Math.min(ROAD_LEFT_MAX, this.road[0]! + this.rng.range(-1, 1))); this.road.unshift(next); this.road.pop(); }
       for (const p of this.obstacles) p.y++;
+      this.resolveShots(); // препятствие, шагнувшее в клетку выстрела, считается пойманным выстрелом
       this.obstacles = this.obstacles.filter((p) => { if (p.y <= 20) return true; this.addScore(1); this.passed++; return false; });
       if (this.id !== 'obstacle-race' && (!this.obstacles.length || this.obstacles.at(-1)!.y >= 6)) {
         const lanes = this.id === 'racing-four' ? [1,3,5,7] : [1,4,7];
-        this.obstacles.push({ x: this.rng.pick(lanes), y: 0, kind: this.id === 'racing-pickup' && this.rng.chance(0.4) ? this.rng.range(1,2) : this.id === 'racing-pickup' && this.rng.chance(0.3) ? -1 : 0 });
+        let kind = this.id === 'racing-pickup' && this.rng.chance(0.4) ? this.rng.range(1,2) : this.id === 'racing-pickup' && this.rng.chance(0.3) ? -1 : 0;
+        // Стена разрушается только выстрелом: пока дальнее оружие не выдано, вместо стены — обычная машина (неизбежной потери жизни нет).
+        if (kind < 0 && !this.hasGun) kind = 0;
+        this.obstacles.push({ x: this.rng.pick(lanes), y: 0, kind });
       }
       if (this.id === 'obstacle-race') { this.addScore(1); this.passed++; }
     }
-    if (this.id === 'obstacle-race' && (this.x <= this.road[18]! || this.x >= this.road[18]! + 5)) { this.lose(() => this.setup()); return; }
-    const collision = this.obstacles.find((p) => p.y >= 16 && p.y <= 19 && (p.kind < 0 || Math.abs(p.x - this.x) <= 1));
-    if (collision) {
-      if (collision.kind > 0) { this.weapon = collision.kind; this.obstacles.splice(this.obstacles.indexOf(collision), 1); this.emit({ type: 'bonus' }); }
-      else { this.lose(() => this.setup()); return; }
+    const mine = new Set(roadPlayerPixels(this.slim, this.x).map((c) => cellKey(c.x, c.y)));
+    if (this.id === 'obstacle-race' && [17, 18, 19].some((y) => mine.has(cellKey(this.road[y]!, y)) || mine.has(cellKey(this.road[y]! + ROAD_CORRIDOR, y)) || this.outside(y))) { this.lose(() => this.setup()); return; }
+    let crashed = false;
+    for (const o of [...this.obstacles]) {
+      if (![...this.obstacleKeys(o)].some((key) => mine.has(key))) continue;
+      if (o.kind > 0) { this.weapon = o.kind; if (o.kind === 1) this.hasGun = true; this.obstacles.splice(this.obstacles.indexOf(o), 1); this.emit({ type: 'bonus' }); }
+      else crashed = true;
     }
+    if (crashed) { this.lose(() => this.setup()); return; }
     if (this.passed >= 30) { this.passed = 0; this.win(() => this.setup()); }
   }
+  /** Игрок вышел за край поля на строке `y` (клетка с отрицательной колонкой или правее девятой): у трассы это тоже съезд с дороги. */
+  private outside(y: number): boolean { return roadPlayerPixels(this.slim, this.x).some((c) => c.y === y && (c.x < 0 || c.x > 9)); }
   protected draw(): Uint8Array {
     const out = new Uint8Array(200);
-    if (this.id === 'obstacle-race') this.road.forEach((x, y) => { put(out, x, y); put(out, x + 5, y); });
+    if (this.id === 'obstacle-race') this.road.forEach((x, y) => { put(out, x, y); put(out, x + ROAD_CORRIDOR, y); });
     else for (let y = 0; y < 20; y += 2) { put(out, 0, y); put(out, 9, y); }
-    for (const p of this.obstacles) {
-      put(out, p.x, p.y, p.kind > 0 ? 2 : 1); put(out, p.x, p.y + 1, p.kind > 0 ? 2 : 1);
-      if (p.kind === 2) put(out, p.x, p.y + 2, 2);
-      if (p.kind <= 0) { put(out, p.x + 1, p.y + 1); put(out, p.x - 1, p.y + 1); if (p.kind < 0) for (let x = 1; x <= 8; x++) put(out, x, p.y); }
-    }
-    put(out, this.x, 17, 2); put(out, this.x, 18); put(out, this.x - 1, 19); put(out, this.x + 1, 19);
+    for (const p of this.obstacles) for (const c of roadObstaclePixels(this.slim, p)) put(out, c.x, c.y, c.value);
+    for (const c of roadPlayerPixels(this.slim, this.x)) put(out, c.x, c.y, c.value);
     for (const s of this.shots) put(out, s.x, s.y); return out;
   }
 }
+
+/** Нижняя строка, до которой доходит строй в игре с ответным огнём. Пуля игрока рождается в строке 17 и проверяется после сдвига вверх, поэтому строй останавливается строкой выше: иначе его нижний ряд нельзя было бы подстрелить. */
+const TALKING_LOWEST_ROW = 16;
 
 export class ShooterGame extends LibraryGame {
   readonly id: 'honeybee' | 'space-invaders' | 'ufo-raiders' | 'dual-shooting' | 'talking-shooting' | 'tetris-shooting' | 'meteor-fighter';
@@ -110,7 +171,9 @@ export class ShooterGame extends LibraryGame {
     if (this.timer % this.period(45, 16) === 0 && this.id !== 'honeybee' && this.id !== 'dual-shooting' && this.id !== 'meteor-fighter') {
       if (this.targets.some((p) => p.x + this.directionNow < 0 || p.x + this.directionNow > 9)) {
         this.directionNow *= -1;
-        for (const p of this.targets) p.y = this.id === 'talking-shooting' ? Math.min(17, p.y + 1) : p.y + 1;
+        // «Говорящая» стрельба: строй идёт вниз целиком и останавливается над пушкой по общей нижней границе (клетки не склеиваются и не меняют форму).
+        const step = this.id !== 'talking-shooting' || Math.max(...this.targets.map((p) => p.y)) + 1 <= TALKING_LOWEST_ROW ? 1 : 0;
+        for (const p of this.targets) p.y += step;
       } else for (const p of this.targets) p.x += this.directionNow;
       if (this.targets.some((p) => p.y >= 18)) { this.lose(() => this.setup()); return; }
     }

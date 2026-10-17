@@ -43,21 +43,26 @@ export class PadsGame extends LibraryGame {
       }
       if (d >= 0) {
         const i = this.notes.findIndex((n) => n.direction === d && n.y >= 16 && n.y <= 19);
-        if (i < 0) this.lose(() => this.setup()); else { this.notes.splice(i, 1); this.reward(); }
+        if (i < 0) this.lose(() => this.setup()); else { this.notes.splice(i, 1); this.emit({ type: 'tone', pad: d, ticks: 12 }); this.reward(); }
       } return;
     }
-    if (this.showing > 0) { this.showing--; return; }
+    if (this.showing > 0) {
+      // Показ последовательности: на начало каждого сигнала — его тон (рисунок `draw` считает те же такты).
+      const elapsed = this.sequence.length * 40 + 20 - this.showing;
+      if (this.showing > 20 && elapsed % 40 === 0) this.emit({ type: 'tone', pad: this.sequence[elapsed / 40]!, ticks: 25 });
+      this.showing--; return;
+    }
     if (--this.timer <= 0) { this.lose(() => { if (this.id === 'simon') this.sequence = []; this.setup(); }); return; }
     if (d < 0 && !action(input)) return;
     // Action corresponds to the bottom pad, permitting the original fire-button layout too.
     const chosen = d >= 0 ? d : 2;
     const expected = this.id === 'simon' ? this.sequence[this.response] : this.target;
     if (chosen !== expected) { this.lose(() => { this.sequence = []; this.setup(); }); return; }
-    this.emit({ type: 'hit' });
+    this.emit(this.id === 'simon' ? { type: 'tone', pad: chosen, ticks: 12 } : { type: 'hit' });
     if (this.id === 'simon' && ++this.response < this.sequence.length) { this.timer = this.period(180, 90); return; }
     this.reward(); if (!this.busy) this.setup();
   }
-  private reward(): void { this.addScore(10); if (++this.hits % 10 === 0) this.win(() => { this.sequence = []; this.setup(); }); else this.emit({ type: 'bonus' }); }
+  private reward(): void { this.addScore(10); if (++this.hits % 10 === 0) this.win(() => { this.sequence = []; this.setup(); }); else if (this.id !== 'dance') this.emit({ type: 'bonus' }); }
   protected draw(): Uint8Array {
     const out = new Uint8Array(200);
     if (this.id === 'dance') { for (let i = 0; i < 4; i++) put(out, i * 2 + 1, 18); for (const n of this.notes) { put(out, n.direction * 2 + 1, n.y, 2); if (n.y > 0) put(out, n.direction * 2 + 1, n.y - 1); } return out; }

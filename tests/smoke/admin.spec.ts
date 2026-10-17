@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
 import { validateConfig } from '../../src/config/schema';
 import { LIBRARY_IDS } from '../../src/games/library';
+import { BRICK_GAMES } from '../../src/brick/games';
+import { TOYS } from '../../src/app/toys';
+import { canAssign } from '../../src/app/bodyButtons';
 
 test('admin: edits, validates, publishes and loads a shared menu in a fresh page', async ({ page, context }) => {
   let config = validateConfig(defaults), revision = 0;
@@ -29,7 +32,26 @@ test('admin: edits, validates, publishes and loads a shared menu in a fresh page
   await page.setViewportSize({width:390,height:844}); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-for (const id of LIBRARY_IDS) test(`library: ${id} starts from a published menu, pauses and resets`,async ({page}) => {
+/** Игре нужна кнопка, которой нет на корпусе (Jigsaw: отдельный «огонь»), — её нельзя назначить игрушке: админка её не предлагает, схема отклоняет. */
+const ASSIGNABLE = LIBRARY_IDS.filter((id) => canAssign(BRICK_GAMES[id]!, TOYS.clock99));
+const BLOCKED = LIBRARY_IDS.filter((id) => !ASSIGNABLE.includes(id));
+
+test('admin: игры, которым нужна отсутствующая на корпусе кнопка, не предлагаются и не принимаются', async ({ page }) => {
+  expect(BLOCKED).toEqual(['jigsaw']);
+  const config = validateConfig(defaults);
+  await page.route('**/api/config', (route) => route.fulfill({ json: { config, revision: 1 } }));
+  await page.goto('./admin');
+  await page.getByRole('button', { name: 'Часы+99', exact: true }).click();
+  const options = await page.getByLabel('Добавить игру', { exact: true }).locator('option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value));
+  expect(options).toContain('snake');
+  for (const id of BLOCKED) expect(options, id).not.toContain(id);
+  const bad = validateConfig(defaults);
+  bad.toys.clock99.games = [{ id: 'jigsaw' }];
+  bad.toys.clock99.defaultGame = 'jigsaw';
+  expect(() => validateConfig(bad)).toThrow(/нужна кнопка/);
+});
+
+for (const id of ASSIGNABLE) test(`library: ${id} starts from a published menu, pauses and resets`,async ({page}) => {
   const config = validateConfig(defaults); config.toys.clock99.games = [{id}]; config.toys.clock99.defaultGame = id;
   await page.route('**/api/config',route => route.fulfill({json:{revision:1,config}}));
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));

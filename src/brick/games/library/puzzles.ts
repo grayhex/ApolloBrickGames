@@ -1,5 +1,6 @@
 import { LibraryGame, action, DX, DY, put } from './common';
 import type { BrickGameOptions, BrickInput } from '../../types';
+import { SOKOBAN_LEVELS } from './sokobanLevels';
 
 export function toggleLights(board: Uint8Array, x: number, y: number): void {
   for (const [dx, dy] of [[0, 0], [0, -1], [1, 0], [0, 1], [-1, 0]]) {
@@ -30,12 +31,18 @@ export class SokobanGame extends LibraryGame {
   private history: { player: number; crates: number[] }[] = [];
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
   protected reset(): void { this.repeat.reset(); this.setup(); }
+  /** Задача уровня `level` из десяти собственных (`sokobanLevels.ts`, с проверенными решениями); после десятой они повторяются. Карта стоит по центру, с четвёртой строки. */
   private setup(): void {
     this.walls.clear(); this.crates.clear(); this.goals.clear(); this.history = [];
-    const count = 1 + Math.min(2, Math.floor((this.level - 1) / 3));
-    for (let y = 4; y <= 12; y++) for (let x = 1; x <= 8; x++) if (y === 4 || y === 12 || x === 1 || x === 8) this.walls.add(y * 10 + x);
-    for (let i = 0; i < count; i++) { this.crates.add(83 + i * 2); this.goals.add(53 + i * 2); }
-    this.player = 103;
+    const rows = SOKOBAN_LEVELS[(this.level - 1) % SOKOBAN_LEVELS.length]!.map;
+    const ox = Math.floor((10 - Math.max(...rows.map((r) => r.length))) / 2);
+    rows.forEach((row, y) => [...row].forEach((ch, x) => {
+      const p = (4 + y) * 10 + ox + x;
+      if (ch === '#') this.walls.add(p);
+      if (ch === '$' || ch === '*') this.crates.add(p);
+      if (ch === '.' || ch === '*' || ch === '+') this.goals.add(p);
+      if (ch === '@' || ch === '+') this.player = p;
+    }));
   }
   protected update(input: BrickInput): void {
     if (input.pressed.has('fire')) { this.setup(); return; }
@@ -59,12 +66,14 @@ export class SokobanGame extends LibraryGame {
 export const PEG_HOLES = Array.from({ length: 49 }, (_, p) => p).filter((p) => (p % 7 >= 2 && p % 7 <= 4) || (Math.floor(p / 7) >= 2 && Math.floor(p / 7) <= 4));
 export class SolitaireGame extends LibraryGame {
   readonly id = 'peg-solitaire'; pegs = new Set<number>(); cursor = 24; selected: number | null = null;
+  /** Счёт на начало текущей задачи: повтор возвращает его, поэтому «прыжок → повтор» не копит очки. Рекорд не уменьшается — он хранит лучшую попытку. */
+  private checkpoint = 0;
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
-  protected reset(): void { this.pegs = new Set(PEG_HOLES.filter((p) => p !== 24)); this.cursor = 24; this.selected = null; this.repeat.reset(); }
+  protected reset(): void { this.pegs = new Set(PEG_HOLES.filter((p) => p !== 24)); this.cursor = 24; this.selected = null; this.repeat.reset(); this.checkpoint = this.score; }
   protected update(input: BrickInput): void {
     const d = this.direction(input);
     if (d >= 0) { const x = this.cursor % 7 + DX[d]!, y = Math.floor(this.cursor / 7) + DY[d]!; if (x >= 0 && x < 7 && y >= 0 && y < 7) this.cursor = y * 7 + x; }
-    if (input.pressed.has('fire')) { this.reset(); return; }
+    if (input.pressed.has('fire')) { this.setScore(this.checkpoint); this.reset(); return; }
     if (!input.pressed.has('rotate')) return;
     if (this.pegs.has(this.cursor)) { this.selected = this.cursor; return; }
     if (this.selected === null || !PEG_HOLES.includes(this.cursor)) return;
@@ -128,12 +137,24 @@ export class ReversiGame extends LibraryGame {
   }
 }
 
+/** Наибольший показатель степени плитки: на поле 4 × 4 больше 2^17 не собрать; плитки с этим показателем не сливаются (определённое поведение на пределе). */
+export const MAX_TILE_EXPONENT = 17;
 export function slideTiles(line: readonly number[]): { cells: number[]; score: number } {
   const packed = line.filter(Boolean), cells: number[] = []; let score = 0;
   for (let i = 0; i < packed.length; i++) {
-    let value = packed[i]!; if (packed[i + 1] === value) { value++; i++; score += 2 ** value; } cells.push(value);
+    let value = packed[i]!; if (packed[i + 1] === value && value < MAX_TILE_EXPONENT) { value++; i++; score += 2 ** value; } cells.push(value);
   }
   while (cells.length < line.length) cells.push(0); return { cells, score };
+}
+/** Клетки плитки с показателем степени `exponent` (1…17) в рамке 2 × 4: `[столбец, строка]`. */
+export function tileGlyph(exponent: number): [number, number][] {
+  const cells: [number, number][] = [];
+  const tall = exponent >= 16;
+  for (let b = 0; b < 4; b++) {
+    if (!(tall && b === 3)) cells.push([0, b]);
+    if (exponent & (1 << b)) cells.push([1, b]);
+  }
+  return cells;
 }
 export class MergeGame extends LibraryGame {
   readonly id = '2048'; board = new Uint8Array(16); private won = false;
@@ -152,9 +173,10 @@ export class MergeGame extends LibraryGame {
   }
   protected draw(): Uint8Array {
     const out = new Uint8Array(200);
-    // Each 2×4 tile shows its exponent as binary pips; the guide provides a value legend.
+    // Плитка 2 × 4: слева полоса (четыре клетки; у показателей 16 и 17 — три, нижняя погашена), справа четыре двоичных разряда младших бит показателя.
+    // Всё горит постоянно (не мигает), поэтому в обеих фазах мигания экрана плитки различимы; для 1…17 рисунки не повторяются (см. tileGlyph).
     this.board.forEach((v, p) => { if (!v) return; const x = p % 4 * 2 + 1, y = Math.floor(p / 4) * 5;
-      for (let b = 0; b < 4; b++) { put(out, x, y + b, 1); if (v & (1 << b)) put(out, x + 1, y + b, 2); }
+      for (const [dx, dy] of tileGlyph(v)) put(out, x + dx, y + dy, 1);
     }); return out;
   }
 }
@@ -193,7 +215,12 @@ export class MazeGame extends LibraryGame {
   protected draw(): Uint8Array { const out = this.walls.slice(); out[this.player] = 2; out[this.goal] = this.tick % 12 < 6 ? 1 : 0; return out; }
 }
 
-/** A small packing puzzle. Pieces come from a known partition, so each board has a solution. */
+/**
+ * A small packing puzzle. Pieces come from a known partition, so each board has a solution.
+ * Управление: стрелки двигают фигуру, ROTATE поворачивает, **«огонь» укладывает** (с DOWN — задача заново). Укладка требует отдельной кнопки «огонь»,
+ * которой на корпусах игрушек 1–4 нет (RESET корпуса — выход в меню, не огонь), поэтому игра объявлена с `needs: ['fire']` и игрушке не назначается
+ * (проверка в схеме конфигурации и в списке админки): обходных способов — удержания, сочетаний, клавиатуры — не придумано, это не аутентично.
+ */
 export class JigsawGame extends LibraryGame {
   readonly id = 'jigsaw'; board = new Uint8Array(16); pieceIndex = 0; shape: number[][] = []; x = 0; y = 0;
   private pieces: number[][][] = [];

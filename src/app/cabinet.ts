@@ -71,6 +71,9 @@ const BRICK_CUES: Partial<Record<BrickEvent['type'], AudioCue>> = {
   gameOver: 'gameOver',
 };
 
+/** Тон площадки по её номеру: вверх, вправо, вниз, влево. */
+const PAD_CUES: readonly AudioCue[] = ['pad0', 'pad1', 'pad2', 'pad3'];
+
 const TETRIS_CUES: Partial<Record<TetrisEvent['type'], AudioCue>> = {
   started: 'confirm',
   move: 'introStep',
@@ -83,6 +86,7 @@ const TETRIS_CUES: Partial<Record<TetrisEvent['type'], AudioCue>> = {
 
 /** Сигнал для события; `moveSound` — звучит ли движение (в меню и в тетрисе да, в остальных играх оно сыпалось бы каждый шаг). */
 export function cueFor(event: CabinetEvent, moveSound: boolean): AudioCue | null {
+  if (event.type === 'tone') return PAD_CUES[event.pad] ?? null;
   if (event.type === 'lines') return event.count >= 4 ? 'secret' : 'levelCompleted';
   if (event.type === 'move') return moveSound ? 'introStep' : null;
   return (BRICK_CUES[event.type as BrickEvent['type']] ?? TETRIS_CUES[event.type as TetrisEvent['type']]) ?? null;

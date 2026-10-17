@@ -7,6 +7,7 @@ import { LightsGame, toggleLights, slideTiles, reversiFlips, ReversiGame, Sokoba
 import { SnakeGame, PadsGame, BomberGame } from '../../../src/brick/games/library/arcade';
 import { CapsuleGame, FlickerTetrisGame, QuarthGame } from '../../../src/brick/games/library/falling';
 import { makeBrickInput, NEUTRAL_BRICK_INPUT, type BrickGame } from '../../../src/brick/types';
+import { SOKOBAN_LEVELS } from '../../../src/brick/games/library/sokobanLevels';
 for (const def of Object.values(LIBRARY_GAMES)) conformance(def);
 const run = (g: BrickGame, n: number) => { for (let i = 0; i < n; i++) g.step(NEUTRAL_BRICK_INPUT); };
 describe('library rules', () => {
@@ -25,9 +26,16 @@ describe('library rules', () => {
     g.cursor = 19; g.step(makeBrickInput(['rotate'])); expect(g.board[27]).toBe(1); run(g,30); expect(g.board.filter(Boolean)).toHaveLength(6);
   });
   it('Sokoban pushes one crate, supports undo and a reachable goal', () => {
-    const g = new SokobanGame(); g.start(); g.step(makeBrickInput(['up'])); g.step(makeBrickInput(['up'])); expect(g.crates.has(73)).toBe(true);
-    g.step(makeBrickInput(['rotate'])); expect(g.crates.has(83)).toBe(true);
-    g.step(makeBrickInput(['up'])); g.step(makeBrickInput(['up'])); expect(g.step(makeBrickInput(['up']))).toContainEqual({ type:'win' });
+    const g = new SokobanGame(); g.start();
+    const level = SOKOBAN_LEVELS[0]!;
+    // Первая задача решается по сохранённому решению: шаги и толчки, отмена последнего хода, затем победа.
+    const dir = (ch: string): 'up' | 'right' | 'down' | 'left' => ({ u: 'up', r: 'right', d: 'down', l: 'left' } as const)[ch.toLowerCase() as 'u' | 'r' | 'd' | 'l'];
+    const before = [...g.crates];
+    for (const ch of level.solution.slice(0, -1)) { g.step(makeBrickInput([dir(ch)])); g.step(NEUTRAL_BRICK_INPUT); }
+    g.step(makeBrickInput(['rotate'])); g.step(NEUTRAL_BRICK_INPUT); // отмена последнего сделанного хода (предпоследнего символа решения)
+    expect(g.crates.size).toBe(before.length);
+    g.step(makeBrickInput([dir(level.solution.at(-2)!)])); g.step(NEUTRAL_BRICK_INPUT); // тот же ход заново
+    expect(g.step(makeBrickInput([dir(level.solution.at(-1)!)]))).toContainEqual({ type:'win' });
   });
   it('peg solitaire removes exactly the jumped peg', () => {
     const g = new SolitaireGame(); g.start(); g.cursor = 10; g.step(makeBrickInput(['rotate'])); g.cursor = 24; g.step(makeBrickInput(['rotate'])); expect(g.pegs.size).toBe(31); expect(g.pegs.has(17)).toBe(false); expect(g.pegs.has(24)).toBe(true);
@@ -47,7 +55,7 @@ describe('library rules', () => {
     const g = new FlickerTetrisGame(); g.start(); expect(g['board'].includes(2)).toBe(true); g['board'].fill(0); expect(g.step(NEUTRAL_BRICK_INPUT)).toContainEqual({ type:'win' }); run(g,60); expect(g['board'].includes(2)).toBe(true);
   });
   it('Quarth removes a completed rectangle, not an arbitrary full row', () => {
-    const g = new QuarthGame(); g.start(); g.x = 3; expect(g.step(makeBrickInput(['rotate']))).toContainEqual({ type:'win' });
+    const g = new QuarthGame(); g.start(); g.x = 4; expect(g.step(makeBrickInput(['rotate']))).toContainEqual({ type:'win' }); // у первого силуэта одна клетка не хватает в колонке 4
   });
   it('a bomber destroys buildings only where its bomb lands', () => {
     const g = new BomberGame(); g.start(); g.buildings.fill(2); g.x = 4; g.step(makeBrickInput(['rotate'])); run(g,68); expect(g.buildings[4]).toBe(1); expect(g.buildings[5]).toBe(2);

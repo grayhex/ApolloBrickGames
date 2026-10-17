@@ -4,7 +4,7 @@
  * вынесены в отдельный список `assumptions` и должны быть короткими и честными. Названия и пометки вариантов берутся из `BrickGameDef.modes`.
  * Чистые данные без DOM: панель рисует схемы клетками, тексты берёт по языку интерфейса.
  */
-import { BRICK_TICK_HZ } from './types';
+import { BRICK_TICK_HZ, type BrickAction } from './types';
 
 /** Строка на двух языках интерфейса. */
 export interface GuideText {
@@ -50,13 +50,43 @@ export interface GuideScheme {
   caption: GuideText;
 }
 
-/** Кнопка корпуса, о которой говорит строка управления. */
-export type GuideButton = 'left' | 'right' | 'up' | 'down' | 'rotate' | 'start';
+/**
+ * Кнопка (или группа кнопок), о которой говорит строка управления: четыре стрелки по отдельности и группами (`arrows` — все четыре, `sides` — влево и вправо,
+ * `vertical` — вверх и вниз), ROTATE, клавиша «огонь» (`fire`: на корпусе её нет, есть только на клавиатуре и геймпаде; RESET корпуса — это выход в меню, не огонь) и S./P.
+ */
+export type GuideButton = 'left' | 'right' | 'up' | 'down' | 'rotate' | 'fire' | 'start' | 'arrows' | 'sides' | 'vertical';
+
+/** Какие игровые действия покрывает строка управления с такой кнопкой (`start` — команда оболочки, игре не передаётся). */
+export const BUTTON_ACTIONS: Readonly<Record<GuideButton, readonly BrickAction[]>> = {
+  left: ['left'],
+  right: ['right'],
+  up: ['up'],
+  down: ['down'],
+  rotate: ['rotate'],
+  fire: ['fire'],
+  start: [],
+  arrows: ['left', 'right', 'up', 'down'],
+  sides: ['left', 'right'],
+  vertical: ['up', 'down'],
+};
 
 export interface GuideControl {
   button: GuideButton;
   /** Что кнопка делает в этой игре (в игре, не в меню). */
   text: GuideText;
+  /** Кнопки, которые нужно держать вместе с этой (сочетание, например ROTATE вместе с DOWN). */
+  with?: readonly GuideButton[];
+  /** Действие срабатывает при удержании кнопки, а не при нажатии. */
+  hold?: boolean;
+  /** Доступно только на клавиатуре и геймпаде: на корпусе нужной кнопки нет. */
+  keyboardOnly?: boolean;
+}
+
+/** Действия игры, которые описывает хотя бы одна строка управления. */
+export function guidedActions(controls: readonly GuideControl[]): Set<BrickAction> {
+  const covered = new Set<BrickAction>();
+  for (const control of controls) for (const button of [control.button, ...(control.with ?? [])]) for (const action of BUTTON_ACTIONS[button]) covered.add(action);
+  return covered;
 }
 
 export interface GuideScore {
