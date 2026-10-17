@@ -1,3 +1,4 @@
+
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "crocodilemario",
@@ -31,16 +32,14 @@
         "ConfigurationStore"
       ]
     }
-  ]
-{
+  ],
   "observability": {
     "logs": {
-      "enabled": false,
+      "enabled": true,
       "invocation_logs": true
     },
     "traces": {
       "enabled": false
     }
   }
-}
 }
