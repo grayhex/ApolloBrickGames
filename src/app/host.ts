@@ -79,7 +79,7 @@ export async function startHost(initial: ToyId): Promise<void> {
       await preloadRoom();
     } else {
       const image = new Image();
-      image.src = `${import.meta.env.BASE_URL}brand/${engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
+      image.src = `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
       await image.decode().catch(() => undefined); // не загрузилась — игрушка всё равно запустится, наклейка появится позже
     }
   }

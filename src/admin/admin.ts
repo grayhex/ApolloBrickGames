@@ -1,11 +1,11 @@
 import './admin.css';
-import { TOYS, APOLLO_IDS, type ApolloId } from '../app/toys';
+import { TOYS } from '../app/toys';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { canAssign } from '../app/bodyButtons';
 import { SHELLS, type Shell } from '../input/settings';
 import { defaultConfig } from '../config/runtime';
-import { validateConfig } from '../config/schema';
+import { validateConfig, universalGames, CONFIG_TOY_IDS, type ConfigToyId } from '../config/schema';
 import { BRICK_GUIDES } from '../brick/guides';
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] { const e = document.createElement(tag); e.textContent = text; e.className = className; return e; }
 function button(text: string, fn: () => void, disabled = false): HTMLButtonElement { const b = el('button',text); b.type = 'button'; b.disabled = disabled; b.addEventListener('click',fn); return b; }
@@ -13,8 +13,8 @@ const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',ye
 export async function startAdmin(): Promise<void> {
   document.title = 'Apollo · Настройки коллекции'; document.body.dataset['chrome'] = 'tech'; delete document.body.dataset['booting'];
   const root = el('main','','admin'); document.body.replaceChildren(root);
-  let config = defaultConfig(), revision = 0, active: ApolloId = 'mario', dirty = false, busy = false, connected = false;
-  const header = el('header','','admin__header'); header.append(el('div','APOLLO / STUDIO','admin__eyebrow'),el('h1','Четыре корпуса. Ваша коллекция.'),el('p','Соберите меню каждой приставки, выберите доступные цвета и опубликуйте настройки для всех игроков.'));
+  let config = defaultConfig(), revision = 0, active: ConfigToyId = 'mario', dirty = false, busy = false, connected = false;
+  const header = el('header','','admin__header'); header.append(el('div','BRICK GAME / STUDIO','admin__eyebrow'),el('h1','Ваша коллекция. Ваши игры.'),el('p','Соберите меню каждой приставки, выберите доступные цвета и опубликуйте настройки для всех игроков.'));
   const back = el('a','Открыть коллекцию ↗'); back.href = import.meta.env.BASE_URL; header.append(back); root.append(header);
   const status = el('p','Загрузка конфигурации…','admin__status'); status.setAttribute('role','status'); root.append(status);
   const tabs = el('nav','','admin__tabs'); tabs.setAttribute('aria-label','Приставки'); root.append(tabs);
@@ -38,19 +38,23 @@ export async function startAdmin(): Promise<void> {
   function changed(): void { dirty = true; message('Есть неопубликованные изменения.'); }
   function option(value: string, text: string): HTMLOptionElement { const o = el('option',text); o.value = value; return o; }
   function render(): void {
-    tabs.replaceChildren(...APOLLO_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
+    tabs.replaceChildren(...CONFIG_TOY_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
     content.replaceChildren(); const toy = config.toys[active];
     const appearance = el('section','','admin__card'); appearance.append(el('h2',TOYS[active].name),el('p','Цвета корпуса','admin__eyebrow'));
     const swatches = el('div','','admin__swatches');
-    for (const color of SHELLS) {
+    for (const color of active === 'brickgame' ? [] : SHELLS) {
       const label = el('label',colors[color]); const input = el('input'); input.type = 'checkbox'; input.checked = toy.shells.includes(color); input.setAttribute('aria-label',`Доступен цвет: ${colors[color]}`); label.dataset['color'] = color;
       input.addEventListener('change',() => { if (!input.checked && toy.shells.length === 1) { input.checked = true; message('Оставьте хотя бы один цвет.',true); return; } toy.shells = input.checked ? [...toy.shells,color] : toy.shells.filter((s) => s !== color); if (!toy.shells.includes(toy.defaultShell)) toy.defaultShell = toy.shells[0]!; changed(); render(); }); label.prepend(input); swatches.append(label);
     }
     const defaultLabel = el('label','Основной цвет'); const defaultSelect = el('select'); defaultSelect.setAttribute('aria-label','Основной цвет'); defaultSelect.append(...toy.shells.map((s) => option(s,colors[s]))); defaultSelect.value = toy.defaultShell;
-    defaultSelect.addEventListener('change',() => { toy.defaultShell = defaultSelect.value as Shell; changed(); }); defaultLabel.append(defaultSelect); appearance.append(swatches,defaultLabel);
+    defaultSelect.addEventListener('change',() => { toy.defaultShell = defaultSelect.value as Shell; changed(); }); defaultLabel.append(defaultSelect); if (active === 'brickgame') appearance.append(el('p','Серо-чёрный корпус')); else appearance.append(swatches,defaultLabel);
     const music = el('div','','admin__music'); const musicButton = button('Загрузка однобитной мелодии — позже',() => {},true); music.append(el('h3','Мелодия'),el('p','Здесь появится импорт простой однобитной мелодии для этой приставки.'),musicButton); appearance.append(music); content.append(appearance);
     const menu = el('section','','admin__card'); menu.append(el('h2',`Меню · ${toy.games.length}`));
-    if (active === 'mario') menu.append(el('p','У Mario собственный сегментный экран. Сейчас доступен Mario; оригинальные Tetris и Shooting подключим позже. Игры матрицы 10×20 назначаются остальным трём приставкам.'));
+    if (active === 'mario') menu.append(el('p','У Mario собственный сегментный экран. Сейчас доступен Mario; оригинальные Tetris и Shooting подключим позже. Игры матрицы 10×20 назначаются матричным приставкам.'));
+    if (active === 'brickgame') {
+      const automatic = universalGames(config).filter(g => !toy.games.some(p => p.id === g.id));
+      const extra = el('details'); extra.append(el('summary',`Автоматически · ${automatic.length}`), el('p','Игры, не назначенные другим приставкам, появляются здесь автоматически. Закрепите игру в меню ниже, чтобы оставить её независимо от остальных назначений.'),el('p',automatic.map(g => GAMES[g.id].names.ru).join(' · '))); menu.append(extra);
+    }
     const firstLabel = el('label','Выбрана при включении'); const first = el('select'); first.setAttribute('aria-label','Выбрана при включении'); first.append(...toy.games.map((g) => option(g.id,GAMES[g.id].names.ru))); first.value = toy.defaultGame; first.addEventListener('change',() => { toy.defaultGame = first.value as GameId; changed(); }); firstLabel.append(first); menu.append(firstLabel);
     const list = el('ol','','admin__games');
     toy.games.forEach((game,index) => {

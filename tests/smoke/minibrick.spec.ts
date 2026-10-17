@@ -44,7 +44,6 @@ test('переключение Mini → Alibaba → Apollo восстанавл�
   await page.goBack();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'minibrick');
   await expect(page.locator('.minibrick-lcd')).toHaveCount(1);
-  await page.locator('#toy-family-apollo').click();
   await page.locator('.toysw__item[data-toy=seabattle]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
   await expect(page.locator('.minibrick-lcd')).toHaveCount(0);
@@ -60,9 +59,10 @@ test('две модели в «Другие» доступны на телефо
     await page.goto('./?toy=minibrick&view=full');
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
     await page.addStyleTag({ content: "*{font-family:'DejaVu Sans',sans-serif !important}" });
-    const links = page.locator('[data-family=other] .toysw__item');
+    const links = page.locator('#real-models .toysw__item[data-toy=alibaba], #real-models .toysw__item[data-toy=minibrick]');
     await expect(links).toHaveCount(2);
     for (const link of await links.all()) {
+      await link.scrollIntoViewIfNeeded();
       const box = (await link.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
@@ -87,10 +87,10 @@ test('группа «Другие» не перекрывает системно
     await page.setViewportSize({ width, height: 900 });
     await page.goto('./?power=on');
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
-    await page.locator('#toy-family-other').click();
+    await page.getByRole('button',{name:'Следующие модели'}).click();
     const menu = (await page.locator('#toy-switch').boundingBox())!;
     const corner = (await page.locator('.corner').boundingBox())!;
-    expect(menu.x + menu.width).toBeLessThan(corner.x);
+    expect(menu.y >= corner.y + corner.height || menu.x >= corner.x + corner.width).toBe(true);
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
   }
 });

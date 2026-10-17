@@ -147,6 +147,18 @@
       ],
       "defaultShell": "red",
       "defaultGame": "tank"
+    },
+    "brickgame": {
+      "games": [
+        {
+          "id": "tetris"
+        }
+      ],
+      "defaultGame": "tetris",
+      "shells": [
+        "white"
+      ],
+      "defaultShell": "white"
     }
   }
 }

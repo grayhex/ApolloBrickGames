@@ -1,3 +1,4 @@
+import { brickGameMini } from './brickGameModel';
 import { miniBrickMini } from './minibrickModel';
 import { alibabaMini } from './alibabaModel';
 import { SHELLS, type Shell } from '../input/settings';
@@ -16,6 +17,7 @@ let pickerSerial = 0;
  * печати берётся из палитры `[data-shell]` (CSS-переменные), поэтому совпадает с настоящей игрушкой.
  */
 export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'): SVGSVGElement {
+  if (toy === 'brickgame') { const icon = brickGameMini(); icon.classList.add('mini'); return icon; }
   if (toy === 'alibaba' || toy === 'minibrick') { const icon = toy === 'alibaba' ? alibabaMini('closed') : miniBrickMini('closed', shell === 'white'); icon.classList.remove('view-mini'); icon.classList.add('mini'); return icon; }
   const sheen = `sheen-${serial}-${shell}`;
   // Как на корпусе игрушки: на синем и красном — белая печать, на жёлтом и белом — красная.

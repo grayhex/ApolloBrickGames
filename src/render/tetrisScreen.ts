@@ -20,7 +20,7 @@ export type TetrisGlyph = 'star' | 'square';
  * (горит на паузе и при полной заливке). У обеих игрушек с чашкой (по фотографиям) NEXT — сегмент (горит, когда у игры есть превью), а старшая цифра счёта,
  * SPEED и LEVEL умеет показывать только «1».
  */
-export type TetrisPanel = 'clock' | 'sea' | 'tank';
+export type TetrisPanel = 'clock' | 'sea' | 'tank' | 'classic';
 
 export interface TetrisScreenOptions {
   glyph: TetrisGlyph;
@@ -148,9 +148,14 @@ export class TetrisScreen {
     const hi = scene.phase === 'over' && scene.overFill >= FIELD_ROWS ? Math.floor(scene.tick / 90) % 2 : 0;
     const blinkOn = scene.blinkValue === undefined || Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 0;
     const hasPreview = scene.preview !== undefined && scene.preview !== null;
-    const signature = `${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}`;
-    if (signature === this.signature && scene.cells.length === this.previousCells.length &&
-      scene.cells.every((cell, i) => cell === this.previousCells[i])) return;
+    const dance = this.options.panel === 'classic' && scene.phase === 'playing' ? Math.floor(scene.tick / 30) % 2 : 0;
+    const signature = `${dance}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}`;
+    if (
+      signature === this.signature &&
+      scene.cells.length === this.previousCells.length &&
+      scene.cells.every((cell, i) => cell === this.previousCells[i])
+    )
+      return;
     const ctx = this.ctx;
     this.clear();
     ctx.setTransform(this.scale, 0, 0, this.scale, this.offsetX, this.offsetY);
@@ -212,9 +217,10 @@ export class TetrisScreen {
 
   // ── Боковая панель ─────────────────────────────────────────────────────
   private drawPanel(scene: TetrisScene): void {
+    const ctx = this.ctx;
     const sea = this.options.panel !== 'clock'; // раскладка «Морского боя»: без значков сверху, внизу значок игры
     const tank = this.options.panel === 'tank'; // «168 в 1 танк»: чашка — значок паузы (по фотографиям оригинала)
-    const lcd = sea; // «Морской бой» и «168 в 1 танк» — один LCD: старшие цифры только «1», NEXT — сегмент (по фотографиям обоих)
+    const lcd = sea && this.options.panel !== 'classic'; // «Морской бой» и «168 в 1 танк» — один LCD: старшие цифры только «1», NEXT — сегмент (по фотографиям обоих)
     const all = scene.allOn;
     const showHi = scene.phase === 'ready' || (scene.phase === 'over' && scene.overFill >= FIELD_ROWS && Math.floor(scene.tick / 90) % 2 === 1);
     const value = showHi ? scene.hiScore : scene.score;
@@ -264,7 +270,18 @@ export class TetrisScreen {
     this.text('LEVEL', PANEL_CX, speedLabel + 6 + 31 + 24 + 14, 9.5, 1, 'center');
 
     // Чашка в углу панели. У «Морского боя» — виден при включении и на экране ожидания; у «168 в 1» — значок паузы: горит на паузе и при полной заливке.
-    if (sea) {
+    if (this.options.panel === 'classic') {
+      const dancing = scene.phase === 'playing' && Math.floor(scene.tick / 30) % 2 === 1;
+      const pixels = dancing
+        ? ['001100', '001100', '101101', '011110', '001100', '010010', '100001']
+        : ['001100', '001100', '001101', '111110', '001100', '001010', '010010'];
+      ctx.globalAlpha = segmentAlpha(all || scene.phase !== 'over');
+      pixels.forEach((row, y) =>
+        [...row].forEach((pixel, x) => {
+          if (pixel === '1') ctx.fillRect(PANEL_CX - 9 + x * 3, 282 + y * 3, 3, 3);
+        }),
+      );
+    } else if (sea) {
       const on = tank ? all || scene.phase === 'paused' : all || scene.phase === 'ready';
       this.cup(PANEL_CX, 296, segmentAlpha(on));
     }
@@ -282,17 +299,7 @@ export class TetrisScreen {
   }
 
   /** Число из `count` цифр; у `blankZero` ведущий ноль не горит (двузначные SPEED и LEVEL). */
-  private number(
-    text: string,
-    count: number,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    all: boolean,
-    blankZero = false,
-    onesFirst = false,
-  ): void {
+  private number(text: string, count: number, x: number, y: number, w: number, h: number, all: boolean, blankZero = false, onesFirst = false): void {
     const step = w + (w >= 14 ? 3 : 2.2);
     for (let i = 0; i < count; i++) {
       const ch = text[i] ?? '0';

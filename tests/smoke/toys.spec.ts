@@ -36,13 +36,13 @@ test.describe('шапка и переключатель', () => {
   test('логотип Apollo внутри категории, слева управление; четыре белые миниатюры и текущая игрушка', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
-    const logo = page.locator('#toy-family-apollo .toysw__logo');
+    const logo = page.locator('.site-brand img');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-    const items = page.locator('[data-family=apollo] .toysw__item');
-    await expect(items).toHaveCount(4);
-    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк']);
-    await expect(items.locator('svg.toysw__icon')).toHaveCount(4); // миниатюры закрытых игрушек
+    const items = page.locator('#real-models .toysw__item');
+    await expect(items).toHaveCount(6);
+    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'Alibaba Dance 99 in 1', 'Mini Brick Game B-S96']);
+    await expect(items.locator('svg.toysw__icon')).toHaveCount(6); // миниатюры закрытых игрушек
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
     // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён), логотип правее них.
     const dots = page.locator('#devices .dev:visible');
@@ -72,7 +72,7 @@ test.describe('шапка и переключатель', () => {
     await expect(page).toHaveURL(/\?toy=clock99$/);
     await loaded();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'clock99');
-    await expect(page).toHaveTitle('Часы+99 — Apollo');
+    await expect(page).toHaveTitle('Часы+99 — Brick Game Online');
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
     await page.locator('.toysw__item[data-toy="seabattle"]').click();
     await expect(page).toHaveURL(/\?toy=seabattle$/);
@@ -374,8 +374,8 @@ for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
       return { id: n.id, left: rect.left, right: rect.right, radius: getComputedStyle(n).borderRadius, animation: getComputedStyle(n).animationName };
     }));
     expect(docks.length).toBeGreaterThanOrEqual(2);
-    expect(new Set(docks.map(d => d.radius)).size).toBe(1);
-    expect((await page.locator('#topleft').boundingBox())!.x + (await page.locator('#topleft').boundingBox())!.width).toBeLessThan(docks.find(d => d.id === 'corner')!.left);
+    expect(docks.every(d => parseFloat(d.radius) >= 12)).toBe(true);
+    await expect(page.locator('#topleft #corner')).toBeVisible();
     expect(docks.every(d => d.animation === 'none')).toBe(true); // reducedMotion from the shared Playwright config
     await page.setViewportSize({ width: 360, height: 800 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);

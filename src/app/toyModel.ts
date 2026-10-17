@@ -1,3 +1,4 @@
+import { applyBrickGame } from './brickGameModel';
 import { h, svg } from './dom';
 import { t } from './i18n';
 import { keyLabel, type ToyModel } from './toys';
@@ -71,7 +72,8 @@ export function applyToyModel(model: ToyModel, refs: ToyModelRefs): void {
   toy.dataset['model'] = model.id;
   toy.dataset['deco'] = model.deco;
   arena.dataset['model'] = model.id;
-  document.title = `${model.name} — Apollo`;
+  document.title = `${model.name} — Brick Game Online`;
+  if (model.universal) { applyBrickGame(refs); relabelKeys(model, base); return; }
 
   // ── Нижняя половина: подписи и порядок кнопок ──────────────────────────
   const art = base.querySelector('.base__art');
