@@ -37,10 +37,9 @@ test('сайт без параметра открывает универсаль
   expect(new URL(page.url()).search).toBe('');
 });
 
-test('корпус универсального Brick Game: без верхних винтов, рамка у стекла, узоры по бокам, подписи направлений, надпись «N IN 1»', async ({ page }) => {
+test('корпус универсального Brick Game: без винтов, рамка у стекла, узоры по бокам, подписи направлений, надпись «N IN 1»', async ({ page }) => {
   await open(page, '?toy=brickgame');
-  await expect(page.locator('.lid__screw--tl, .lid__screw--tr')).toHaveCount(0);
-  await expect(page.locator('.lid__screw--bl, .lid__screw--br')).toHaveCount(2);
+  await expect(page.locator('.lid__screw')).toHaveCount(0);
   // Узор: по восемнадцати ячеек (рамка и квадрат внутри) с каждой стороны, стороны разные.
   const sides = await page.locator('.classic__motif').evaluateAll((nodes) => nodes.map((node) => [node.querySelectorAll('rect').length, node.innerHTML]));
   expect(sides.map(([count]) => count)).toEqual([36, 36]);

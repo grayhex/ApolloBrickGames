@@ -104,6 +104,21 @@ test('TOP-5 expands to 20, keeps nicknames as text, and shows model SVG tooltips
   await expect(page.locator('#leaderboard-title')).toHaveText('High scores');
   await expect(page.locator('#leaderboard .leaderboard__caption')).toContainText('Variant 1');
 });
+
+test('Mario keeps all five score rows visible below the compact remote on desktop', async ({ page }) => {
+  await setup(page);
+  for (const [width, height] of [[1280, 720], [1440, 900]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto('./?toy=mario&power=on');
+    await page.locator('body:not([data-booting])').waitFor();
+    await expect(page.locator('#leaderboard tbody tr')).toHaveCount(5);
+    const card = (await page.locator('#leaderboard').boundingBox())!;
+    const last = (await page.locator('#leaderboard tbody tr').last().boundingBox())!;
+    const remote = (await page.locator('.ctl-card').boundingBox())!;
+    expect(card.y).toBeGreaterThanOrEqual(remote.y + remote.height);
+    expect(last.y + last.height).toBeLessThanOrEqual(height);
+  }
+});
 test('standard run registers canonical parameters, freezes score, publishes voluntarily with a fresh token, remembers only nickname', async ({
   page,
 }) => {
@@ -262,4 +277,58 @@ test('Mario bonus-lives secret keeps gameplay intact but opts the run out of glo
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
   await expect(page.locator('#leaderboard')).toContainText('Вне рейтинга');
   expect(requests.filter((r) => r.path === 'runs')).toHaveLength(0);
+});
+
+test('Mario keeps one ranked run through pause and all four lives, then registers a new party', async ({ page }) => {
+  test.setTimeout(90000);
+  const requests = await setup(page);
+  await page.goto('./?toy=mario&power=on');
+  await page.locator('body:not([data-booting])').waitFor();
+  const area = page.locator('#game-area');
+  await area.focus();
+  for (let lives = 4; lives > 0; lives--) {
+    await expect(area).toHaveAttribute('data-lives', String(lives));
+    await page.keyboard.press('Enter');
+    await expect(area).toHaveAttribute('data-phase', 'playing');
+    await expect.poll(() => requests.filter((r) => r.path === 'runs').length).toBe(1);
+    if (lives === 4) {
+      await page.keyboard.press('Escape');
+      await expect(area).toHaveAttribute('data-phase', 'paused');
+      await page.keyboard.press('Escape');
+      await expect(area).toHaveAttribute('data-phase', 'playing');
+    }
+    await page.keyboard.down('ArrowRight');
+    await expect(area).not.toHaveAttribute('data-phase', 'playing', { timeout: 20000 });
+    await page.keyboard.up('ArrowRight');
+    if (lives > 1) await expect(area).toHaveAttribute('data-phase', 'ready', { timeout: 10000 });
+  }
+  await expect(area).toHaveAttribute('data-phase', 'gameOver');
+  await expect(page.locator('#leaderboard-nickname')).toBeVisible();
+  expect(requests.filter((r) => r.path === 'runs')).toHaveLength(1);
+  expect(requests.filter((r) => r.path === 'finish')).toHaveLength(1);
+  expect(requests.find((r) => r.path === 'finish')!.data['runId']).toBe(RUN);
+  await area.focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => requests.filter((r) => r.path === 'runs').length).toBe(2);
+  await expect(page.locator('#leaderboard-nickname')).toHaveCount(0);
+});
+
+test('Frogger restart melodies after lost lives do not create new ranked parties', async ({ page }) => {
+  test.setTimeout(60000);
+  const requests = await setup(page);
+  const config = validateConfig(defaults);
+  config.toys.brickgame.games = [{ id: 'frog' }];
+  config.toys.brickgame.defaultGame = 'frog';
+  await page.route('**/api/config', (route) => route.fulfill({ json: { config, revision: 1 } }));
+  await boot(page);
+  await page.locator('[data-key=sp]').click();
+  await expect.poll(() => requests.filter((r) => r.path === 'runs').length).toBe(1);
+  await page.locator('#game-area').focus();
+  // Walking past the edge loses a life; holding left repeats after each natural respawn.
+  await page.keyboard.down('ArrowLeft');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'over', { timeout: 45000 });
+  await page.keyboard.up('ArrowLeft');
+  await expect(page.locator('#leaderboard-nickname')).toBeVisible();
+  expect(requests.filter((r) => r.path === 'runs')).toHaveLength(1);
+  expect(requests.filter((r) => r.path === 'finish')).toHaveLength(1);
 });

@@ -103,7 +103,7 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
     shells: model.shells,
     slots: [],
     bundled: [],
-    levelsDisabled: true,
+    levels: false,
     music: false,
     speedrun: false,
     tickRateHz: 60,

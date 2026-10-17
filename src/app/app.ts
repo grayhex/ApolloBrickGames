@@ -120,6 +120,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const life = new Lifecycle();
   const { signal } = life;
   let leaderboard: LeaderboardCard | null = null;
+  let marioPartyStarted = false;
   const refs = {
     gameArea: byId<HTMLElement>('game-area'),
     stage: byId<HTMLElement>('stage'),
@@ -277,12 +278,16 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const stepper = new FixedStepper(1000 / ctx.rules.params.tickRateHz);
 
   const onEvents = (events: readonly GameEvent[]): void => {
-    if(events.some(event=>event.type==='phaseChanged'&&event.to==='playing'&&(event.from==='ready'||event.from==='gameOver'||event.from==='completed'))){
+    if(!marioPartyStarted&&events.some(event=>event.type==='phaseChanged'&&event.to==='playing'&&event.from==='ready')){
+      marioPartyStarted = true;
       leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},currentLevel.kind==='original'&&game.state.levelId===slots.find(slot=>slot.number===1)?.levelId&&game.state.lives===ctx.rules.params.lives&&game.state.score===0);
       leaderboard?.begin();
     }
     if(events.some(event=>event.type==='secretLives')){leaderboard?.cancel();leaderboard?.select({gameId:'mario',mode:0,toyId:'mario'},false);}
-    if(events.some(event=>event.type==='gameOver'||event.type==='gameCompleted'))leaderboard?.finish(game.state.score);
+    if(events.some(event=>event.type==='gameOver'||event.type==='gameCompleted')){
+      leaderboard?.finish(game.state.score);
+      marioPartyStarted = false;
+    }
     for (const event of events) {
       if (event.type === 'levelStarted') {
         snapCamera = true;
@@ -491,6 +496,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
       if (level) source = userPack(pack, level);
     }
     if (!source) return false;
+    marioPartyStarted = false;
     leaderboard?.cancel();
     const original = ref.kind !== 'user'; // интро и сценарий входа — у уровней пакета (оригинальных и готовых); карта из редактора стартует сразу
     session.suspend();
@@ -630,6 +636,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     refocusGame();
   }, { signal });
   const restart = (): void => {
+    marioPartyStarted = false;
     leaderboard?.cancel();
     suspendReason = null;
     director.reset(); // явный рестарт — не возрождение после гибели: обрывает звучащую гибель и снова с фанфары
@@ -703,6 +710,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
+    marioPartyStarted = false;
     leaderboard?.cancel();
     if (on && view === 'closed') {
       view = 'full';

@@ -20,7 +20,6 @@ import { InputHub } from './hub';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import type { LedState } from './leds';
-import { ORIGINAL_LEVEL_COUNT, type OriginalSlot } from './levels';
 import { SettingsDialog } from './settingsUi';
 import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
@@ -126,6 +125,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || (Date.now() % 0x7fffffff) || DEFAULT_SEED;
   const cabinet = createCabinet(model, { seed, loadHi, defs: BRICK_GAMES });
   let leaderboard: LeaderboardCard | null = null;
+  let rankedPartyStarted = false;
   let rankedPhase = cabinet.phase;
   const selectRanking = (): void => {
     const r=cabinet.ranking;
@@ -276,8 +276,15 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   const emit = (events: readonly CabinetEvent[]): void => {
     const started=events.some(event=>event.type==='started');
-    if(started){ selectRanking(); leaderboard?.begin(); }
-    if(cabinet.phase==='over'&&(rankedPhase!=='over'||started))leaderboard?.finish(cabinet.score);
+    if(started&&!rankedPartyStarted){
+      rankedPartyStarted = true;
+      selectRanking();
+      leaderboard?.begin();
+    }
+    if(cabinet.phase==='over'&&(rankedPhase!=='over'||started)){
+      leaderboard?.finish(cabinet.score);
+      rankedPartyStarted = false;
+    }
     rankedPhase=cabinet.phase;
     for (const event of events) {
       if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu);
@@ -383,6 +390,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const setPower = (on: boolean): void => {
     if (on === powered) return;
     powered = on;
+    rankedPartyStarted = false;
     if(!on)leaderboard?.cancel();
     if (on && view === 'closed') {
       view = 'full';
@@ -404,6 +412,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
   refs.toy.dataset['power'] = powered ? 'on' : 'off';
   const restartGame = (): void => {
+    rankedPartyStarted = false;
     leaderboard?.cancel();
     persistHi();
     brickAudio.silence();
@@ -495,8 +504,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   }, { signal });
 
   // ── Пульт справа и угловое меню ──────────────────────────────────────
-  // Уровней у заглушки нет: девять плиток заперты, список карт недоступен, спидрана и музыки нет.
-  const slots: OriginalSlot[] = Array.from({ length: ORIGINAL_LEVEL_COUNT }, (_, index) => ({ number: index + 1, levelId: null }));
+  // Уровень и скорость выбираются штатными кнопками игрушки; отдельного блока карт в пульте нет.
   const none = (): void => undefined;
   const panelActions: ControlPanelActions = {
     pickShell: (shell) => {
@@ -531,14 +539,14 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     pickUser: none,
   };
   const controls = new ControlPanel(refs.sideCtl, {
-    slots,
+    slots: [],
     bundled: [],
     actions: panelActions,
     tickRateHz: TETRIS_TICK_HZ,
     onPointerUse: refocusGame,
     toy: model.id,
     shells: model.shells,
-    levelsDisabled: !model.levels,
+    levels: false,
     music: false,
     speedrun: false,
     remote: ['onoff', 'sp', 'reset'],
