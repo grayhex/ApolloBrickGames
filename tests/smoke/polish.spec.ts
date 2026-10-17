@@ -85,7 +85,7 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(help).toBeHidden();
   await page.locator('#corner-settings').click();
   const settings = page.locator('#settings');
-  await expect(settings.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(settings.getByRole('heading', { name: 'Control settings' })).toBeVisible();
   await expect(settings.getByRole('heading', { name: 'Keyboard' })).toBeVisible();
   await expect(settings.getByRole('button', { name: 'Reset controls' })).toBeVisible();
   await expect(settings.locator('tr', { hasText: 'Jump' }).first()).toContainText('Space');

@@ -278,11 +278,11 @@ test.describe('«Часы+99»', () => {
 });
 
 test.describe('«Морской бой»', () => {
-  test('аппаратная часть: подписи, без светодиодов, линия цвета корпуса вокруг экрана; сохранённый синий цвет имеет приоритет над общим', async ({ page }) => {
+  test('аппаратная часть: подписи, без светодиодов, линия цвета корпуса вокруг экрана; начальный цвет берётся из общей конфигурации', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('crocodile-mario:settings:v1', JSON.stringify({ version: 1, display: { shell: 'blue' } })));
     await open(page, 'seabattle');
     await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
-    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue'); // сохранённый выбор игрока важнее опубликованного основного цвета
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red'); // устаревший локальный цвет больше не перекрывает опубликованный
     const labels = await page.locator('.base__art text').allTextContents();
     for (const text of ['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'UP/MODE', 'LEFT/LEVEL', 'RIGHT/SPEED', 'DOWN', 'ROTATE']) expect(labels, text).toContain(text);
     expect(labels).not.toContain('SOUND');
@@ -293,10 +293,10 @@ test.describe('«Морской бой»', () => {
     const picks = page.locator('#shell-picker .shellpick__btn');
     expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('data-shell')))).toEqual(['blue', 'red', 'yellow', 'white']);
     expect(await picks.evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-disabled') === 'true'))).toEqual([false, false, true, true]);
-    await picks.nth(2).click({ force: true }); // жёлтого у «Морского боя» нет — остаётся синий
-    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
-    await picks.nth(1).click();
+    await picks.nth(2).click({ force: true }); // жёлтого у «Морского боя» нет — остаётся красный
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
+    await picks.nth(0).click();
+    await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'blue');
   });
 
   test('меню: RESET возвращает в меню; S./P. запускает выбранную игру; игра A запускается и возвращается в меню', async ({ page }) => {
