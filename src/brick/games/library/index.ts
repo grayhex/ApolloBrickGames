@@ -4,6 +4,7 @@ import { MazeGame, JigsawGame, LightsGame, SokobanGame, SolitaireGame, ReversiGa
 import { SnakeGame, PadsGame, MatchingGame, FlappyGame, BasketGame, DiggerGame, BomberGame, DiceGame } from './arcade';
 import { RoadGame, ShooterGame, BallGame, BowlingGame } from './action';
 import { FlickerTetrisGame, QuarthGame, CapsuleGame } from './falling';
+import { LIBRARY_MODES, WIKI_MODE_COUNT } from './modes';
 const factories: Record<LibraryId, (o: BrickGameOptions) => BrickGame> = {
   maze: (o) => new MazeGame(o), jigsaw: (o) => new JigsawGame(o),
   'meteor-fighter': (o) => new ShooterGame('meteor-fighter',o),
@@ -20,5 +21,6 @@ const factories: Record<LibraryId, (o: BrickGameOptions) => BrickGame> = {
 /** Кнопки, без которых игра не проходится и которых нет на корпусе игрушек 1–4: такая игра не назначается игрушке (см. `needs` в `BrickGameDef`). */
 const NEEDS: Partial<Record<LibraryId, readonly BrickAction[]>> = { jigsaw: ['fire'] };
 export const LIBRARY_GAMES: Readonly<Record<LibraryId, BrickGameDef>> = Object.fromEntries(LIBRARY_IDS.map((id): [LibraryId, BrickGameDef] => [id, {
-  id, declaredModes: null, ...(NEEDS[id] ? { needs: NEEDS[id] } : {}), ...(NEEDS[id]?.includes('fire') ? { usesFire: true } : {}), modes: [{ name: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, note: 'Реконструкция по описанию правил; точная прошивка и варианты оригинала не подтверждены.' }], create: factories[id],
+  id, declaredModes: WIKI_MODE_COUNT[id] ?? null, ...(NEEDS[id] ? { needs: NEEDS[id] } : {}), ...(NEEDS[id]?.includes('fire') ? { usesFire: true } : {}),
+  modes: LIBRARY_MODES[id] ?? [{ name: { ru: LIBRARY_NAMES[id][0], en: LIBRARY_NAMES[id][1] }, note: 'Реконструкция по описанию правил; точная прошивка и варианты оригинала не подтверждены.' }], create: factories[id],
 }])) as Record<LibraryId, BrickGameDef>;

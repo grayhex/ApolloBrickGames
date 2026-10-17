@@ -10,8 +10,8 @@ import {
   DESCENT_FIRST_MS,
   DESCENT_TENTH_MS,
   EXTRA_LIFE_SCORE,
+  MT1997_VARIANTS,
   RECTANGLE_CELL_POINTS,
-  SHAPES_MODES,
   SPAWN_EVERY,
   SPEED_STEP_SCORE,
   START_FIGURES_MAX,
@@ -50,8 +50,8 @@ export const SHAPES_SCHEMES: readonly GuideScheme[] = [
 
 export const SHAPES_GUIDE: GameGuideData = {
   summary: gt(
-    'Сверху спускаются фигуры. Пушка либо разрушает их выстрелами (варианты 1–2), либо достраивает до прямоугольников, и те исчезают (варианты 3–4).',
-    'Shapes come down from the top. The gun either destroys them with shots (variants 1–2) or completes them into rectangles, which then vanish (variants 3–4).',
+    'Сверху спускаются фигуры. Пушка либо разрушает их выстрелами (варианты 1–2 и 5–6), либо достраивает до прямоугольников, и те исчезают (3–4 и 7–8).',
+    'Shapes come down from the top. The gun either destroys them with shots (variants 1–2 and 5–6) or completes them into rectangles, which then vanish (3–4 and 7–8).',
   ),
   goal: gt(
     'Не дать фигурам дойти до пушки: сбивайте их выстрелами или достраивайте до прямоугольников.',
@@ -79,8 +79,8 @@ export const SHAPES_GUIDE: GameGuideData = {
       'Touching shapes form one group: a cell between them can complete a joint rectangle. In completing, a bullet that meets nothing flies away.',
     ),
     gt(
-      'В вариантах «в бок» (2 и 4) после каждого шага спуска всё поле сдвигается на клетку влево или вправо, без оборачивания.',
-      'In the “sideways” variants (2 and 4) the whole field shifts one cell left or right after every descent step, without wrapping.',
+      'В вариантах «в бок» (2, 4, 6 и 8) после каждого шага спуска всё поле сдвигается на клетку влево или вправо, без оборачивания.',
+      'In the “sideways” variants (2, 4, 6 and 8) the whole field shifts one cell left or right after every descent step, without wrapping.',
     ),
     gt(
       `Клетка дошла до ряда ствола — потеря жизни: взрыв, очистка поля, тот же уровень заново. На уровнях 1–${ONE_FIGURE_UNTIL} стартует одна фигура, ${ONE_FIGURE_UNTIL + 1}–${TWO_FIGURES_UNTIL} две, дальше ${START_FIGURES_MAX}.`,
@@ -118,8 +118,8 @@ export const SHAPES_GUIDE: GameGuideData = {
   schemes: SHAPES_SCHEMES,
   assumptions: [
     gt(
-      `У донора игры «фигуры» нет: правила — из описания MT1997 (${SHAPES_MODES.length} варианта: 2 отстрела и 2 достройки, с движением в бок и без); пушка, пули, жизни — донорские.`,
-      `The donor has no “shapes” game: rules follow the MT1997 description (${SHAPES_MODES.length} variants: 2 shooting, 2 completing); gun, bullets and lives are the donor’s.`,
+      `У донора игры «фигуры» нет: правила — из описания MT1997 (${MT1997_VARIANTS} варианта: 2 отстрела и 2 достройки, с движением в бок и без); пушка, пули, жизни — донорские.`,
+      `The donor has no “shapes” game: rules follow the MT1997 description (${MT1997_VARIANTS} variants: 2 shooting, 2 completing); gun, bullets and lives are the donor’s.`,
     ),
     gt(
       'Вид фигур, частота появления, скорость спуска, очки, слияние соприкоснувшихся фигур и мигание прямоугольника — выбраны нами.',
@@ -132,6 +132,10 @@ export const SHAPES_GUIDE: GameGuideData = {
     gt(
       '«Подмога» (вторая пушка за потерянную жизнь) и вишенки-награды MT1997 не восстановлены.',
       'The MT1997 “help” (a second gun for a lost life) and cherry rewards are not restored.',
+    ),
+    gt(
+      'Варианты 5–8 — те же, но поле вверх дном (пушка вверху): по вики retroconsoles, правила — допущение; в MT1997 переворота нет.',
+      'Variants 5–8 are the same with the field upside down (gun on top): per the retroconsoles wiki, rules are an assumption; MT1997 has no flip.',
     ),
   ],
 };

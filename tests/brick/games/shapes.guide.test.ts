@@ -17,7 +17,7 @@ import {
 } from '../../../src/brick';
 import { TETROMINOES, findRectangle, placeFigure } from '../../../src/brick/games/gun/figures';
 import type { GunSpace } from '../../../src/brick/games/gun/space';
-import { SHAPES_MODES, ShapesGame, shapesDef } from '../../../src/brick/games/shapes';
+import { MT1997_VARIANTS, ShapesGame, shapesDef } from '../../../src/brick/games/shapes';
 import { BRICK_GUIDES, SHAPES_GUIDE } from '../../../src/brick/guides';
 import { frameHash } from '../conformance';
 import { hold, idle, litRows, run, show, skipIntro, tap, types } from './gunKit';
@@ -329,7 +329,7 @@ function topLevel(): number {
 
 /** Все числа, подтверждённые игрой (в виде строк, как их находит `numbersIn`). */
 function measuredNumbers(): Set<string> {
-  const roles = [0, 1, 2, 3].map(variantRole);
+  const roles = Array.from({ length: shapesDef.modes.length }, (_, mode) => variantRole(mode));
   const figures = Array.from({ length: topLevel() }, (_, i) => startFigures(i + 1));
   const hanging = hangingDimensions();
   const rectangle = pointsPerRectangleCell((game) => game.figure(['##', '#.'], 4, 15), [5]);
@@ -437,21 +437,27 @@ describe('shapes: числа описания подтверждены игро�
     expect(GUIDE.facts[3]?.value).toBe(`${descentMs(1)}→${descentMs(10)}`);
   });
 
-  it('число вариантов и их роли: четыре, отстрел — 1 и 2, достройка — 3 и 4, «в бок» — 2 и 4', () => {
-    expect(shapesDef.modes.length).toBe(4);
-    expect([0, 1, 2, 3].map(variantRole)).toEqual([
+  it('число вариантов и их роли: восемь; отстрел — 1, 2, 5, 6, достройка — 3, 4, 7, 8, «в бок» — чётные (5–8 — те же, но вверх дном)', () => {
+    expect(shapesDef.modes.length).toBe(8);
+    expect(MT1997_VARIANTS).toBe(4);
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(variantRole)).toEqual([
+      { shooting: true, sideways: false },
+      { shooting: true, sideways: true },
+      { shooting: false, sideways: false },
+      { shooting: false, sideways: true },
       { shooting: true, sideways: false },
       { shooting: true, sideways: true },
       { shooting: false, sideways: false },
       { shooting: false, sideways: true },
     ]);
-    expect(GUIDE.summary.ru).toContain('(варианты 1–2)');
-    expect(GUIDE.summary.ru).toContain('(варианты 3–4)');
-    expect(GUIDE.summary.en).toContain('(variants 1–2)');
-    expect(GUIDE.summary.en).toContain('(variants 3–4)');
-    expect(GUIDE.rules.some((text) => text.ru.includes('(2 и 4)') && text.en.includes('(2 and 4)'))).toBe(true);
-    expect(GUIDE.assumptions[0]?.ru).toContain(`${SHAPES_MODES.length} варианта: 2 отстрела и 2 достройки`);
-    expect(GUIDE.assumptions[0]?.en).toContain(`${SHAPES_MODES.length} variants: 2 shooting, 2 completing`);
+    expect(GUIDE.summary.ru).toContain('(варианты 1–2 и 5–6)');
+    expect(GUIDE.summary.ru).toContain('(3–4 и 7–8)');
+    expect(GUIDE.summary.en).toContain('(variants 1–2 and 5–6)');
+    expect(GUIDE.summary.en).toContain('(3–4 and 7–8)');
+    expect(GUIDE.rules.some((text) => text.ru.includes('(2, 4, 6 и 8)') && text.en.includes('(2, 4, 6 and 8)'))).toBe(true);
+    expect(GUIDE.assumptions[0]?.ru).toContain(`${MT1997_VARIANTS} варианта: 2 отстрела и 2 достройки`);
+    expect(GUIDE.assumptions[0]?.en).toContain(`${MT1997_VARIANTS} variants: 2 shooting, 2 completing`);
+    expect(GUIDE.assumptions.some((text) => text.ru.includes('Варианты 5–8') && text.ru.includes('вверх дном') && text.en.includes('Variants 5–8'))).toBe(true);
   });
 
   it('в числах всех текстов нет ничего, кроме измеренного игрой (допущение о донорских 16 вариантах и т. п. здесь не встречается)', () => {
@@ -621,14 +627,14 @@ describe('shapes: правила описания совпадают с игро
     expect(groups(game.cells()).length).toBe(2);
   });
 
-  it('четыре варианта различаются; следующий номер по кругу возвращает первый', () => {
+  it('восемь вариантов различаются; следующий номер по кругу возвращает первый', () => {
     const played = (mode: number): string => {
       const game = started(mode);
       run(game, 400, (t) => (t % 7 === 0 ? makeBrickInput(['fire']) : t % 29 === 0 ? makeBrickInput(['left']) : NEUTRAL_BRICK_INPUT));
       return frameHash(game);
     };
-    expect(new Set([0, 1, 2, 3].map(played)).size).toBe(4);
-    expect(played(4)).toBe(played(0));
+    expect(new Set([0, 1, 2, 3, 4, 5, 6, 7].map(played)).size).toBe(8);
+    expect(played(8)).toBe(played(0));
   });
 });
 

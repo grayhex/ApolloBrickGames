@@ -1,17 +1,25 @@
 import type { LibraryId } from '../../games/library';
 import { gt, type GuideText } from '../guide';
 
+/** Игры, варианты которых перечислены в вики retroconsoles (раздел Modes) и реализованы по её списку; сами правила признаков — допущение. */
+const WIKI_VARIANTS = new Set<LibraryId>(['dance', 'obstacle-race', 'snake', 'pneumatic-ball', 'pong', 'honeybee']);
+
 /** Объём содержания, отдельно от технического ready и исторической достоверности. */
 export function contentStatus(id: LibraryId): GuideText {
-  return id === 'sokoban' || id === 'quarth'
-    ? gt(
-        'Набор из 10 авторских задач; совпадение с оригиналом не установлено.',
-        'A set of 10 project-authored challenges; fidelity to the original is unverified.',
-      )
-    : gt(
-        'Играбельный прототип: один профиль правил, без полного набора оригинальных вариантов.',
-        'Playable prototype: one rule profile, without the complete original variant set.',
-      );
+  if (id === 'sokoban' || id === 'quarth')
+    return gt(
+      'Набор из 10 авторских задач; совпадение с оригиналом не установлено.',
+      'A set of 10 project-authored challenges; fidelity to the original is unverified.',
+    );
+  if (WIKI_VARIANTS.has(id))
+    return gt(
+      'Играбельный прототип: один профиль правил; варианты — по списку вики, их правила — допущение.',
+      'Playable prototype: one rule profile; variants follow the wiki list, their rules are an assumption.',
+    );
+  return gt(
+    'Играбельный прототип: один профиль правил, без полного набора оригинальных вариантов.',
+    'Playable prototype: one rule profile, without the complete original variant set.',
+  );
 }
 
 const PROGRESSION: Partial<Record<LibraryId, GuideText>> = {

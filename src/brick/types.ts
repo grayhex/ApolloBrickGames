@@ -152,7 +152,10 @@ export interface BrickGameDef {
    */
   usesFire?: boolean;
   modes: readonly BrickModeDef[];
-  /** Сколько вариантов у игры на настоящем устройстве, если известно (иначе `null`): реализованных может быть меньше. */
+  /**
+   * Сколько вариантов у игры на настоящем устройстве, если известно (иначе `null`): реализованных может быть меньше.
+   * У семи игр библиотеки (`games/library/modes.ts`) здесь число вариантов по описанию вики retroconsoles — это другая прошивка, не Apollo; весь её список реализован.
+   */
   declaredModes: number | null;
   create(options: BrickGameOptions): BrickGame;
 }
