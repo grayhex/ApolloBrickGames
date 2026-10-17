@@ -59,8 +59,8 @@ export interface ControlPanelOptions {
   shells?: readonly Shell[];
   /** Дубли кнопок корпуса в пульте (видны, пока виден только экран игрушки); по умолчанию нет. */
   remote?: readonly RemoteKey[];
-  /** Уровни выключены (у игры-заглушки их нет): плитки заперты, список карт недоступен. */
-  levelsDisabled?: boolean;
+  /** Выбор оригинальных уровней и карт редактора; у остальных игрушек блок отсутствует. */
+  levels?: boolean;
   /** Выбор музыки и её громкость; у игры без мелодии скрыты. По умолчанию есть. */
   music?: boolean;
   /** Спидран-HUD (время прохождения уровней); у игры без уровней скрыт. По умолчанию есть. */
@@ -263,7 +263,7 @@ export class ControlPanel {
 
     // ── Уровни ───────────────────────────────────────────────────────────
     const grid = this.label(h('div', { class: 'lvgrid', id: 'original-levels', role: 'group' }), 'lv.originalAria', 'aria-label');
-    for (const slot of options.slots) {
+    for (const slot of options.levels === false ? [] : options.slots) {
       const open = slot.levelId !== null;
       const tile = h(
         'button',
@@ -286,14 +286,11 @@ export class ControlPanel {
       else if (kind === 'user') actions.pickUser(this.userSelect.value.slice('user:'.length));
       options.onPointerUse();
     });
-    if (options.levelsDisabled) this.userSelect.disabled = true;
     const levels = h(
       'section',
-      { class: 'side__sec', id: 'blk-levels', 'aria-labelledby': 'lv-title', ...(options.levelsDisabled ? { 'data-disabled': 'true' } : {}) },
+      { class: 'side__sec', id: 'blk-levels', 'aria-labelledby': 'lv-title' },
       this.label(h('h3', { class: 'side__h', id: 'lv-title' }), 'lv.h'),
-      this.label(h('p', { class: 'side__cap' }), 'lv.original'),
       grid,
-      this.label(h('p', { class: 'side__cap' }), 'lv.custom'),
       this.userSelect,
     );
 
@@ -334,7 +331,7 @@ export class ControlPanel {
           ),
         )
       : null;
-    this.root.replaceChildren(h('div', {class:'ctl-card'}, top, ...(remote ? [remote] : []), sound, view, segments, levels, ...(options.speedrun === false ? [] : [this.runBox])));
+    this.root.replaceChildren(h('div', {class:'ctl-card'}, top, ...(remote ? [remote] : []), sound, view, segments, ...(options.levels === false ? [] : [levels]), ...(options.speedrun === false ? [] : [this.runBox])));
     this.setUserLevels([], null);
     this.relabel();
     onLangChange(() => this.relabel(), options.signal);

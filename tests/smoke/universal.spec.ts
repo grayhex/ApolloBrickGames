@@ -71,6 +71,11 @@ for (const width of [320, 360, 900, 1440])
       const boxes = await page
         .locator('#topleft,.site-brand,#toy-switch')
         .evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().toJSON()));
+      if (width >= 1200) {
+        const remote = (await page.locator('#side-ctl').boundingBox())!;
+        expect(boxes[1]!.width).toBeCloseTo(remote.width, 0);
+        expect(boxes[1]!.right).toBeCloseTo(remote.x + remote.width, 0);
+      }
       for (let i = 0; i < boxes.length; i++)
         for (let j = i + 1; j < boxes.length; j++) {
           const a = boxes[i]!,

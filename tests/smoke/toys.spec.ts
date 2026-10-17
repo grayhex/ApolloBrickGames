@@ -157,7 +157,7 @@ test.describe('«Часы+99»', () => {
     await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
   });
 
-  test('слева справка по тетрису, справа — звук, вид, уровни выключены; музыки и спидрана нет', async ({ page }) => {
+  test('слева справка по тетрису, справа — звук и вид; блока уровней, музыки и спидрана нет', async ({ page }) => {
     await open(page, 'clock99');
     await expect(page.locator('#side-info')).toBeVisible();
     await expect(page.locator('#side-info .grules li')).toHaveCount(3);
@@ -168,12 +168,8 @@ test.describe('«Часы+99»', () => {
     await expect(page.locator('#music')).toHaveCount(0);
     await expect(page.locator('#run')).toHaveCount(0);
     await expect(page.locator('#segments-off')).toBeVisible();
-    const tiles = page.locator('#original-levels .lv');
-    await expect(tiles).toHaveCount(9);
-    for (let i = 0; i < 9; i++) await expect(tiles.nth(i)).toHaveAttribute('aria-disabled', 'true');
-    await expect(page.locator('#user-level')).toBeDisabled();
-    await tiles.nth(0).click({ force: true }); // aria-disabled: иначе Playwright ждал бы «доступности»
-    expect(await area(page, 'phase')).toBe('ready'); // плитка уровня ничего не запускает
+    await expect(page.locator('#blk-levels,#original-levels,#user-level')).toHaveCount(0);
+    expect(await area(page, 'phase')).toBe('ready');
   });
 
   test('игра — тетрис: старт, сдвиг, поворот, ускорение вниз без скрытого броска, пауза и продолжение', async ({ page }) => {
