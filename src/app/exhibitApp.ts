@@ -1,3 +1,4 @@
+import { openEncyclopedia } from './help';
 import './exhibit.css';
 import './minibrick.css';
 import { applyMiniBrickModel, miniBrickMark } from './minibrickModel';
@@ -50,7 +51,6 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
   };
   const notice = h('dialog', { class: 'settings alibaba-notice', id: `${id}-notice`, 'aria-labelledby': `${id}-notice-title` });
   document.body.append(notice);
-  const help = byId<HTMLDialogElement>('help');
   const closeDialog = (dialog: HTMLDialogElement): void => {
     dialog.close();
     focus(); // Native close events are queued; keyboard input must work immediately after Escape.
@@ -185,7 +185,6 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
       .querySelector('[data-key="onoff"]')
       ?.setAttribute('aria-label', `ON/OFF — ${t('alibaba.unavailable')}`);
     if (notice.open) populateDialog(notice);
-    if (help.open) populateDialog(help);
   }
   byId('corner-lang').addEventListener(
     'click',
@@ -202,8 +201,7 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
   byId('corner-help').addEventListener(
     'click',
     () => {
-      populateDialog(help);
-      if (!help.open) help.showModal();
+      openEncyclopedia(id);
     },
     { signal },
   );
@@ -219,7 +217,7 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
   window.addEventListener(
     'keydown',
     (event) => {
-      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || notice.open || help.open || settings.isOpen) return;
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || notice.open || settings.isOpen) return;
       if ((event.target as Element | null)?.closest('button,a,input,select,textarea,[contenteditable=true]')) return;
       if (event.code === 'KeyO') {
         event.preventDefault();
@@ -233,7 +231,7 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
     { signal },
   );
   onLangChange(relabel, signal);
-  for (const dialog of [notice, help]) {
+  for (const dialog of [notice]) {
     dialog.addEventListener('close', focus, { signal });
     dialog.addEventListener(
       'cancel',
@@ -246,7 +244,6 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
   }
   life.onDispose(() => {
     settings.close();
-    if (help.open) help.close();
     notice.close();
     notice.remove();
     hub.detach();

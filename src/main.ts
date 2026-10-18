@@ -7,6 +7,7 @@ import { startSheet } from './app/sheet';
 import { clearTheme } from './app/theme';
 
 const isAdmin = /\/admin\/?$/.test(window.location.pathname);
+const isEncyclopedia = /\/encyclopedia\/?$/.test(window.location.pathname);
 const route = parseRoute(window.location.hash);
 // Вид страницы: игрушка (комната, клип) выставляет startApp; контрольный лист и редактор — технические страницы.
 if (route === 'sheet' || route === 'editor') {
@@ -14,14 +15,16 @@ if (route === 'sheet' || route === 'editor') {
   delete document.body.dataset['booting']; // у технических страниц нет раскладки игрушки, которую надо прятать до готовности
 }
 // Светлый фон — только у игрушки; технические страницы всегда тёмные (index.html ставит тему заранее, до загрузки данных).
-if (route !== 'room') clearTheme();
+if (route !== 'room' && !isEncyclopedia) clearTheme();
 // Смена маршрута — простая перезагрузка: у каждого маршрута свой пакет данных и свои обработчики.
-window.addEventListener('hashchange', () => window.location.reload());
+if (!isEncyclopedia) window.addEventListener('hashchange', () => window.location.reload());
 
 // Страница игрушки (комната): хозяин страницы запускает игрушку из адреса `?toy=…` (без параметра — Crocodile Mario) и меняет игрушки на месте,
 // без перезагрузки (шапка с логотипом и переключателем — тоже его). Техническое демо запускается напрямую: оно одно и не переключается.
 const start: Promise<unknown> =
-  isAdmin
+  isEncyclopedia
+    ? import('./config/runtime').then(async ({ loadConfig }) => { await loadConfig(); const page = await import('./encyclopedia/page'); page.startEncyclopedia(); })
+    : isAdmin
     ? import('./admin/admin').then((module) => module.startAdmin())
     : route === 'sheet'
     ? startSheet()

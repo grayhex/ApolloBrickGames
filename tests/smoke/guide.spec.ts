@@ -89,6 +89,18 @@ test.describe('вкладки игр', () => {
     expect(await tabs(page).evaluateAll((items) => items.filter((item) => (item as HTMLElement).tabIndex === 0).length)).toBe(1);
   });
 
+  test('стрелки по вкладкам переключают и меню консоли, как щелчок по вкладке', async ({ page }) => {
+    await open(page, 'toy=tank168');
+    await selected(page).focus();
+    await page.keyboard.press('ArrowRight');
+    const game = await selected(page).getAttribute('data-game');
+    expect(game).toBeTruthy();
+    await expect.poll(() => area(page, 'game')).toBe(game);
+    await page.keyboard.press('End');
+    const last = await selected(page).getAttribute('data-game');
+    await expect.poll(() => area(page, 'game')).toBe(last);
+  });
+
   test('«Морской бой»: режимы A–F по списку владельца, открыта игра, выбранная в меню консоли (A); арканоид с оговоркой про «теннис»; коробки нет', async ({ page }) => {
     await open(page, 'toy=seabattle');
     await expect(tabs(page)).toHaveText(['A', 'B', 'C', 'D', 'E', 'F']);
@@ -353,25 +365,17 @@ test.describe('3D-коробка Crocodile Mario: вывод выключен', 
   });
 });
 
-test('подробная справка содержит варианты и допущения, левая панель — краткие правила и схемы', async ({ page }) => {
+test('энциклопедия содержит варианты и источники; слева одна статичная схема', async ({ page }) => {
   await open(page, 'toy=seabattle');
-  await expect(page.locator('#gpanel .gsec, #gpanel .chip')).toHaveCount(0);
-  await expect(page.locator('#gpanel .gscheme:not(.gclip)')).toBeVisible();
-  await expect(page.locator('#gpanel .gclip canvas')).toBeVisible(); // рядом со схемой — зацикленный «геймплей»
+  await expect(page.locator('#gpanel .gscheme')).toHaveCount(1);
+  await expect(page.locator('#gpanel canvas')).toHaveCount(0);
   await expect(page.locator('#gpanel .grules li')).toHaveCount(3);
   await page.locator('#corner-help').click();
-  const help = page.locator('#help');
-  await expect(help).toBeVisible();
-  const sea = help.locator('.help__game[data-game="sea-battle"]');
-  await sea.locator(':scope > summary').click();
-  await expect(sea).toContainText('Поочерёдные выстрелы');
-  const tanks = help.locator('.help__game[data-game="tank"]');
-  await tanks.locator(':scope > summary').click();
-  await tanks.locator('[data-sec="modes"] summary').click();
-  await expect(tanks.locator('.gmodes li')).toHaveCount(2);
-  await expect(help).toContainText('MIT');
-  await page.keyboard.press('Escape');
-  await expect(help).not.toBeVisible();
+  await expect(page.locator('.enc-article h2')).toHaveText('Морской бой');
+  await expect(page.locator('#rules')).toContainText('Затем стреляет соперник');
+  await page.locator('.enc-item[data-game=tank]').click();
+  await expect(page.locator('#modes li')).toHaveCount(5);
+  await expect(page.locator('#sources')).toContainText('MIT');
 });
 test('фигуры Mario сохраняют квадратные рамки в невысоком окне', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 800 });

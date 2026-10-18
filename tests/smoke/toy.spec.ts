@@ -417,18 +417,9 @@ test('настройки — только управление; справка: 
   await expect(page.locator('dialog#settings')).toBeHidden();
 
   await page.locator('#corner-help').click();
-  const help = page.locator('dialog#help');
-  await expect(help).toBeVisible();
-  for (const label of ['ON/OFF', 'S./P.', 'SOUND', 'FIRE', 'LEFT', 'RIGHT', 'UP', 'DOWN', 'JUMP']) {
-    await expect(help.locator('th', { hasText: label }).first()).toBeVisible();
-  }
-  await expect(help.locator('tr', { hasText: 'S./P.' })).toContainText('Enter');
-  await page.keyboard.press('Escape');
-  await expect(help).toBeHidden();
-  await expect(page.locator('#game-area')).toBeFocused();
-  expect(await phase(page)()).toBe('paused'); // продолжение — только явным нажатием S./P.
-  await key(page, 'sp').click();
-  await expect.poll(phase(page)).toBe('playing');
+  await expect(page).toHaveURL(/encyclopedia\?game=mario/);
+  await expect(page.locator('.enc-article h2')).toHaveText('Crocodile Mario');
+  await expect(page.locator('.help__table, .gctl, #settings')).toHaveCount(0);
 });
 
 test('технические страницы лежат внутри редактора', async ({ page }) => {

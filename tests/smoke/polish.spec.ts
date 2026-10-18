@@ -73,18 +73,16 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(page.locator('#corner-theme')).toHaveAttribute('aria-label', 'Light theme');
   await expect(page.locator('#shell-picker [data-shell="red"]')).toHaveAccessibleName('red');
   await expect(page.locator('#corner-settings')).toHaveAttribute('title', 'Control settings');
-  await expect(page.locator('#corner-help')).toHaveAttribute('aria-label', 'Help');
+  await expect(page.locator('#corner-help')).toHaveAttribute('aria-label', 'Game encyclopedia');
   await expect(page.locator('[data-key="up"]')).toHaveAttribute('aria-label', 'UP — jump');
   await expect(page.locator('#stage')).toHaveAttribute('aria-label', 'Crocodile Mario toy');
 
-  // Справка и настройки — на английском.
+  // The encyclopedia is a separate page and follows the chosen language.
   await page.locator('#corner-help').click();
-  const help = page.locator('#help');
-  await expect(help.getByRole('heading', { name: 'Help' })).toBeVisible();
-  await expect(help.locator('tr:has(th:text-is("JUMP"))')).toContainText('Space');
-  await expect(help.locator('tr:has(th:text-is("UP"))')).toContainText('jump upwards');
-  await page.keyboard.press('Escape');
-  await expect(help).toBeHidden();
+  await expect(page).toHaveURL(/encyclopedia/);
+  await expect(page.getByRole('heading', {name:'Game encyclopedia',exact:true})).toBeVisible();
+  await expect(page.locator('.gctl, .help__table')).toHaveCount(0);
+  await page.goBack();
   await page.locator('#corner-settings').click();
   const settings = page.locator('#settings');
   await expect(settings.getByRole('heading', { name: 'Control settings' })).toBeVisible();
@@ -121,16 +119,10 @@ test('справка слева по упаковке: фигуры, очки, �
   const jump = info.locator('.keys__row', { hasText: 'Прыжок' });
   await expect(jump).toContainText('Пробел');
   await expect(jump).toContainText('↑');
-  // «Оригинальное устройство» — не в левой панели, а в справке (значок «?» в уголке): режимы TETRIS и SHOOTING, особые функции, секрет.
-  await expect(info.locator('#original-device')).toHaveCount(0);
   await page.locator('#corner-help').click();
-  const original = page.locator('#help #original-device');
-  await expect(original.getByRole('heading', { name: 'Оригинальное устройство' })).toBeVisible();
-  await expect(original).toContainText('TETRIS (99 игр)');
-  await expect(original).toContainText('SHOOTING (1)');
-  await expect(original).toContainText('3 минуты');
-  await expect(original).toContainText('200 жизней');
-  await page.keyboard.press('Escape');
+  await expect(page.locator('#sources')).toContainText('видео');
+  await expect(page.locator('.enc-article h2')).toHaveText('Crocodile Mario');
+  await page.goBack();
   // Громкость по умолчанию — 25 %.
   await expect(page.locator('#volume')).toHaveValue('25');
   await expect(page.locator('#volume-row .vol__value')).toHaveText('25%');

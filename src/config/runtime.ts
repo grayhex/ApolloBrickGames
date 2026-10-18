@@ -4,7 +4,10 @@ import { GAMES } from '../games/catalog';
 import { TOYS } from '../app/toys';
 import { setDefaultLang } from '../input/lang';
 export const defaultConfig = (): SiteConfig => validateConfig(raw);
+let currentConfig: SiteConfig | undefined;
+export const getConfig = (): SiteConfig => currentConfig ?? defaultConfig();
 export function applyConfig(config: SiteConfig): void {
+  currentConfig = config;
   setDefaultLang(config.language);
   for (const id of CONFIG_TOY_IDS) {
     const model = TOYS[id],

@@ -7,7 +7,7 @@ const RU = {
   // ── Уголок страницы и подписи на корпусе ────────────────────────────────
   'corner.nav': 'Сервис',
   'corner.settings': 'Настройки управления',
-  'corner.help': 'Справка',
+  'corner.help': 'Энциклопедия игр',
   'corner.editor': 'Редактор уровней',
   'corner.lang': 'Язык интерфейса',
   'corner.langTitle': 'Сменить язык на English',
@@ -397,7 +397,7 @@ export type MsgKey = keyof typeof RU;
 const EN: Record<MsgKey, string> = {
   'corner.nav': 'Tools',
   'corner.settings': 'Control settings',
-  'corner.help': 'Help',
+  'corner.help': 'Game encyclopedia',
   'corner.editor': 'Level editor',
   'corner.lang': 'Interface language',
   'corner.langTitle': 'Switch language to Русский',

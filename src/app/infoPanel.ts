@@ -385,6 +385,7 @@ export class InfoPanel {
       if (next === undefined) return;
       event.preventDefault();
       select(ids[next] ?? this.selected, true);
+      this.onChoose?.(this.selected); // как при щелчке: меню консоли следует за открытой вкладкой
     });
     chooser.addEventListener('change', () => {
       select(chooser.value as GameId);
@@ -431,6 +432,6 @@ export class InfoPanel {
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
     const data = BRICK_GUIDES[id];
-    return [head, ...(data ? compactGuide(guideForBody(data, model, BRICK_GAMES[id]), lang, id) : [])];
+    return [head, ...(data ? compactGuide(guideForBody(data, model, BRICK_GAMES[id]), lang) : [])];
   }
 }

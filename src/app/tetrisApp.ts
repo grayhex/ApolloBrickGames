@@ -16,7 +16,7 @@ import { CableGlitch } from './cableGlitch';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
 import { InfoPanel } from './infoPanel';
-import { HelpDialog } from './help';
+import { openEncyclopedia } from './help';
 import { InputHub } from './hub';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { applyStatic, getLang, setLang, t } from './i18n';
@@ -100,7 +100,6 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     lidFront: byId<HTMLElement>('lid-front'),
     lidCover: byId<HTMLButtonElement>('lid-cover'),
     lower: byId<HTMLElement>('lower'),
-    help: byId<HTMLDialogElement>('help'),
     boxDialog: byId<HTMLDialogElement>('box-dialog'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
@@ -135,7 +134,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   if (params.has('debug')) Object.defineProperty(window, model.menu ? '__brick' : '__tetris', { configurable: true, get: () => cabinet.debugTarget() });
 
   const isKeyboardActive = (): boolean => {
-    if (settingsDialog.isOpen || helpDialog.isOpen || infoPanel.boxOpen) return false;
+    if (settingsDialog.isOpen || infoPanel.boxOpen) return false;
     if (view === 'closed') return false; // пока крышка закрыта, игре клавиши не принадлежат: Enter или пробел открывают игрушку
     const active = document.activeElement;
     return active === null || active === document.body || refs.gameArea.contains(active);
@@ -361,16 +360,14 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     onOpen: openMenu,
     onClose: closeMenu,
   });
-  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, model, signal);
 
   /** Навигация по настройкам с геймпада: вверх/вниз — фокус, подтвердить — нажатие, назад — закрыть. */
   function handleMenuInput(frame: InputFrame): void {
     if (settingsDialog.capturing) return;
-    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : infoPanel.boxOpen ? refs.boxDialog : null;
+    const dialog = settingsDialog.isOpen ? refs.settings : infoPanel.boxOpen ? refs.boxDialog : null;
     if (!dialog) return;
     if (frame.pressed & NAV_BACK) {
       settingsDialog.close();
-      helpDialog.close();
       infoPanel.closeBox();
       return;
     }
@@ -418,6 +415,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     powered = on;
     rankedPartyStarted = false;
     if(!on)leaderboard?.cancel();
+    if (!on) pendingLaunch = null; // отложенный запуск из справки не должен сработать при следующем включении
     if (on && view === 'closed') {
       view = 'full';
       applyView();
@@ -483,14 +481,14 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
-    if (settingsDialog.isOpen || helpDialog.isOpen) return;
+    if (settingsDialog.isOpen) return;
     const active = document.activeElement;
     if (active !== null && active !== document.body && active !== refs.lidCover) return;
     event.preventDefault();
     setView('full');
   }, { signal });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open(), { signal });
-  refs.cornerHelp.addEventListener('click', () => helpDialog.open(), { signal });
+  refs.cornerHelp.addEventListener('click', () => openEncyclopedia(model.id), { signal });
   refs.cornerLang.addEventListener('click', (event) => {
     const next = LANGS[(LANGS.indexOf(getLang()) + 1) % LANGS.length] ?? 'ru';
     hub.updateSettings((s) => {

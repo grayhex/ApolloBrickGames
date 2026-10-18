@@ -1,4 +1,5 @@
 import { adminLeaderboards } from './leaderboards';
+import { adminEncyclopedia } from './encyclopedia';
 import './admin.css';
 import { TOYS } from '../app/toys';
 import { GAMES, type GameId } from '../games/catalog';
@@ -36,11 +37,12 @@ export async function startAdmin(): Promise<void> {
   const reset = button('Вернуть набор из репозитория',() => { if (window.confirm('Заменить черновик исходной конфигурацией? Публикация выполняется отдельно.')) { config = defaultConfig(); changed(); render(); } });
   footer.append(el('h2','Публикация'),el('p','Ключ хранится только в этой открытой вкладке. Изменения вступят в силу при следующем открытии коллекции.'),keyLabel,save,exportButton,importLabel,reload,reset); root.append(footer);
   window.addEventListener('beforeunload',(event) => { if (dirty) event.preventDefault(); });
-  function setBusy(value: boolean): void { busy = value; content.inert = value; tabs.inert = value; footer.inert = value; save.disabled = value || !connected; }
+  function setBusy(value: boolean): void { busy = value; content.inert = value; tabs.inert = value; footer.inert = value; const illustrations = root.querySelector<HTMLElement>('#admin-encyclopedia'); if (illustrations) illustrations.inert = value; save.disabled = value || !connected; }
   function message(text: string, error = false): void { status.textContent = text; status.dataset['error'] = String(error); }
   function changed(): void { dirty = true; message('Есть неопубликованные изменения.'); }
   function option(value: string, text: string): HTMLOptionElement { const o = el('option',text); o.value = value; return o; }
   function render(): void {
+    encyclopedia.refresh();
     const languageLabel = el('label','Язык по умолчанию'); const languageSelect = el('select'); languageSelect.setAttribute('aria-label','Язык по умолчанию'); languageSelect.append(option('ru','Русский'),option('en','English')); languageSelect.value = config.language;
     languageSelect.addEventListener('change',() => { config.language = languageSelect.value as Lang; changed(); }); languageLabel.append(languageSelect);
     general.replaceChildren(el('h2','Общие настройки'),el('p','Язык интерфейса для тех, кто ещё не выбирал его кнопкой RU / EN. Выбор игрока важнее.','admin__eyebrow'),languageLabel);
@@ -107,5 +109,6 @@ export async function startAdmin(): Promise<void> {
     finally { setBusy(false); }
   }
   adminLeaderboards(root,key);
+  const encyclopedia = adminEncyclopedia(root,footer,()=>config,changed);
   render(); await load();
 }
