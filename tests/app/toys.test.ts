@@ -189,7 +189,7 @@ describe('набор игр у консоли', () => {
     const owners = (game: (typeof GAME_IDS)[number]): string[] => TOY_IDS.filter((id) => TOYS[id].games.some((slot) => slot.id === game));
     expect(owners('tetris')).toEqual([...APOLLO_IDS, 'brickgame', 'e88', 'apollo-b0202']);
     expect(owners('shooting')).toEqual(['mario', 'clock99']);
-    expect(owners('racing')).toEqual(['clock99', 'tank168', 'apollo-b0202']);
+    expect(owners('racing')).toEqual(['clock99', 'tank168']);
     expect(owners('tank')).toEqual(['clock99', 'seabattle', 'tank168']);
   });
 

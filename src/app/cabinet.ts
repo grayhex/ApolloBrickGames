@@ -222,7 +222,7 @@ class TetrisCabinet implements Cabinet {
 
 /** Пункты меню консоли: игры игрушки по порядку (`ToyModel.games`) с восстановленными играми из `defs`. */
 export function consoleEntries(model: ToyModel, defs: Readonly<Record<string, BrickGameDef>>): BrickConsoleEntry[] {
-  if (model.nativeDevice) return model.games.map(game => {
+  if (model.nativeDevice) return model.games.filter(game => nativeEntry(model.nativeDevice!, game.entryId!)?.available).map(game => {
     const native = nativeEntry(model.nativeDevice!, game.entryId!)!;
     return { id:game.id, entryId:native.entryId, symbol:native.nativeCode, native, def:nativeDefinition(native), modes:[0] };
   });

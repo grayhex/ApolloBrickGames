@@ -1,7 +1,7 @@
 import { h } from './dom';
 import { onLangChange, t } from './i18n';
 import { miniConsole } from './shellPicker';
-import { TOY_IDS, TOYS, toyHref, type ToyId } from './toys';
+import { APOLLO_IDS, TOY_IDS, TOYS, toyHref, type ToyId } from './toys';
 
 export interface ToySwitch {
   setCurrent(id: ToyId): void;
@@ -22,7 +22,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
       'a',
       { class: 'toysw__item', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': shell, 'aria-label': model.name },
       icon,
-      h('span', { class: 'toysw__name' }, model.name),
+      h('span', { class: 'toysw__label' }, ...(APOLLO_IDS.some(toy=>toy===id) ? [h('span',{class:'toysw__maker'},'Apollo')] : []), h('span', { class: 'toysw__name' }, model.name)),
     );
     if (id !== 'brickgame') shelf.append(link);
     return { id, link };
@@ -49,6 +49,43 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   previous.addEventListener('click', () => scroll(-1));
   next.addEventListener('click', () => scroll(1));
   shelf.addEventListener('scroll', updateArrows, { passive: true });
+  // Vertical wheels browse the horizontal shelf; at either end normal page scrolling resumes.
+  let wheelTimer:ReturnType<typeof setTimeout> | undefined;
+  shelf.addEventListener('wheel', event => {
+    if(event.ctrlKey || event.metaKey || Math.abs(event.deltaX)>Math.abs(event.deltaY)) return;
+    const delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?shelf.clientWidth:1);
+    const before=shelf.scrollLeft;
+    const target=Math.max(0,Math.min(shelf.scrollWidth-shelf.clientWidth,before+delta));
+    if(Math.abs(target-before)<1) return;
+    event.preventDefault();
+    shelf.dataset['wheeling']='';
+    clearTimeout(wheelTimer);wheelTimer=setTimeout(()=>{delete shelf.dataset['wheeling'];},180);
+    shelf.scrollBy({left:delta,behavior:'instant'});
+  },{passive:false});
+  let drag: {id:number;x:number;left:number;moving:boolean} | null=null;
+  let suppressClick=false;
+  shelf.addEventListener('pointerdown',event=>{
+    if(event.pointerType!=='mouse'||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+    suppressClick=false;drag={id:event.pointerId,x:event.clientX,left:shelf.scrollLeft,moving:false};
+  });
+  shelf.addEventListener('pointermove',event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    if(!(event.buttons&1)){drag=null;delete shelf.dataset['dragging'];return;}
+    const distance=event.clientX-drag.x;
+    if(!drag.moving&&Math.abs(distance)<6)return;
+    if(!drag.moving){drag.moving=true;shelf.setPointerCapture(event.pointerId);shelf.dataset['dragging']='';}
+    event.preventDefault();shelf.scrollLeft=drag.left-distance;
+  });
+  const endDrag=(event:PointerEvent):void=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    suppressClick=drag.moving;drag=null;delete shelf.dataset['dragging'];
+    if(shelf.hasPointerCapture(event.pointerId))shelf.releasePointerCapture(event.pointerId);
+  };
+  shelf.addEventListener('pointerup',endDrag);
+  shelf.addEventListener('pointercancel',endDrag);
+  shelf.addEventListener('lostpointercapture',()=>{drag=null;delete shelf.dataset['dragging'];});
+  shelf.addEventListener('dragstart',event=>event.preventDefault());
+  shelf.addEventListener('click',event=>{if(suppressClick){event.preventDefault();event.stopPropagation();suppressClick=false;}},true);
   new ResizeObserver(() => {
     const selected = shelf.querySelector<HTMLAnchorElement>('[aria-current="page"]');
     if (selected) reveal(selected);

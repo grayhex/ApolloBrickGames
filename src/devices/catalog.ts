@@ -14,6 +14,7 @@ export interface NativeEntry {
   rulesetVersion: string;
   /** Availability means a matching profile exists, not merely a related engine. */
   available: boolean;
+  approximate?: boolean;
   name: { ru: string; en: string };
 }
 const entry = (profileId: NativeDeviceId, nativeCode: string, gameId: GameId, available: boolean, ru: string, en: string): NativeEntry => ({
@@ -26,9 +27,9 @@ export const E88_ENTRIES: readonly NativeEntry[] = [
   entry('e88', '3', 'tetris', true, 'Тетрис · препятствие', 'Tetris · obstruction'),
   entry('e88', '4', 'tetris', true, 'Тетрис · особые фигуры и препятствие', 'Tetris · special pieces and obstruction'),
   entry('e88', '5', 'snake', true, 'Змейка', 'Snake'),
-  entry('e88', '6', 'shooting-array', false, 'Стрельба по массиву', 'Array shooting'),
-  entry('e88', '7', 'shooting-figures', false, 'Разрушение клеток', 'Cell destruction'),
-  entry('e88', '8', 'construction', false, 'Строительство клетками', 'Cell construction'),
+  {...entry('e88', '6', 'shooting-array', true, 'Стрельба по массиву', 'Array shooting'), approximate:true},
+  {...entry('e88', '7', 'shooting-figures', true, 'Разрушение клеток', 'Cell destruction'), approximate:true},
+  {...entry('e88', '8', 'construction', true, 'Строительство клетками', 'Cell construction'), approximate:true},
 ];
 const GROUPS = [
   ['A', 10, 'frog', 'Лягушка', 'Frog'], ['B', 1, 'racing', 'Гонки', 'Racing'],
@@ -48,7 +49,25 @@ export function nativeEntry(device: NativeDeviceId, entryId: string): NativeEntr
 export function nativeVariant(profileId: string, variantId: string): NativeEntry | undefined {
   return isNativeDevice(profileId) ? NATIVE_MENUS[profileId].find(e => e.variantId === variantId) : undefined;
 }
+/** Admin status compares every persisted slot, including unfinished research entries. */
 export function originalMenu(device: NativeDeviceId, entries: readonly { entryId?: string }[]): boolean {
   const original = NATIVE_MENUS[device];
   return entries.length === original.length && entries.every((entry, i) => entry.entryId === original[i]!.entryId);
+}
+/** The player sees only the playable subset of the original menu. */
+export function originalPlayableMenu(device: NativeDeviceId, entries: readonly { entryId?: string }[]): boolean {
+  const original = NATIVE_MENUS[device].filter(e=>e.available);
+  const visible = entries.filter(e=>nativeEntry(device,e.entryId ?? '')?.available);
+  return visible.length === original.length && visible.every((entry, i) => entry.entryId === original[i]!.entryId);
+}
+
+/** Public menus contain playable entries only; persisted research slots remain import-compatible. */
+export function playableEntries(device: NativeDeviceId, entries: readonly {id: GameId; entryId?: string}[]): {id: GameId; entryId: string}[] {
+  const playable = entries.flatMap(ref => {
+    const e = nativeEntry(device, ref.entryId ?? '');
+    return e?.available ? [{id:e.gameId,entryId:e.entryId}] : [];
+  });
+  // A legacy admin document may contain only unfinished entries. Keep the toy usable.
+  const first = NATIVE_MENUS[device].find(e => e.available)!;
+  return playable.length ? playable : [{id:first.gameId,entryId:first.entryId}];
 }

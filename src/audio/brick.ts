@@ -7,10 +7,21 @@ const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker
 export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): BrickSound | null {
   if (nativeProfile === 'e88') {
     if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
-    if (event.type === 'started') return 'e88_start';
+    if (event.type === 'started') return TETRIS.has(game) ? 'e88_tetris_music' : 'e88_start';
     if (event.type === 'gameOver') return 'e88_over';
-    // Tetris GPIO cues have not been transcribed; do not substitute another device's tune.
-    if (game !== 'snake') return null;
+    if (game !== 'snake') {
+      switch(event.type){
+        case 'move':return 'e88_move';
+        case 'rotate':case 'shot':return 'e88_turn';
+        case 'lock':case 'drop':return 'e88_lock';
+        case 'hit':case 'explode':return 'e88_hit';
+        case 'lines':return `e88_lines_${Math.max(1,Math.min(4,event.count))}` as BrickSound;
+        case 'bonus':return 'e88_bonus';
+        case 'win':return 'e88_win';
+        case 'crash':return 'e88_crash';
+        default:return null;
+      }
+    }
   }
   if (game === 'snake' && !inMenu) {
     switch (event.type) {
@@ -62,6 +73,8 @@ export class BrickAudio {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
   private voices = new Set<{ oscillator: OscillatorNode; envelope: GainNode }>();
+  private musicVoices = new Set<{ oscillator: OscillatorNode; envelope: GainNode }>();
+  private music: {notes:readonly BrickTone[];offset:number;since:number;paused:boolean} | null = null;
   private until = 0;
   private priority = 0;
   private volume = 0.25;
@@ -94,9 +107,12 @@ export class BrickAudio {
   }
   play(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): void {
     if (event.type === 'paused') {
-      this.silence();
+      this.pauseMusic();
+      this.stopEffects();
       return;
     }
+    if(event.type==='resumed'){this.resumeMusic();return;}
+    if(inMenu||event.type==='started'||event.type==='gameOver')this.silence();
     const sound = brickSound(event, game, inMenu, nativeProfile);
     const padHz = event.type === 'tone' ? PAD_HZ[event.pad] : undefined;
     const notes: readonly BrickTone[] | null =
@@ -119,20 +135,31 @@ export class BrickAudio {
     )
       return;
     if (context.currentTime < this.until && priority < this.priority) return;
-    this.silence();
+    if(sound==='e88_tetris_music'){
+      this.music={notes,offset:0,since:context.currentTime,paused:false};
+      this.schedule(notes,true);
+      return;
+    }
+    this.stopEffects();
+    this.schedule(notes,false);
+    this.priority = priority;
+  }
+  private schedule(notes:readonly BrickTone[],music:boolean):void {
+    const context=this.context!,voices=music?this.musicVoices:this.voices;
     const start = context.currentTime;
     for (const track of new Set(notes.map((note) => note.track ?? 0))) {
       const oscillator = context.createOscillator();
       const envelope = context.createGain();
       oscillator.type = 'square';
       oscillator.connect(envelope);
-      envelope.connect(this.gain);
+      envelope.connect(this.gain!);
       const voice = { oscillator, envelope };
-      this.voices.add(voice);
+      voices.add(voice);
       oscillator.onended = () => {
         oscillator.disconnect();
         envelope.disconnect();
-        this.voices.delete(voice);
+        voices.delete(voice);
+        if(music&&!voices.size&&!this.music?.paused)this.music=null;
       };
       envelope.gain.setValueAtTime(0, start);
       let at = start;
@@ -141,7 +168,7 @@ export class BrickAudio {
         if (note.atMs !== undefined) at = start + note.atMs / 1000;
         const duration = note.ms / 1000;
         const end = at + duration;
-        const gain = note.gain ?? 1;
+        const gain = (note.gain ?? 1) * (music ? .5 : 1);
         envelope.gain.setValueAtTime(0, at);
         if (note.hz > 0) {
           envelope.gain.linearRampToValueAtTime(gain, at + Math.min(0.002, duration / 4));
@@ -162,11 +189,10 @@ export class BrickAudio {
       }
       oscillator.start(start);
       oscillator.stop(at);
-      this.until = Math.max(this.until, at);
+      if(!music)this.until = Math.max(this.until, at);
     }
-    this.priority = priority;
   }
-  silence(): void {
+  private stopEffects(): void {
     for (const { oscillator, envelope } of this.voices) {
       envelope.disconnect();
       try {
@@ -178,6 +204,23 @@ export class BrickAudio {
     this.voices.clear();
     this.until = 0;
   }
+  private stopMusic():void {
+    for(const {oscillator,envelope}of this.musicVoices){envelope.disconnect();try{oscillator.stop();}catch{/* already ended */}}
+    this.musicVoices.clear();
+  }
+  private pauseMusic():void {
+    if(this.music&&!this.music.paused){this.music.offset+=Math.max(0,this.context!.currentTime-this.music.since);this.music.paused=true;}
+    this.stopMusic();
+  }
+  private resumeMusic():void {
+    const music=this.music;
+    if(!music?.paused||this.muted||!this.context||this.disposed)return;
+    let skip=music.offset*1000;
+    const notes=music.notes.flatMap(note=>{if(skip>=note.ms){skip-=note.ms;return [];}const rest={...note,ms:note.ms-skip};skip=0;return [rest];});
+    if(!notes.length){this.music=null;return;}
+    music.paused=false;music.since=this.context.currentTime;this.schedule(notes,true);
+  }
+  silence():void {this.music=null;this.stopMusic();this.stopEffects();}
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;

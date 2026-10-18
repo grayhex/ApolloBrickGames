@@ -125,7 +125,7 @@ it('remains usable without Web Audio', () => {
 it('uses bounded tone schedules, including deterministic pitched noise', () => {
   for (const notes of Object.values(BRICK_PHRASES))
     for (const note of notes) {
-      expect(note.ms).toBeGreaterThan(4);
+      expect(note.ms).toBeGreaterThan(0); // Original channel 10 uses 2.048 ms steps.
       expect(note.hz).toBeGreaterThanOrEqual(0);
       // E88 sound ROM includes notes above 5 kHz; keep the original frequencies.
       expect(note.hz).toBeLessThan(16000);
@@ -208,10 +208,29 @@ it('a terminal game cue can interrupt a pad tone instead of being lost', () => {
 
 it('selects E88-native menu/start cues without borrowing B0202 Tetris effects',()=>{
   expect(brickSound({type:'move'},'tetris',true,'e88')).toBe('e88_menu');
-  expect(brickSound({type:'started'},'tetris',false,'e88')).toBe('e88_start');
-  expect(brickSound({type:'rotate'},'tetris',false,'e88')).toBeNull();
+  expect(brickSound({type:'started'},'tetris',false,'e88')).toBe('e88_tetris_music');
+  expect(brickSound({type:'rotate'},'tetris',false,'e88')).toBe('e88_turn');
   expect(brickSound({type:'rotate'},'tetris',false,'apollo-b0202')).toBe('b0202_turn');
   const {port,voices}=harness();port.unlock();port.play({type:'move'},'tetris',true,'e88');
   expect(voices).toHaveLength(1);port.setMuted(true);expect(voices[0]!.stop).toHaveBeenCalled();
   port.dispose();expect(fetch).not.toHaveBeenCalled();
+});
+
+it('E88 plays both Korobeiniki parts while effects remain audible; pause/resume preserves the music cursor',()=>{
+ const {port,voices,context,gains}=harness();port.unlock();port.play({type:'started'},'tetris',false,'e88');
+ expect(voices[0]!.stop.mock.calls[0]![0]).toBeCloseTo(9.961464,4);
+ context.currentTime=1;port.play({type:'move'},'tetris',false,'e88');
+ expect(voices).toHaveLength(2);expect(gains[1]!.disconnect).not.toHaveBeenCalled();
+ context.currentTime=2;port.play({type:'paused'},'tetris',false,'e88');
+ expect(gains[1]!.disconnect).toHaveBeenCalled();expect(gains[2]!.disconnect).toHaveBeenCalled();
+ context.currentTime=20;port.play({type:'resumed'},'tetris',false,'e88');
+ expect(voices[2]!.stop.mock.calls[0]![0]).toBeCloseTo(27.961464,4);
+ port.setMuted(true);expect(gains[3]!.disconnect).toHaveBeenCalled();
+ port.setMuted(false);port.play({type:'resumed'},'tetris',false,'e88');expect(voices).toHaveLength(3);
+ port.dispose();expect(fetch).not.toHaveBeenCalled();
+});
+it('terminal cues and explicit silence stop the E88 melody, with no delayed restart',()=>{
+ const {port,voices,gains}=harness();port.unlock();port.play({type:'started'},'tetris',false,'e88');
+ port.play({type:'gameOver'},'tetris',false,'e88');expect(gains[1]!.disconnect).toHaveBeenCalled();
+ port.silence();port.play({type:'resumed'},'tetris',false,'e88');expect(voices).toHaveLength(2);
 });

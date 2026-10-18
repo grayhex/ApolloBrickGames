@@ -22,3 +22,17 @@ describe('published configuration', () => {
     finally { Object.assign(TOYS,original); }
   });
 });
+
+it('filters unfinished native slots without mutating the published config or losing a playable default',()=>{
+ const original=structuredClone(TOYS),config=defaultConfig();
+ try{
+  config.toys['apollo-b0202'].defaultEntry='apollo-b0202.H03';config.toys['apollo-b0202'].defaultGame='tetris';
+  const snapshot=structuredClone(config);applyConfig(config);
+  expect(config).toEqual(snapshot);
+  expect(TOYS['apollo-b0202'].games.map(g=>g.entryId)).toEqual(['apollo-b0202.A01','apollo-b0202.D01','apollo-b0202.E02','apollo-b0202.H01','apollo-b0202.H02']);
+  expect(TOYS['apollo-b0202'].defaultEntry).toBe('apollo-b0202.A01');
+  config.toys['apollo-b0202'].defaultEntry='apollo-b0202.H02';applyConfig(config);expect(TOYS['apollo-b0202'].defaultEntry).toBe('apollo-b0202.H02');
+  config.toys['apollo-b0202'].games=[{id:'tetris',entryId:'apollo-b0202.H03'}];config.toys['apollo-b0202'].defaultEntry='apollo-b0202.H03';
+  applyConfig(config);expect(TOYS['apollo-b0202'].games).toHaveLength(1);expect(TOYS['apollo-b0202'].defaultEntry).toBe('apollo-b0202.A01');
+ }finally{Object.assign(TOYS,original);}
+});

@@ -418,7 +418,7 @@ function nativeToy(id: NativeDeviceId): ToyModel {
     id, name: apollo ? 'Apollo B0202 · 126 in 1' : 'Brick Game E-88 · 8 in 1',
     family: apollo ? 'apollo' : 'other', chassis: 'monoblock', nativeDevice: id,
     shells: [apollo ? 'black' : 'gray'], defaultShell: apollo ? 'black' : 'gray', thumbShell: apollo ? 'black' : 'gray',
-    games: NATIVE_MENUS[id].map(e => ({ id: e.gameId, entryId: e.entryId, label: `${e.nativeCode} · ${e.name.en}`, status: e.available ? 'ready' : 'planned' })),
+    games: NATIVE_MENUS[id].filter(e => e.available).map(e => ({ id: e.gameId, entryId: e.entryId, label: `${e.nativeCode} · ${e.name.en}`, status: e.available ? 'ready' : 'planned' })),
     defaultGame: NATIVE_MENUS[id][0]!.gameId, defaultEntry: NATIVE_MENUS[id][0]!.entryId,
     gamesCount: apollo ? 126 : 8, menu: true, gameKeys: apollo ? 'letters' : 'digits',
     glyph: 'square', panel: 'sea', deco: 'frame', leds: false, info: true, pack: null, levels: false,

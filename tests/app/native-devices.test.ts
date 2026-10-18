@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { NATIVE_MENUS, nativeEntry, originalMenu } from '../../src/devices/catalog';
+import { NATIVE_MENUS, nativeEntry, originalMenu, originalPlayableMenu } from '../../src/devices/catalog';
 import { nativeGuide } from '../../src/devices/guide';
 import { nativeDefinition } from '../../src/devices/profiles';
 import { E88Blocks,E88_BLOCK_FALL_MS,e88Piece } from '../../src/devices/e88-blocks';
@@ -35,6 +35,7 @@ describe('native firmware manifests',()=>{
       expect([...bodyActions(TOYS[id])].sort()).toEqual(['down','left','right','rotate']);
       for(const entry of NATIVE_MENUS[id]){
         const a=createCabinet(TOYS[id],options),b=createCabinet(TOYS[id],options);
+        if(!entry.available){expect(a.selectGame(entry.entryId)).toBe(false);continue;}
         expect(a.selectGame(entry.entryId)).toBe(true);expect(b.selectGame(entry.entryId)).toBe(true);
         expect(a.info['symbol']).toBe(entry.nativeCode);
         expect(a.start()).toEqual(b.start());expect(a.inMenu).toBe(!entry.available);
@@ -68,11 +69,13 @@ describe('native firmware manifests',()=>{
   });
   it('B0202 wraps variants within a group, and RIGHT + DOWN traverses groups',()=>{
     const c=createCabinet(TOYS['apollo-b0202'],options);
-    c.menu(makeFrame({pressed:['jump']}));expect(c.info['symbol']).toBe('A10');
+    c.menu(makeFrame({pressed:['jump']}));expect(c.info['symbol']).toBe('A01');
     c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('A01');
-    for(const group of 'BCDEFGHIA'){
-      c.menu(makeFrame({pressed:['down'],held:['right']}));expect(c.info['symbol']).toBe(`${group}01`);
+    for(const code of ['D01','E02','H01','A01']){
+      c.menu(makeFrame({pressed:['down'],held:['right']}));expect(c.info['symbol']).toBe(code);
     }
+    c.selectGame('apollo-b0202.H01');c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('H02');
+    c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('H01');
   });
 });
 
@@ -156,4 +159,21 @@ it('E88 exposes all thirteen original start levels, while B0202 still wraps afte
   for(let n=0;n<12;n++){e.menu(makeFrame({pressed:['left']}));b.menu(makeFrame({pressed:['left']}));}
   expect(e.ranking.level).toBe(12);expect(b.ranking.level).toBe(2);
   e.start();expect(e.scene(scene).level).toBe(12);
+});
+
+it('admin detects edits to unfinished slots while player status compares the playable menu',()=>{
+ const original=NATIVE_MENUS['apollo-b0202'];
+ expect(originalMenu('apollo-b0202',original)).toBe(true);
+ const removed=original.filter(e=>e.nativeCode!=='H03');
+ const reordered=[...original];
+ const at=reordered.findIndex(e=>e.nativeCode==='H03');
+ [reordered[at],reordered[at+1]]=[reordered[at+1]!,reordered[at]!];
+ for(const edited of [removed,reordered]){
+  expect(originalMenu('apollo-b0202',edited)).toBe(false);
+  expect(originalPlayableMenu('apollo-b0202',edited)).toBe(true);
+ }
+ const playable=original.filter(e=>e.available);
+ expect(originalPlayableMenu('apollo-b0202',playable)).toBe(true);
+ expect(originalPlayableMenu('apollo-b0202',playable.slice(1))).toBe(false);
+ expect(originalPlayableMenu('apollo-b0202',[...playable].reverse())).toBe(false);
 });

@@ -45,8 +45,11 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
           : gt('Вариант 01 — B0202 A01: шаг, очки за переход, таблицы и период движения рядов сверены с ROM. ГСЧ, часть таймерных событий и сцены адаптированы. Варианты 02–16 сохраняют правила симулятора; процент относится к проверенным аспектам 01.', 'Variant 01 follows B0202 A01: steps, crossing scores, row tables and movement period were checked against the ROM. RNG, some timed events and scenes are adapted. Variants 02–16 keep simulator rules; the percentage refers to verified aspects of 01.');
   }
   if(id==='tetris'){
-    sources.push(research('docs/devices/e88-b0202.md',gt('Профили E‑88 1–4: оригинальные фигуры, интервалы падения, очки 10/30/70/150 и препятствие; B0202 H02 — отражённое поле. Ограничения указаны отдельно.', 'E‑88 profiles 1–4: original shapes, gravity intervals, 10/30/70/150 scoring and obstruction; B0202 H02 flips the field. Limitations are listed separately.')));
+    sources.push(research('docs/devices/e88-b0202.md',gt('Профили E‑88 1–4: оригинальные фигуры, интервалы падения, очки 10/30/70/150 и препятствие; B0202 H02 — отражённое поле. Звук тетриса E‑88: каналы 0/3/10/11 и обе части мелодии 14/15. Ограничения указаны отдельно.', 'E‑88 profiles 1–4: original shapes, gravity intervals, 10/30/70/150 scoring and obstruction; B0202 H02 flips the field. E‑88 Tetris audio uses channels 0/3/10/11 and both melody parts 14/15. Limitations are listed separately.')));
     scope=gt('Общие правила Tetris сверены по нескольким источникам. Профили E‑88 и B0202 различаются; их ГСЧ, сцены и часть прогрессии остаются адаптацией. Оценка общей игры не означает точность всех вариантов.', 'Shared Tetris rules were cross-checked against several sources. E‑88 and B0202 profiles differ; RNG, scenes and parts of progression remain adapted. The general game rating does not certify every variant.');
+  }
+  if(['shooting-array','shooting-figures','construction'].includes(id)){
+    sources.push(research('docs/devices/e88-b0202.md',gt('E‑88 №6–8 подключены как приближённые библиотечные варианты по решению владельца. Формы, карты, тайминги и очки оригинала ещё не сверены.', 'E‑88 #6–8 use owner-approved approximate library variants. Original shapes, maps, timing and scoring are not yet verified.')));
   }
   if(id==='romeo-juliet'||id==='sea-battle'){
     accuracy=60;
