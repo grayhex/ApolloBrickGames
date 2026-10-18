@@ -1,8 +1,10 @@
 name: CI
 
+# Cloudflare independently builds/deploys main after merge.
+# Run expensive validation on PRs, not again for each push or merge.
 on:
-  push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
