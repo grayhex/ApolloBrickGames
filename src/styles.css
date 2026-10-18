@@ -4159,6 +4159,7 @@ body.route-editor .shell > :not(#fatal) {
 
 .gpanel__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
 }
@@ -4179,6 +4180,30 @@ body.route-editor .shell > :not(#fatal) {
   margin: 0;
   font: 700 0.84rem/1.25 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
+}
+
+.gpanel__stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px 7px 2px 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--muted);
+  font: 650 0.64rem/1.2 system-ui, sans-serif;
+  cursor: help;
+}
+.gpanel__stage b {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text);
+  font: 700 0.88rem/1 ui-serif, Georgia, serif;
 }
 
 .gpanel__meta {

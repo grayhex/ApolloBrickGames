@@ -350,3 +350,18 @@ test('Dice ROM: START/P switches the prediction; the pause indicator freezes pla
   await expect.poll(()=>categories.some(c=>c==='dice:0:r2:standard-v1:matrix')).toBe(true);
   await expect(page.locator('#gpanel')).toContainText('четырёх костей');
 });
+
+test('universal Brick Game descriptions mark alpha/beta accuracy in both languages and themes',async({page})=>{
+  await open(page,'?toy=brickgame',config=>{
+    config.toys.brickgame.games=[{id:'maze'},{id:'tank'},{id:'snake'}];config.toys.brickgame.defaultGame='maze';
+  });
+  const select=page.locator('#side-info select');
+  const badge=page.locator('#gpanel .gpanel__stage');
+  await expect(badge).toHaveText('αАльфа');await expect(badge).toHaveAttribute('title',/30%/);
+  await select.selectOption('tank');await expect(badge).toHaveText('βБета');await expect(badge).toHaveAttribute('title',/60%/);
+  await select.selectOption('snake');await expect(badge).toHaveCount(0);
+  await select.selectOption('maze');await page.locator('#corner-lang').click();await expect(badge).toHaveText('αAlpha');
+  await page.locator('#corner-theme').click();await expect(badge).toBeVisible();
+  await expect(badge).toHaveAttribute('aria-label',/30%/);
+  await page.locator('.toysw__item[data-toy=tank168]').click();await expect(badge).toHaveCount(0);
+});

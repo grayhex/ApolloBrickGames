@@ -62,7 +62,13 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
     scope=gt('Режим часов пока не реализован. Эта запись сохраняет сведения об оригинальном устройстве.', 'The clock mode is not implemented yet. This entry preserves information about the original device.');
   }
   return {id,family:familyFor(id),accuracy,sources,scope};
-});
+}).sort((a,b)=>b.accuracy-a.accuracy);
+
+/** Evidence-based preview marks, separate from technical playability. */
+export function previewStage(id: GameId): 'alpha' | 'beta' | null {
+  const accuracy=ENTRIES.find(entry=>entry.id===id)?.accuracy;
+  return accuracy===30 ? 'alpha' : accuracy===60 ? 'beta' : null;
+}
 
 export const MARIO_GUIDE: GameGuideData = {
   summary:gt('Карманное приключение на сегментном экране. Марио проходит участки с платформами, препятствиями и врагами.', 'A pocket adventure on a segmented LCD. Mario crosses stages filled with platforms, obstacles and enemies.'),
