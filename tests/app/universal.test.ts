@@ -12,7 +12,7 @@ describe('universal Brick Game', () => {
     const loaded = validateConfig(legacy);
     for (const id of APOLLO_IDS) expect(loaded.toys[id]).toEqual(config.toys[id]);
     expect(loaded.toys.brickgame.defaultGame).toBe('tetris');
-    expect(loaded.toys.brickgame.shells).toEqual(['gray', 'black']);
+    expect(loaded.toys.brickgame.shells).toEqual(['gray', 'black', 'clear', 'smoke']);
     expect(loaded.toys.brickgame.defaultShell).toBe('gray');
     expect(() => validateConfig({ ...legacy, toys: { ...legacy.toys, brickgame: {} } })).toThrow();
     expect(() => validateConfig({ ...legacy, toys: { ...legacy.toys, brickgame: null } })).toThrow();

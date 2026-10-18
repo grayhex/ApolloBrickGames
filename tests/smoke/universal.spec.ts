@@ -21,7 +21,7 @@ test('universal console boots, synthesizes a greeting, supports FIRE and returns
   await expect(page.locator('#view-closed')).toHaveCount(0);
   expect(await page.locator('#toy .key').evaluateAll((nodes) => nodes.every((node) => (node as HTMLElement).tabIndex === -1))).toBe(true);
   await expect(page.locator('.toy__hinge')).toBeHidden();
-  await expect(page.locator('#shell-picker [role=radio]')).toHaveCount(2);
+  await expect(page.locator('#shell-picker [role=radio]')).toHaveCount(4);
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'gray');
   const gray = await page.locator('#toy').evaluate((node) => getComputedStyle(node).backgroundImage);
   await page.locator('#shell-picker [data-shell=black]').click();

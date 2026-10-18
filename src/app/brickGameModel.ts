@@ -68,53 +68,41 @@ function padCross(): SVGSVGElement {
   return svg('svg', { class: 'classic__pad', viewBox: '0 0 24 24', 'aria-hidden': 'true' }, arrow(0), arrow(90), arrow(180), arrow(270));
 }
 
-/**
- * Надпись на корпусе по снимку оригинала (серия E-S88): «BRICK» и «GAME» — две параллельные строки, поднимающиеся вправо под углом, ниже и правее —
- * тонкое «N IN 1» (N — число игр, назначенных универсальной модели сейчас), рядом на корпусе — красный круглый знак с улыбкой и раскрытыми ладонями.
- * Допущения: угол, кегль, межстрочное расстояние и размер знака — по пропорциям снимка; шрифт гротеск без засечек (на оригинале он геометрический),
- * китайские иероглифы под знаком не воспроизводятся: что на них напечатано, не установлено.
- */
-function wordmark(games: number): SVGSVGElement {
-  const mark = svg('svg', { class: 'classic__wordmark', viewBox: '0 0 100 60', 'aria-hidden': 'true' });
-  const count = `${games} IN 1`;
-  const text = (cls: string, x: number, y: number, length: number, content: string): SVGTextElement =>
-    svg('text', { class: cls, x: String(x), y: String(y), textLength: String(length), lengthAdjust: 'spacing' }, content);
-  /** Рука с двумя пальцами «V» (на оригинале знак с раскрытыми ладонями показывает по два пальца каждая рука): ладонь, два пальца врозь и короткий большой палец. */
-  const hand = (side: -1 | 1): SVGGElement => {
-    const palm = svg('ellipse', { cx: '0', cy: '0', rx: '3.4', ry: '3.7', fill: 'currentColor' });
-    const fingers = [-15, 15].map((angle) =>
-      svg('line', { x1: '0', y1: '-1.6', x2: '0', y2: '-8.4', stroke: 'currentColor', 'stroke-width': '2.1', 'stroke-linecap': 'round', transform: `rotate(${angle} 0 0)` }),
-    );
-    const thumb = svg('ellipse', { cx: String(-side * 3.5), cy: '1.2', rx: '1.3', ry: '2.1', fill: 'currentColor', transform: `rotate(${side * 28} ${-side * 3.5} 1.2)` });
-    return svg('g', { transform: `translate(${side * 12.2} 11.6) rotate(${side * 14})` }, palm, ...fingers, thumb);
-  };
-  mark.append(
-    svg(
-      'g',
-      { transform: 'translate(4 53) rotate(-38)', class: 'classic__lines' },
-      text('classic__brand', 0, 0, 42, 'BRICK'),
-      text('classic__brand', 22, 14.4, 37, 'GAME'),
-      text('classic__count', 46, 25.6, count.length * 4.5, count),
-    ),
-    svg(
-      'g',
-      { class: 'classic__face', transform: 'translate(80 41)' },
-      svg('circle', { r: '10.6', fill: 'currentColor' }),
-      svg('g', { fill: 'var(--classic-body)' },
-        svg('circle', { cx: '-3.6', cy: '-2.6', r: '1.3' }),
-        svg('circle', { cx: '3.6', cy: '-2.6', r: '1.3' }),
-        svg('path', { d: 'M-6 1.6Q0 11 6 1.6Z' }),
-      ),
-      hand(-1),
-      hand(1),
-    ),
-  );
-  return mark;
+/** Site branding distinguishes the universal toy from original hardware replicas. */
+function wordmark(games: number): HTMLElement {
+  return h('div',{class:'classic__wordmark','aria-hidden':'true'},
+    h('img',{class:'classic__site-logo',src:`${import.meta.env.BASE_URL}brand/brick-game-online-logo.svg`,alt:'Brick Game Online',width:'1920',height:'760'}),
+    h('span',{class:'classic__count'},`${games} IN 1`));
+}
+
+/** Decorative, fictional electronics; no claim to reproduce a particular original PCB. */
+function circuitBoard(): SVGSVGElement {
+  const board=svg('svg',{class:'classic__pcb',viewBox:'0 0 400 965','aria-hidden':'true',focusable:'false'});
+  board.append(svg('rect',{x:'17',y:'20',width:'366',height:'922',rx:'32',fill:'#aeb7ae'}),
+    svg('path',{d:'M32 35H368V820H32Z',fill:'#316f59',stroke:'#bcce96','stroke-width':'2'}));
+  for(let n=0;n<14;n++){
+    const x=45+n*23;
+    board.append(svg('path',{d:`M${x} 62V${400+n*7}L${x+10} ${410+n*7}V${720-n*4}H${360-n*8}`,fill:'none',stroke:n%3?'#adbd73':'#d6c696','stroke-width':n%3?'1.4':'2.5',opacity:'.7'}));
+    for(const y of [60,410+n*7,720-n*4])board.append(svg('circle',{cx:String(x),cy:String(y),r:'2.4',fill:'#d9dcad'}));
+  }
+  board.append(svg('rect',{x:'120',y:'448',width:'118',height:'92',rx:'6',fill:'#172a25',stroke:'#6f8b77','stroke-width':'3'}),
+    svg('text',{x:'179',y:'494',fill:'#7b9e88','font-size':'10','text-anchor':'middle'},'BGO · MATRIX'),
+    svg('text',{x:'179',y:'511',fill:'#7b9e88','font-size':'8','text-anchor':'middle'},'REV 01'));
+  for(let n=0;n<12;n++)for(const y of [438,540])board.append(svg('rect',{x:String(126+n*9),y:String(y),width:'3',height:'10',fill:'#d5d5bd'}));
+  for(const [x,y] of [[64,475],[280,500],[314,645],[55,738]]){
+    board.append(svg('rect',{x:String(x),y:String(y),width:'17',height:'28',rx:'4',fill:'#233a36',stroke:'#b3bba8','stroke-width':'2'}),svg('ellipse',{cx:String(x!+8.5),cy:String(y!+3),rx:'7',ry:'3',fill:'#c1c7b7'}));
+  }
+  for(let n=0;n<11;n++)board.append(svg('rect',{x:String(55+n*27),y:String(564+n%3*25),width:'13',height:'6',rx:'1',fill:'#c4b893',stroke:'#d9d3bb','stroke-width':'1'}));
+  board.append(svg('circle',{cx:'280',cy:'755',r:'44',fill:'#25352e',stroke:'#a1aa8f','stroke-width':'5'}));
+  for(const radius of [12,20,28,35])board.append(svg('circle',{cx:'280',cy:'755',r:String(radius),fill:'none',stroke:'#647562','stroke-width':'1'}));
+  for(const y of [839,889])board.append(svg('rect',{x:'62',y:String(y),width:'258',height:'40',rx:'9',fill:'#414b47',stroke:'#858c81','stroke-width':'3'}),svg('rect',{x:'66',y:String(y+4),width:'26',height:'32',rx:'3',fill:'#b3b8a7'}),svg('path',{d:`M103 ${y+20}H287`,stroke:'#717c6e','stroke-width':'2'}));
+  return board;
 }
 
 /** A new universal design inspired by classic vertical Brick Games, not a replica of a firmware model. */
 export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
   const { lid, base } = refs;
+  refs.toy.prepend(circuitBoard(),h('div',{class:'classic__glass','aria-hidden':'true'}));
   lid.querySelector('.lid__art')?.remove();
   for (const screw of lid.querySelectorAll('.lid__screw')) screw.remove();
   const face = lid.querySelector('.lid__face')!;
@@ -161,7 +149,8 @@ export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
   );
 }
 export function brickGameMini(view: View = 'full', shell?: Shell): SVGSVGElement {
-  const body = shell === 'white' ? '#eee' : shell === 'gray' ? '#cecec0' : shell === 'black' ? '#222725' : 'var(--classic-body, #cecec0)';
+  const transparent=shell==='clear'||shell==='smoke';
+  const body = shell === 'clear' ? '#ccd9cd' : shell==='smoke' ? '#151e19' : shell === 'white' ? '#eee' : shell === 'gray' ? '#cecec0' : shell === 'black' ? '#222725' : 'var(--classic-body, #cecec0)';
   const ridge = shell === 'white' ? '#fafaf6' : shell === 'black' ? '#3b403c' : shell === 'gray' ? '#e0e0d5' : 'var(--classic-hi, #e0e0d5)';
   const screen = view === 'screen';
   const root = svg('svg', { class: 'view-mini', viewBox: `0 0 44 ${screen ? 52 : 100}`, 'aria-hidden': 'true', focusable: 'false' });
@@ -171,6 +160,7 @@ export function brickGameMini(view: View = 'full', shell?: Shell): SVGSVGElement
     svg('rect', { x: '8', y: '10', width: '28', height: '33', fill: '#bac49c' }),
     svg('path', { d: 'M26 11V42M11 38h3v-3h3v3h3v3h-9Z', fill: '#3c4537', stroke: '#3c4537', 'stroke-width': '.4' }),
   );
+  if(transparent&&!screen)root.append(svg('path',{d:'M5 49H39V94H5Z',fill:'#548671',opacity:'.75'}),svg('path',{d:'M7 52V87H34V56M11 55V83H30V59M15 56V79H26V62',fill:'none',stroke:'#b7c595','stroke-width':'.6'}),svg('rect',{x:'17',y:'57',width:'11',height:'8',rx:'1',fill:'#273c33'}));
   if (!screen)
     root.append(
       svg('path', { d: 'M2 46Q22 43 42 46V53Q22 59 2 53Z', fill: ridge }),

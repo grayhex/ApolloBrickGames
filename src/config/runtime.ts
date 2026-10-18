@@ -19,7 +19,7 @@ export function applyConfig(config: SiteConfig): void {
     model.thumbShell = settings.thumbShell;
     model.defaultGame = settings.defaultGame;
     if (isNativeDevice(id)) {
-      const games = playableEntries(id, settings.games);
+      const games = playableEntries(id, settings.games.flatMap(game=>[game,...(game.variants??[]).map(entryId=>({id:game.id,entryId}))]));
       model.defaultEntry = games.some(g => g.entryId === settings.defaultEntry) ? settings.defaultEntry : games[0]!.entryId;
       model.defaultGame = games.find(g => g.entryId === model.defaultEntry)!.id;
       model.games = games.map(g => {

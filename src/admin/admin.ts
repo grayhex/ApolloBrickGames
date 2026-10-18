@@ -14,7 +14,7 @@ import { BRICK_GUIDES } from '../brick/guides';
 import type { Lang } from '../input/lang';
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] { const e = document.createElement(tag); e.textContent = text; e.className = className; return e; }
 function button(text: string, fn: () => void, disabled = false): HTMLButtonElement { const b = el('button',text); b.type = 'button'; b.disabled = disabled; b.addEventListener('click',fn); return b; }
-const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',yellow:'Жёлтый',white:'Белый',gray:'Серый',black:'Чёрный' };
+const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',yellow:'Жёлтый',white:'Белый',gray:'Серый',black:'Чёрный',clear:'Светлый прозрачный',smoke:'Тёмный прозрачный' };
 export async function startAdmin(): Promise<void> {
   document.title = 'Apollo · Настройки коллекции'; document.body.dataset['chrome'] = 'tech'; delete document.body.dataset['booting'];
   const root = el('main','','admin'); document.body.replaceChildren(root);

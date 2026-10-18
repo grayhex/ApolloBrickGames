@@ -51,6 +51,9 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
   if(['shooting-array','shooting-figures','construction'].includes(id)){
     sources.push(research('docs/devices/e88-b0202.md',gt('E‑88 №6–8 подключены как приближённые библиотечные варианты по решению владельца. Формы, карты, тайминги и очки оригинала ещё не сверены.', 'E‑88 #6–8 use owner-approved approximate library variants. Original shapes, maps, timing and scoring are not yet verified.')));
   }
+  if(['racing','racing-shooting','shooting-array','shooting-figures','tetris-pentix','dice'].includes(id)){
+    sources.push(research('docs/devices/e88-b0202.md',gt('Базовые игры B0202 B/C/E/F/G/I подключены из библиотеки по решению владельца. Для конкретных профилей B/C/F/G/I действует α (30%); E01 — β (60%) на ядре E02, без неподтверждённого счётчика раундов. Общая оценка игры не переносится на эти профили.', 'B0202 base games B/C/E/F/G/I are owner-approved library adaptations. B/C/F/G/I are alpha (30%); E01 is beta (60%) using E02 rules without its unverified round counter. The general game rating does not certify these profiles.')));
+  }
   if(id==='romeo-juliet'||id==='sea-battle'){
     accuracy=60;
     sources.push({kind:'owner',title:'Apollo · наблюдения владельца / owner observations',url:repo+'docs/brick/completion.md',note:gt('Фото оригинального экрана и уточнения владельца: автоматический подъём Ромео; поочерёдная стрельба вслепую в Морском бое.', 'Original LCD photos and owner clarifications: automatic Romeo movement; alternating blind shots in Sea Battle.')});

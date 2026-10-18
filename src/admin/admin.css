@@ -36,3 +36,10 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 .admin__encyclopedia :is(input,select) { display:block; width:100%; min-width:0; box-sizing:border-box; margin-top:6px; }
 .admin__encyclopedia .admin__row-actions { flex-wrap:wrap; }
 .admin__image-preview img { display:block; max-width:100%; max-height:320px; object-fit:contain; border-radius:12px; margin-top:16px; }
+
+.admin__modifications { display:grid; gap:8px; margin:10px 0; border:1px solid #35434f; border-radius:10px; padding:10px; }
+.admin .admin__modifications label { display:flex; gap:8px; align-items:center; margin:0; }
+.admin__modifications input { accent-color:#8edac5; flex:none; }
+.admin__games li > small { display:block; margin-top:4px; color:#9caeba; }
+.admin__swatches [data-color=clear]::after { background:linear-gradient(135deg,#eaf0df,#73a38d); }
+.admin__swatches [data-color=smoke]::after { background:linear-gradient(135deg,#667063,#20382b); }
