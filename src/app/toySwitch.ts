@@ -49,7 +49,11 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   previous.addEventListener('click', () => scroll(-1));
   next.addEventListener('click', () => scroll(1));
   shelf.addEventListener('scroll', updateArrows, { passive: true });
-  new ResizeObserver(updateArrows).observe(shelf);
+  new ResizeObserver(() => {
+    const selected = shelf.querySelector<HTMLAnchorElement>('[aria-current="page"]');
+    if (selected) reveal(selected);
+    updateArrows();
+  }).observe(shelf);
   shelf.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     const links = items.filter((item) => item.id !== 'brickgame').map((item) => item.link);

@@ -49,6 +49,15 @@ for(const toy of ['e88','apollo-b0202'] as const){
     const bounds=await page.locator('.native__lcd').boundingBox(),carousel=await page.locator('.toysw').boundingBox();
     expect(bounds!.y).toBeGreaterThanOrEqual(carousel!.y+carousel!.height-1);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    // Resizing must reveal the whole selected card, including a long native model name.
+    if(width===1440){
+      await page.setViewportSize({width:320,height:1000});
+      await expect.poll(async()=>{
+        const card=await page.locator(`#real-models [data-toy="${toy}"]`).boundingBox();
+        const shelf=await page.locator('#real-models').boundingBox();
+        return !!card&&!!shelf&&card.x>=shelf.x-1&&card.x+card.width<=shelf.x+shelf.width+1;
+      }).toBe(true);
+    }
   });
 }
 test('native admin preserves repeated engine IDs and start entry through JSON export',async({page})=>{
