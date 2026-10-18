@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { NATIVE_MENUS, nativeEntry, originalMenu } from '../../src/devices/catalog';
+import { NATIVE_MENUS, nativeEntry, originalMenu, originalPlayableMenu } from '../../src/devices/catalog';
 import { nativeGuide } from '../../src/devices/guide';
 import { nativeDefinition } from '../../src/devices/profiles';
 import { E88Blocks,E88_BLOCK_FALL_MS,e88Piece } from '../../src/devices/e88-blocks';
@@ -159,4 +159,21 @@ it('E88 exposes all thirteen original start levels, while B0202 still wraps afte
   for(let n=0;n<12;n++){e.menu(makeFrame({pressed:['left']}));b.menu(makeFrame({pressed:['left']}));}
   expect(e.ranking.level).toBe(12);expect(b.ranking.level).toBe(2);
   e.start();expect(e.scene(scene).level).toBe(12);
+});
+
+it('admin detects edits to unfinished slots while player status compares the playable menu',()=>{
+ const original=NATIVE_MENUS['apollo-b0202'];
+ expect(originalMenu('apollo-b0202',original)).toBe(true);
+ const removed=original.filter(e=>e.nativeCode!=='H03');
+ const reordered=[...original];
+ const at=reordered.findIndex(e=>e.nativeCode==='H03');
+ [reordered[at],reordered[at+1]]=[reordered[at+1]!,reordered[at]!];
+ for(const edited of [removed,reordered]){
+  expect(originalMenu('apollo-b0202',edited)).toBe(false);
+  expect(originalPlayableMenu('apollo-b0202',edited)).toBe(true);
+ }
+ const playable=original.filter(e=>e.available);
+ expect(originalPlayableMenu('apollo-b0202',playable)).toBe(true);
+ expect(originalPlayableMenu('apollo-b0202',playable.slice(1))).toBe(false);
+ expect(originalPlayableMenu('apollo-b0202',[...playable].reverse())).toBe(false);
 });

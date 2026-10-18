@@ -1,4 +1,4 @@
-import { nativeEntry, originalMenu } from '../devices/catalog';
+import { nativeEntry, originalPlayableMenu } from '../devices/catalog';
 import { nativeGuide } from '../devices/guide';
 import { previewStage } from '../encyclopedia/catalog';
 import { guideForBody } from './bodyButtons';
@@ -438,7 +438,7 @@ export class InfoPanel {
       const lang = getLang(), ru = lang === 'ru';
       const head = h('header',{class:'gpanel__head'},h('span',{class:'gkey'},entry.nativeCode),h('h4',{class:'gpanel__name'},entry.name[lang]));
       const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
-      const menu = h('p',{class:'side__text'},(originalMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
+      const menu = h('p',{class:'side__text'},(originalPlayableMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
       const guide = nativeGuide(entry);
       return [head, ...(entry.approximate ? [h('p',{class:'gpanel__approx'},ru ? '≈ Приближённый вариант из общей библиотеки. Точные правила E‑88 ещё уточняются.' : '≈ Adapted library game. Exact E‑88 rules are still being researched.')] : []), ...(guide ? compactGuide(guide, lang) : [state]), menu];
     }

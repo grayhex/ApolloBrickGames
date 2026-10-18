@@ -49,7 +49,13 @@ export function nativeEntry(device: NativeDeviceId, entryId: string): NativeEntr
 export function nativeVariant(profileId: string, variantId: string): NativeEntry | undefined {
   return isNativeDevice(profileId) ? NATIVE_MENUS[profileId].find(e => e.variantId === variantId) : undefined;
 }
+/** Admin status compares every persisted slot, including unfinished research entries. */
 export function originalMenu(device: NativeDeviceId, entries: readonly { entryId?: string }[]): boolean {
+  const original = NATIVE_MENUS[device];
+  return entries.length === original.length && entries.every((entry, i) => entry.entryId === original[i]!.entryId);
+}
+/** The player sees only the playable subset of the original menu. */
+export function originalPlayableMenu(device: NativeDeviceId, entries: readonly { entryId?: string }[]): boolean {
   const original = NATIVE_MENUS[device].filter(e=>e.available);
   const visible = entries.filter(e=>nativeEntry(device,e.entryId ?? '')?.available);
   return visible.length === original.length && visible.every((entry, i) => entry.entryId === original[i]!.entryId);
