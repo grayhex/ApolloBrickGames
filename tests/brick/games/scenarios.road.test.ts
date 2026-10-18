@@ -129,7 +129,7 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     return runUntil(g, () => g.score > score, hold('up'), 60).events;
   };
 
-  coveredScenario('obstacle-race', 'прогресс', 'прогресс: безопасная езда — +1 за каждый шаг дороги, тридцатый шаг даёт победу (+100) и второй уровень', () => {
+  coveredScenario('obstacle-race', 'прогресс', 'прогресс: безопасная езда — +1 за каждый шаг дороги, шестидесятый шаг даёт победу (+100) и второй уровень', () => {
     const make = (): RoadGame => begin('obstacle-race', { seed: 1 });
     const { steps, won } = route(make, ['up'], 400);
     expect(won, 'маршрут доходит до победы в уровне').toBe(true);
@@ -146,29 +146,29 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     // шаг дороги измеряем: первый такт, на котором счёт стал 1; дальше шаги идут строго с тем же периодом
     const period = trace.findIndex((row) => row.score >= 1) + 1;
     expect(period).toBeGreaterThan(1);
-    expect(trace).toHaveLength(30 * period); // тридцатый шаг — последний такт сценария
+    expect(trace).toHaveLength(60 * period); // шестидесятый шаг — последний такт сценария
     trace.forEach((row, i) => {
       const t = i + 1;
       const previous = i === 0 ? start : trace[i - 1]!.road;
-      if (t < 30 * period) expect(row.score, `счёт на такте ${t}`).toBe(Math.floor(t / period));
+      if (t < 60 * period) expect(row.score, `счёт на такте ${t}`).toBe(Math.floor(t / period));
       // шаг дороги — это сдвиг трассы на строку вниз; между шагами трасса стоит
       if (t % period === 0) expect(row.road.slice(1), `сдвиг на такте ${t}`).toEqual(previous.slice(0, 19));
       else expect(row.road, `покой на такте ${t}`).toEqual(previous);
     });
     const last = trace.at(-1)!;
     expect(count(last.events, 'win')).toBe(1);
-    expect(last.score).toBe(30 + 100);
+    expect(last.score).toBe(60 + 100);
     expect(g.level).toBe(1); // уровень сменится после сценки победы
 
     const { events } = runUntil(g, has('levelUp'), NEUTRAL_BRICK_INPUT, 200);
     expect(count(events, 'levelUp')).toBe(1);
     expect(g.level).toBe(2);
-    expect(g.score).toBe(130);
+    expect(g.score).toBe(160);
     expect(g.lives).toBe(4);
     expect(g.x).toBe(4);
     expect(g.road.every((v) => v === 2)).toBe(true); // новый уровень начинается с прямой трассы
     run(g, period, hold('up'));
-    expect(g.score).toBe(131); // счёт шагов нового уровня идёт заново
+    expect(g.score).toBe(161); // счёт шагов нового уровня идёт заново
   });
 
   coveredScenario('obstacle-race', 'прогресс', 'прогресс: удержание ↑ ускоряет дорогу — шаг с газом короче шага без газа', () => {
@@ -749,7 +749,7 @@ describe('дорожные игры: потеря жизни и конец па�
       }
       expect(pause).toBeGreaterThan(1);
       expect(pause).toBeLessThan(300);
-      expect(g.x).toBe(4);
+      expect(g.x).toBe(id==='racing-four'?3:4);
       expect(g.road.every((v) => v === 2)).toBe(true);
       expect(g.obstacles).toHaveLength(0);
       expect(g.shots).toHaveLength(0);

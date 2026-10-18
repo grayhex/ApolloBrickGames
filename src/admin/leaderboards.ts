@@ -24,7 +24,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
   const revision = h('p'), status = h('p', { role: 'status' }),
     rows = h('div', { class: 'admin__record-list' });
   const category = (): string =>
-    categoryFor({ gameId: game.value, mode: Number(mode.value), toyId: toy.value, rulesetVersion: rulesetFor(game.value), startProfile: STANDARD_START });
+    categoryFor({ gameId: game.value, mode: Number(mode.value), toyId: toy.value, rulesetVersion: rulesetFor(game.value,Number(mode.value)), startProfile: STANDARD_START });
   const message = (text: string): void => {
     status.textContent = text;
   };
@@ -137,6 +137,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
   };
   game.onchange = refreshChoices;
   mode.onchange = () => {
+    revision.textContent = `Стандартный старт · ruleset ${rulesetFor(game.value,Number(mode.value))}`;
     rows.replaceChildren();
     nextCursor = null;
     more.hidden = true;

@@ -5,7 +5,7 @@ import { canAssign } from '../app/bodyButtons';
 import { isGameId, type GameId } from '../games/catalog';
 import { rulesetFor } from '../games/rulesets';
 
-/** Default revision for unchanged games; use rulesetFor(gameId) for selections. */
+/** Default revision for unchanged games; use rulesetFor(gameId,Number(mode)) for selections. */
 export const RULESET_VERSION = '1';
 export const STANDARD_START = 'standard-v1';
 export interface RankingSpec {
@@ -64,7 +64,7 @@ export function selection(value: unknown): RunSelection {
       : !def || Number(mode) >= def.modes.length || toyId === 'mario' || !canAssign(def, TOYS[toyId]))
   )
     throw new Error('Invalid canonical mode or controls');
-  const revision = rulesetFor(gameId);
+  const revision = rulesetFor(gameId,Number(mode));
   if (v['rulesetVersion'] !== revision || v['startProfile'] !== STANDARD_START) throw new Error('Unsupported rules/start profile');
   return { gameId, mode: Number(mode), toyId, rulesetVersion: revision, startProfile: STANDARD_START };
 }
@@ -92,8 +92,8 @@ export function validateCategory(value: unknown): string {
   const toyId = controls === 'mario' ? 'mario' : controls === 'matrix-fire' ? 'brickgame' : 'clock99';
   if (
     !/^(0|[1-9]\d*)$/.test(mode ?? '') ||
-    rules !== `r${rulesetFor(gameId ?? '')}` ||
-    categoryFor({ gameId, mode: Number(mode), rulesetVersion: rulesetFor(gameId ?? ''), startProfile, toyId }) !== value
+    rules !== `r${rulesetFor(gameId ?? '',Number(mode))}` ||
+    categoryFor({ gameId, mode: Number(mode), rulesetVersion: rulesetFor(gameId ?? '',Number(mode)), startProfile, toyId }) !== value
   )
     throw new Error('Unknown category');
   return value;

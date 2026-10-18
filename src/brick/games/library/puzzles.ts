@@ -199,8 +199,10 @@ export class FillGame extends LibraryGame {
 
 export class MazeGame extends LibraryGame {
   readonly id = 'maze'; walls = new Uint8Array(200); player = 171; goal = 17;
+  remaining = 900; round = 0;
+  get seconds(): number { return Math.max(6, 15 - this.round); }
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
-  protected reset(): void { this.repeat.reset(); this.setup(); }
+  protected reset(): void { this.round = this.startLevel - 1 + (this.startSpeed - 1) * 10; this.repeat.reset(); this.setup(); }
   private setup(): void {
     this.walls.fill(1); this.player = 171; this.goal = 17;
     const visited = new Set([this.player]), stack = [this.player]; this.walls[this.player] = 0;
@@ -210,9 +212,49 @@ export class MazeGame extends LibraryGame {
       const d = this.rng.pick(choices), delta = DX[d]! + DY[d]! * 10, to = p + delta * 2;
       this.walls[p + delta] = this.walls[to] = 0; visited.add(to); stack.push(to);
     }
+    // Short clocks must still allow a human route: open useful shortcuts, keeping
+    // the full connected maze and its dead ends. Never generate an impossible sprint.
+    const distance = (): number => {
+      const queue = [this.player], dist = new Map([[this.player, 0]]);
+      for (const p of queue) {
+        if (p === this.goal) return dist.get(p)!;
+        for (const delta of [-10, 10, -1, 1]) if (this.walls[p + delta] === 0 && !dist.has(p + delta)) {
+          dist.set(p + delta, dist.get(p)! + 1); queue.push(p + delta);
+        }
+      }
+      return Infinity;
+    };
+    let length = distance();
+    const limit = Math.max(26, Math.floor(this.seconds * 3.5));
+    const shortcuts = this.rng.shuffled(Array.from({length: 200}, (_,p)=>p).filter(p=>{
+      const x=p%10,y=Math.floor(p/10);
+      return x>0&&x<8&&y>0&&y<18&&this.walls[p]===1;
+    }));
+    for (const p of shortcuts) {
+      if (length <= limit) break;
+      this.walls[p]=0;const next=distance();
+      if(next<length)length=next;else this.walls[p]=1;
+    }
+    this.remaining = this.seconds * 60;
   }
-  protected update(input: BrickInput): void { const d = this.direction(input); if (d < 0) return; const to = this.player + DX[d]! + DY[d]! * 10; if (this.walls[to] !== 0) { this.emit({ type:'blocked' }); return; } this.player = to; if (to === this.goal) this.win(() => this.setup()); }
-  protected draw(): Uint8Array { const out = this.walls.slice(); out[this.player] = 2; out[this.goal] = this.tick % 12 < 6 ? 1 : 0; return out; }
+  protected update(input: BrickInput): void {
+    if (--this.remaining <= 0) { this.gameOver(); return; }
+    if (this.remaining <= 180 && this.remaining % 60 === 0) this.emit({type:'tone',pad:0,ticks:6});
+    const d = this.direction(input); if (d < 0) return;
+    const to = this.player + DX[d]! + DY[d]! * 10;
+    if (this.walls[to] !== 0) { this.emit({ type:'blocked' }); return; }
+    this.player = to; this.emit({type:'move'});
+    if (to === this.goal) {
+      this.addScore(100 * (this.round + 1) + 5 * Math.ceil(this.remaining / 60)); this.emit({type:'win'});
+      this.animateClear(60,()=>{this.round++;this.nextLevel();this.repeat.reset();this.setup();});
+    }
+  }
+  protected draw(): Uint8Array {
+    const out = this.walls.slice(); out[this.player] = 2; out[this.goal] = this.tick % 12 < 6 ? 1 : 0;
+    for(let y=0;y<20;y++)out[y*10+9]=0;
+    for(let s=0;s<Math.ceil(this.remaining/60);s++)put(out,9,17-s,this.remaining<=180?2:1);
+    return out;
+  }
 }
 
 /**

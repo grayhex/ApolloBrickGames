@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ENTRIES, guideFor, previewStage } from '../../src/encyclopedia/catalog';
+import { nativeEntry } from '../../src/devices/catalog';
+import { logicOrigin } from '../../src/games/quality';
 import { GAMES } from '../../src/games/catalog';
 import { defaultConfig } from '../../src/config/runtime';
 import { illustrationUrl, validateConfig } from '../../src/config/schema';
@@ -18,11 +20,18 @@ describe('encyclopedia evidence and published illustrations', () => {
     expect(ENTRIES.find(e=>e.id==='tank')?.accuracy).toBe(60);
     expect(ENTRIES.find(e=>e.id==='snake')?.accuracy).toBe(90);
   });
-  it('orders the catalog by descending evidence accuracy and marks only alpha/beta reconstructions',()=>{
+  it('orders evidence separately from readiness and implemented provenance',()=>{
     const scores=ENTRIES.map(entry=>entry.accuracy);
     expect(scores).toEqual([...scores].sort((a,b)=>b-a));
-    expect(previewStage('maze')).toBe('alpha');expect(previewStage('tank')).toBe('beta');
-    for(const id of ['snake','dice','honeybee','frog','tetris','mario','clock'] as const)expect(previewStage(id)).toBeNull();
+    expect(previewStage('maze')).toBe('beta');expect(previewStage('tank')).toBe('beta');
+    for(const id of ['tetris','mario'] as const)expect(previewStage(id)).toBeNull();
+    expect(nativeEntry('apollo-b0202','apollo-b0202.H01')!.stage).toBe('alpha');
+    expect(logicOrigin('tetris')).toBe('rom');
+    expect(logicOrigin('maze')).toBe('ai');expect(logicOrigin('tank')).toBe('rom');
+    expect(ENTRIES.find(e=>e.id==='maze')!.accuracy).toBe(30);
+    expect(logicOrigin('space-invaders')).toBe('ai'); // related ROM link is not a verified implementation
+    expect(logicOrigin('honeybee',0)).toBe('rom');expect(logicOrigin('honeybee',1)).toBe('ai');
+    expect(previewStage('honeybee',1)).toBe('alpha');
   });
   it('keeps old configurations valid and round-trips game illustrations independently of toy menus', () => {
     const config=defaultConfig();

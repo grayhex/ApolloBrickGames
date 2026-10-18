@@ -143,20 +143,20 @@ describe('варианты по вики retroconsoles: каталог', () => {
 /**
  * Отпечатки прогонов варианта 01 каждой игры библиотеки (зёрна 1 и 7, случайный ввод до первого конца партии, но не дольше 3000 тактов), снятые с кода
  * до добавления вариантов (`modeFingerprint.ts`). От индекса варианта зависят категории рейтингов и сохранённые рекорды, поэтому 01 должен оставаться прежним
- * по кадрам и событиям. Snake/Dice/Beetle сознательно обновлены по ROM в ruleset 2; их новые отпечатки дополнены независимыми ROM-трассами. Остальные отпечатки не менялись.
+ * по кадрам и событиям. Snake/Dice/Beetle сознательно обновлены по ROM в ruleset 2; их новые отпечатки дополнены независимыми ROM-трассами. Реконструкции в ruleset 2 получили баланс 2026-10: см. balance.test.ts и docs/brick/balance-review.md. Подтверждённые ROM-отпечатки не менялись.
  */
 const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   '2048': ['d4581bad', 'e7732f33'],
-  'meteor-fighter': ['dc8a98d8', '50ba3444'],
-  'tetris-shooting': ['bd940115', 'd966622e'],
+  'meteor-fighter': ['f2c2ef52', 'ec77517c'],
+  'tetris-shooting': ['a8de6fab', '0e19dc92'],
   snake: ['64f92442', '324afeb1'],
-  maze: ['2cbb1290', '0b6a04a7'],
+  maze: ['4b4d6b25', '28083266'],
   jigsaw: ['b5948e13', '21e04c8b'],
   pong: ['df728dae', '319d8a01'],
-  'pong-double': ['4abf94c0', 'a6760919'],
+  'pong-double': ['cd306a5f', '77457c28'],
   'pneumatic-ball': ['ef2fc58c', '2a0853b0'],
   honeybee: ['cbe2702d', '51f0f149'],
-  'obstacle-race': ['c30c06a1', '4e3ed4c9'],
+  'obstacle-race': ['27d1e30d', 'd9add65a'],
   'matching-blocks': ['e54e7f75', '58487de9'],
   'whack-a-mole': ['a45bec5b', '7eb5f3ad'],
   simon: ['ce1e7174', '3ceca6d5'],
@@ -165,8 +165,8 @@ const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   quarth: ['f4514e6c', '7a6dc637'],
   'lights-out': ['2739acc9', '65a346a8'],
   'boat-racing': ['7e13d11d', '1ceb272b'],
-  'talking-shooting': ['a2971408', '58b1777c'],
-  'ufo-raiders': ['cb3a9a2d', 'c5aa37d4'],
+  'talking-shooting': ['2ee6e57b', 'a886db53'],
+  'ufo-raiders': ['e110d4b0', '4cdcca09'],
   'tetris-flicker': ['58b11f2c', '8d87786c'],
   'super-tank': ['3e08cd1c', 'faa27da9'],
   'racing-pickup': ['64952ef9', '8b068716'],
@@ -174,19 +174,19 @@ const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   sokoban: ['262f97d9', '702d6b10'],
   columns: ['1dd154ec', '342a3517'],
   'columns-flicker': ['85c8b3b2', '379d4475'],
-  'space-invaders': ['7f5ae953', '58b1777c'],
+  'space-invaders': ['4c57a608', '32898b77'],
   'peg-solitaire': ['6e7eacf9', '5e95750f'],
   basket: ['52672966', 'c3cf0544'],
   'dr-mario': ['95fe3a33', '44e94e9a'],
   bowling: ['67e01335', 'a1d7269a'],
-  'dual-shooting': ['e45d723a', '3d6d7724'],
-  'racing-four': ['4083083c', '910757f6'],
+  'dual-shooting': ['fda76583', '912376a2'],
+  'racing-four': ['c7b3c9ea', '0b990c37'],
   'arkanoid-dots': ['da208826', 'c357897a'],
   'flappy-bird': ['297cc268', 'a1005f90'],
   reversi: ['209e9978', 'ec34e3a8'],
   'fill-connect': ['83b3cd01', 'c4d85b6f'],
   digger: ['78a0d657', '58d2f872'],
-  'helicopter-bomber': ['5279937c', 'd8c97136'],
+  'helicopter-bomber': ['59ba80b5', '8f14ab13'],
 };
 
 describe('baseline варианта 01: неизменённые игры и осознанные ROM-ревизии', () => {
@@ -817,7 +817,7 @@ describe('Obstacles Race, вариант 02: поле вверх дном', () =
     expect(lit(g, 5, 10)).toBe(0);
   });
 
-  it('[obstacle-race · вариант 02 · прогресс] тридцать шагов дороги без аварий — +1 за шаг, затем +100 и уровень 2; газ — кнопка ↓', () => {
+  it('[obstacle-race · вариант 02 · прогресс] шестьдесят шагов дороги без аварий — +1 за шаг, затем +100 и уровень 2; газ — кнопка ↓', () => {
     const make = (): RoadGame => race(1);
     const found = findSafePath(make(), { horizon: 400, stride: 2, alwaysHeld: ['down'], moves: [['left'], ['right']] });
     expect(found.found, 'существует маршрут без потери жизни').toBe(true);
@@ -830,7 +830,7 @@ describe('Obstacles Race, вариант 02: поле вверх дном', () =
     }
     expect(count(events, 'win')).toBe(1);
     expect(count(events, 'lifeLost')).toBe(0);
-    expect(g.score).toBe(30 + 100);
+    expect(g.score).toBe(60 + 100);
     until(g, () => g.level === 2, 200);
     expect(g.lives).toBe(4);
     expect(g.road.every((v) => v === 2)).toBe(true);

@@ -1,3 +1,4 @@
+import { LIBRARY_IDS } from '../games/library';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GUIDES } from '../brick/guides';
 import { gt, type GameGuideData, type GuideText } from '../brick/guide';
@@ -52,7 +53,7 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
     sources.push(research('docs/devices/e88-b0202.md',gt('E‑88 №6–8 подключены как приближённые библиотечные варианты по решению владельца. Формы, карты, тайминги и очки оригинала ещё не сверены.', 'E‑88 #6–8 use owner-approved approximate library variants. Original shapes, maps, timing and scoring are not yet verified.')));
   }
   if(['racing','racing-shooting','shooting-array','shooting-figures','tetris-pentix','dice'].includes(id)){
-    sources.push(research('docs/devices/e88-b0202.md',gt('Базовые игры B0202 B/C/E/F/G/I подключены из библиотеки по решению владельца. Для конкретных профилей B/C/F/G/I действует α (30%); E01 — β (60%) на ядре E02, без неподтверждённого счётчика раундов. Общая оценка игры не переносится на эти профили.', 'B0202 base games B/C/E/F/G/I are owner-approved library adaptations. B/C/F/G/I are alpha (30%); E01 is beta (60%) using E02 rules without its unverified round counter. The general game rating does not certify these profiles.')));
+    sources.push(research('docs/devices/e88-b0202.md',gt('Базовые игры B0202 B/C/E/F/G/I подключены из библиотеки по решению владельца. Для конкретных профилей B/C/F/G/I действует α; E01 — β на ядре E02, без неподтверждённого счётчика раундов. Общая оценка игры не переносится на эти профили.', 'B0202 base games B/C/E/F/G/I are owner-approved library adaptations. B/C/F/G/I are alpha; E01 is beta using E02 rules without its unverified round counter. The general game rating does not certify these profiles.')));
   }
   if(id==='romeo-juliet'||id==='sea-battle'){
     accuracy=60;
@@ -71,14 +72,11 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
     accuracy=0; sources.splice(0,sources.length,research('docs/toys.md',gt('Часы упомянуты на оригинальном устройстве; отдельный режим ещё не исследован.', 'A clock is listed on the original device; the standalone mode has not been researched yet.')));
     scope=gt('Режим часов пока не реализован. Эта запись сохраняет сведения об оригинальном устройстве.', 'The clock mode is not implemented yet. This entry preserves information about the original device.');
   }
+  if(LIBRARY_IDS.some(gameId=>gameId===id)&&!['snake','dice','tetris-flicker'].includes(id))sources.push(research('docs/brick/balance-review.md',gt('Проверка проходимости, баланса, столкновений и условий окончания. Авторские решения обозначены отдельно от сведений об оригинале.','Playability, balance, collisions and end-condition audit. Project design choices are distinguished from original-device evidence.')));
   return {id,family:familyFor(id),accuracy,sources,scope};
 }).sort((a,b)=>b.accuracy-a.accuracy);
 
-/** Evidence-based preview marks, separate from technical playability. */
-export function previewStage(id: GameId): 'alpha' | 'beta' | null {
-  const accuracy=ENTRIES.find(entry=>entry.id===id)?.accuracy;
-  return accuracy===30 ? 'alpha' : accuracy===60 ? 'beta' : null;
-}
+export { previewStage } from '../games/quality';
 
 export const MARIO_GUIDE: GameGuideData = {
   summary:gt('Карманное приключение на сегментном экране. Марио проходит участки с платформами, препятствиями и врагами.', 'A pocket adventure on a segmented LCD. Mario crosses stages filled with platforms, obstacles and enemies.'),

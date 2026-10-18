@@ -35,8 +35,8 @@ const PROGRESSION: Partial<Record<LibraryId, GuideText>> = {
     'Ten silhouettes; after the tenth, the set repeats at the next speed. These are project-authored challenges.',
   ),
   maze: gt(
-    'Новый случайный лабиринт после выхода. Размер и алгоритм одинаковы; серии вручную составленных карт нет.',
-    'A new random maze after reaching the exit. Size and algorithm stay the same; there is no curated map series.',
+    'Каждый выход открывает новый лабиринт. Таймер сокращается с 15 до 6 секунд; награда растёт. Пауза останавливает отсчёт.',
+    'Each exit opens a new maze. Time falls from 15 to 6 seconds; rewards grow. Pausing stops the clock.',
   ),
   'lights-out': gt(
     'Решаемое поле 10×10 создаётся 3 + уровень переключениями. Это не гарантия роста сложности и не набор оригинальных задач.',

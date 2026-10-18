@@ -9,7 +9,7 @@ const s = (toyId = 'clock99', gameId = 'tetris', mode = 0) => ({
   gameId,
   toyId,
   mode,
-  rulesetVersion: rulesetFor(gameId),
+  rulesetVersion: rulesetFor(gameId,mode),
   startProfile: STANDARD_START,
 });
 describe('stable leaderboard categories', () => {
