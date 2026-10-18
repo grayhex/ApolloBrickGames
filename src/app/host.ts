@@ -43,6 +43,7 @@ export async function startHost(initial: ToyId): Promise<void> {
     stageLabel: stage.dataset['i18nAttrs'] ?? '',
   };
   const restoreShell = (): void => {
+    for (const layer of byId('toy').querySelectorAll(':scope > [data-toy-layer]')) layer.remove();
     cover.replaceChildren(...pristine.cover.map((node) => node.cloneNode(true)));
     document.querySelector('.lid__shell')?.replaceWith(pristine.lidShell.cloneNode(true));
     base.replaceChildren(...pristine.base.map((node) => node.cloneNode(true)));

@@ -1,4 +1,4 @@
-import { isNativeDevice, NATIVE_DEVICE_IDS, NATIVE_MENUS, nativeEntry, type NativeDeviceId } from '../devices/catalog';
+import { isNativeDevice, NATIVE_DEVICE_IDS, NATIVE_MENUS, nativeEntry, nativeFamilies, nativeBase, type NativeDeviceId } from '../devices/catalog';
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
@@ -7,11 +7,14 @@ import { missingButtons } from '../app/bodyButtons';
 import { DEFAULT_LANG, isLang, type Lang } from '../input/lang';
 export interface ConfigGame {
   entryId?: string;
+  /** Native modifications belonging to this one assigned game. */
+  variants?: string[];
   id: GameId;
   modes?: number[];
 }
 export interface ConfigToy {
   defaultEntry?: string;
+  shellPaletteVersion?: 2;
   games: ConfigGame[];
   defaultGame: GameId;
   shells: Shell[];
@@ -19,7 +22,7 @@ export interface ConfigToy {
   /** Цвет миниатюры игрушки в карусели переключателя: из палитры игрушки (у универсальной — ещё и белый). */
   thumbShell: Shell;
 }
-/** Цвета миниатюры: у приставок Apollo — их палитра, у универсальной — серый, чёрный и белый (прежний вид переключателя). */
+/** Цвета миниатюры: у приставок Apollo — их палитра, у универсальной — все её корпуса и белый (прежний вид переключателя). */
 export const thumbPalette = (id: ConfigToyId): readonly Shell[] => (isNativeDevice(id) ? [id === 'e88' ? 'gray' : 'black'] : id === 'brickgame' ? ['white', ...MONOBLOCK_SHELLS] : APOLLO_SHELLS);
 export const DEFAULT_THUMB_SHELL: Shell = 'white';
 export const CONFIG_TOY_IDS = [...APOLLO_IDS, 'brickgame', ...NATIVE_DEVICE_IDS] as const;
@@ -39,7 +42,7 @@ export function illustrationUrl(value: unknown): string {
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Для иллюстрации нужна ссылка HTTPS без логина и пароля.');
   return url.href;
 }
-const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['gray', 'black'], defaultShell: 'gray', thumbShell: DEFAULT_THUMB_SHELL };
+const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: [...MONOBLOCK_SHELLS], shellPaletteVersion:2, defaultShell: 'gray', thumbShell: DEFAULT_THUMB_SHELL };
 /** Computed at load time: published four-toy documents remain valid, and orphan games never disappear. */
 export function universalGames(config: SiteConfig): ConfigGame[] {
   const assigned = new Set(APOLLO_IDS.flatMap((id) => config.toys[id].games.map((g) => g.id)));
@@ -91,7 +94,8 @@ export function validateConfig(value: unknown): SiteConfig {
         throw new Error(`${id}/${gameId}: недопустимые варианты игры.`);
       return { id: gameId, modes: [...modes] as number[] };
     });
-    const shells = source['shells'];
+    const legacyPalette=id==='brickgame'&&source['shellPaletteVersion']===undefined&&JSON.stringify(source['shells'])===JSON.stringify(['gray','black']);
+    const shells = legacyPalette ? [...MONOBLOCK_SHELLS] : source['shells'];
     const palette: readonly Shell[] = id === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS;
     if (
       !Array.isArray(shells) ||
@@ -106,7 +110,7 @@ export function validateConfig(value: unknown): SiteConfig {
     if (typeof thumbShell !== 'string' || !thumbPalette(id).some((s) => s === thumbShell)) throw new Error(`${id}: недопустимый цвет миниатюры в карусели.`);
     if (typeof source['defaultGame'] !== 'string' || !seen.has(source['defaultGame']))
       throw new Error(`${id}: стартовая игра должна входить в меню.`);
-    toys[id] = { games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, thumbShell: thumbShell as Shell, defaultGame: source['defaultGame'] as GameId };
+    toys[id] = { ...(id==='brickgame'?{shellPaletteVersion:2 as const}:{}), games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, thumbShell: thumbShell as Shell, defaultGame: source['defaultGame'] as GameId };
   }
   const encyclopedia: NonNullable<SiteConfig['encyclopedia']> = {};
   if (value['encyclopedia'] !== undefined) {
@@ -121,27 +125,34 @@ export function validateConfig(value: unknown): SiteConfig {
 
 /** Additive v1 migration: only missing device documents are populated; existing values are validated intact. */
 export function nativeDefault(id: NativeDeviceId): ConfigToy {
-  const entries = NATIVE_MENUS[id];
+  const games = nativeFamilies(id).map(({base,variants})=>({id:base.gameId,entryId:base.entryId,variants:variants.map(e=>e.entryId)}));
   const shell: Shell = id === 'e88' ? 'gray' : 'black';
-  return { games:entries.map(e => ({id:e.gameId, entryId:e.entryId})), defaultEntry:entries[0]!.entryId,
-    defaultGame:entries[0]!.gameId, shells:[shell], defaultShell:shell, thumbShell:shell };
+  return { games, defaultEntry:games[0]!.entryId,defaultGame:games[0]!.id,shells:[shell],defaultShell:shell,thumbShell:shell };
 }
 function validateNativeToy(id: NativeDeviceId, source: unknown): ConfigToy {
   if (!record(source) || !Array.isArray(source['games']) || !source['games'].length || source['games'].length > NATIVE_MENUS[id].length)
-    throw new Error(`${id}: недопустимое меню оригинальных позиций.`);
-  const seen = new Set<string>();
-  const games = source['games'].map((g: unknown): ConfigGame => {
-    if (!record(g) || typeof g['entryId'] !== 'string') throw new Error(`${id}: нужен entryId оригинальной позиции.`);
-    const entry = nativeEntry(id, g['entryId']);
-    if (!entry || entry.gameId !== g['id'] || seen.has(entry.entryId) || g['modes'] !== undefined)
-      throw new Error(`${id}: неизвестная, повторная или несовместимая позиция.`);
+    throw new Error(`${id}: недопустимый набор игр.`);
+  const seen = new Set<string>(), groups = new Map<GameId,ConfigGame>();
+  const grouped = source['games'].some(g=>record(g)&&g['variants']!==undefined);
+  for(const g of source['games']) {
+    if(!record(g)||typeof g['entryId']!=='string')throw new Error(`${id}: нужен entryId игры.`);
+    const entry=nativeEntry(id,g['entryId']);
+    if(!entry||entry.gameId!==g['id']||seen.has(entry.entryId)||g['modes']!==undefined)throw new Error(`${id}: неизвестная, повторная или несовместимая игра.`);
     seen.add(entry.entryId);
-    return { id:entry.gameId, entryId:entry.entryId };
-  });
-  const first = games.find(g => g.entryId === source['defaultEntry']);
-  if (!first || first.id !== source['defaultGame']) throw new Error(`${id}: стартовая позиция должна входить в меню.`);
-  const expected = id === 'e88' ? 'gray' : 'black';
-  if (!Array.isArray(source['shells']) || source['shells'].length !== 1 || source['shells'][0] !== expected || source['defaultShell'] !== expected || (source['thumbShell'] ?? expected) !== expected)
-    throw new Error(`${id}: разрешён только подтверждённый цвет ${expected}.`);
-  return { games,defaultEntry:first.entryId,defaultGame:first.id,shells:[expected],defaultShell:expected,thumbShell:expected };
+    const base=nativeBase(id,entry.gameId);
+    if(grouped&&(groups.has(entry.gameId)||entry.entryId!==base.entryId))throw new Error(`${id}: модификации должны находиться внутри игры.`);
+    let game=groups.get(entry.gameId);
+    if(!game){game={id:base.gameId,entryId:base.entryId,variants:[]};groups.set(game.id,game);}
+    if(g['variants']!==undefined){
+      const variants=g['variants'];
+      if(!Array.isArray(variants)||new Set(variants).size!==variants.length||variants.some(v=>typeof v!=='string'||v===base.entryId||!nativeEntry(id,v)?.available||nativeEntry(id,v)?.gameId!==base.gameId))throw new Error(`${id}: несовместимая модификация.`);
+      game.variants!.push(...variants as string[]);
+    }else if(entry.available&&entry.entryId!==base.entryId)game.variants!.push(entry.entryId);
+  }
+  const oldDefault=typeof source['defaultEntry']==='string'?nativeEntry(id,source['defaultEntry']):undefined;
+  if(!oldDefault||oldDefault.gameId!==source['defaultGame']||!seen.has(oldDefault.entryId))throw new Error(`${id}: стартовая игра должна входить в меню.`);
+  const first=groups.get(oldDefault.gameId)!;
+  const expected=id==='e88'?'gray':'black';
+  if(!Array.isArray(source['shells'])||source['shells'].length!==1||source['shells'][0]!==expected||source['defaultShell']!==expected||(source['thumbShell']??expected)!==expected)throw new Error(`${id}: разрешён только подтверждённый цвет ${expected}.`);
+  return {games:[...groups.values()],defaultEntry:first.entryId,defaultGame:first.id,shells:[expected],defaultShell:expected,thumbShell:expected};
 }

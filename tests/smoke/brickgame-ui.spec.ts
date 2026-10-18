@@ -78,8 +78,9 @@ test('корпус универсального Brick Game: без винтов,
   // Надпись двумя строками под углом и число игр, назначенных приставке сейчас.
   const games = universalGames(validateConfig(defaults)).length;
   await expect(page.locator('.classic__count')).toHaveText(`${games} IN 1`);
-  await expect(page.locator('.classic__brand')).toHaveText(['BRICK', 'GAME']);
-  await expect(page.locator('.classic__face circle').first()).toBeAttached(); // красный знак с улыбкой и ладонями рядом с надписью
+  await expect(page.locator('.classic__site-logo')).toHaveText('BRICKGAME.ONLINE');
+  await expect(page.locator('.classic__site-logo')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+  await expect(page.locator('.classic__face')).toHaveCount(0);
   await expect(page.locator('.classic__wordmark')).toHaveCSS('pointer-events', 'none'); // не перекрывает кнопки
 });
 
@@ -373,4 +374,29 @@ test('universal Brick Game descriptions mark alpha/beta accuracy in both languag
   await page.locator('#corner-theme').click();await expect(badge).toBeVisible();
   await expect(badge).toHaveAttribute('aria-label',/30%/);
   await page.locator('.toysw__item[data-toy=tank168]').click();await expect(badge).toHaveCount(0);
+});
+
+test('clear and smoke shells reveal decorative electronics, without covering controls',async({page})=>{
+ await open(page,'?toy=brickgame&power=on');
+ await expect(page.locator('.classic__pcb')).toHaveCSS('opacity','0');
+ for(const shell of ['clear','smoke']){
+  await page.locator(`#shell-picker [data-shell=${shell}]`).click();
+  await expect(page.locator('.classic__pcb')).toHaveCSS('opacity','0.24');
+  await expect(page.locator('.classic__glass')).toHaveCSS('pointer-events','none');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+  await page.locator('#base [data-key=sp]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await page.locator('#base [data-action=reset]').click();
+ }
+ await page.locator('#view-screen').click();await expect(page.locator('.classic__pcb')).toBeHidden();
+ await expect(page.locator('.classic__count')).toBeHidden();
+ for(let cycle=0;cycle<3;cycle++){
+  await page.locator('.toysw__item[data-toy=mario]').click();
+  await expect(page.locator('.toysw__item[data-toy=mario]')).toHaveAttribute('aria-current','page');
+  await expect(page.locator('.classic__pcb,.classic__glass')).toHaveCount(0);
+  await page.locator('.toysw__universal').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-model','brickgame');
+  await expect(page.locator('.classic__pcb')).toHaveCount(1);
+  await expect(page.locator('.classic__glass')).toHaveCount(1);
+ }
 });

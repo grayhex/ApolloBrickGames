@@ -319,7 +319,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
   },
   brickgame: {
     id: 'brickgame', chassis: 'monoblock', family: 'other', name: 'Brick Game', universal: true,
-    shells: ['gray', 'black'], defaultShell: 'gray',
+    shells: ['gray', 'black', 'clear', 'smoke'], defaultShell: 'gray',
     games: [{ id: 'tetris', label: 'Tetris', status: 'ready' }], defaultGame: 'tetris',
     menu: true, gameKeys: 'digits', glyph: 'square', panel: 'classic',
     deco: 'frame', leds: false, info: true, pack: null, levels: false,

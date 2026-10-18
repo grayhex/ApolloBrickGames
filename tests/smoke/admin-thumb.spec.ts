@@ -19,7 +19,7 @@ test('admin: цвет миниатюры в карусели выбираетс�
   await thumb.selectOption('red');
   await page.getByRole('button', { name: 'Brick Game', exact: true }).click();
   const universal = page.getByLabel('Цвет миниатюры в карусели', { exact: true });
-  expect(await universal.locator('option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value))).toEqual(['white', 'gray', 'black']);
+  expect(await universal.locator('option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value))).toEqual(['white', 'gray', 'black', 'clear', 'smoke']);
   await universal.selectOption('black');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key');
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();

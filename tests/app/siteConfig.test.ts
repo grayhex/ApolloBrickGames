@@ -23,16 +23,17 @@ describe('published configuration', () => {
   });
 });
 
-it('filters unfinished native slots without mutating the published config or losing a playable default',()=>{
+it('expands assigned native games for physical MODE without mutating config',()=>{
  const original=structuredClone(TOYS),config=defaultConfig();
  try{
-  config.toys['apollo-b0202'].defaultEntry='apollo-b0202.H03';config.toys['apollo-b0202'].defaultGame='tetris';
-  const snapshot=structuredClone(config);applyConfig(config);
-  expect(config).toEqual(snapshot);
-  expect(TOYS['apollo-b0202'].games.map(g=>g.entryId)).toEqual(['apollo-b0202.A01','apollo-b0202.D01','apollo-b0202.E02','apollo-b0202.H01','apollo-b0202.H02']);
-  expect(TOYS['apollo-b0202'].defaultEntry).toBe('apollo-b0202.A01');
-  config.toys['apollo-b0202'].defaultEntry='apollo-b0202.H02';applyConfig(config);expect(TOYS['apollo-b0202'].defaultEntry).toBe('apollo-b0202.H02');
-  config.toys['apollo-b0202'].games=[{id:'tetris',entryId:'apollo-b0202.H03'}];config.toys['apollo-b0202'].defaultEntry='apollo-b0202.H03';
-  applyConfig(config);expect(TOYS['apollo-b0202'].games).toHaveLength(1);expect(TOYS['apollo-b0202'].defaultEntry).toBe('apollo-b0202.A01');
+  const snapshot=structuredClone(config);applyConfig(config);expect(config).toEqual(snapshot);
+  expect(TOYS['apollo-b0202'].games.map(g=>g.entryId)).toEqual(['apollo-b0202.A01','apollo-b0202.B01','apollo-b0202.C01','apollo-b0202.D01','apollo-b0202.E01','apollo-b0202.E02','apollo-b0202.F01','apollo-b0202.G01','apollo-b0202.H01','apollo-b0202.H02','apollo-b0202.I01']);
+  config.toys['apollo-b0202'].games.find(g=>g.id==='tetris')!.variants=[];
+  applyConfig(config);expect(TOYS['apollo-b0202'].games.some(g=>g.entryId==='apollo-b0202.H02')).toBe(false);
  }finally{Object.assign(TOYS,original);}
+});
+it('upgrades the old universal palette once and preserves intentional later restrictions',()=>{
+ const legacy=defaultConfig();delete legacy.toys.brickgame.shellPaletteVersion;legacy.toys.brickgame.shells=['gray','black'];
+ const normalized=validateConfig(legacy);expect(normalized.toys.brickgame.shells).toEqual(['gray','black','clear','smoke']);
+ normalized.toys.brickgame.shells=['gray','black'];expect(validateConfig(normalized).toys.brickgame.shells).toEqual(['gray','black']);
 });

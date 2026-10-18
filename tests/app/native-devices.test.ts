@@ -71,7 +71,7 @@ describe('native firmware manifests',()=>{
     const c=createCabinet(TOYS['apollo-b0202'],options);
     c.menu(makeFrame({pressed:['jump']}));expect(c.info['symbol']).toBe('A01');
     c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('A01');
-    for(const code of ['D01','E02','H01','A01']){
+    for(const code of ['B01','C01','D01','E01','F01','G01','H01','I01','A01']){
       c.menu(makeFrame({pressed:['down'],held:['right']}));expect(c.info['symbol']).toBe(code);
     }
     c.selectGame('apollo-b0202.H01');c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('H02');
@@ -124,12 +124,22 @@ describe('native config and ranking compatibility',()=>{
     expect(validateConfig(normalized)).toEqual(normalized);
     expect(()=>validateConfig({...legacy,toys:{...legacy.toys,e88:null}})).toThrow();
   });
-  it('validates entry references and defaultEntry while permitting repeated engine IDs',()=>{
+  it('assigns games once and validates nested native modifications',()=>{
     const c=defaultConfig(),t=c.toys.e88;
-    t.games=t.games.slice(0,4).reverse();t.defaultEntry='e88.3';t.defaultGame='tetris';
-    expect(validateConfig(c).toys.e88.defaultEntry).toBe('e88.3');expect(originalMenu('e88',t.games)).toBe(false);
-    t.games[0]!.entryId='apollo-b0202.H01';expect(()=>validateConfig(c)).toThrow();
-    t.games[0]!.entryId='e88.3';expect(()=>validateConfig(c)).toThrow();
+    expect(t.games).toHaveLength(5);expect(t.games[0]!.variants).toEqual(['e88.2','e88.3','e88.4']);
+    t.games.reverse();t.defaultEntry='e88.5';t.defaultGame='snake';expect(validateConfig(c).toys.e88.defaultEntry).toBe('e88.5');
+    const bad=structuredClone(c);bad.toys.e88.games[0]!.variants=['e88.2'];expect(()=>validateConfig(bad)).toThrow();
+    const duplicate=structuredClone(c);duplicate.toys.e88.games.push(duplicate.toys.e88.games[0]!);expect(()=>validateConfig(duplicate)).toThrow();
+    const unsupported=structuredClone(c);unsupported.toys['apollo-b0202'].games[0]!.variants=['apollo-b0202.A02'];expect(()=>validateConfig(unsupported)).toThrow();
+  });
+  it('migrates a flat legacy menu and starts the base game without rewriting its source',()=>{
+    const c=defaultConfig();for(const id of ['e88','apollo-b0202'] as const)c.toys[id].games=NATIVE_MENUS[id].map(e=>({id:e.gameId,entryId:e.entryId}));
+    c.toys['apollo-b0202'].defaultEntry='apollo-b0202.E02';c.toys['apollo-b0202'].defaultGame='dice';
+    const before=structuredClone(c),normalized=validateConfig(c);
+    expect(c).toEqual(before);expect(normalized.toys['apollo-b0202'].games).toHaveLength(9);
+    expect(normalized.toys['apollo-b0202'].defaultEntry).toBe('apollo-b0202.E01');
+    expect(normalized.toys['apollo-b0202'].games.find(g=>g.id==='dice')!.variants).toEqual(['apollo-b0202.E02']);
+    expect(validateConfig(normalized)).toEqual(normalized);
   });
   it('isolates every playable native profile without changing legacy categories',()=>{
     const keys=[];

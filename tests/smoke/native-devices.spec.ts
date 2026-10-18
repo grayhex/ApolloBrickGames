@@ -21,11 +21,11 @@ for(const toy of ['e88','apollo-b0202'] as const){
     await expect(page.locator('.native__key')).toHaveCount(toy==='e88'?7:8);
     if(toy==='e88')await expect(page.locator('#side-ctl [data-action=reset]')).toHaveCount(0);
     const entry=toy==='e88'?'e88.2':'apollo-b0202.H02';
-    await page.locator('#guide-game').selectOption(toy==='e88'?entry:'apollo-b0202.H01');
-    if(toy==='apollo-b0202')await page.locator('#base [data-key=down]').click();
+    await page.locator('#guide-game').selectOption(toy==='e88'?'e88.1':'apollo-b0202.H01');
+    await page.locator('#base [data-key=down]').click();
     await expect(area).toHaveAttribute('data-entry',entry);
     await page.locator('.gnav__btn--launch').click();await expect(area).toHaveAttribute('data-phase','playing');
-    await expect(page.locator('#guide-game')).toHaveValue(toy==='e88'?entry:'apollo-b0202.H01');
+    await expect(page.locator('#guide-game')).toHaveValue(toy==='e88'?'e88.1':'apollo-b0202.H01');
     await page.locator('#base [data-key=sp]').click();await expect(area).toHaveAttribute('data-phase','paused');
     const tick=await area.getAttribute('data-tick');await page.waitForTimeout(120);expect(await area.getAttribute('data-tick')).toBe(tick);
     await page.locator('#view-screen').click();await expect(page.locator('#toy')).toHaveAttribute('data-view','screen');
@@ -62,24 +62,26 @@ for(const toy of ['e88','apollo-b0202'] as const){
     }
   });
 }
-test('native admin preserves repeated engine IDs and start entry through JSON export',async({page})=>{
+test('native admin assigns whole games and nests modifications through JSON export',async({page})=>{
   const config=validateConfig(defaults);
   await page.route('**/api/config',route=>route.fulfill({json:{config,revision:8}}));await page.goto('./admin');
   await page.getByRole('button',{name:'Brick Game E-88 · 8 in 1',exact:true}).click();
   await expect(page.locator('.admin__content')).toContainText('Оригинальный набор');
-  await page.getByLabel('Выбрана при включении').selectOption('e88.4');
-  await page.locator('[data-entry="e88.4"]').getByRole('button',{name:'↑',exact:true}).click();
+  await page.getByLabel('Выбрана при включении').selectOption('e88.5');
+  await page.locator('[data-entry="e88.5"]').getByRole('button',{name:'↑',exact:true}).click();
+  await page.getByLabel('Модификация 4',{exact:true}).uncheck();
+  await expect(page.locator('.admin__games>li')).toHaveCount(5);
   await expect(page.locator('.admin__content')).toContainText('Изменённый набор');
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать JSON'}).click();
   const file=await download;expect(file.suggestedFilename()).toBe('default.json');
   const stream=await file.createReadStream();const chunks:Buffer[]=[];for await(const chunk of stream!)chunks.push(Buffer.from(chunk));
   const exported=validateConfig(JSON.parse(Buffer.concat(chunks).toString()));
-  expect(exported.toys.e88.defaultEntry).toBe('e88.4');expect(exported.toys.e88.games[2]!.entryId).toBe('e88.4');
+  expect(exported.toys.e88.defaultEntry).toBe('e88.5');expect(exported.toys.e88.games[0]!.entryId).toBe('e88.5');expect(exported.toys.e88.games.find(g=>g.id==='tetris')!.variants).toEqual(['e88.2','e88.3']);
 });
 
 test('B0202 lists games once and hides unfinished modes; H02 stays on the physical menu',async({page})=>{
  await page.goto('./?toy=apollo-b0202&power=on');await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
- await expect(page.locator('#guide-game option')).toHaveText(['A: Лягушка','D: Жуки','E: Кости','H: Тетрис']);
+ await expect(page.locator('#guide-game option')).toHaveText(['A: Лягушка','B: α · Гонки','C: α · Стрельба','D: Жуки','E: β · Кости','F: α · Стрельба по массиву','G: α · Падающие фигуры','H: Тетрис','I: α · Пентомино']);
  await expect(page.locator('#side-info')).not.toContainText('исследуется');
  await page.locator('#guide-game').selectOption('apollo-b0202.H01');
  await page.locator('#base [data-key=down]').click();await expect(page.locator('#game-area')).toHaveAttribute('data-entry','apollo-b0202.H02');
@@ -107,4 +109,18 @@ test('carousel shows Apollo brands and mouse wheel/drag scroll without selecting
  await expect(page.locator('.toysw__item[aria-current=page]')).toHaveAttribute('data-toy','mario');
  // A normal click after dragging remains functional.
  await page.locator('#real-models [data-toy=e88]').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','e88');
+});
+
+test('B0202 starts each restored base game and keeps Dice 02 behind MODE',async({page})=>{
+ await page.goto('./?toy=apollo-b0202&power=on');await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+ for(const code of ['B01','C01','E01','F01','G01','I01']){
+  await page.locator('#guide-game').selectOption('apollo-b0202.'+code);
+  await expect(page.locator('.gpanel__stage')).toHaveAttribute('data-stage',code==='E01'?'beta':'alpha');
+  await page.locator('.gnav__btn--launch').click();await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await page.locator('#base [data-key=fire]').click();
+ }
+ await page.locator('#guide-game').selectOption('apollo-b0202.E01');
+ await expect(page.locator('#game-area')).toHaveAttribute('data-entry','apollo-b0202.E01');
+ await page.locator('#base [data-key=down]').click();await expect(page.locator('#game-area')).toHaveAttribute('data-entry','apollo-b0202.E02');
+ await expect(page.locator('#guide-game')).toHaveValue('apollo-b0202.E01');
 });

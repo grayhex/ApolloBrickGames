@@ -324,44 +324,44 @@
       "defaultGame": "tetris",
       "shells": [
         "gray",
-        "black"
+        "black",
+        "clear",
+        "smoke"
       ],
       "defaultShell": "gray",
-      "thumbShell": "white"
+      "thumbShell": "white",
+      "shellPaletteVersion": 2
     },
     "e88": {
       "games": [
         {
           "id": "tetris",
-          "entryId": "e88.1"
-        },
-        {
-          "id": "tetris",
-          "entryId": "e88.2"
-        },
-        {
-          "id": "tetris",
-          "entryId": "e88.3"
-        },
-        {
-          "id": "tetris",
-          "entryId": "e88.4"
+          "entryId": "e88.1",
+          "variants": [
+            "e88.2",
+            "e88.3",
+            "e88.4"
+          ]
         },
         {
           "id": "snake",
-          "entryId": "e88.5"
+          "entryId": "e88.5",
+          "variants": []
         },
         {
           "id": "shooting-array",
-          "entryId": "e88.6"
+          "entryId": "e88.6",
+          "variants": []
         },
         {
           "id": "shooting-figures",
-          "entryId": "e88.7"
+          "entryId": "e88.7",
+          "variants": []
         },
         {
           "id": "construction",
-          "entryId": "e88.8"
+          "entryId": "e88.8",
+          "variants": []
         }
       ],
       "defaultEntry": "e88.1",
@@ -376,507 +376,52 @@
       "games": [
         {
           "id": "frog",
-          "entryId": "apollo-b0202.A01"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A02"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A03"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A04"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A05"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A06"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A07"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A08"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A09"
-        },
-        {
-          "id": "frog",
-          "entryId": "apollo-b0202.A10"
+          "entryId": "apollo-b0202.A01",
+          "variants": []
         },
         {
           "id": "racing",
-          "entryId": "apollo-b0202.B01"
+          "entryId": "apollo-b0202.B01",
+          "variants": []
         },
         {
           "id": "racing-shooting",
-          "entryId": "apollo-b0202.C01"
+          "entryId": "apollo-b0202.C01",
+          "variants": []
         },
         {
           "id": "honeybee",
-          "entryId": "apollo-b0202.D01"
+          "entryId": "apollo-b0202.D01",
+          "variants": []
         },
         {
           "id": "dice",
-          "entryId": "apollo-b0202.E01"
-        },
-        {
-          "id": "dice",
-          "entryId": "apollo-b0202.E02"
-        },
-        {
-          "id": "dice",
-          "entryId": "apollo-b0202.E03"
+          "entryId": "apollo-b0202.E01",
+          "variants": [
+            "apollo-b0202.E02"
+          ]
         },
         {
           "id": "shooting-array",
-          "entryId": "apollo-b0202.F01"
+          "entryId": "apollo-b0202.F01",
+          "variants": []
         },
         {
           "id": "shooting-figures",
-          "entryId": "apollo-b0202.G01"
+          "entryId": "apollo-b0202.G01",
+          "variants": []
         },
         {
           "id": "tetris",
-          "entryId": "apollo-b0202.H01"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H02"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H03"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H04"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H05"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H06"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H07"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H08"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H09"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H10"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H11"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H12"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H13"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H14"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H15"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H16"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H17"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H18"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H19"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H20"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H21"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H22"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H23"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H24"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H25"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H26"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H27"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H28"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H29"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H30"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H31"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H32"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H33"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H34"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H35"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H36"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H37"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H38"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H39"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H40"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H41"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H42"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H43"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H44"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H45"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H46"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H47"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H48"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H49"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H50"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H51"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H52"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H53"
-        },
-        {
-          "id": "tetris",
-          "entryId": "apollo-b0202.H54"
+          "entryId": "apollo-b0202.H01",
+          "variants": [
+            "apollo-b0202.H02"
+          ]
         },
         {
           "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I01"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I02"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I03"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I04"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I05"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I06"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I07"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I08"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I09"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I10"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I11"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I12"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I13"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I14"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I15"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I16"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I17"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I18"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I19"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I20"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I21"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I22"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I23"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I24"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I25"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I26"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I27"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I28"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I29"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I30"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I31"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I32"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I33"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I34"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I35"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I36"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I37"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I38"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I39"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I40"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I41"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I42"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I43"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I44"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I45"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I46"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I47"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I48"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I49"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I50"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I51"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I52"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I53"
-        },
-        {
-          "id": "tetris-pentix",
-          "entryId": "apollo-b0202.I54"
+          "entryId": "apollo-b0202.I01",
+          "variants": []
         }
       ],
       "defaultEntry": "apollo-b0202.A01",

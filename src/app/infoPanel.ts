@@ -343,11 +343,11 @@ export class InfoPanel {
     const chooser = h('select', {class:'pick', id:'guide-game', 'aria-label':t('games.tabs')});
     const tabs = new Map<string, HTMLButtonElement>();
     this.tabEls = tabs;
-    const games = model.nativeDevice === 'apollo-b0202'
+    const games = model.nativeDevice
       ? model.games.filter((game,index,all)=>all.findIndex(g=>g.id===game.id)===index)
       : model.games;
     const ids = games.map((game) => game.entryId ?? game.id);
-    const representative = (id:string):string => model.nativeDevice === 'apollo-b0202'
+    const representative = (id:string):string => model.nativeDevice
       ? games.find(g=>g.id===nativeEntry(model.nativeDevice!,id)?.gameId)?.entryId ?? id : id;
     const select = (id: string, focus = false): void => {
       this.selected = id;
@@ -366,7 +366,7 @@ export class InfoPanel {
       const id = game.entryId ?? game.id;
       const native = model.nativeDevice && game.entryId ? nativeEntry(model.nativeDevice,game.entryId) : undefined;
       const key = native ? model.nativeDevice === 'apollo-b0202' ? native.group : native.nativeCode : gameKey(model,index);
-      const name = native ? `${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
+      const name = native ? `${native.approximate ? native.accuracy===60?'β · ':'α · ' : ''}${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
       chooser.append(h('option',{value:id},`${key}: ${name}`));
       const tab = h(
         'button',
@@ -437,10 +437,11 @@ export class InfoPanel {
     if (entry) {
       const lang = getLang(), ru = lang === 'ru';
       const head = h('header',{class:'gpanel__head'},h('span',{class:'gkey'},entry.nativeCode),h('h4',{class:'gpanel__name'},entry.name[lang]));
+      if(entry.approximate){const beta=entry.accuracy===60;head.append(h('span',{class:'gpanel__stage','data-stage':beta?'beta':'alpha',title:ru?`Приближённая версия этой модели · ${entry.accuracy??30}%`:`Adaptation for this model · ${entry.accuracy??30}%`},h('b',{},beta?'β':'α'),ru?(beta?'Бета':'Альфа'):(beta?'Beta':'Alpha')));}
       const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
       const menu = h('p',{class:'side__text'},(originalPlayableMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
       const guide = nativeGuide(entry);
-      return [head, ...(entry.approximate ? [h('p',{class:'gpanel__approx'},ru ? '≈ Приближённый вариант из общей библиотеки. Точные правила E‑88 ещё уточняются.' : '≈ Adapted library game. Exact E‑88 rules are still being researched.')] : []), ...(guide ? compactGuide(guide, lang) : [state]), menu];
+      return [head, ...(entry.approximate ? [h('p',{class:'gpanel__approx'},ru ? '≈ Приближённый вариант из общей библиотеки. Точные правила этой модели ещё уточняются.' : '≈ Adapted library game. Exact rules for this model are still being researched.')] : []), ...(guide ? compactGuide(guide, lang) : [state]), menu];
     }
     const id = selectedId as GameId;
     const lang = getLang();
