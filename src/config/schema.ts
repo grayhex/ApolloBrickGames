@@ -132,6 +132,23 @@ export function nativeDefault(id: NativeDeviceId): ConfigToy {
 function validateNativeToy(id: NativeDeviceId, source: unknown): ConfigToy {
   if (!record(source) || !Array.isArray(source['games']) || !source['games'].length || source['games'].length > NATIVE_MENUS[id].length)
     throw new Error(`${id}: недопустимый набор игр.`);
+  // E88 exposes eight top-level games, including four distinct Tetris entries.
+  // Expand the previous five-family document without changing the selected entry.
+  if(id==='e88'){
+    const games:ConfigGame[]=[],seen=new Set<string>();
+    for(const g of source['games']){
+      if(!record(g)||typeof g['entryId']!=='string'||g['modes']!==undefined||g['variants']!==undefined&&!Array.isArray(g['variants']))throw new Error('e88: недопустимый пункт меню.');
+      for(const entryId of [g['entryId'],...(g['variants'] as unknown[]??[])]){
+        const entry=typeof entryId==='string'?nativeEntry(id,entryId):undefined;
+        if(!entry?.available||entry.gameId!==g['id']||seen.has(entry.entryId))throw new Error('e88: неизвестный или повторный пункт.');
+        seen.add(entry.entryId);games.push({id:entry.gameId,entryId:entry.entryId,variants:[]});
+      }
+    }
+    const first=games.find(g=>g.entryId===source['defaultEntry']);
+    if(!first||first.id!==source['defaultGame'])throw new Error('e88: стартовая игра должна входить в меню.');
+    if(JSON.stringify(source['shells'])!==JSON.stringify(['gray'])||source['defaultShell']!=='gray'||(source['thumbShell']??'gray')!=='gray')throw new Error('e88: разрешён только подтверждённый серый цвет.');
+    return {games,defaultEntry:first.entryId,defaultGame:first.id,shells:['gray'],defaultShell:'gray',thumbShell:'gray'};
+  }
   const seen = new Set<string>(), groups = new Map<GameId,ConfigGame>();
   const grouped = source['games'].some(g=>record(g)&&g['variants']!==undefined);
   for(const g of source['games']) {
@@ -152,7 +169,7 @@ function validateNativeToy(id: NativeDeviceId, source: unknown): ConfigToy {
   const oldDefault=typeof source['defaultEntry']==='string'?nativeEntry(id,source['defaultEntry']):undefined;
   if(!oldDefault||oldDefault.gameId!==source['defaultGame']||!seen.has(oldDefault.entryId))throw new Error(`${id}: стартовая игра должна входить в меню.`);
   const first=groups.get(oldDefault.gameId)!;
-  const expected=id==='e88'?'gray':'black';
+  const expected='black' as const;
   if(!Array.isArray(source['shells'])||source['shells'].length!==1||source['shells'][0]!==expected||source['defaultShell']!==expected||(source['thumbShell']??expected)!==expected)throw new Error(`${id}: разрешён только подтверждённый цвет ${expected}.`);
   return {games:[...groups.values()],defaultEntry:first.entryId,defaultGame:first.id,shells:[expected],defaultShell:expected,thumbShell:expected};
 }

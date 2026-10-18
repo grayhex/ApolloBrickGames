@@ -1,3 +1,4 @@
+import { MazeGame } from '../brick/games/library/puzzles';
 import { BRICK_GAMES } from '../brick/games';
 import { BRICK_COLS, BRICK_ROWS, makeBrickInput, type BrickAction } from '../brick';
 
@@ -49,6 +50,16 @@ for (const id of ['pong', 'pong-double', 'pneumatic-ball', 'arkanoid-dots', 'ark
 for (const id of ['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker', 'quarth', 'columns', 'columns-flicker', 'dr-mario', 'romeo-juliet']) SCRIPTS[id] = falling;
 SCRIPTS['snake'] = snake;
 
+/** A real route demonstrates maze movement and its clock, instead of walking into a wall. */
+function mazeDemo(game: MazeGame,tick:number): Frame {
+  if(tick%12!==0)return {pressed:[],held:[]};
+  const queue=[game.goal],distance=new Map([[game.goal,0]]);
+  for(const p of queue)for(const delta of [-10,1,10,-1])if(game.walls[p+delta]===0&&!distance.has(p+delta)){distance.set(p+delta,distance.get(p)!+1);queue.push(p+delta);}
+  const directions=['up','right','down','left'] as const;
+  const index=[-10,1,10,-1].findIndex(delta=>distance.get(game.player+delta)===(distance.get(game.player)??0)-1);
+  return {pressed:index<0?[]:[directions[index]!],held:[]};
+}
+
 const cache = new Map<string, Clip | null>();
 
 /** Запись игры; `null`, если у игры нет реализации. Кадры считаются на месте: тысяча тактов чистой симуляции занимает миллисекунды. */
@@ -58,12 +69,12 @@ export function clipFor(id: string): Clip | null {
   const def = BRICK_GAMES[id];
   let clip: Clip | null = null;
   if (def) {
-    const game = def.create({ seed: CLIP_SEED, speed: 6, level: 1 });
+    const game = def.create({ seed: CLIP_SEED, speed: id==='maze'?1:6, level: 1 });
     const script = SCRIPTS[id] ?? ordinary;
     game.start();
     const frames: Uint8Array[] = [];
     for (let tick = 0; tick < SKIP_TICKS + CAPTURE_TICKS; tick++) {
-      const { pressed, held } = script(tick);
+      const { pressed, held } = game instanceof MazeGame ? mazeDemo(game,tick) : script(tick);
       game.step(makeBrickInput(pressed, [...held, ...pressed]));
       if (tick >= SKIP_TICKS && (tick - SKIP_TICKS) % TICKS_PER_FRAME === 0) frames.push(game.cells().slice());
       if (game.phase === 'over' && frames.length > 0) break;

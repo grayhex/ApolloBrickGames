@@ -124,13 +124,21 @@ describe('native config and ranking compatibility',()=>{
     expect(validateConfig(normalized)).toEqual(normalized);
     expect(()=>validateConfig({...legacy,toys:{...legacy.toys,e88:null}})).toThrow();
   });
-  it('assigns games once and validates nested native modifications',()=>{
+  it('keeps eight E88 games independent while B0202 modifications stay nested',()=>{
     const c=defaultConfig(),t=c.toys.e88;
-    expect(t.games).toHaveLength(5);expect(t.games[0]!.variants).toEqual(['e88.2','e88.3','e88.4']);
+    expect(t.games).toHaveLength(8);expect(t.games.every(g=>g.variants?.length===0)).toBe(true);
     t.games.reverse();t.defaultEntry='e88.5';t.defaultGame='snake';expect(validateConfig(c).toys.e88.defaultEntry).toBe('e88.5');
     const bad=structuredClone(c);bad.toys.e88.games[0]!.variants=['e88.2'];expect(()=>validateConfig(bad)).toThrow();
     const duplicate=structuredClone(c);duplicate.toys.e88.games.push(duplicate.toys.e88.games[0]!);expect(()=>validateConfig(duplicate)).toThrow();
     const unsupported=structuredClone(c);unsupported.toys['apollo-b0202'].games[0]!.variants=['apollo-b0202.A02'];expect(()=>validateConfig(unsupported)).toThrow();
+  });
+  it('expands the former five E88 families without losing selection or order',()=>{
+    const c=defaultConfig(),e=c.toys.e88;
+    e.games=[{id:'tetris',entryId:'e88.1',variants:['e88.2','e88.3','e88.4']},...e.games.slice(4)];
+    e.defaultEntry='e88.3';e.defaultGame='tetris';
+    const before=structuredClone(c),out=validateConfig(c);
+    expect(c).toEqual(before);expect(out.toys.e88.games.map(g=>g.entryId)).toEqual(Array.from({length:8},(_,i)=>`e88.${i+1}`));
+    expect(out.toys.e88.defaultEntry).toBe('e88.3');expect(validateConfig(out)).toEqual(out);
   });
   it('migrates a flat legacy menu and starts the base game without rewriting its source',()=>{
     const c=defaultConfig();for(const id of ['e88','apollo-b0202'] as const)c.toys[id].games=NATIVE_MENUS[id].map(e=>({id:e.gameId,entryId:e.entryId}));

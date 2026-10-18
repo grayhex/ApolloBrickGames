@@ -115,7 +115,7 @@ export class FlappyGame extends LibraryGame {
   protected update(input: BrickInput): void {
     if (action(input) || input.pressed.has('up')) this.velocity = -0.22;
     this.velocity = Math.min(0.22, this.velocity + 0.009); this.bird += this.velocity;
-    if (++this.timer >= this.period(22, 10)) { this.timer = 0; for (const p of this.pipes) { p.x--; if (p.x < 2 && !p.passed) { p.passed = true; this.addScore(1); } } this.pipes = this.pipes.filter((p) => p.x >= 0); if (this.pipes.at(-1)!.x <= 4) this.pipes.push({ x: 9, gap: this.rng.range(3, 12), passed: false }); }
+    if (++this.timer >= this.period(22, 10)) { this.timer = 0; for (const p of this.pipes) { p.x--; if (p.x < 2 && !p.passed) { p.passed = true; this.addScore(1); } } this.pipes = this.pipes.filter((p) => p.x >= 0); if (this.pipes.at(-1)!.x <= 4) this.pipes.push({ x: 9, gap: Math.max(3,Math.min(12,this.pipes.at(-1)!.gap+this.rng.range(-3,3))), passed: false }); }
     const y = Math.floor(this.bird); if (y < 0 || y >= 20 || this.pipes.some((p) => p.x === 2 && (y < p.gap || y >= p.gap + 6))) this.gameOver();
   }
   protected draw(): Uint8Array { const out = new Uint8Array(200); for (const p of this.pipes) for (let y = 0; y < 20; y++) if (y < p.gap || y >= p.gap + 6) put(out, p.x, y); put(out, 2, Math.floor(this.bird), 2); return out; }
@@ -128,7 +128,7 @@ export class BasketGame extends LibraryGame {
   private setup(): void { this.x = 4; this.drops = []; this.timer = 0; this.repeat.reset(); }
   protected update(input: BrickInput): void {
     this.x = this.horizontal(input, this.x, 7);
-    if (++this.timer % this.period(24, 6)) return;
+    if (++this.timer % this.period(24, 9)) return;
     for (const drop of this.drops) {
       drop.y++; if (drop.y !== 18) continue;
       const catchIt = drop.x >= this.x && drop.x <= this.x + 2;
@@ -162,10 +162,10 @@ export class DiggerGame extends LibraryGame {
 }
 
 export class BomberGame extends LibraryGame {
-  readonly id = 'helicopter-bomber'; buildings = new Uint8Array(10); x = 0; y = 1; bomb: { x: number; y: number } | null = null; private timer = 0;
+  readonly id = 'helicopter-bomber'; buildings = new Uint8Array(10); x = 0; y = 1; bomb: { x: number; y: number } | null = null; private timer = 0; private laps = 0;
   constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
   protected reset(): void { this.setLives(4); this.setup(); }
-  private setup(): void { this.buildings = Uint8Array.from({ length: 10 }, () => this.rng.range(2, 5 + this.level)); this.x = 0; this.y = 1; this.bomb = null; this.timer = 0; }
+  private setup(): void { this.laps = 0; this.buildings = Uint8Array.from({ length: 10 }, () => this.rng.range(2, 5 + this.level)); this.x = 0; this.y = 1; this.bomb = null; this.timer = 0; }
   protected update(input: BrickInput): void {
     if (action(input) && !this.bomb) this.bomb = { x: this.x, y: this.y + 1 };
     this.timer++;
@@ -173,7 +173,7 @@ export class BomberGame extends LibraryGame {
       this.bomb.y++; if (this.bomb.y >= 20 - this.buildings[this.bomb.x]!) { if (this.buildings[this.bomb.x]) { this.buildings[this.bomb.x]!--; this.addScore(10); this.emit({ type: 'explode' }); } this.bomb = null; }
     }
     if (!this.buildings.some(Boolean)) { this.win(() => this.setup()); return; }
-    if (this.timer % (input.held.has('right') ? 4 : this.period(18, 7)) === 0) { if (++this.x >= 10) { this.x = 0; this.y++; } }
+    if (this.timer % (input.held.has('right') ? 4 : this.period(18, 7)) === 0) { if (++this.x >= 10) { this.x = 0; if(++this.laps % 2 === 0)this.y++; } }
     if (this.y >= 20 - this.buildings[this.x]!) this.lose(() => this.setup());
   }
   protected draw(): Uint8Array { const out = new Uint8Array(200); this.buildings.forEach((h, x) => { for (let y = 20 - h; y < 20; y++) put(out, x, y); }); put(out, this.x, this.y, 2); if (this.bomb) put(out, this.bomb.x, this.bomb.y, 2); return out; }

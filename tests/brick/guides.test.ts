@@ -103,7 +103,7 @@ describe('описания игр: реестр', () => {
         const rows = guide.controls.map((control) => [control.button, ...(control.with ?? []), control.hold ? 'hold' : 'tap', control.keyboardOnly ? 'kbd' : 'body'].join('+'));
         expect(new Set(rows).size).toBe(rows.length);
         for (const score of guide.scoring) expect(score.points).toMatch(/^[+×]?\d|^0/);
-        for (const scheme of guide.schemes) expect(scheme.cells.join('')).toContain('#');
+        for (const scheme of guide.schemes) expect(scheme.cells.join('')).toMatch(/[#*]/);
       });
     });
   }

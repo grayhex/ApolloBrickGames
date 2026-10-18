@@ -337,11 +337,22 @@
         {
           "id": "tetris",
           "entryId": "e88.1",
-          "variants": [
-            "e88.2",
-            "e88.3",
-            "e88.4"
-          ]
+          "variants": []
+        },
+        {
+          "id": "tetris",
+          "entryId": "e88.2",
+          "variants": []
+        },
+        {
+          "id": "tetris",
+          "entryId": "e88.3",
+          "variants": []
+        },
+        {
+          "id": "tetris",
+          "entryId": "e88.4",
+          "variants": []
         },
         {
           "id": "snake",

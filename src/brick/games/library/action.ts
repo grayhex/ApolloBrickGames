@@ -2,7 +2,7 @@ import { LibraryGame, action, heldAction, put } from './common';
 import { BRICK_MOVE_TICKS, HONEYBEE_MODES, OBSTACLE_RACE_MODES, PNEUMATIC_MODES, PONG_MODES, ballTraits, honeybeeTraits } from './modes';
 import type { BrickGameOptions, BrickInput } from '../../types';
 
-/** Препятствие, бонус или стена на дороге: `kind` 0 — машина, 1 и 2 — бонусы (дальняя и ближняя атака), −1 — стена во всю ширину. */
+/** Препятствие, бонус или стена на дороге: `kind` 0 — машина, 1 и 2 — бонусы (дальняя и ближняя атака), −1 — стена во всю ширину, −2 — дорожный камень. */
 export interface RoadObstacle {
   x: number;
   y: number;
@@ -35,22 +35,22 @@ export function roadPlayerPixels(slim: boolean, x: number): { x: number; y: numb
   return (slim ? PLAYER_SLIM : PLAYER_WIDE).map(([dx, dy, value]) => ({ x: x + dx, y: ROAD_PLAYER_ROW + dy, value }));
 }
 export function roadObstaclePixels(slim: boolean, o: RoadObstacle): { x: number; y: number; value: number }[] {
-  const sprite = o.kind < 0 ? WALL : o.kind === 1 ? BONUS_GUN : o.kind === 2 ? BONUS_PUNCH : slim ? CAR_SLIM : CAR_WIDE;
-  return sprite.map(([dx, dy, value]) => ({ x: (o.kind < 0 ? 0 : o.x) + dx, y: o.y + dy, value }));
+  const sprite: readonly Pixel[] = o.kind === -2 ? [[0, 0, 1]] : o.kind === -1 ? WALL : o.kind === 1 ? BONUS_GUN : o.kind === 2 ? BONUS_PUNCH : slim ? CAR_SLIM : CAR_WIDE;
+  return sprite.map(([dx, dy, value]) => ({ x: (o.kind === -1 ? 0 : o.x) + dx, y: o.y + dy, value }));
 }
 
 export class RoadGame extends LibraryGame {
   readonly id: RoadId;
   x = 4; road = Array<number>(20).fill(2); obstacles: RoadObstacle[] = []; shots: { x: number; y: number }[] = [];
   /** Последнее подобранное оружие (1 — дальняя атака, 2 — ближняя) и признак, что дальняя атака уже была выдана: стены появляются только после неё. */
-  weapon = 0; hasGun = false; private timer = 0; private cooldown = 0; private passed = 0;
+  weapon = 0; hasGun = false; private timer = 0; private cooldown = 0; private passed = 0; private scrolls = 0;
   constructor(id: RoadGame['id'], o: BrickGameOptions = {}) {
     super(o, id === 'obstacle-race' ? OBSTACLE_RACE_MODES.length : 1); this.id = id;
     this.flipped = id === 'obstacle-race' && this.mode === 1; // вариант 02 «Invert upside-down»
     this.init();
   }
   protected reset(): void { this.setLives(4); this.passed = 0; this.weapon = 0; this.hasGun = false; this.setup(); }
-  private setup(): void { this.x = 4; this.road.fill(2); this.obstacles = []; this.shots = []; this.timer = 0; this.cooldown = 0; this.repeat.reset(); }
+  private setup(): void { this.x = this.id === 'racing-four' ? 3 : 4; this.scrolls = 0; this.road.fill(2); this.obstacles = []; this.shots = []; this.timer = 0; this.cooldown = 0; this.repeat.reset(); }
   private get slim(): boolean { return this.id === 'racing-four'; }
   private get canShoot(): boolean { return this.id === 'super-tank' || this.id === 'racing-pickup' && (this.weapon === 1 || this.hasGun); }
   private get canPunch(): boolean { return this.id === 'punch-racing' || this.id === 'racing-pickup' && this.weapon === 2; }
@@ -86,10 +86,17 @@ export class RoadGame extends LibraryGame {
     this.timer++;
     if (this.timer % 3 === 0) { for (const s of this.shots) s.y--; this.resolveShots(); }
     if (this.timer % (input.held.has('up') ? 5 : this.period(25, 7)) === 0) {
-      if (this.id === 'obstacle-race') { const next = Math.max(0, Math.min(ROAD_LEFT_MAX, this.road[0]! + this.rng.range(-1, 1))); this.road.unshift(next); this.road.pop(); }
+      if (this.id === 'obstacle-race') {
+        this.scrolls++;
+        // Long bends leave room for the three-cell car. Stones sit inside a straight
+        // section, with a full three-cell passage on their opposite side.
+        const next = Math.max(0, Math.min(ROAD_LEFT_MAX, this.road[0]! + (this.scrolls % 10 === 0 ? this.rng.range(-1, 1) : 0)));
+        this.road.unshift(next); this.road.pop();
+        if (this.scrolls % 10 === 3) this.obstacles.push({ x: next + (Math.floor(this.scrolls / 10) % 2 === 0 ? 2 : 4), y: -1, kind: -2 });
+      }
       for (const p of this.obstacles) p.y++;
       this.resolveShots(); // препятствие, шагнувшее в клетку выстрела, считается пойманным выстрелом
-      this.obstacles = this.obstacles.filter((p) => { if (p.y <= 20) return true; this.addScore(1); this.passed++; return false; });
+      this.obstacles = this.obstacles.filter((p) => { if (p.y <= 20) return true; if (this.id !== 'obstacle-race') { this.addScore(1); this.passed++; } return false; });
       if (this.id !== 'obstacle-race' && (!this.obstacles.length || this.obstacles.at(-1)!.y >= 6)) {
         const lanes = this.id === 'racing-four' ? [1,3,5,7] : [1,4,7];
         let kind = this.id === 'racing-pickup' && this.rng.chance(0.4) ? this.rng.range(1,2) : this.id === 'racing-pickup' && this.rng.chance(0.3) ? -1 : 0;
@@ -100,15 +107,15 @@ export class RoadGame extends LibraryGame {
       if (this.id === 'obstacle-race') { this.addScore(1); this.passed++; }
     }
     const mine = new Set(roadPlayerPixels(this.slim, this.x).map((c) => cellKey(c.x, c.y)));
-    if (this.id === 'obstacle-race' && [17, 18, 19].some((y) => mine.has(cellKey(this.road[y]!, y)) || mine.has(cellKey(this.road[y]! + ROAD_CORRIDOR, y)) || this.outside(y))) { this.lose(() => this.setup()); return; }
+    if (this.id === 'obstacle-race' && [17, 18, 19].some((y) => mine.has(cellKey(this.road[y]!, y)) || mine.has(cellKey(this.road[y]! + ROAD_CORRIDOR, y)) || this.outside(y))) { this.passed=0; this.lose(() => this.setup()); return; }
     let crashed = false;
     for (const o of [...this.obstacles]) {
       if (![...this.obstacleKeys(o)].some((key) => mine.has(key))) continue;
       if (o.kind > 0) { this.weapon = o.kind; if (o.kind === 1) this.hasGun = true; this.obstacles.splice(this.obstacles.indexOf(o), 1); this.emit({ type: 'bonus' }); }
       else crashed = true;
     }
-    if (crashed) { this.lose(() => this.setup()); return; }
-    if (this.passed >= 30) { this.passed = 0; this.win(() => this.setup()); }
+    if (crashed) { if(this.id==='obstacle-race')this.passed=0; this.lose(() => this.setup()); return; }
+    if (this.passed >= (this.id === 'obstacle-race' ? 60 : 30)) { this.passed = 0; this.win(() => this.setup()); }
   }
   /** Игрок вышел за край поля на строке `y` (клетка с отрицательной колонкой или правее девятой): у трассы это тоже съезд с дороги. */
   private outside(y: number): boolean { return roadPlayerPixels(this.slim, this.x).some((c) => c.y === y && (c.x < 0 || c.x > 9)); }
@@ -129,7 +136,7 @@ const TALKING_LOWEST_ROW = 16;
 export class ShooterGame extends LibraryGame {
   readonly id: 'honeybee' | 'space-invaders' | 'ufo-raiders' | 'dual-shooting' | 'talking-shooting' | 'tetris-shooting' | 'meteor-fighter';
   x = 4; targets: { x: number; y: number }[] = []; bullets: { x: number; y: number; enemy: boolean }[] = [];
-  private timer = 0; private cooldown = 0; private directionNow = 1; bossHP = 0; health = 3; private protectedUfo: { x: number; y: number } | null = null; private bossStage = false; private hazard = { x:9, y:0 }; private takeoff = 0;
+  private timer = 0; private cooldown = 0; private directionNow = 1; bossHP = 0; health = 3; private protectedUfo: { x: number; y: number } | null = null; private bossStage = false; private hazard = { x:9, y:0 }; private takeoff = 0; private immunity = 0;
   /** Варианты «Пчёлки» по вики: фигура идёт по диагонали и два ствола (invert — общий механизм `LibraryGame.flipped`); у остальных игр всегда `false`. */
   readonly diagonal: boolean; readonly twin: boolean;
   constructor(id: ShooterGame['id'], o: BrickGameOptions = {}) {
@@ -140,7 +147,7 @@ export class ShooterGame extends LibraryGame {
   }
   protected reset(): void { this.setLives(4); this.setup(); }
   private setup(): void {
-    this.x = 4; this.health = 3; this.timer = this.cooldown = 0; this.bullets = []; this.directionNow = 1; this.bossHP = this.id === 'dual-shooting' || this.id === 'meteor-fighter' ? 10 : 0; this.takeoff = this.id === 'meteor-fighter' ? 60 : 0;
+    this.x = 4; this.immunity = 0; this.health = 3; this.timer = this.cooldown = 0; this.bullets = []; this.directionNow = 1; this.bossHP = this.id === 'dual-shooting' || this.id === 'meteor-fighter' ? 10 : 0; this.takeoff = this.id === 'meteor-fighter' ? 60 : 0;
     this.targets = []; this.bossStage = false; this.hazard = { x:9, y:0 };
     for (let y = 2; y <= 5; y++) for (let x = 2; x <= 7; x++) if (this.id !== 'honeybee' || (x + y) % 3 !== 0) this.targets.push({ x, y });
     if (this.id === 'tetris-shooting') this.targets = [{x:2,y:2},{x:3,y:2},{x:4,y:2},{x:3,y:3},{x:6,y:5},{x:6,y:6},{x:6,y:7},{x:7,y:7}];
@@ -148,12 +155,41 @@ export class ShooterGame extends LibraryGame {
     this.protectedUfo = this.id === 'ufo-raiders' ? this.targets[0]! : null;
     this.repeat.reset();
   }
+  private get duel(): boolean { return this.id === 'dual-shooting' || this.id === 'meteor-fighter'; }
+  private get weakPoint(): {x:number;y:number} | undefined {
+    if(!this.duel || !this.targets.length)return undefined;
+    const cx=(Math.min(...this.targets.map(p=>p.x))+Math.max(...this.targets.map(p=>p.x)))/2;
+    const bottom=Math.max(...this.targets.map(p=>p.y));
+    return this.targets.reduce((a,b)=>Math.abs(b.x-cx)+bottom-b.y<Math.abs(a.x-cx)+bottom-a.y?b:a);
+  }
+  private resolveBullets(): boolean {
+    for (const b of this.bullets) {
+      if (!b.enemy) {
+        const index = this.targets.findIndex((p) => p.x === b.x && p.y === b.y);
+        if (index < 0) continue;
+        if(this.duel && this.targets[index]!==this.weakPoint){b.y=-1;this.emit({type:'blocked'});continue;}
+        if (this.id === 'ufo-raiders' && this.targets[index] === this.protectedUfo) { this.lose(() => this.setup()); return true; }
+        if (this.bossHP > 0) { this.bossHP--; if (!this.bossHP) this.targets = []; } else this.targets.splice(index, 1);
+        b.y = -1; this.addScore(5); this.emit({ type: 'hit' });
+      } else {
+        const tip = this.twin ? Math.abs(b.x - this.x) === 1 : b.x === this.x;
+        const hit = b.y === 17 && tip || b.y === 18 && Math.abs(b.x - this.x) <= 1;
+        if (!hit) continue;
+        b.y = 20;
+        if (this.immunity) continue;
+        if (--this.health <= 0 || !(this.id === 'dual-shooting' || this.id === 'meteor-fighter' || this.bossStage)) { this.lose(() => this.setup()); return true; }
+        this.immunity = 45; this.emit({ type: 'blocked' });
+      }
+    }
+    this.bullets = this.bullets.filter((b) => b.y >= 0 && b.y < 20);
+    return false;
+  }
   protected update(input: BrickInput): void {
     this.x = this.horizontal(input, this.x, 8);
     if (this.takeoff > 0) { this.takeoff--; return; }
     if (this.cooldown) this.cooldown--;
     if (heldAction(input) && !this.cooldown) {
-      this.cooldown = 10;
+      this.cooldown = this.duel ? 16 : 10;
       // Два ствола «Пчёлки» — по бокам от центра, как у донора (x ± 1); колонки за краем поля пропускаются.
       if (this.twin) { for (const barrel of [this.x - 1, this.x + 1]) if (barrel >= 0 && barrel <= 9) this.bullets.push({ x: barrel, y: 17, enemy: false }); }
       else this.bullets.push({ x: this.x, y: 17, enemy: false });
@@ -161,22 +197,11 @@ export class ShooterGame extends LibraryGame {
       this.emit({ type: 'shot' });
     }
     this.timer++;
-    if (this.timer % 4 === 0) {
-      for (const b of this.bullets) {
-        b.y += b.enemy ? 1 : -1;
-        if (!b.enemy) {
-          const index = this.targets.findIndex((p) => p.x === b.x && p.y === b.y);
-          if (index >= 0) {
-            if (this.id === 'ufo-raiders' && this.targets[index] === this.protectedUfo) { this.lose(() => this.setup()); return; }
-            if (this.bossHP > 0) { this.bossHP--; if (!this.bossHP) this.targets = []; } else this.targets.splice(index, 1);
-            b.y = -1; this.addScore(5); this.emit({ type: 'hit' });
-          }
-        } else if (b.y >= 18 && b.y <= 19 && Math.abs(b.x - this.x) <= 1) {
-          b.y = 20; if (--this.health <= 0 || this.id !== 'dual-shooting' && this.id !== 'meteor-fighter') { this.lose(() => this.setup()); return; }
-        }
-      }
-      this.bullets = this.bullets.filter((b) => b.y >= 0 && b.y < 20);
-    }
+    if (this.immunity) this.immunity--;
+    // Check movement into a stationary bullet as well as bullet/formation movement.
+    if (this.resolveBullets()) return;
+    for (const b of this.bullets) if (this.timer % (b.enemy ? this.period(7, 5) : 4) === 0) b.y += b.enemy ? 1 : -1;
+    if (this.resolveBullets()) return;
     if (!this.targets.length || this.id === 'ufo-raiders' && this.targets.length === 1 && this.targets[0] === this.protectedUfo) {
       if (this.id === 'space-invaders' && !this.bossStage) { this.bossStage = true; this.bossHP = Math.min(10, 8 + this.level); this.targets = [{x:3,y:2},{x:4,y:2},{x:5,y:2},{x:4,y:3}]; }
       else { this.win(() => this.setup()); return; }
@@ -185,8 +210,8 @@ export class ShooterGame extends LibraryGame {
       if (--this.hazard.x < 0) { this.hazard.x = 9; this.hazard.y++; }
       if (this.hazard.y >= 18) { this.lose(() => this.setup()); return; }
     }
-    if (this.timer % this.period(90, 25) === 0) {
-      const enemy = this.rng.pick(this.targets); this.bullets.push({ x: enemy.x, y: enemy.y + 1, enemy: true });
+    if (this.timer % (this.duel ? this.period(60, 35) : this.period(120, 45)) === 0) {
+      const enemy = this.duel ? this.targets.reduce((a,b)=>Math.abs(b.x-this.x)<Math.abs(a.x-this.x)?b:a) : this.rng.pick(this.targets); this.bullets.push({ x: enemy.x, y: enemy.y + 1, enemy: true });
     }
     if (this.diagonal && this.timer % this.period(90, 30) === 0) {
       // «Brick move diagonally»: шаг на клетку вбок и на ряд вниз; у боковой стены сторона меняется. Дошла до пушки — потеря жизни.
@@ -194,17 +219,18 @@ export class ShooterGame extends LibraryGame {
       for (const p of this.targets) { p.x += this.directionNow; p.y++; }
       if (this.targets.some((p) => p.y >= 18)) { this.lose(() => this.setup()); return; }
     }
-    if (this.timer % this.period(45, 16) === 0 && this.id !== 'honeybee' && this.id !== 'dual-shooting' && this.id !== 'meteor-fighter') {
+    if (this.timer % this.period(45, 16) === 0 && this.id !== 'honeybee' ) {
       if (this.targets.some((p) => p.x + this.directionNow < 0 || p.x + this.directionNow > 9)) {
         this.directionNow *= -1;
         // «Говорящая» стрельба: строй идёт вниз целиком и останавливается над пушкой по общей нижней границе (клетки не склеиваются и не меняют форму).
-        const step = this.id !== 'talking-shooting' || Math.max(...this.targets.map((p) => p.y)) + 1 <= TALKING_LOWEST_ROW ? 1 : 0;
+        const step = this.id === 'dual-shooting' || this.id === 'meteor-fighter' ? 0 : this.id !== 'talking-shooting' || Math.max(...this.targets.map((p) => p.y)) + 1 <= TALKING_LOWEST_ROW ? 1 : 0;
         for (const p of this.targets) p.y += step;
       } else for (const p of this.targets) p.x += this.directionNow;
       if (this.targets.some((p) => p.y >= 18)) { this.lose(() => this.setup()); return; }
     }
+    this.resolveBullets();
   }
-  protected draw(): Uint8Array { const out = new Uint8Array(200); this.targets.forEach((p) => put(out, p.x, p.y, this.id === 'ufo-raiders' && p === this.protectedUfo ? 2 : 1)); for (const b of this.bullets) put(out, b.x, b.y, b.enemy ? 2 : 1); if (this.twin) { put(out, this.x - 1, 17, 2); put(out, this.x + 1, 17, 2); } else put(out, this.x, 17 + Math.ceil(this.takeoff/30), 2); for (let dx = -1; dx <= 1; dx++) put(out, this.x + dx, 18); if (this.id === 'tetris-shooting') put(out,this.hazard.x,this.hazard.y,2); if (this.id === 'dual-shooting' || this.id === 'meteor-fighter' || this.bossStage) { for (let i = 0; i < Math.min(10, this.bossHP); i++) put(out, i, 0); for (let i = 0; i < this.health; i++) put(out, i, 19, 2); } return out; }
+  protected draw(): Uint8Array { const out = new Uint8Array(200), weak=this.weakPoint; this.targets.forEach((p) => put(out, p.x, p.y, (this.id === 'ufo-raiders' && p === this.protectedUfo) || p === weak ? 2 : 1)); for (const b of this.bullets) put(out, b.x, b.y, b.enemy ? 2 : 1); if (this.twin) { put(out, this.x - 1, 17, 2); put(out, this.x + 1, 17, 2); } else put(out, this.x, 17 + Math.ceil(this.takeoff/30), 2); for (let dx = -1; dx <= 1; dx++) put(out, this.x + dx, 18); if (this.id === 'tetris-shooting') put(out,this.hazard.x,this.hazard.y,2); if (this.id === 'dual-shooting' || this.id === 'meteor-fighter' || this.bossStage) { for (let i = 0; i < Math.min(10, this.bossHP); i++) put(out, i, 0); for (let i = 0; i < this.health; i++) put(out, i, 19, 2); } return out; }
 }
 
 export class BallGame extends LibraryGame {
@@ -223,7 +249,7 @@ export class BallGame extends LibraryGame {
   protected reset(): void { this.setLives(4); this.goals = 0; this.setup(); }
   private setup(): void {
     this.x = Math.floor((10 - this.paddle) / 2); this.guard = Math.floor((10 - this.guardWidth) / 2); this.timer = 0; this.guardDirection = 1; this.brickDirection = 1; this.bricks.clear(); this.dots.clear(); this.repeat.reset();
-    this.balls = [{ x: this.x + this.centre, y: 17, dx: 1, dy: -1 }]; if (this.id === 'pong-double') this.balls.push({ x: 5, y: 14, dx: -1, dy: -1 });
+    this.balls = [{ x: this.x + this.centre, y: 17, dx: 1, dy: -1 }]; if (this.id === 'pong-double') { this.balls[0]!.dx = this.rng.pick([-1, 1]); this.balls.push({ x: 5, y: 14, dx: -this.balls[0]!.dx, dy: -1 }); this.guardDirection = this.rng.pick([-1, 1]); }
     if (this.id === 'pong') for (let y = 8; y <= 9; y++) for (let x = 2; x <= 7; x++) this.bricks.add(y * 10 + x);
     if (this.id === 'arkanoid-dots') { for (let y = 3; y <= 6; y++) for (let x = 1; x <= 8; x++) this.bricks.add(y * 10 + x); this.dots.add(12); this.dots.add(17); }
   }
@@ -232,7 +258,11 @@ export class BallGame extends LibraryGame {
     if (this.id === 'pneumatic-ball' && !this.balls.length && heldAction(input)) this.balls.push({ x: this.x + this.centre, y: 17, dx: 0, dy: -1 });
     if (this.brickMove && this.timer % BRICK_MOVE_TICKS === 0) this.shiftBricks();
     if (this.timer % this.period(20, 6)) return;
-    this.guard += this.guardDirection; if (this.guard <= 0 || this.guard >= 10 - this.guardWidth) this.guardDirection *= -1;
+    if(this.id==='pong-double') {
+      const incoming=this.balls.filter(b=>b.dy<0).sort((a,b)=>a.y-b.y)[0];
+      if(incoming && Math.floor(this.timer/this.period(20,6))%2===0)this.guard=Math.max(0,Math.min(10-this.guardWidth,this.guard+Math.sign(incoming.x-this.guard-Math.floor(this.guardWidth/2))));
+    } else this.guard += this.guardDirection;
+    if (this.guard <= 0 || this.guard >= 10 - this.guardWidth) this.guardDirection *= -1;
     for (const ball of this.balls) {
       let xx = ball.x + ball.dx, yy = ball.y + ball.dy;
       if (xx < 0 || xx > 9) { ball.dx *= -1; xx = ball.x + ball.dx; }
@@ -256,6 +286,9 @@ export class BallGame extends LibraryGame {
     }
     this.balls = this.balls.filter((b) => b.y < 20);
     if (this.id === 'arkanoid-dots' && !this.bricks.size && !this.dots.size || this.goals >= 5) { this.goals = 0; this.win(() => this.setup()); }
+    else if(this.id==='pong-double') {
+      while(this.balls.length<2){const side=this.balls.length===0?-1:1;this.balls.push({x:this.x+(side<0?0:this.paddle-1),y:17,dx:side,dy:-1});}
+    }
     else if (!this.balls.length && this.id !== 'pneumatic-ball') this.balls.push({ x: this.x + this.centre, y: 17, dx: 1, dy: -1 });
   }
   /** «Brick move»: кирпичная стенка (то, что осталось от неё) целиком едет на клетку вбок; у края поля направление меняется. */

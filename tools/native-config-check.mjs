@@ -32,7 +32,7 @@ try{
  const response=await mf.dispatchFetch('http://localhost/api/config');assert.equal(response.status,200);const normalized=await response.json();
  assert.equal(normalized.revision,23);assert.equal(normalized.config.language,'en');assert.deepEqual(normalized.config.encyclopedia,old.encyclopedia);
  for(const [id,toy]of Object.entries(old.toys))assert.deepEqual(normalized.config.toys[id],toy);
- assert.equal(normalized.config.toys.e88.games.length,5);assert.equal(normalized.config.toys['apollo-b0202'].games.length,9);
+ assert.equal(normalized.config.toys.e88.games.length,8);assert.equal(normalized.config.toys['apollo-b0202'].games.length,9);
  const reopened=await mf.getDurableObjectNamespace('CONFIG');const raw=await reopened.get(reopened.idFromName('site')).fetch('http://internal/fixture/raw');assert.deepEqual(await raw.json(),saved);
  normalized.config.toys.e88.defaultEntry='e88.5';normalized.config.toys.e88.defaultGame='snake';
  const publish=await mf.dispatchFetch('http://localhost/api/admin/config',{method:'PUT',headers:{Origin:'http://localhost',Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(normalized)});

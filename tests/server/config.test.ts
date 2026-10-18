@@ -62,7 +62,7 @@ it('normalizes a previously published four-device document without rewriting rev
   await storage.put('published',saved);
   const response=await send(new Request('https://games.example/api/config'));
   const normalized=await response.json() as {revision:number;config:ReturnType<typeof defaultConfig>};
-  expect(normalized.revision).toBe(17);expect(normalized.config.toys.e88.games).toHaveLength(5);expect(normalized.config.toys['apollo-b0202'].games).toHaveLength(9);
+  expect(normalized.revision).toBe(17);expect(normalized.config.toys.e88.games).toHaveLength(8);expect(normalized.config.toys['apollo-b0202'].games).toHaveLength(9);
   for(const [id,toy]of Object.entries(toys))expect(normalized.config.toys[id as keyof typeof c.toys]).toEqual(toy);
   expect(await storage.get('published')).toEqual(saved);
   const next={...normalized.config};next.toys.e88.defaultEntry='e88.5';next.toys.e88.defaultGame='snake';

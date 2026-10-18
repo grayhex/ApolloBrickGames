@@ -1,6 +1,6 @@
 import { nativeEntry, originalPlayableMenu } from '../devices/catalog';
 import { nativeGuide } from '../devices/guide';
-import { previewStage } from '../encyclopedia/catalog';
+import { gameBadges } from './gameBadges';
 import { guideForBody } from './bodyButtons';
 import { BRICK_GAMES } from '../brick/games';
 import { BRICK_GUIDES } from '../brick/guides';
@@ -343,11 +343,11 @@ export class InfoPanel {
     const chooser = h('select', {class:'pick', id:'guide-game', 'aria-label':t('games.tabs')});
     const tabs = new Map<string, HTMLButtonElement>();
     this.tabEls = tabs;
-    const games = model.nativeDevice
+    const games = model.nativeDevice === 'apollo-b0202'
       ? model.games.filter((game,index,all)=>all.findIndex(g=>g.id===game.id)===index)
       : model.games;
     const ids = games.map((game) => game.entryId ?? game.id);
-    const representative = (id:string):string => model.nativeDevice
+    const representative = (id:string):string => model.nativeDevice === 'apollo-b0202'
       ? games.find(g=>g.id===nativeEntry(model.nativeDevice!,id)?.gameId)?.entryId ?? id : id;
     const select = (id: string, focus = false): void => {
       this.selected = id;
@@ -366,7 +366,7 @@ export class InfoPanel {
       const id = game.entryId ?? game.id;
       const native = model.nativeDevice && game.entryId ? nativeEntry(model.nativeDevice,game.entryId) : undefined;
       const key = native ? model.nativeDevice === 'apollo-b0202' ? native.group : native.nativeCode : gameKey(model,index);
-      const name = native ? `${native.approximate ? native.accuracy===60?'β · ':'α · ' : ''}${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
+      const name = native ? `${native.approximate ? native.stage==='beta'?'β · ':'α · ' : ''}${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
       chooser.append(h('option',{value:id},`${key}: ${name}`));
       const tab = h(
         'button',
@@ -437,7 +437,7 @@ export class InfoPanel {
     if (entry) {
       const lang = getLang(), ru = lang === 'ru';
       const head = h('header',{class:'gpanel__head'},h('span',{class:'gkey'},entry.nativeCode),h('h4',{class:'gpanel__name'},entry.name[lang]));
-      if(entry.approximate){const beta=entry.accuracy===60;head.append(h('span',{class:'gpanel__stage','data-stage':beta?'beta':'alpha',title:ru?`Приближённая версия этой модели · ${entry.accuracy??30}%`:`Adaptation for this model · ${entry.accuracy??30}%`},h('b',{},beta?'β':'α'),ru?(beta?'Бета':'Альфа'):(beta?'Beta':'Alpha')));}
+      head.append(gameBadges(entry.gameId,lang,{stage:entry.stage}));
       const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
       const menu = h('p',{class:'side__text'},(originalPlayableMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
       const guide = nativeGuide(entry);
@@ -446,14 +446,7 @@ export class InfoPanel {
     const id = selectedId as GameId;
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
-    const stage=model.universal ? previewStage(id) : null;
-    if(stage){
-      const alpha=stage==='alpha', label=lang==='ru'?(alpha?'Альфа':'Бета'):(alpha?'Alpha':'Beta');
-      const detail=lang==='ru'
-        ? `${label}: точность реконструкции ${alpha?30:60}%. Подробнее об источниках — в энциклопедии игр.`
-        : `${label}: reconstruction accuracy ${alpha?30:60}%. See the game encyclopedia for sources.`;
-      head.append(h('span',{class:'gpanel__stage','data-stage':stage,title:detail,'aria-label':detail},h('b',{'aria-hidden':'true'},alpha?'α':'β'),label));
-    }
+    head.append(gameBadges(id,lang));
     const data = BRICK_GUIDES[id];
     return [head, ...(data ? compactGuide(guideForBody(data, model, BRICK_GAMES[id]), lang) : [])];
   }

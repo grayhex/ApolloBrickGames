@@ -89,14 +89,14 @@ const newBalls = (id: BallGame['id'], options: BrickGameOptions = {}): BallGame 
   return g;
 };
 /**
- * Дождаться очередного шага мяча и вернуть события. Признак шага — смещение вратаря (верхней ракетки): он двигается ровно в те такты,
- * в которые двигаются мячи. Ввод действует в такте шага, поэтому удержание кнопки нужно давать на всём протяжении ожидания.
+ * Дождаться очередного шага мяча и вернуть события. Признак шага — изменение мячей, счёта, жизней или вратаря. В двухмячном режиме
+ * вратарь может стоять на месте, поэтому его движение не служит единственными часами. Ввод действует в такте шага, поэтому удержание кнопки нужно давать на всём протяжении ожидания.
  */
 const ballStep = (g: BallGame, input: BrickInput = NEUTRAL_BRICK_INPUT): BrickEvent[] => {
-  const guard = g.guard;
-  const events: BrickEvent[] = [];
-  for (let i = 0; i < 100 && g.guard === guard; i++) events.push(...g.step(input));
-  expect(g.guard, 'мяч не сделал шаг за 100 тактов').not.toBe(guard);
+  const snapshot=()=>JSON.stringify({balls:g.balls,guard:g.guard,score:g.score,lives:g.lives});
+  const before=snapshot();const events:BrickEvent[]=[];
+  for(let i=0;i<100&&snapshot()===before;i++)events.push(...g.step(input));
+  expect(snapshot(),'мяч не сделал шаг за 100 тактов').not.toBe(before);
   return events;
 };
 /** Мяч у верхней границы: следующим шагом он войдёт в верхнюю зону в колонке 9, а вратарь (после сдвига) стоит левее колонки 7 — гол. */
@@ -253,7 +253,7 @@ describe('pong-double: два мяча', () => {
     expect(g.bricks.size).toBe(0); // кирпичей нет: всё внимание двум мячам
     const picture = g.cells();
     for (const b of g.balls) expect(picture[b.y * 10 + b.x], `мяч (${b.x}, ${b.y}) мигает на экране`).toBe(2);
-    const start = g.balls.map((b) => ({ ...b }));
+    const start = g.balls.map(({x,y,dy})=>({x,y,dy}));
 
     // оба мяча одновременно уходят в верхнюю зону справа и слева от вратаря
     g.guard = 3;
@@ -270,20 +270,20 @@ describe('pong-double: два мяча', () => {
     expect(ballStep(g)).toContainEqual({ type: 'win' });
     expect(g.score).toBe(150);
     until(g, () => g.level === 2, 100);
-    expect(g.balls).toEqual(start); // новый уровень снова начинается с двух мячей
+    expect(g.balls.map(({x,y,dy})=>({x,y,dy}))).toEqual(start); // новый уровень снова начинается с двух мячей
     expect(g.lives).toBe(4);
   });
 
   scenario('pong-double', 'неудача', 'пропущенный мяч отнимает жизнь сразу, даже если второй ещё в игре; поле начинается заново с двумя мячами', () => {
     const g = newBalls('pong-double');
-    const start = g.balls.map((b) => ({ ...b }));
+    const start = g.balls.map(({x,y,dy})=>({x,y,dy}));
     g.balls = [ball(7, 17, -1, 1), ball(5, 6, 1, -1)]; // первый уходит мимо ракетки (3–5), второй далеко от краёв
     const events = ballStep(g);
     expect(events).toContainEqual({ type: 'lifeLost' });
     expect(g.lives).toBe(3);
     expect(g.phase).toBe('playing');
     until(g, () => g.balls.length === 2 && g.balls[0]!.y === 17, 100);
-    expect(g.balls).toEqual(start); // второй мяч не сохраняется: поле собрано заново
+    expect(g.balls.map(({x,y,dy})=>({x,y,dy}))).toEqual(start); // второй мяч не сохраняется: поле собрано заново
     expect(g.lives).toBe(3);
   });
 

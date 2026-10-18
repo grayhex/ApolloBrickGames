@@ -1,3 +1,4 @@
+import { arcadePilot } from '../arcadePilot';
 import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
 /**
  * Сценарные тесты правил стрелялок Brick Game (класс ShooterGame): honeybee, space-invaders, ufo-raiders, dual-shooting, talking-shooting, tetris-shooting, meteor-fighter.
@@ -10,8 +11,8 @@ import { SCENARIO_GROUPS, scenarioSuite } from '../scenarioCoverage';
  * Ожидаемые числа выписаны по правилам (справка `guides/library.ts`, `docs/brick/library.md`) и нарисованы вручную, а не взяты из констант реализации.
  *
  * Условные обозначения: поле 10 × 20, строка 0 — верх; пушка: нос в (x, 17), основание (x−1…x+1, 18), x = 0…8; пуля игрока стартует в (x, 17);
- * вражеский выстрел поражает пушку в строках 18–19 в трёх столбцах x−1…x+1.
- * Темп при скорости 1: строй делает шаг раз в 45 тактов, первый ответный выстрел — на 90-м такте, пуля проходит строку за 4 такта,
+ * вражеский выстрел поражает только нарисованные клетки носа (17) и корпуса (18).
+ * Темп при скорости 1: строй делает шаг раз в 45 тактов, первый ответный выстрел строя — на 120-м такте, игрок — 4 такта на строку, враг — 7,
  * пауза между выстрелами игрока — 10 тактов, сцена потери жизни или победы — 60 тактов.
  */
 import { describe, expect, it } from 'vitest';
@@ -41,7 +42,7 @@ const LEVEL_BONUS = 100;
 const SCENE = 60;
 /** Шаг строя при скорости 1 и такт первого ответного выстрела. */
 const FORMATION_STEP = 45;
-const FIRST_ENEMY_SHOT = 90;
+const FIRST_ENEMY_SHOT = 120;
 
 /** ROTATE зажат без нового нажатия: пушка стреляет, как только остыла. */
 const HOLD = makeBrickInput([], ['rotate']);
@@ -116,6 +117,8 @@ function awaitEnemyShot(game: ShooterGame, limit = 200): { x: number; y: number 
 }
 /** Вражеский выстрел падает на пушку (или рядом, со смещением dx) с верха её зоны; такты идут, пока выстрел не исчезнет или не отнимет жизнь. */
 function strike(game: ShooterGame, dx = 0): BrickEvent[] {
+  run(game,game['immunity']);
+  game.bullets=game.bullets.filter(b=>!b.enemy);
   game.bullets.push({ x: game.x + dx, y: 17, enemy: true });
   const events: BrickEvent[] = [];
   for (let i = 0; i < 16; i++) {
@@ -126,12 +129,18 @@ function strike(game: ShooterGame, dx = 0): BrickEvent[] {
   return events;
 }
 
+function coreHit(game:ShooterGame):BrickEvent[] {
+  const target=game['weakPoint']??game.targets[0]!;
+  game.bullets=[{...target,enemy:false}];return game.step(IDLE);
+}
+
 /**
  * Автопилот: уходит с линии вражеских выстрелов (зона попадания — три столбца), иначе встаёт под ближайший столбец, где есть куда стрелять, и держит ROTATE.
  * Кнопку направления нажимает не чаще раза в три такта — это под силу человеку.
  */
 function pilot(game: ShooterGame, aim: (column: number) => boolean): BrickInput {
-  const unsafe = (column: number): boolean => game.bullets.some((b) => b.enemy && Math.abs(b.x - column) <= 1);
+  if(game['duel'])return arcadePilot(game);
+  const unsafe = (column: number): boolean => game.bullets.some((b) => b.enemy && b.y>=12 && b.y<=18 && Math.abs(b.x - column) <= 1);
   const columns = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((column) => !unsafe(column) && (unsafe(game.x) || aim(column)));
   let goal = game.x;
   if (columns.length && !columns.includes(game.x)) goal = columns.reduce((best, column) => (Math.abs(column - game.x) < Math.abs(best - game.x) ? column : best));
@@ -140,7 +149,7 @@ function pilot(game: ShooterGame, aim: (column: number) => boolean): BrickInput 
   return makeBrickInput(free ? [direction < 0 ? 'left' : 'right'] : [], ['rotate']);
 }
 /** Играет автопилотом, пока не случится событие `stop` (но не дольше `limit` тактов). */
-function fly(game: ShooterGame, aim: (column: number) => boolean, stop: BrickEvent['type'], limit = 800): BrickEvent[] {
+function fly(game: ShooterGame, aim: (column: number) => boolean, stop: BrickEvent['type'], limit = 1600): BrickEvent[] {
   const events: BrickEvent[] = [];
   for (let i = 0; i < limit && !has(events, stop) && game.phase === 'playing'; i++) events.push(...game.step(pilot(game, aim)));
   return events;
@@ -330,7 +339,7 @@ describe('space-invaders: сценарии', () => {
     expect(box(g)).toBe('x0–9 y17–17'); // строка 17 — ещё не потеря
     expect(g.lives).toBe(4);
     expect(g.phase).toBe('playing');
-    run(g, FIRST_ENEMY_SHOT - FORMATION_STEP - 1);
+    run(g, FORMATION_STEP - 1);
     expect(g.lives).toBe(4);
     const events = g.step(IDLE); // второй шаг: строка 18
     expect(has(events, 'lifeLost')).toBe(true);
@@ -442,14 +451,14 @@ describe('dual-shooting: сценарии', () => {
     g.step(makeBrickInput(['rotate']));
     expect(g.bullets.filter((b) => !b.enemy).map((b) => b.x).sort()).toEqual([4, 5]); // стволы рядом: x и x+1
     let events = runUntil(g, IDLE, (e) => has(e, 'hit'), 100);
-    expect(count(events, 'hit')).toBe(2); // оба ствола попали в тот же такт
-    expect(g.score).toBe(10);
-    expect(g.bossHP).toBe(hp - 2);
+    expect(count(events, 'hit')).toBe(1); // ядро принимает один ствол; второй попадает в броню
+    expect(g.score).toBe(5);
+    expect(g.bossHP).toBe(hp - 1);
     expect(g.lives).toBe(4);
 
     // Остальное — зажатым огнём; шкала босса следует за здоровьем, пока оно не больше десяти.
-    events = runUntil(g, HOLD, (e) => has(e, 'win'), 400);
-    expect(count(events, 'hit')).toBe(hp - 2);
+    events = fly(g,()=>true,'win',3000);
+    expect(count(events, 'hit')).toBe(hp - 1);
     expect(g.bossHP).toBe(0);
     expect(g.score).toBe(hp * 5 + LEVEL_BONUS);
     expect(g.lives).toBe(4);
@@ -460,23 +469,22 @@ describe('dual-shooting: сценарии', () => {
     expect(playerBar(g)).toBe(3);
   });
 
-  progress('dual-shooting', 'шкала босса уменьшается вместе со здоровьем, когда оно не больше десяти: каждый залп двумя стволами — две клетки', () => {
+  progress('dual-shooting', 'шкала босса уменьшается вместе со здоровьем, когда оно не больше десяти: каждое попадание в ядро — одна клетка', () => {
     const g = start('dual-shooting');
     g.bossHP = 10;
     g.x = 4;
     expect(bossBar(g)).toBe(10);
     const volleys: { hp: number; bar: number; score: number }[] = [];
-    for (let t = 0; t < 200 && volleys.length < 4; t++) {
-      if (has(g.step(t < 31 ? HOLD : IDLE), 'hit')) volleys.push({ hp: g.bossHP, bar: bossBar(g), score: g.score });
+    for (let i=0;i<4;i++) {
+      expect(has(coreHit(g),'hit')).toBe(true);volleys.push({hp:g.bossHP,bar:bossBar(g),score:g.score});
     }
-    expect(volleys).toEqual([{ hp: 8, bar: 8, score: 10 }, { hp: 6, bar: 6, score: 20 }, { hp: 4, bar: 4, score: 30 }, { hp: 2, bar: 2, score: 40 }]);
+    expect(volleys).toEqual([{hp:9,bar:9,score:5},{hp:8,bar:8,score:10},{hp:7,bar:7,score:15},{hp:6,bar:6,score:20}]);
   });
 
   failure('dual-shooting', 'три попадания по игроку отнимают жизнь; первые два уменьшают только здоровье, поле после потери начинается заново', () => {
     const g = start('dual-shooting');
     const hp = g.bossHP;
-    run(g, 11, HOLD); // два залпа
-    run(g, 50); // долетели: четыре попадания
+    for(let i=0;i<4;i++)coreHit(g); // четыре отдельных попадания в ядро
     expect(g.bossHP).toBe(hp - 4);
     const damaged = g.score;
     expect(damaged).toBe(20);
@@ -722,13 +730,13 @@ describe('meteor-fighter: сценарии', () => {
   progress('meteor-fighter', 'самолёт-босс сбит: каждое попадание +5 и минус единица здоровья босса, победа +100, на новом уровне снова взлёт', () => {
     const g = start('meteor-fighter');
     // Самолёт-босс: нос и три ряда крыльев (столбцы 2–6, строки 2–4).
-    expect(picture(g, 2, 6, 2, 4)).toEqual(['..#..', '.###.', '#####']);
+    expect(picture(g, 2, 6, 2, 4)).toEqual(['..#..', '.###.', '##*##']);
     const hp = g.bossHP;
     expect(hp).toBeGreaterThan(1);
     expect(bossBar(g)).toBe(hp);
     run(g, TAKEOFF);
     expect(playerBar(g)).toBe(3);
-    const events = runUntil(g, HOLD, (e) => has(e, 'win'), 400);
+    const events = fly(g,()=>true,'win',3000);
     expect(count(events, 'hit')).toBe(hp);
     expect(g.bossHP).toBe(0);
     expect(g.targets).toHaveLength(0);
@@ -738,7 +746,7 @@ describe('meteor-fighter: сценарии', () => {
     run(g, SCENE);
     expect(g.level).toBe(2);
     expect(g.bossHP).toBeGreaterThan(0);
-    expect(picture(g, 2, 6, 2, 4)).toEqual(['..#..', '.###.', '#####']);
+    expect(picture(g, 2, 6, 2, 4)).toEqual(['..#..', '.###.', '##*##']);
     // Новый уровень начинается с нового взлёта.
     expect(count(run(g, TAKEOFF, HOLD), 'shot')).toBe(0);
     expect(has(g.step(HOLD), 'shot')).toBe(true);
@@ -760,8 +768,7 @@ describe('meteor-fighter: сценарии', () => {
     const g = start('meteor-fighter');
     run(g, TAKEOFF);
     const hp = g.bossHP;
-    run(g, 11, HOLD); // два выстрела
-    run(g, 70); // долетели: два попадания
+    coreHit(g);coreHit(g); // два попадания в ядро
     expect(g.bossHP).toBe(hp - 2);
     const damaged = g.score;
     expect(damaged).toBe(10);
@@ -805,7 +812,7 @@ describe('meteor-fighter: сценарии', () => {
     const g = start('meteor-fighter');
     run(g, TAKEOFF);
     const before = bossBar(g);
-    runUntil(g, HOLD, (e) => has(e, 'hit'), 200);
+    expect(has(coreHit(g),'hit')).toBe(true);
     expect(bossBar(g)).toBeLessThan(before);
   });
 });
@@ -835,9 +842,7 @@ describe('шкала боссов на всех начальных уровня�
       expect(hp).toBe(id === 'space-invaders' && level === 1 ? 9 : 10);
       for (let left = hp; left > 1; left--) {
         expect(lit(g, 0, 0)).toBe(left);
-        const target = g.targets[0]!;
-        g.bullets = [{ x: target.x, y: target.y + 1, enemy: false }];
-        const events = run(g, 4);
+        const events = coreHit(g);
         expect(count(events, 'hit')).toBe(1);
         expect(g.bossHP).toBe(left - 1);
         expect(lit(g, 0, 0)).toBe(left - 1);

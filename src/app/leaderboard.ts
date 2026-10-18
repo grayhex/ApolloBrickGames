@@ -214,7 +214,7 @@ export class LeaderboardCard {
     const identity = `${value.gameId}:${value.mode}:${value.toyId}:${value.profileId ?? ''}:${value.variantId ?? ''}`,
       eligible = this.pageEligible && standard;
     if (identity === this.selectionKey && eligible === this.eligible) return;
-    const selection = { ...value, rulesetVersion: nativeVariant(value.profileId ?? '',value.variantId ?? '')?.rulesetVersion ?? rulesetFor(value.gameId), startProfile: STANDARD_START };
+    const selection = { ...value, rulesetVersion: nativeVariant(value.profileId ?? '',value.variantId ?? '')?.rulesetVersion ?? rulesetFor(value.gameId,value.mode), startProfile: STANDARD_START };
     let category: string;
     try {
       category = categoryFor(selection);

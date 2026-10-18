@@ -146,3 +146,19 @@ test('catalog accuracy stays descending after filtering and changing language',a
   await page.locator('.enc-filters button').nth(2).click();await sorted();
   await page.locator('#enc-lang').click();await sorted();
 });
+
+test('provenance is mode-specific and independent of evidence percentage and readiness',async({page})=>{
+  await page.goto('./encyclopedia?game=honeybee');
+  await expect(page.locator('#modes .game-origin')).toHaveCount(8);
+  await expect(page.locator('#modes .game-origin').first()).toHaveAttribute('data-origin','rom');
+  await expect(page.locator('#modes [data-origin=ai]')).toHaveCount(7);
+  await expect(page.locator('.enc-accuracy strong')).toHaveText('90%');
+  await page.goto('./encyclopedia?game=maze');
+  await expect(page.locator('.enc-article__head .game-origin')).toHaveAttribute('data-origin','ai');
+  await expect(page.locator('.enc-article__head .gpanel__stage')).toHaveAttribute('data-stage','beta');
+  await expect(page.locator('.enc-accuracy strong')).toHaveText('30%');
+  await expect(page.locator('#rules')).toContainText('15 секунд');
+  await page.locator('#enc-lang').click();await page.locator('#enc-theme').click();
+  await expect(page.locator('#rules')).toContainText('15 seconds');
+  await expect(page.locator('.enc-article__head .gpanel__stage')).toHaveAttribute('title',/complete game loop/);
+});

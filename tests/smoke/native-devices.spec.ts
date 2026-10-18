@@ -12,6 +12,7 @@ for(const toy of ['e88','apollo-b0202'] as const){
     // The original cherry segment is not a sound indicator. Ghosts never become lit on mute.
     const cherries=page.locator('.native__lcd [id="181_2"]');
     if(toy==='e88'){
+      await expect(page.locator('#guide-game option')).toHaveCount(8);
       await expect(cherries).not.toHaveCSS('opacity','1');
       await page.locator('#base [data-key=sound]').click();
       await expect(cherries).not.toHaveCSS('opacity','1');
@@ -25,7 +26,7 @@ for(const toy of ['e88','apollo-b0202'] as const){
     await page.locator('#base [data-key=down]').click();
     await expect(area).toHaveAttribute('data-entry',entry);
     await page.locator('.gnav__btn--launch').click();await expect(area).toHaveAttribute('data-phase','playing');
-    await expect(page.locator('#guide-game')).toHaveValue(toy==='e88'?'e88.1':'apollo-b0202.H01');
+    await expect(page.locator('#guide-game')).toHaveValue(toy==='e88'?'e88.2':'apollo-b0202.H01');
     await page.locator('#base [data-key=sp]').click();await expect(area).toHaveAttribute('data-phase','paused');
     const tick=await area.getAttribute('data-tick');await page.waitForTimeout(120);expect(await area.getAttribute('data-tick')).toBe(tick);
     await page.locator('#view-screen').click();await expect(page.locator('#toy')).toHaveAttribute('data-view','screen');
@@ -62,21 +63,22 @@ for(const toy of ['e88','apollo-b0202'] as const){
     }
   });
 }
-test('native admin assigns whole games and nests modifications through JSON export',async({page})=>{
+test('E88 admin assigns eight independent entries and exports their order',async({page})=>{
   const config=validateConfig(defaults);
   await page.route('**/api/config',route=>route.fulfill({json:{config,revision:8}}));await page.goto('./admin');
   await page.getByRole('button',{name:'Brick Game E-88 · 8 in 1',exact:true}).click();
   await expect(page.locator('.admin__content')).toContainText('Оригинальный набор');
   await page.getByLabel('Выбрана при включении').selectOption('e88.5');
-  await page.locator('[data-entry="e88.5"]').getByRole('button',{name:'↑',exact:true}).click();
-  await page.getByLabel('Модификация 4',{exact:true}).uncheck();
-  await expect(page.locator('.admin__games>li')).toHaveCount(5);
+  for(let i=0;i<4;i++)await page.locator('[data-entry="e88.5"]').getByRole('button',{name:'↑',exact:true}).click();
+  await expect(page.locator('.admin__modifications')).toHaveCount(0);
+  await page.locator('[data-entry="e88.4"]').getByRole('button',{name:'Удалить',exact:true}).click();
+  await expect(page.locator('.admin__games>li')).toHaveCount(7);
   await expect(page.locator('.admin__content')).toContainText('Изменённый набор');
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать JSON'}).click();
   const file=await download;expect(file.suggestedFilename()).toBe('default.json');
   const stream=await file.createReadStream();const chunks:Buffer[]=[];for await(const chunk of stream!)chunks.push(Buffer.from(chunk));
   const exported=validateConfig(JSON.parse(Buffer.concat(chunks).toString()));
-  expect(exported.toys.e88.defaultEntry).toBe('e88.5');expect(exported.toys.e88.games[0]!.entryId).toBe('e88.5');expect(exported.toys.e88.games.find(g=>g.id==='tetris')!.variants).toEqual(['e88.2','e88.3']);
+  expect(exported.toys.e88.defaultEntry).toBe('e88.5');expect(exported.toys.e88.games[0]!.entryId).toBe('e88.5');expect(exported.toys.e88.games.map(g=>g.entryId)).toEqual(['e88.5','e88.1','e88.2','e88.3','e88.6','e88.7','e88.8']);
 });
 
 test('B0202 lists games once and hides unfinished modes; H02 stays on the physical menu',async({page})=>{
@@ -116,6 +118,7 @@ test('B0202 starts each restored base game and keeps Dice 02 behind MODE',async(
  for(const code of ['B01','C01','E01','F01','G01','I01']){
   await page.locator('#guide-game').selectOption('apollo-b0202.'+code);
   await expect(page.locator('.gpanel__stage')).toHaveAttribute('data-stage',code==='E01'?'beta':'alpha');
+  await expect(page.locator('#gpanel .game-origin')).toHaveAttribute('data-origin','rom');
   await page.locator('.gnav__btn--launch').click();await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
   await page.locator('#base [data-key=fire]').click();
  }

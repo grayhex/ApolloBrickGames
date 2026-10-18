@@ -361,19 +361,19 @@ for(const toy of ['brickgame','clock99','seabattle','tank168'] as const)test(`${
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
 });
 
-test('universal Brick Game descriptions mark alpha/beta accuracy in both languages and themes',async({page})=>{
+test('universal Brick Game descriptions separate ROM/AI provenance from alpha/beta readiness in both languages and themes',async({page})=>{
   await open(page,'?toy=brickgame',config=>{
     config.toys.brickgame.games=[{id:'maze'},{id:'tank'},{id:'snake'}];config.toys.brickgame.defaultGame='maze';
   });
   const select=page.locator('#side-info select');
   const badge=page.locator('#gpanel .gpanel__stage');
-  await expect(badge).toHaveText('αАльфа');await expect(badge).toHaveAttribute('title',/30%/);
-  await select.selectOption('tank');await expect(badge).toHaveText('βБета');await expect(badge).toHaveAttribute('title',/60%/);
-  await select.selectOption('snake');await expect(badge).toHaveCount(0);
-  await select.selectOption('maze');await page.locator('#corner-lang').click();await expect(badge).toHaveText('αAlpha');
+  await expect(badge).toHaveText('βБета');await expect(page.locator('#gpanel .game-origin')).toHaveAttribute('data-origin','ai');
+  await select.selectOption('tank');await expect(badge).toHaveText('βБета');await expect(badge).toHaveAttribute('title',/Полный игровой цикл/);await expect(page.locator('#gpanel .game-origin')).toHaveAttribute('data-origin','rom');
+  await select.selectOption('snake');await expect(badge).toHaveText('βБета');
+  await select.selectOption('maze');await page.locator('#corner-lang').click();await expect(badge).toHaveText('βBeta');
   await page.locator('#corner-theme').click();await expect(badge).toBeVisible();
-  await expect(badge).toHaveAttribute('aria-label',/30%/);
-  await page.locator('.toysw__item[data-toy=tank168]').click();await expect(badge).toHaveCount(0);
+  await expect(badge).toHaveAttribute('aria-label',/complete game loop/);
+  await page.locator('.toysw__item[data-toy=tank168]').click();await expect(page.locator('#gpanel .game-origin')).toBeVisible();
 });
 
 test('clear and smoke shells reveal decorative electronics, without covering controls',async({page})=>{
