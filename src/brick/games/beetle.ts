@@ -73,7 +73,7 @@ export class BeetleGame extends BrickBase {
     return false;
   }
   private lose(): void {
-    this.setLives((this.lives??1)-1);this.emit({type:'lifeLost'});
+    this.setLives((this.lives??1)-1);this.emit({type:'crash'});this.emit({type:'lifeLost'});
     if(!this.lives)this.gameOver();else this.cutscene(60,null,()=>this.setup());
   }
   protected draw(): Uint8Array {

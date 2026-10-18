@@ -33,6 +33,10 @@ describe('Frog A01 reference, original B0202 code', () => {
     g.step(input(['rotate']));expect(g.score).toBe(crossing.score);expect(g.speed).toBe(crossing.speedAfter+1);expect(g.y).toBe(19);
     for(let i=0;i<117;i++)g.step(idle);expect([g.x,g.y]).toEqual(crossing.head);
   });
+  it('emits one audible crash along with lifeLost, rather than a silent loss',()=>{
+    const g=new B0202FrogGame();g.start();g.x=0;
+    expect(g.step(input(['left']))).toEqual([{type:'crash'},{type:'lifeLost'}]);expect(g.lives).toBe(3);
+  });
   it('preserves canonical indices and the other documented donor variants',()=>{
     expect(froggerDef.modes).toHaveLength(16);expect(froggerDef.create({mode:0})).toBeInstanceOf(B0202FrogGame);
     expect(froggerDef.create({mode:16})).toBeInstanceOf(B0202FrogGame);

@@ -76,7 +76,7 @@ export class B0202FrogGame extends BrickBase {
     if (this.x < 0 || this.x > 9 || this.road[this.y * 10 + this.x]) this.lose();
   }
   private lose(): void {
-    this.setLives((this.lives ?? 1) - 1); this.emit({ type: 'lifeLost' });
+    this.setLives((this.lives ?? 1) - 1); this.emit({ type: 'crash' }); this.emit({ type: 'lifeLost' });
     if (!this.lives) this.gameOver();
     else this.cutscene(60, null, () => { this.x = 5; this.y = 0; this.keys.reset(); });
   }

@@ -5,7 +5,7 @@ import { LIBRARY_GAMES } from '../../src/brick/games/library';
 import { NEUTRAL_BRICK_INPUT as idle, makeBrickInput as input } from '../../src/brick/types';
 import { BRICK_GUIDES } from '../../src/brick/guides';
 import { guideProblems } from '../../src/brick/guide';
-const run=(g:BeetleGame,n:number)=>{for(let i=0;i<n;i++)g.step(idle);};
+const run=(g:BeetleGame,n:number)=>Array.from({length:n},()=>g.step(idle)).flat();
 describe('Beetle B0202 D01 reference',()=>{
   it('keeps the canonical main slot; the seven wiki variants retain their implementation',()=>{
     expect(LIBRARY_GAMES.honeybee.create({mode:0})).toBeInstanceOf(BeetleGame);
@@ -38,7 +38,8 @@ describe('Beetle B0202 D01 reference',()=>{
   it('wraps missed enemies, loses a life only at contact, and advances after reserves without a +100 bonus',()=>{
     const g=new BeetleGame();g.start();g.x=4;g.enemies=[{x:0,y:2}];run(g,27);
     expect(g.enemies[0]!.y).toBe(16);expect(g.lives).toBe(4);
-    const h=new BeetleGame();h.start();h.enemies=[{x:4,y:2}];run(h,27);expect(h.lives).toBe(3);
+    const h=new BeetleGame();h.start();h.enemies=[{x:4,y:2}];const events=run(h,27);expect(h.lives).toBe(3);
+    expect(events.filter(e=>e.type==='crash')).toHaveLength(1);expect(events.filter(e=>e.type==='lifeLost')).toHaveLength(1);
     const win=new BeetleGame();win.start();win.enemies=[{x:4,y:10}];win.formation.fill(0);
     win.step(input(['rotate']));expect(win.score).toBe(1);expect(win.level).toBe(2);
     expect(win.enemies[0]!.y).toBe(17);expect(win.enemies[0]!.x).toBe(7);

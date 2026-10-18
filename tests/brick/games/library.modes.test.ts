@@ -155,7 +155,7 @@ const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   pong: ['df728dae', '319d8a01'],
   'pong-double': ['4abf94c0', 'a6760919'],
   'pneumatic-ball': ['ef2fc58c', '2a0853b0'],
-  honeybee: ['c04080b4', 'd3ad67dc'],
+  honeybee: ['cbe2702d', '51f0f149'],
   'obstacle-race': ['c30c06a1', '4e3ed4c9'],
   'matching-blocks': ['e54e7f75', '58487de9'],
   'whack-a-mole': ['a45bec5b', '7eb5f3ad'],
