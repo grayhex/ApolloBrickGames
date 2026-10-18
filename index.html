@@ -42,17 +42,18 @@
             <span class="dev" data-device="gamepad" data-state="ready" title="Геймпад" hidden></span>
             <button type="button" class="dev dev--pause" data-device="pause" data-state="off" title="Игра не на паузе" aria-pressed="false"></button>
           </span>
-        <button type="button" class="corner__btn" id="corner-settings" title="Настройки" aria-label="Настройки" data-i18n-attrs="title=corner.settings;aria-label=corner.settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm8.2 4.4-.1-2 1.9-1.4-1.8-3.2-2.2.8a7.6 7.6 0 0 0-1.7-1l-.4-2.3h-3.6l-.4 2.3a7.6 7.6 0 0 0-1.7 1l-2.2-.8-1.8 3.2L6 11l-.1 2 .1 0-1.9 1.5 1.8 3.2 2.2-.9c.5.4 1.1.7 1.7 1l.4 2.3h3.6l.4-2.3c.6-.3 1.2-.6 1.7-1l2.2.9 1.8-3.2-1.9-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        </button>
       <nav class="corner" id="corner" aria-label="Сервис" data-i18n-attrs="aria-label=corner.nav">
+        <button type="button" class="corner__btn" id="corner-settings" title="Настройки" aria-label="Настройки" data-i18n-attrs="title=corner.settings;aria-label=corner.settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.67 4.14a2.34 2.34 0 0 1 4.66 0 2.34 2.34 0 0 0 3.32 1.92 2.34 2.34 0 0 1 2.33 4.03 2.34 2.34 0 0 0 0 3.82 2.34 2.34 0 0 1-2.33 4.03 2.34 2.34 0 0 0-3.32 1.92 2.34 2.34 0 0 1-4.66 0 2.34 2.34 0 0 0-3.32-1.92 2.34 2.34 0 0 1-2.33-4.03 2.34 2.34 0 0 0 0-3.82 2.34 2.34 0 0 1 2.33-4.03 2.34 2.34 0 0 0 3.32-1.92Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
         <button type="button" class="corner__btn" id="corner-theme" data-theme="dark" aria-label="Светлый фон" title="Светлый фон"></button>
         <button type="button" class="corner__btn corner__btn--lang" id="corner-lang" data-lang="ru" aria-label="Язык интерфейса" title="Сменить язык на English">
           <span class="lang__opt" data-opt="ru">RU</span><span class="lang__sep" aria-hidden="true">/</span><span class="lang__opt" data-opt="en">EN</span>
         </button>
 
-        <button type="button" class="corner__btn" id="corner-help" title="Справка" aria-label="Справка" data-i18n-attrs="title=corner.help;aria-label=corner.help">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.9 2.4c-.9.5-1.3 1-1.3 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg>
+        <button type="button" class="corner__btn corner__btn--book" id="corner-help" title="Энциклопедия игр" aria-label="Энциклопедия игр" data-i18n-attrs="title=corner.help;aria-label=corner.help">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5C8.7 2.8 5.3 2.8 2 4v15c3.3-1.2 6.7-1.2 10 1 3.3-2.2 6.7-2.2 10-1V4c-3.3-1.2-6.7-1.2-10 1Zm0 0v15M5 8h3M5 11h3m8-3h3m-3 3h3"/></svg>
+          <span data-i18n="corner.help">Энциклопедия игр</span>
         </button>
 
       </nav>
@@ -454,7 +455,6 @@
     <div class="editor" id="editor-root" hidden></div>
 
     <dialog class="settings" id="settings"></dialog>
-    <dialog class="settings help" id="help"></dialog>
     <dialog class="settings box-dialog" id="box-dialog"></dialog>
     <noscript>Для игры нужен JavaScript.</noscript>
     <script>

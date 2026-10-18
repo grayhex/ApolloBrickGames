@@ -82,11 +82,12 @@ const GAP = 1;
  * Холст с зацикленной записью. Цвет — текущий цвет текста панели (холст прозрачный), поэтому подходит и тёмной, и светлой теме.
  * При «уменьшении движения» показывается один кадр. Таймер сам останавливается, когда холст убран из страницы (панель перерисована).
  */
-export function clipCanvas(clip: Clip, label: string): HTMLCanvasElement {
+export function clipCanvas(clip: Clip, label: string, options: { scale?: number; signal?: AbortSignal; playing?: () => boolean } = {}): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
-  const pitch = CELL + GAP;
-  const width = BRICK_COLS * pitch - GAP;
-  const height = BRICK_ROWS * pitch - GAP;
+  const scale = options.scale ?? 1;
+  const pitch = (CELL + GAP) * scale;
+  const width = BRICK_COLS * pitch - GAP * scale;
+  const height = BRICK_ROWS * pitch - GAP * scale;
   const ratio = Math.max(1, window.devicePixelRatio || 1);
   canvas.width = Math.round(width * ratio);
   canvas.height = Math.round(height * ratio);
@@ -108,24 +109,31 @@ export function clipCanvas(clip: Clip, label: string): HTMLCanvasElement {
         const value = frame[y * BRICK_COLS + x] ?? 0;
         ctx.globalAlpha = value === 1 || (value === 2 && blinkOn) ? 1 : 0.09;
         ctx.fillStyle = ink;
-        ctx.fillRect(x * pitch, y * pitch, CELL, CELL);
+        ctx.fillRect(x * pitch, y * pitch, CELL * scale, CELL * scale);
       }
     ctx.globalAlpha = 1;
   };
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!options.playing && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     queueMicrotask(() => draw(Math.floor(clip.frames.length / 2)));
     return canvas;
   }
   let index = 0;
   let seen = false;
   let waited = 0;
+  let visible = true;
+  const observer = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; });
+  observer.observe(canvas);
+  const stop = (): void => { window.clearInterval(timer); observer.disconnect(); };
   const timer = window.setInterval(() => {
     if (canvas.isConnected) {
       seen = true;
+      if (document.hidden || !visible) return;
+      if (options.playing?.() === false) return;
       draw(index++);
       canvas.dataset['frame'] = String(index % clip.frames.length);
-    } else if (seen || ++waited > 30) window.clearInterval(timer);
+    } else if (seen || ++waited > 30) stop();
   }, 1000 / CLIP_FPS);
+  options.signal?.addEventListener('abort', stop, { once: true });
   queueMicrotask(() => draw(0));
   return canvas;
 }

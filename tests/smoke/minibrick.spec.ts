@@ -18,9 +18,7 @@ test('Mini Brick Game: выключенный LCD, собственное упр
   await expect(page.locator('#minibrick-notice')).toBeVisible();
   await page.keyboard.press('Escape');
   await page.locator('#corner-lang').click();
-  await page.locator('#corner-help').click();
-  await expect(page.locator('#help')).toContainText('Red and blue folding shell');
-  await page.keyboard.press('Escape');
+  await expect(page.locator('#corner-help')).toHaveAccessibleName('Game encyclopedia');
   await page.locator('#corner-settings').click();
   await expect(page.locator('#settings .shellpick')).toHaveCount(0);
   await page.keyboard.press('Escape');

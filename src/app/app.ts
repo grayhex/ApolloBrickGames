@@ -31,7 +31,7 @@ import { boundSources, keySource } from '../input/bindings';
 import { CableGlitch } from './cableGlitch';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
-import { HelpDialog } from './help';
+import { openEncyclopedia } from './help';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
@@ -138,7 +138,6 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     lidFront: byId<HTMLElement>('lid-front'),
     lidCover: byId<HTMLButtonElement>('lid-cover'),
     lower: byId<HTMLElement>('lower'),
-    help: byId<HTMLDialogElement>('help'),
     boxDialog: byId<HTMLDialogElement>('box-dialog'),
     srStatus: byId<HTMLElement>('sr-status'),
     lcdWindow: byId<HTMLElement>('lcd-window'),
@@ -230,7 +229,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   // Клавиатура принадлежит игре, пока не открыт диалог и фокус не в кнопке/поле страницы: на пустом месте
   // страницы или на игровой области клавиши работают без предварительного клика.
   const isKeyboardActive = (): boolean => {
-    if (settingsDialog.isOpen || helpDialog.isOpen || infoPanel?.boxOpen) return false;
+    if (settingsDialog.isOpen || infoPanel?.boxOpen) return false;
     if (view === 'closed') return false; // пока крышка закрыта, игре клавиши не принадлежат: Enter или пробел открывают игрушку
     const active = document.activeElement;
     return active === null || active === document.body || refs.gameArea.contains(active);
@@ -344,7 +343,6 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     onOpen: openMenu,
     onClose: closeMenu,
   });
-  const helpDialog = new HelpDialog(refs.help, hub, { onOpen: openMenu, onClose: closeMenu }, TOYS.mario, signal);
 
   function refocusGame(): void {
     refs.gameArea.focus({ preventScroll: true });
@@ -359,11 +357,10 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   /** Навигация по настройкам с геймпада: вверх/вниз — фокус, подтвердить — нажатие, назад — закрыть. */
   function handleMenuInput(frame: InputFrame): void {
     if (settingsDialog.capturing) return;
-    const dialog = settingsDialog.isOpen ? refs.settings : helpDialog.isOpen ? refs.help : infoPanel?.boxOpen ? refs.boxDialog : null;
+    const dialog = settingsDialog.isOpen ? refs.settings : infoPanel?.boxOpen ? refs.boxDialog : null;
     if (!dialog) return;
     if (frame.pressed & NAV_BACK) {
       settingsDialog.close();
-      helpDialog.close();
       infoPanel?.closeBox();
       return;
     }
@@ -758,14 +755,14 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
   window.addEventListener('keydown', (event) => {
     if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.code !== 'Enter' && event.code !== 'Space') return;
-    if (settingsDialog.isOpen || helpDialog.isOpen || infoPanel?.boxOpen) return;
+    if (settingsDialog.isOpen || infoPanel?.boxOpen) return;
     const active = document.activeElement;
     if (active !== null && active !== document.body && active !== refs.lidCover) return; // фокус в кнопке или поле — клавиша им и нужна
     event.preventDefault();
     setView('full');
   }, { signal });
   refs.cornerSettings.addEventListener('click', () => settingsDialog.open(), { signal });
-  refs.cornerHelp.addEventListener('click', () => helpDialog.open(), { signal });
+  refs.cornerHelp.addEventListener('click', () => openEncyclopedia('mario'), { signal });
   // Шлейф можно «зажать»: см. CableGlitch. Захват указателя — чтобы отпускание засчиталось, где бы ни оказался курсор.
   const band = refs.toy.querySelector<HTMLElement>('.toy__band');
   if (band) {

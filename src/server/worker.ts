@@ -61,9 +61,11 @@ export default {
       return env.CONFIG.get(env.CONFIG.idFromName('site')).fetch(request);
     }
     if (url.pathname.startsWith('/api/')) return json({ error:'Not found' },404);
-    if (url.pathname === '/admin' || url.pathname === '/admin/') {
+    if (['/admin','/admin/','/encyclopedia','/encyclopedia/'].includes(url.pathname)) {
       const response = await env.ASSETS.fetch(new Request(new URL('/',url),request));
-      const headers = new Headers(response.headers); headers.set('Cache-Control','no-store'); headers.set('X-Robots-Tag','noindex, nofollow'); return new Response(response.body,{ status:response.status,headers });
+      const headers = new Headers(response.headers); headers.set('Cache-Control','no-store');
+      if (url.pathname.startsWith('/admin')) headers.set('X-Robots-Tag','noindex, nofollow');
+      return new Response(response.body,{ status:response.status,headers });
     }
     return env.ASSETS.fetch(request);
   },

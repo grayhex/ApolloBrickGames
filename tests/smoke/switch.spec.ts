@@ -119,32 +119,13 @@ test.describe('«168 в 1 танк»', () => {
     expect(await label()).not.toBe('#2b8a4e');
   });
 
-  test('справка: набор игр «168 в 1 танк» по списку владельца (девять игр меню); восстановлены все девять, правила — по открытому симулятору', async ({
-    page,
-  }) => {
+  test('энциклопедия после переключения открывает текущую игру и её источники', async ({page}) => {
     await ready(page, '?toy=tank168&power=on');
     await page.locator('#corner-help').click();
-    const games = page.locator('#help .games__row');
-    await expect(games).toHaveCount(9);
-    expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['game']))).toEqual([
-      'tank',
-      'frog',
-      'racing',
-      'racing-shooting',
-      'shooting-array',
-      'shooting-figures',
-      'construction',
-      'tetris',
-      'tetris-pentix',
-    ]);
-    expect(await games.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset['status']))).toEqual(Array(9).fill('ready'));
-    await expect(page.locator('#help .games__row[data-game="tetris"]')).toContainText('есть (приближённо)');
-    await expect(page.locator('#help .games__row[data-game="tetris"] .games__name')).toHaveText('8. Тетрис (51)'); // знак игры в меню и число вариантов
-    await expect(page.locator('#help .games__row[data-game="tank"] .games__name')).toHaveText('1. Танки (5)');
-    await expect(page.locator('#help .games__row[data-game="racing"] .games__name')).toHaveText('3. Гонки');
-    await expect(page.locator('#help #device-games')).toContainText('168');
-    await expect(page.locator('#help')).toContainText('ROTATE выбирает игру'); // как листается меню
-    await page.keyboard.press('Escape');
+    await expect(page).toHaveURL(/game=tank&toy=tank168/);
+    await expect(page.locator('.enc-article h2')).toHaveText('Танки');
+    await expect(page.locator('#sources')).toContainText('n0Live');
+    await expect(page.locator('.enc-article')).not.toContainText('есть (приближённо)');
   });
 
   test('слева справка с наклейкой этой игрушки', async ({ page }) => {
@@ -314,11 +295,9 @@ test.describe('переключение игрушек на месте', () => {
     await switchTo(page, 'clock99');
     await switchTo(page, 'seabattle');
     await page.locator('#corner-help').click();
-    await expect(page.locator('#help')).toBeVisible();
-    await expect(page.locator('#help .games__row')).toHaveCount(6); // набор «Морского боя» (режимы A–F), а не «Часов+99»
-    await expect(page.locator('#help .help__table th').first()).toHaveText('ON/OFF');
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#help')).toBeHidden();
+    await expect(page).toHaveURL(/game=sea-battle&toy=seabattle/);
+    await expect(page.locator('.enc-article h2')).toHaveText('Морской бой');
+    await page.goBack();
     await page.locator('#corner-settings').click();
     await expect(page.locator('#settings')).toBeVisible();
     await page.keyboard.press('Escape');

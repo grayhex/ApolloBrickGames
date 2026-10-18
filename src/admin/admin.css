@@ -31,3 +31,8 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 .admin__general { display:grid; gap:10px; margin-bottom:18px; }
 .admin__general h2 { margin:0; }
 .admin__general label { display:grid; gap:6px; max-width:320px; }
+.admin__encyclopedia { margin-block:24px; }
+.admin__encyclopedia label { display:block; margin-block:12px; }
+.admin__encyclopedia :is(input,select) { display:block; width:100%; min-width:0; box-sizing:border-box; margin-top:6px; }
+.admin__encyclopedia .admin__row-actions { flex-wrap:wrap; }
+.admin__image-preview img { display:block; max-width:100%; max-height:320px; object-fit:contain; border-radius:12px; margin-top:16px; }

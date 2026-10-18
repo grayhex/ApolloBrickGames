@@ -82,7 +82,7 @@ test('по умолчанию открывается уровень 1 (mario-1) 
   for (const word of ['DEMO', 'демо', 'Готов к старту', 'Кликните', 'Клавиатура:', 'тестовая комната', 'Таймер']) {
     expect(text, word).not.toContain(word);
   }
-  await expect(page.locator('#corner button, #corner a')).toHaveCount(3); // фон, язык, справка
+  await expect(page.locator('#corner button, #corner a')).toHaveCount(4); // управление, фон, язык, энциклопедия
   await expect(page.locator('#devices')).toBeVisible();
   await expect(page.locator('#corner-theme')).toBeVisible();
   await expect(page.locator('#corner-lang')).toBeVisible();
@@ -179,12 +179,6 @@ test('переназначение прыжка из настроек дейст
   await expect(row).toContainText('J');
   await page.getByRole('button', { name: 'Закрыть' }).click();
   await expect(page.locator('#game-area')).toBeFocused(); // после закрытия настроек управление вернулось игре
-  // Справка показывает актуальные клавиши.
-  await page.locator('#corner-help').click();
-  await expect(page.locator('#help tr', { hasText: 'JUMP' })).toContainText('J');
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#help')).toBeHidden();
-
   await page.keyboard.press('Enter');
   await expect.poll(phase(page)).toBe('playing');
   await expect.poll(entry(page), { timeout: 6000 }).toBe('off');

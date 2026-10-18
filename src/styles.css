@@ -2456,7 +2456,7 @@ body:not([data-booting]) .chrome-dock {
 .topleft { position: fixed; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 14px; }
 body:not([data-chrome='toy']) .topleft { display: none; }
 /* On wide windows the dock sits over the help panel: same centre, same width (set by dockAlign.ts). */
-.topleft[data-aligned] { left: var(--dock-left); width: var(--dock-width); box-sizing: border-box; justify-content: space-between; padding-inline: 10px; }
+.topleft[data-aligned] { left: var(--dock-left); width: var(--dock-width); box-sizing: border-box; justify-content: space-between; padding-inline: 6px; }
 body:not([data-booting]) .topleft { animation: dock-arrive 480ms cubic-bezier(.2,.8,.2,1) both; }
 
 :is(.chrome-dock .corner__btn) {
@@ -4636,3 +4636,17 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 .gclip { color:var(--text); }
 .gclip__canvas { display:block; margin-inline:auto; padding:4px; background:color-mix(in srgb,var(--lcd,#bbb) 26%,transparent); border-radius:6px; }
 .gquick__schemes .gclip { max-width:145px; }
+
+/* One group for control settings, theme, language and the wider encyclopedia entry. */
+.topleft #corner { flex:1; justify-content:flex-end; gap:2px; min-width:0; }
+.topleft #corner-settings { flex-shrink:0; }
+.topleft .corner__btn--book { display:flex; align-items:center; justify-content:center; gap:6px; width:auto; min-width:44px; padding:5px 7px; }
+.corner__btn--book>span { max-width:77px; font-size:10px; line-height:1.25; text-align:left; }
+.topleft .corner__btn--book svg { flex-shrink:0; }
+.topleft[data-aligned] { gap:4px; }
+.topleft[data-aligned] .corner__btn:not(.corner__btn--book):not(.corner__btn--lang) { width:29px; }
+.topleft[data-aligned] .corner__btn--lang { width:48px; }
+.gquick__schemes:has(>.gscheme:only-child) { grid-template-columns:1fr; }
+.gquick__schemes>.gscheme:only-child { max-width:180px; margin-inline:auto; }
+@media(max-width:1399px) { .corner__btn--book>span { display:none; } .topleft .corner__btn--book { padding:5px 9px; } }
+@media(max-width:400px) { .topleft .corner__btn--lang { min-width:38px; } .topleft .corner__btn--book { width:36px; min-width:36px; padding:5px 4px; } }

@@ -21,20 +21,7 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
     await page.locator('[data-key="fire"]').click(); // физическая RESET
     await expect(area).toHaveAttribute('data-menu', 'menu');
 
-    await page.locator('#corner-help').click();
-    const help = page.locator('#help');
-    await expect(help).toBeVisible();
-    // У тетриса в подробной справке остались ROTATE и DOWN, скрытого броска нет.
-    const tetris = help.locator('.help__game[data-game="tetris"]');
-    await tetris.locator('summary').first().click();
-    await expect(tetris.locator('.gctl')).not.toContainText('FIRE');
-    await expect(tetris.locator('.gctl')).not.toContainText('Бросить');
-    await expect(tetris.locator('.gctl')).toContainText('ROTATE');
-    await expect(help).not.toContainText('левая — мгновенное падение');
-    expect(await help.locator('.help__game[data-game] .gctl').allTextContents()).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('клавиша «огонь»')]),
-    );
-    await page.keyboard.press('Escape');
+    await expect(page.locator('#help')).toHaveCount(0);
 
     await page.locator('#corner-settings').click();
     const settings = page.locator('#settings');

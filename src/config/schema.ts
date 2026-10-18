@@ -26,6 +26,15 @@ export interface SiteConfig {
   /** Язык интерфейса по умолчанию, пока игрок не выбрал свой (RU / EN); в старых документах нет — русский. */
   language: Lang;
   toys: Record<ConfigToyId, ConfigToy>;
+  /** Original game illustrations, published with the collection configuration. */
+  encyclopedia?: Partial<Record<GameId, { imageUrl: string }>>;
+}
+export function illustrationUrl(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 2048) throw new Error('Нужна ссылка HTTPS на иллюстрацию (до 2048 символов).');
+  let url: URL;
+  try { url = new URL(value); } catch { throw new Error('Некорректная ссылка на иллюстрацию.'); }
+  if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Для иллюстрации нужна ссылка HTTPS без логина и пароля.');
+  return url.href;
 }
 const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: ['gray', 'black'], defaultShell: 'gray', thumbShell: DEFAULT_THUMB_SHELL };
 /** Computed at load time: published four-toy documents remain valid, and orphan games never disappear. */
@@ -92,5 +101,13 @@ export function validateConfig(value: unknown): SiteConfig {
       throw new Error(`${id}: стартовая игра должна входить в меню.`);
     toys[id] = { games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, thumbShell: thumbShell as Shell, defaultGame: source['defaultGame'] as GameId };
   }
-  return { version: 1, language, toys };
+  const encyclopedia: NonNullable<SiteConfig['encyclopedia']> = {};
+  if (value['encyclopedia'] !== undefined) {
+    if (!record(value['encyclopedia'])) throw new Error('Некорректный каталог иллюстраций.');
+    for (const [id, entry] of Object.entries(value['encyclopedia'])) {
+      if (!isGameId(id) || !record(entry)) throw new Error('Неизвестная игра в каталоге иллюстраций.');
+      encyclopedia[id] = { imageUrl: illustrationUrl(entry['imageUrl']) };
+    }
+  }
+  return { version: 1, language, toys, ...(Object.keys(encyclopedia).length ? { encyclopedia } : {}) };
 }

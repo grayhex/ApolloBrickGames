@@ -1,7 +1,6 @@
-import type { GameGuideData, GuideButton, GuideControl, GuideScheme, GuideText } from '../brick/guide';
+import type { GameGuideData, GuideButton, GuideControl, GuideScheme } from '../brick/guide';
 import type { BrickGameDef } from '../brick/types';
 import type { Lang } from '../input/lang';
-import { clipCanvas, clipFor } from './demoClip';
 import { h } from './dom';
 import { t } from './i18n';
 
@@ -44,15 +43,6 @@ export function schemeEl(scheme: GuideScheme, lang: Lang): HTMLElement {
   return h('figure', { class: 'gscheme' }, grid, h('figcaption', { class: 'gscheme__cap' }, scheme.caption[lang]));
 }
 
-/** Раскрывающийся раздел вкладки. */
-function section(title: string, open: boolean, name: string, ...body: HTMLElement[]): HTMLElement {
-  const details = h('details', { class: 'gsec', 'data-sec': name }, h('summary', { class: 'gsec__sum' }, title), ...body);
-  if (open) details.setAttribute('open', '');
-  return details;
-}
-
-const line = (text: GuideText, lang: Lang, className = 'gtext'): HTMLElement => h('p', { class: className }, text[lang]);
-
 /**
  * Названия вариантов, которые показывает консоль: `modes` — индексы в списке игры (без них — все реализованные); номер на экране консоли — позиция + 1.
  */
@@ -64,77 +54,9 @@ export function modeLabels(def: BrickGameDef, modes: readonly number[] | undefin
   });
 }
 
-/** Все блоки описания игры (после шапки с названием и значками). */
-export function guideBlocks(guide: GameGuideData, def: BrickGameDef | undefined, modes: readonly number[] | undefined, lang: Lang): HTMLElement[] {
-  const blocks: HTMLElement[] = [
-    line(guide.summary, lang),
-    h('p', { class: 'gtext gpanel__goal' }, h('b', {}, `${t('games.goal')}: `), guide.goal[lang]),
-    h(
-      'ul',
-      { class: 'gfacts' },
-      ...guide.facts.map((fact) => h('li', {}, h('b', {}, fact.value), h('span', {}, fact.label[lang]))),
-    ),
-    section(t('games.sec.rules'), true, 'rules', h('ol', { class: 'grules' }, ...guide.rules.map((rule) => h('li', {}, rule[lang])))),
-    section(
-      t('games.sec.controls'),
-      false,
-      'controls',
-      h(
-        'dl',
-        { class: 'gctl' },
-        ...guide.controls.flatMap((control) => [h('dt', {}, h('kbd', { class: 'kbd' }, controlCap(control))), h('dd', {}, control.text[lang])]),
-      ),
-    ),
-  ];
-  const scoring: HTMLElement[] = [];
-  if (guide.scoring.length > 0) {
-    scoring.push(
-      h(
-        'ul',
-        { class: 'gscore' },
-        ...guide.scoring.map((score) => h('li', {}, h('span', {}, score.what[lang]), h('b', {}, score.points))),
-      ),
-    );
-  }
-  scoring.push(
-    h('p', { class: 'gtext' }, h('b', {}, `${t('games.progress.h')}: `), guide.progression[lang]),
-    h('p', { class: 'gtext' }, h('b', {}, `${t('games.lives.h')}: `), guide.lives ? guide.lives[lang] : t('games.lives.none')),
-  );
-  blocks.push(section(t('games.sec.scoring'), false, 'scoring', ...scoring));
-  blocks.push(section(t('games.sec.schemes'), false, 'schemes', ...guide.schemes.map((scheme) => schemeEl(scheme, lang))));
-  if (def) {
-    const labels = modeLabels(def, modes, lang);
-    if (labels.length > 0) {
-      blocks.push(
-        section(
-          t('games.sec.modes', { n: labels.length }),
-          false,
-          'modes',
-          h(
-            'ol',
-            { class: 'gmodes' },
-            ...labels.map((label) => h('li', { title: label.note }, h('span', { class: 'gmodes__n' }, label.number), label.name)),
-          ),
-        ),
-      );
-    }
-  }
-  if (guide.assumptions.length > 0) {
-    blocks.push(
-      section(t('games.sec.assumptions'), false, 'assumptions', h('ul', { class: 'gassume' }, ...guide.assumptions.map((item) => h('li', {}, item[lang])))),
-    );
-  }
-  return blocks;
-}
-
 /** Always-visible essentials, with small LCD illustrations; development notes live in Help. */
-export function compactGuide(guide: GameGuideData, lang: Lang, gameId?: string): HTMLElement[] {
-  // Слева — поле в начале партии, справа — зацикленный фрагмент настоящей игры («геймплей»); остальные схемы — в справке.
-  const clip = gameId ? clipFor(gameId) : null;
-  const first = guide.schemes[0];
-  const schemes = clip
-    ? [...(first ? [schemeEl(first, lang)] : []), h('figure', { class: 'gscheme gclip' }, clipCanvas(clip, t('games.clip')), h('figcaption', { class: 'gscheme__cap' }, t('games.clip')))]
-    : guide.schemes.slice(0, 2).map((scheme) => schemeEl(scheme, lang));
+export function compactGuide(guide: GameGuideData, lang: Lang): HTMLElement[] {
+  const schemes = guide.schemes.slice(0, 1).map((scheme) => schemeEl(scheme, lang));
   return [
     h('p', { class: 'gtext gpanel__goal' }, guide.goal[lang]),
     h('div', { class: 'gquick__schemes' }, ...schemes),

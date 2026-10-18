@@ -18,6 +18,8 @@
     "run_worker_first": [
       "/admin",
       "/admin/*",
+      "/encyclopedia",
+      "/encyclopedia/",
       "/api/*"
     ]
   },

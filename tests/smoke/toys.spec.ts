@@ -325,16 +325,12 @@ test.describe('«Морской бой»', () => {
     await expect.poll(phase(page)).toBe('playing');
   });
 
-  test('справка — свои кнопки и свой текст, без раздела об оригинальном устройстве Crocodile Mario', async ({ page }) => {
+  test('энциклопедия открывает статью выбранной игры без таблицы управления', async ({ page }) => {
     await open(page, 'seabattle');
     await page.locator('#corner-help').click();
-    const dialog = page.locator('#help');
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('Включите игрушку');
-    await expect(dialog.locator('th')).toContainText(['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'LEFT/LEVEL', 'RIGHT/SPEED', 'UP/MODE', 'DOWN', 'ROTATE']);
-    await expect(dialog.locator('#original-device')).toHaveCount(0);
-    await page.keyboard.press('Escape');
-    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/encyclopedia\?game=sea-battle&toy=seabattle/);
+    await expect(page.locator('.enc-article h2')).toHaveText('Морской бой');
+    await expect(page.locator('.help__table, .gctl')).toHaveCount(0);
   });
 });
 

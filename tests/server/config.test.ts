@@ -33,4 +33,23 @@ describe('configuration Worker', () => {
     expect((await send(request)).status).toBe(400); env.ADMIN_TOKEN = ''; expect((await send(put(defaultConfig()))).status).toBe(503);
   });
   it('serves /admin directly without adding a public navigation link', async () => { const {send} = setup(); const r = await send(new Request('https://games.example/admin')); expect(await r.text()).toBe('assets'); expect(r.headers.get('X-Robots-Tag')).toContain('noindex'); });
+  it('serves the public encyclopedia directly, including a trailing slash and game links',async()=>{
+    const {send}=setup();
+    for(const path of ['/encyclopedia?game=tetris','/encyclopedia/?game=snake']){
+      const response=await send(new Request(`https://games.example${path}`));
+      expect(response.status).toBe(200);expect(await response.text()).toBe('assets');
+      expect(response.headers.get('X-Robots-Tag')).toBeNull();
+    }
+  });
+});
+
+it('publishes original illustrations atomically with the existing authenticated configuration', async () => {
+  const {send,storage}=setup();
+  const config=defaultConfig();config.encyclopedia={snake:{imageUrl:'https://images.example/original-snake.png'}};
+  expect((await send(put(config,0,'wrong'))).status).toBe(401);
+  expect((await send(put(config))).status).toBe(200);
+  const reloaded=new ConfigurationStore({storage});
+  const read=await reloaded.fetch(new Request('https://games.example/api/config'));
+  expect((await read.json() as {config:unknown}).config).toEqual(config);
+  expect((await send(put({...config,encyclopedia:{snake:{imageUrl:'javascript:alert(1)'}}},1))).status).toBe(400);
 });
