@@ -415,6 +415,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     powered = on;
     rankedPartyStarted = false;
     if(!on)leaderboard?.cancel();
+    if (!on) pendingLaunch = null; // отложенный запуск из справки не должен сработать при следующем включении
     if (on && view === 'closed') {
       view = 'full';
       applyView();

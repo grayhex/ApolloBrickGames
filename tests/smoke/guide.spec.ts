@@ -89,6 +89,18 @@ test.describe('вкладки игр', () => {
     expect(await tabs(page).evaluateAll((items) => items.filter((item) => (item as HTMLElement).tabIndex === 0).length)).toBe(1);
   });
 
+  test('стрелки по вкладкам переключают и меню консоли, как щелчок по вкладке', async ({ page }) => {
+    await open(page, 'toy=tank168');
+    await selected(page).focus();
+    await page.keyboard.press('ArrowRight');
+    const game = await selected(page).getAttribute('data-game');
+    expect(game).toBeTruthy();
+    await expect.poll(() => area(page, 'game')).toBe(game);
+    await page.keyboard.press('End');
+    const last = await selected(page).getAttribute('data-game');
+    await expect.poll(() => area(page, 'game')).toBe(last);
+  });
+
   test('«Морской бой»: режимы A–F по списку владельца, открыта игра, выбранная в меню консоли (A); арканоид с оговоркой про «теннис»; коробки нет', async ({ page }) => {
     await open(page, 'toy=seabattle');
     await expect(tabs(page)).toHaveText(['A', 'B', 'C', 'D', 'E', 'F']);
