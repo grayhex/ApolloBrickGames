@@ -77,7 +77,7 @@ function wordmark(games: number): HTMLElement {
 
 /** Decorative, fictional electronics; no claim to reproduce a particular original PCB. */
 function circuitBoard(): SVGSVGElement {
-  const board=svg('svg',{class:'classic__pcb',viewBox:'0 0 400 965','aria-hidden':'true',focusable:'false'});
+  const board=svg('svg',{class:'classic__pcb','data-toy-layer':'',viewBox:'0 0 400 965','aria-hidden':'true',focusable:'false'});
   board.append(svg('rect',{x:'17',y:'20',width:'366',height:'922',rx:'32',fill:'#aeb7ae'}),
     svg('path',{d:'M32 35H368V820H32Z',fill:'#316f59',stroke:'#bcce96','stroke-width':'2'}));
   for(let n=0;n<14;n++){
@@ -102,7 +102,7 @@ function circuitBoard(): SVGSVGElement {
 /** A new universal design inspired by classic vertical Brick Games, not a replica of a firmware model. */
 export function applyBrickGame(refs: ToyModelRefs, model: ToyModel): void {
   const { lid, base } = refs;
-  refs.toy.prepend(circuitBoard(),h('div',{class:'classic__glass','aria-hidden':'true'}));
+  refs.toy.prepend(circuitBoard(),h('div',{class:'classic__glass','data-toy-layer':'','aria-hidden':'true'}));
   lid.querySelector('.lid__art')?.remove();
   for (const screw of lid.querySelectorAll('.lid__screw')) screw.remove();
   const face = lid.querySelector('.lid__face')!;

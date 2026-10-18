@@ -390,4 +390,13 @@ test('clear and smoke shells reveal decorative electronics, without covering con
  }
  await page.locator('#view-screen').click();await expect(page.locator('.classic__pcb')).toBeHidden();
  await expect(page.locator('.classic__count')).toBeHidden();
+ for(let cycle=0;cycle<3;cycle++){
+  await page.locator('.toysw__item[data-toy=mario]').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-model','mario');
+  await expect(page.locator('.classic__pcb,.classic__glass')).toHaveCount(0);
+  await page.locator('.toysw__universal').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-model','brickgame');
+  await expect(page.locator('.classic__pcb')).toHaveCount(1);
+  await expect(page.locator('.classic__glass')).toHaveCount(1);
+ }
 });
