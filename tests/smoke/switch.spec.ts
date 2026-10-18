@@ -298,6 +298,8 @@ test.describe('переключение игрушек на месте', () => {
     await expect(page).toHaveURL(/game=sea-battle&toy=seabattle/);
     await expect(page.locator('.enc-article h2')).toHaveText('Морской бой');
     await page.goBack();
+    await page.locator('#view-full').click();
+    await expect(page.locator('#toy')).toHaveAttribute('data-view','full');
     await page.locator('#corner-settings').click();
     await expect(page.locator('#settings')).toBeVisible();
     await page.keyboard.press('Escape');
