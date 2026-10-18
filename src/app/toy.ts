@@ -39,6 +39,8 @@ export function pressedKeys(down: ActionMask, actions: Partial<Record<ToyKeyId, 
 
 export interface ToyHooks {
   phase(): Phase;
+  /** Game-owned S/P semantics (e.g. Dice prediction); absent for Mario's normal start/pause. */
+  startPauseAction?(): ActionMask;
   /** Включена ли игрушка: выключенная кнопки игры не слушает. */
   powered(): boolean;
   onPower(): void;
@@ -97,7 +99,7 @@ export class ToyPanel {
           if (event.detail !== 0) return; // мышь и палец уже отработали в pointerdown
           if (id === 'onoff') this.hooks.onPower();
           else if (this.hooks.powered()) {
-            this.hub.screen.press(KEYBOARD_POINTER, startPauseAction(this.hooks.phase()));
+            this.hub.screen.press(KEYBOARD_POINTER, (this.hooks.startPauseAction?.() ?? startPauseAction(this.hooks.phase())));
             window.setTimeout(() => this.hub.screen.release(KEYBOARD_POINTER), KEYBOARD_PRESS_MS);
           }
         });
@@ -146,7 +148,7 @@ export class ToyPanel {
       if (id === 'onoff' || id === 'sound') {
         this.trigger(id);
       } else if (this.hooks.onPress?.(id) !== true && this.hooks.powered()) {
-        const mask = id === 'sp' ? startPauseAction(this.hooks.phase()) : ((this.hooks.keyActions ?? KEY_ACTIONS)[id] ?? 0);
+        const mask = id === 'sp' ? (this.hooks.startPauseAction?.() ?? startPauseAction(this.hooks.phase())) : ((this.hooks.keyActions ?? KEY_ACTIONS)[id] ?? 0);
         if (mask !== 0) this.hub.screen.press(event.pointerId, mask);
       }
       this.sync(this.hub.tracker.down);

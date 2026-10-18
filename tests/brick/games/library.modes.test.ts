@@ -95,7 +95,7 @@ describe('варианты по вики retroconsoles: каталог', () => {
       def.modes.forEach((mode, index) => {
         expect(mode.name.ru).toMatch(/[А-Яа-яЁё]/);
         expect(mode.name.en).not.toMatch(/[А-Яа-яЁё]/);
-        if (index === 0) {
+        if (index === 0 && id !== 'snake' && id !== 'honeybee') {
           expect(mode.note, 'вариант 01 — прежняя игра').toContain('без изменений');
         } else if (id === 'quarth') {
           expect(mode.note, 'источник Quarth — слова владельца, не вики').toContain('со слов владельца');
@@ -143,24 +143,24 @@ describe('варианты по вики retroconsoles: каталог', () => {
 /**
  * Отпечатки прогонов варианта 01 каждой игры библиотеки (зёрна 1 и 7, случайный ввод до первого конца партии, но не дольше 3000 тактов), снятые с кода
  * до добавления вариантов (`modeFingerprint.ts`). От индекса варианта зависят категории рейтингов и сохранённые рекорды, поэтому 01 должен оставаться прежним
- * по кадрам и событиям. Если правила варианта 01 меняются сознательно, отпечатки нужно снять заново.
+ * по кадрам и событиям. Snake/Dice/Beetle сознательно обновлены по ROM в ruleset 2; их новые отпечатки дополнены независимыми ROM-трассами. Остальные отпечатки не менялись.
  */
 const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   '2048': ['d4581bad', 'e7732f33'],
   'meteor-fighter': ['dc8a98d8', '50ba3444'],
   'tetris-shooting': ['bd940115', 'd966622e'],
-  snake: ['0e40c402', 'cae162fd'],
+  snake: ['64f92442', '324afeb1'],
   maze: ['2cbb1290', '0b6a04a7'],
   jigsaw: ['b5948e13', '21e04c8b'],
   pong: ['df728dae', '319d8a01'],
   'pong-double': ['4abf94c0', 'a6760919'],
   'pneumatic-ball': ['ef2fc58c', '2a0853b0'],
-  honeybee: ['c876942b', '2ca4b1a2'],
+  honeybee: ['cbe2702d', '51f0f149'],
   'obstacle-race': ['c30c06a1', '4e3ed4c9'],
   'matching-blocks': ['e54e7f75', '58487de9'],
   'whack-a-mole': ['a45bec5b', '7eb5f3ad'],
   simon: ['ce1e7174', '3ceca6d5'],
-  dice: ['cfaa7463', '9c64075a'],
+  dice: ['30c9b37d', '9e3db428'],
   dance: ['44474ae6', '693e6140'],
   quarth: ['f4514e6c', '7a6dc637'],
   'lights-out': ['2739acc9', '65a346a8'],
@@ -189,12 +189,12 @@ const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   'helicopter-bomber': ['5279937c', 'd8c97136'],
 };
 
-describe('вариант 01 каждой игры библиотеки остался прежним', () => {
+describe('baseline варианта 01: неизменённые игры и осознанные ROM-ревизии', () => {
   it('таблица отпечатков охватывает все игры библиотеки', () => {
     expect(Object.keys(GOLDEN).sort()).toEqual([...LIBRARY_IDS].sort());
   });
   for (const id of LIBRARY_IDS) {
-    it(`${id}: отпечаток прогона варианта 01 совпадает с прежним`, () => {
+    it(`${id}: отпечаток прогона варианта 01 совпадает с утверждённой ревизией`, () => {
       const expected = GOLDEN[id];
       expect(expected, id).toBeDefined();
       [1, 7].forEach((seed, i) => expect(fingerprint(LIBRARY_GAMES[id].create({ seed, mode: 0 }), seed), `${id}, зерно ${seed}`).toBe(expected?.[i]));
@@ -218,7 +218,8 @@ describe('«Invert upside-down»: поле отражено по вертика�
   for (const [id, plain, inverted] of MIRRORS) {
     it(`${id}: вариант ${inverted + 1} — зеркало варианта ${plain + 1} (кадры, события, счёт и жизни совпадают), ввод ↑ ↓ обменен`, () => {
       const def = LIBRARY_GAMES[id];
-      const a = def.create({ seed: 3, mode: plain, speed: 5 });
+      // Wiki variant 03 mirrors the former default figure, not the new ROM Beetle profile.
+      const a = id==='honeybee' && plain===0 ? new ShooterGame('honeybee',{seed:3,mode:0,speed:5}) : def.create({ seed: 3, mode: plain, speed: 5 });
       const b = def.create({ seed: 3, mode: inverted, speed: 5 });
       expect(b.cells(), 'до старта кадр уже перевёрнут').toEqual(flipRows(a.cells()));
       expect(b.cells(), 'и это не тот же кадр').not.toEqual(a.cells());
@@ -738,61 +739,11 @@ describe('Snake: вариант 02 «Frame»', () => {
     expect(snake(0).walls.size).toBe(0);
   });
 
-  it('столкновение с рамкой: змейка, идущая вправо от колонки 4, гибнет на пятом шаге (колонка 9), без рамки — на шестом (колонка 10 за краем)', () => {
-    const ticksToCrash = (mode: number): number => {
-      const g = snake(mode);
-      g.food = 25; // плод в стороне от курса
-      let ticks = 0;
-      while (g.lives === 4 && ticks < 200) {
-        g.step(holding('rotate')); // удержание ускоряет змейку: шаг раз в 4 такта
-        ticks++;
-      }
-      expect(g.lives).toBe(3);
-      return ticks;
-    };
-    expect(ticksToCrash(0)).toBe(24);
-    expect(ticksToCrash(1)).toBe(20);
+  it('рамка уменьшает безопасный путь вправо; ROTATE не добавляет ускорение', () => {
+    for(const [mode,steps] of [[0,5],[1,4]] as const){const g=snake(mode);g.food=20;for(let n=1;n<steps;n++){g.step(makeBrickInput(['right']));expect(g.lives).toBe(4);}g.step(makeBrickInput(['right']));expect(g.lives).toBe(3);}
   });
-
-  it('[snake · вариант 02 · прогресс] тринадцать плодов: +10 за каждый, рост на клетку; после тринадцатого +100, и новая карта с рамкой и перегородками', () => {
-    const g = snake(1);
-    g.food = 105;
-    g.step(makeBrickInput(['left'])); // разворот назад запрещён: курс остаётся вправо
-    run(g, 19);
-    expect(g.body).toHaveLength(4);
-    expect(g.body[0]).toBe(105);
-    expect(g.score).toBe(10);
-    g.food = 106;
-    g.eaten = 12;
-    run(g, 20);
-    expect(g.score).toBe(120);
-    run(g, 60);
-    expect(g.level).toBe(2);
-    expect(g.body).toHaveLength(3);
-    for (let p = 0; p < 200; p++) if (onRing(p)) expect(g.walls.has(p), `рамка на втором уровне, клетка ${p}`).toBe(true);
-    expect(g.walls.size, 'рамка и перегородки второго уровня').toBeGreaterThan(56);
-    expect(g.walls.has(g.food)).toBe(false);
-    expect(onRing(g.food)).toBe(false);
-  });
-
-  it('[snake · вариант 02 · неудача] четыре столкновения с рамкой подряд: жизни 3, 2, 1, 0; на последнем — конец партии, рекорд сохраняется', () => {
-    const g = snake(1);
-    g.food = 105;
-    run(g, 20);
-    expect(g.score).toBe(10);
-    for (let crash = 1; crash <= 4; crash++) {
-      const before = g.lives;
-      let events: BrickEvent[] = [];
-      for (let t = 0; t < 400 && g.lives === before; t++) {
-        g.food = 25;
-        events = [...events, ...g.step(holding('rotate'))];
-      }
-      expect(g.lives, `столкновение ${crash}`).toBe(4 - crash);
-      expect(count(events, 'gameOver'), `столкновение ${crash}`).toBe(crash === 4 ? 1 : 0);
-      if (crash < 4) settle(g);
-    }
-    expectFinished(g);
-    expect(g.hiScore).toBe(10);
+  it('рамка остаётся на следующих полях, выдуманные перегородки с уровнем не появляются', () => {
+    const g=snake(1);g.food=175;g.eaten=12;g.step(makeBrickInput(['up']));expect(g.score).toBe(110);run(g,60);expect(g.level).toBe(2);expect(g.walls.size).toBe(56);expect(g.body.some(onRing)).toBe(false);expect(onRing(g.food)).toBe(false);
   });
 });
 

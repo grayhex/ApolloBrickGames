@@ -1,5 +1,6 @@
+import { rulesetFor, localHiSuffix } from '../../src/games/rulesets';
 import { describe, it, expect } from 'vitest';
-import { categoryFor, validateCategory, rankedPage, selection, RULESET_VERSION, STANDARD_START, nickname } from '../../src/leaderboards/category';
+import { categoryFor, validateCategory, rankedPage, selection, STANDARD_START, nickname } from '../../src/leaderboards/category';
 import { createCabinet } from '../../src/app/cabinet';
 import { TOYS } from '../../src/app/toys';
 import { BRICK_GAMES } from '../../src/brick/games';
@@ -8,10 +9,21 @@ const s = (toyId = 'clock99', gameId = 'tetris', mode = 0) => ({
   gameId,
   toyId,
   mode,
-  rulesetVersion: RULESET_VERSION,
+  rulesetVersion: rulesetFor(gameId),
   startProfile: STANDARD_START,
 });
 describe('stable leaderboard categories', () => {
+  it('resets only games whose rules changed, including local and global records', () => {
+    for(const gameId of ['snake','dice','frog','honeybee']){
+      expect(categoryFor(s('clock99',gameId))).toContain(':r2:');
+      expect(localHiSuffix(gameId)).toBe(':r2:hi');
+      expect(()=>selection({...s('clock99',gameId),rulesetVersion:'1'})).toThrow();
+      expect(()=>validateCategory(`${gameId}:0:r1:standard-v1:matrix`)).toThrow();
+    }
+    expect(categoryFor(s('mario','mario'))).toBe('mario:0:r1:standard-v1:mario');
+    expect(categoryFor(s())).toBe('tetris:0:r1:standard-v1:matrix');
+    expect(localHiSuffix('tetris')).toBe(':hi');
+  });
   it('uses the canonical engine mode, never the on-screen/menu position', () => {
     const model = {
       ...TOYS.clock99,

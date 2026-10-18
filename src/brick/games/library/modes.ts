@@ -62,7 +62,7 @@ export const QUARTH_MODES: readonly BrickModeDef[] = [
 // ---------------------------------------------------------------- Snake: default / Frame
 
 export const SNAKE_MODES: readonly BrickModeDef[] = [
-  { name: { ru: 'Обычная змейка', en: 'Default' }, note: `Прежняя игра без изменений. ${wiki('Snake', 'Mode 1: Default')}` },
+  { name: { ru: 'Обычная змейка', en: 'Default' }, note: `Допущение: победа и усложнение; E88 5 / E-23 93: старт снизу, разворот тела и десять скоростей по ROM. Прогрессия и ГСЧ частично адаптированы. ${wiki('Snake', 'Mode 1: Default')}` },
   {
     name: { ru: 'Рамка', en: 'Frame' },
     note:
@@ -206,9 +206,9 @@ function describeHoneybee(mode: number): BrickModeDef {
     wiki('Little Honeybee', HONEYBEE_WIKI[mode] ?? ''),
     'Допущение: «Brick move diagonally» — фигура каждые 90…30 тактов (по скорости) сдвигается на клетку вбок и на ряд вниз, у боковой стены меняя сторону; достигла пушки — потеря жизни;',
     'два ствола — выстрелы из колонок x − 1 и x + 1 (колонки за краем поля пропускаются);',
-    `${t.invert ? 'invert — поле вверх дном, ↑ и ↓ меняются местами (в игре они не нужны); ' : ''}остальное, включая очки, как у режима 01.`,
+    `${t.invert ? 'invert — поле вверх дном, ↑ и ↓ меняются местами (в игре они не нужны); ' : ''}остальное — прежняя фигура с ответным огнём: +5 за клетку, +100 за очищенную фигуру.`,
   ];
-  return { name: { ru: join(ru, 'Обычная пчёлка'), en: join(en, 'Default') }, note: mode === 0 ? `Прежняя игра без изменений. ${wiki('Little Honeybee', HONEYBEE_WIKI[0] ?? '')}` : parts.join(' ') };
+  return { name: { ru: mode===0?'Жуки · B0202 D01':join(ru, 'Обычная пчёлка'), en: mode===0?'Beetle · B0202 D01':join(en, 'Default') }, note: mode === 0 ? `Основной вариант заменён по выбору владельца: B0202 D01 Beetle. ГСЧ и сцены — допущение. Прежний источник (не Apollo): ${wiki('Little Honeybee', HONEYBEE_WIKI[0] ?? '')}` : parts.join(' ') };
 }
 
 export const HONEYBEE_MODES: readonly BrickModeDef[] = Array.from({ length: 8 }, (_, mode) => describeHoneybee(mode));

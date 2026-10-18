@@ -1,3 +1,4 @@
+import { previewStage } from '../encyclopedia/catalog';
 import { guideForBody } from './bodyButtons';
 import { BRICK_GAMES } from '../brick/games';
 import { BRICK_GUIDES } from '../brick/guides';
@@ -431,6 +432,14 @@ export class InfoPanel {
   private gamePanel(model: ToyModel, id: GameId): HTMLElement[] {
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
+    const stage=model.universal ? previewStage(id) : null;
+    if(stage){
+      const alpha=stage==='alpha', label=lang==='ru'?(alpha?'Альфа':'Бета'):(alpha?'Alpha':'Beta');
+      const detail=lang==='ru'
+        ? `${label}: точность реконструкции ${alpha?30:60}%. Подробнее об источниках — в энциклопедии игр.`
+        : `${label}: reconstruction accuracy ${alpha?30:60}%. See the game encyclopedia for sources.`;
+      head.append(h('span',{class:'gpanel__stage','data-stage':stage,title:detail,'aria-label':detail},h('b',{'aria-hidden':'true'},alpha?'α':'β'),label));
+    }
     const data = BRICK_GUIDES[id];
     return [head, ...(data ? compactGuide(guideForBody(data, model, BRICK_GAMES[id]), lang) : [])];
   }

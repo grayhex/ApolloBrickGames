@@ -5,6 +5,16 @@ import { MASTER_GAIN } from './beeper';
 
 const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker']);
 export function brickSound(event: BrickEvent, game: string, inMenu: boolean): BrickSound | null {
+  if (game === 'snake' && !inMenu) {
+    switch (event.type) {
+      case 'started': return 'e88_start';
+      case 'move': return 'e88_move';
+      case 'bonus': return 'e88_bonus';
+      case 'lifeLost': return 'e88_crash';
+      case 'win': return 'e88_win';
+      case 'gameOver': return 'e88_over';
+    }
+  }
   switch (event.type) {
     case 'started':
       return game === 'brickgame' ? 'welcome' : TETRIS.has(game) ? 'select' : 'start';
@@ -38,7 +48,7 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean): Br
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>
-  MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' ? 0 : sound === 'turn' || sound === 'b0202_turn' ? 1 : 2;
+  sound.startsWith('e88_') ? 0 : MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' ? 0 : sound === 'turn' || sound === 'b0202_turn' ? 1 : 2;
 
 /** Synthesized tones with priority; B0202 effects may overlay its separate noise channel. */
 export class BrickAudio {

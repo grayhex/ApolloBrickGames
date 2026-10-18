@@ -1,3 +1,4 @@
+import { localHiSuffix } from '../games/rulesets';
 import { actionBit, maskOf, type InputFrame } from '../core';
 import type { AudioCue } from '../audio/audio';
 import {
@@ -47,6 +48,7 @@ export interface Cabinet {
   selectGame(id: GameId): boolean;
   start(): CabinetEvent[];
   pause(): CabinetEvent[];
+  startButton?(): CabinetEvent[];
   resume(): CabinetEvent[];
   /** Заново: у одиночного тетриса — новая партия, у консоли — возврат в меню. */
   restart(): CabinetEvent[];
@@ -303,7 +305,7 @@ class ConsoleCabinet implements Cabinet {
     };
   }
   hiKey(): string {
-    return `crocodile-mario:brick:${this.toy}:${this.console_.gameId}:${this.console_.mode}:hi`;
+    return `crocodile-mario:brick:${this.toy}:${this.console_.gameId}:${this.console_.mode}${localHiSuffix(this.console_.gameId)}`;
   }
   /** Звук движения: в меню и в тетрисах — да; в остальных играх шаг каждый такт слушался бы как трещотка. */
   get moveSound(): boolean {
@@ -319,6 +321,7 @@ class ConsoleCabinet implements Cabinet {
   pause(): CabinetEvent[] {
     return this.console_.pause();
   }
+  startButton(): CabinetEvent[] { return this.console_.startButton(); }
   resume(): CabinetEvent[] {
     return this.console_.resume();
   }
@@ -393,7 +396,7 @@ export interface CabinetOptions {
 export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet {
   if (model.defaultGame === null) throw new Error('This console has no game engine yet.');
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
-  const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}:hi`;
+  const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}${localHiSuffix(gameId)}`;
   return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => g.id === model.defaultGame)));
 }
 

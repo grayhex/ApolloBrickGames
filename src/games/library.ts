@@ -13,7 +13,7 @@ export const LIBRARY_NAMES = {
   'matching-blocks': ['Совпадающие фигуры', 'Matching Blocks'],
   'whack-a-mole': ['Ударь крота', 'Whack-a-mole'],
   simon: ['Повтори последовательность', 'Simon Says'],
-  dice: ['Три кости', 'Dice'],
+  dice: ['Четыре кости', 'Dice'],
   dance: ['Танцы', 'Dance'],
   quarth: ['Дострой прямоугольник', 'Quarth'],
   'lights-out': ['Погаси свет', 'Lights Out'],

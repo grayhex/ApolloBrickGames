@@ -109,7 +109,7 @@ export function conformance(def: BrickGameDef, options: { fuzzTicks?: number; se
           const game = make();
           expect(game.id).toBe(def.id);
           expect(game.phase).toBe('ready');
-          expect(game.score).toBe(0);
+          expect(game.score).toBe(def.id === 'dice' ? 1000 : 0); // Dice starts with a ROM bank, rather than an earned-point counter.
           expect(game.tick).toBe(0);
           expectValid(game);
           const before = frameHash(game);
@@ -133,7 +133,7 @@ export function conformance(def: BrickGameDef, options: { fuzzTicks?: number; se
           expect(game.phase).toBe('playing');
           game.restart();
           expect(game.phase).toBe('ready');
-          expect(game.score).toBe(0);
+          expect(game.score).toBe(def.id === 'dice' ? 1000 : 0); // Dice starts with a ROM bank, rather than an earned-point counter.
           expect(game.tick).toBe(0);
           expectValid(game);
         });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENTRIES, guideFor } from '../../src/encyclopedia/catalog';
+import { ENTRIES, guideFor, previewStage } from '../../src/encyclopedia/catalog';
 import { GAMES } from '../../src/games/catalog';
 import { defaultConfig } from '../../src/config/runtime';
 import { illustrationUrl, validateConfig } from '../../src/config/schema';
@@ -16,7 +16,13 @@ describe('encyclopedia evidence and published illustrations', () => {
     expect(ENTRIES.find(e=>e.id==='tetris')?.accuracy).toBe(100);
     expect(ENTRIES.find(e=>e.id==='tetris-pentix')?.accuracy).toBe(90);
     expect(ENTRIES.find(e=>e.id==='tank')?.accuracy).toBe(60);
-    expect(ENTRIES.find(e=>e.id==='snake')?.accuracy).toBe(30);
+    expect(ENTRIES.find(e=>e.id==='snake')?.accuracy).toBe(90);
+  });
+  it('orders the catalog by descending evidence accuracy and marks only alpha/beta reconstructions',()=>{
+    const scores=ENTRIES.map(entry=>entry.accuracy);
+    expect(scores).toEqual([...scores].sort((a,b)=>b-a));
+    expect(previewStage('maze')).toBe('alpha');expect(previewStage('tank')).toBe('beta');
+    for(const id of ['snake','dice','honeybee','frog','tetris','mario','clock'] as const)expect(previewStage(id)).toBeNull();
   });
   it('keeps old configurations valid and round-trips game illustrations independently of toy menus', () => {
     const config=defaultConfig();

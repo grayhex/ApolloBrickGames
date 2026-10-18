@@ -38,7 +38,7 @@ const falling: Script = (tick) => {
   const action = (['left', 'rotate', 'right', 'right', 'rotate', 'left'] as const)[step]!;
   return { pressed: every(tick, 18) ? [action] : [], held: step >= 3 ? ['down'] : [] };
 };
-const snake: Script = cycle(['down', 'left', 'up', 'right'], 28);
+const snake: Script = cycle(['up', 'right', 'down', 'left'], 28);
 const ordinary: Script = cycle(['left', 'rotate', 'right', 'up', 'rotate', 'down'], 16);
 
 const SCRIPTS: Record<string, Script> = {};

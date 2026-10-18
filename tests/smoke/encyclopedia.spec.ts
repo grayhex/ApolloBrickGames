@@ -41,7 +41,7 @@ test('search, categories, language, theme and browser history work without losin
   await expect(page.locator('.enc-item')).toHaveCount(1);
   await page.locator('.enc-item').click();
   await expect(page).toHaveURL(/game=snake/);
-  await expect(page.locator('.enc-accuracy strong')).toHaveText('30%');
+  await expect(page.locator('.enc-accuracy strong')).toHaveText('90%');
   await page.locator('#enc-lang').click();
   await expect(page.locator('h1')).toHaveText('Game encyclopedia');
   await expect(page.locator('.enc-article h2')).toHaveText('Snake');
@@ -135,4 +135,14 @@ test('admin saves image URLs in the common configuration, rejects executable URL
   expect(config.encyclopedia?.snake?.imageUrl).toBe('https://images.example/snake.png');
   await page.reload();await card.getByLabel('Игра для оригинальной иллюстрации').selectOption('snake');
   await expect(input).toHaveValue('https://images.example/snake.png');
+});
+
+
+test('catalog accuracy stays descending after filtering and changing language',async({page})=>{
+  await page.goto('./encyclopedia');
+  const scores=()=>page.locator('.enc-item__accuracy').allTextContents();
+  const sorted=async()=>{const values=(await scores()).map(s=>Number(s.replace('%',''))||0);expect(values.length).toBeGreaterThan(0);expect(values).toEqual([...values].sort((a,b)=>b-a));};
+  await expect(page.locator('.enc-item')).toHaveCount(57);await sorted();
+  await page.locator('.enc-filters button').nth(2).click();await sorted();
+  await page.locator('#enc-lang').click();await sorted();
 });

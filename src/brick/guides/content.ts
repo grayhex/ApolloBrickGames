@@ -6,6 +6,9 @@ const WIKI_VARIANTS = new Set<LibraryId>(['dance', 'obstacle-race', 'snake', 'pn
 
 /** Объём содержания, отдельно от технического ready и исторической достоверности. */
 export function contentStatus(id: LibraryId): GuideText {
+  if (id === 'honeybee') return gt('Основной вариант — Beetle B0202 D01. Остальные семь вариантов по вики сохранены отдельно.', 'The main variant is Beetle B0202 D01. The other seven wiki-based variants remain separate.');
+  if (id === 'snake') return gt('Движение, разворот и скорости сверены с E88 / E-23. Прогрессия и рамка частично реконструированы.', 'Movement, reversal and speeds were checked against E88 / E-23. Progression and Frame remain partly reconstructed.');
+  if (id === 'dice') return gt('Правила четырёх костей, банка и ставки — Apollo B0202 E02. Другие варианты этой прошивки пока не перенесены.', 'Four-dice, bank and wager rules follow Apollo B0202 E02. Other modes of this firmware have not been ported.');
   if (id === 'sokoban' || id === 'quarth')
     return gt(
       'Набор из 10 авторских задач; совпадение с оригиналом не установлено.',

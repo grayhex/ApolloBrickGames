@@ -73,239 +73,29 @@ describe('сценарии: аркадные игры присутствуют �
 
 // ── snake ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-describe('snake: сценарии правил', () => {
-  /** Ход змейки: нажатие в первом такте (если задано), далее тишина — до сдвига головы или потери жизни (не дольше 60 тактов). */
-  const move = (g: SnakeGame, press: BrickAction[] = [], held: BrickAction[] = []): { events: BrickEvent[]; ticks: number } => {
-    const head = g.body[0];
-    const lives = g.lives;
-    const events = [...g.step(makeBrickInput(press, held))];
-    let ticks = 1;
-    while (g.body[0] === head && g.lives === lives && ticks < 60) {
-      events.push(...g.step(makeBrickInput([], held)));
-      ticks++;
+describe('snake: сценарии правил ROM и явно сохранённого прогресса', () => {
+  coveredScenario('snake', 'прогресс', 'плод добавляет клетку и 10 очков; достигнутая длина завершает поле', () => {
+    const g = new SnakeGame(); g.start(); g.food = 185;
+    expect(g.step(makeBrickInput(['up']))).toContainEqual({type:'bonus'});
+    expect(g.body).toEqual([185,195,194,193]); expect(g.score).toBe(10);
+    g.food = 175; g.eaten = 12; g.step(makeBrickInput(['up']));
+    expect(g.score).toBe(120); run(g,60); expect(g.level).toBe(2); expect(g.body).toHaveLength(3);
+  });
+  it('проход по освободившемуся хвосту допустим, попадание в другую часть тела — потеря жизни', () => {
+    const g=new SnakeGame();g.start();g.food=0;g.body=[104,103,113,114];g.directionNow=1;
+    g.step(makeBrickInput(['down']));expect(g.body).toEqual([114,104,103,113]);expect(g.lives).toBe(4);
+    g.body=[104,103,113,114,115,105];g.directionNow=1;g.step(makeBrickInput(['down']));expect(g.lives).toBe(3);
+  });
+  it('нижний и верхний края, как и боковые, не соединяются через поле', () => {
+    for (const [body,direction] of [[[195,185,175],'down'],[[5,15,25],'up'],[[100,101,102],'left'],[[109,108,107],'right']] as const) {
+      const g=new SnakeGame();g.start();g.food=50;g.body=[...body];g.directionNow=direction==='down'?2:direction==='up'?0:direction==='left'?3:1;
+      g.step(makeBrickInput([direction]));expect(g.lives).toBe(3);
     }
-    return { events, ticks };
-  };
-  /** Новая партия; плод убран в левый верхний угол, чтобы он не мешал сценарию. Змейка: голова в клетке 104 (колонка 4, строка 10), хвост 102, курс — вправо. */
-  const fresh = (options: { level?: number } = {}): SnakeGame => {
-    const g = new SnakeGame({ seed: 1, ...options });
-    g.start();
-    g.food = 0;
-    return g;
-  };
-
-  it('начало: змейка из трёх клеток движется вправо, голова мигает, тело горит', () => {
-    const g = fresh();
-    expect(g.body).toEqual([104, 103, 102]);
-    expect(g.lives).toBe(4);
-    const plain = move(g);
-    expect(g.body).toEqual([105, 104, 103]); // сдвиг на клетку: длина прежняя
-    expect(g.score).toBe(0);
-    expect(has(plain.events, 'bonus')).toBe(false);
-    const cells = g.cells();
-    expect([cells[105], cells[104], cells[103], cells[102]]).toEqual([2, 1, 1, 0]);
   });
-
-  it('плод: змейка вырастает на одну клетку, +10 очков и сигнал bonus; новый плод появляется на свободной клетке', () => {
-    const g = fresh();
-    g.food = 105;
-    const ate = move(g);
-    expect(g.body).toEqual([105, 104, 103, 102]);
-    expect(g.score).toBe(10);
-    expect(has(ate.events, 'bonus')).toBe(true);
-    expect(g.food).not.toBe(105);
-    expect(g.body).not.toContain(g.food);
-    expect(g.cells()[g.food]).toBe(2); // плод мигает
-    expect(g.lives).toBe(4);
-    g.food = 106;
-    move(g);
-    expect(g.body).toEqual([106, 105, 104, 103, 102]);
-    expect(g.score).toBe(20);
-  });
-
-  it('обратный разворот запрещён: «назад» игнорируется, в том числе после быстрой пары нажатий «вверх» и «влево»', () => {
-    const g = fresh();
-    g.step(makeBrickInput(['left'])); // курс — вправо, «влево» — разворот
-    move(g);
-    expect(g.body[0]).toBe(105);
-    expect(g.lives).toBe(4);
-    g.step(makeBrickInput(['up']));
-    g.step(makeBrickInput(['left'])); // до хода: «влево» относительно движения вправо — всё ещё разворот, поэтому курс остаётся «вверх»
-    move(g);
-    expect(g.body[0]).toBe(95); // колонка 5, строка 9
-    move(g, ['down']); // разворот относительно движения вверх
-    expect(g.body[0]).toBe(85);
-    move(g, ['left']); // поворот вбок разрешён
-    expect(g.body[0]).toBe(84);
-    expect(g.lives).toBe(4);
-  });
-
-  it('удержание ROTATE ускоряет змейку: ход наступает заметно раньше', () => {
-    const slow = move(fresh());
-    const fast = move(fresh(), [], ['rotate']);
-    expect(fast.ticks).toBeLessThan(slow.ticks);
-    expect(fast.ticks).toBeLessThanOrEqual(slow.ticks / 2);
-  });
-
-  coveredScenario('snake', 'прогресс', 'тринадцать плодов подряд: +10 за каждый, рост на клетку, после последнего +100 за уровень и новая карта с короткой змейкой', () => {
-    const g = fresh();
-    // Маршрут без самопересечений: три плода вправо по строке 10, четыре вверх по колонке 7, шесть влево по строке 6.
-    const route: { turn?: BrickAction; cell: number }[] = [
-      { cell: 105 }, { cell: 106 }, { cell: 107 },
-      { turn: 'up', cell: 97 }, { cell: 87 }, { cell: 77 }, { cell: 67 },
-      { turn: 'left', cell: 66 }, { cell: 65 }, { cell: 64 }, { cell: 63 }, { cell: 62 }, { cell: 61 },
-    ];
-    let events: BrickEvent[] = [];
-    route.forEach((step, i) => {
-      g.food = step.cell;
-      events = move(g, step.turn ? [step.turn] : []).events;
-      expect(g.body[0], `плод ${i + 1}`).toBe(step.cell);
-      expect(g.body, `плод ${i + 1}`).toHaveLength(4 + i);
-      expect(has(events, 'bonus'), `плод ${i + 1}`).toBe(true);
-      expect(g.lives).toBe(4);
-      if (i < 12) {
-        expect(g.score, `плод ${i + 1}`).toBe(10 * (i + 1));
-        expect(has(events, 'win'), `плод ${i + 1}`).toBe(false);
-        expect(g.level).toBe(1);
-      }
-    });
-    expect(has(events, 'win')).toBe(true);
-    expect(g.score).toBe(13 * 10 + 100);
-    expect(g.level).toBe(1); // переход — после сценки очистки поля
-    // сценка без ввода: змейка стоит, нажатия ничего не меняют
-    const head = g.body[0];
-    for (let i = 0; i < 10; i++) g.step(makeBrickInput(['down']));
-    expect(g.body[0]).toBe(head);
-    const next = playUntil(g, () => g.level === 2, 120);
-    expect(next.reached).toBe(true);
-    expect(has(next.events, 'levelUp')).toBe(true);
-    expect(g.body).toEqual([104, 103, 102]); // короткая змейка, курс вправо
-    expect(g.score).toBe(230);
-    expect(g.lives).toBe(4);
-    expect(g.walls.size).toBeGreaterThan(0); // «новая карта»: со второго уровня на поле стенки
-    expect(g.walls.has(g.food)).toBe(false);
-    expect(g.body).not.toContain(g.food);
-  });
-
-  it('стенка поля: потеря жизни, партия повторяется с короткой змейкой, счёт и уровень остаются', () => {
-    const g = fresh();
-    g.food = 105;
-    move(g); // один плод: счёт 10, длина 4, голова в колонке 5
-    g.food = 0;
-    for (const column of [6, 7, 8, 9]) {
-      move(g);
-      expect(g.body[0]).toBe(100 + column);
-      expect(g.lives).toBe(4);
-    }
-    const crash = move(g); // следующая клетка — за правым краем
-    expect(has(crash.events, 'lifeLost')).toBe(true);
-    expect(has(crash.events, 'gameOver')).toBe(false);
-    expect(g.lives).toBe(3);
-    expect(g.score).toBe(10);
-    expect(g.body[0]).toBe(109); // голова за край не вышла
-    for (let i = 0; i < 20; i++) g.step(makeBrickInput(['up'])); // пока идёт сценка потери жизни, ввод не действует
-    expect(g.body[0]).toBe(109);
-    const again = playUntil(g, () => g.body.length === 3, 120);
-    expect(again.reached).toBe(true);
-    expect(g.body).toEqual([104, 103, 102]);
-    expect(g.lives).toBe(3);
-    expect(g.score).toBe(10);
-    expect(g.level).toBe(1);
-    expect(g.phase).toBe('playing');
-  });
-
-  it('верхний и нижний края поля — тоже стенки: вверх от строки 10 безопасны десять клеток, одиннадцатая — потеря жизни; вниз безопасны девять, десятая — потеря', () => {
-    const fast = ['rotate' as const];
-    const up = fresh();
-    move(up, ['up'], fast); // (4;9)
-    for (let row = 8; row >= 0; row--) {
-      move(up, [], fast);
-      expect(up.body[0], `строка ${row}`).toBe(row * 10 + 4);
-    }
-    expect(up.lives).toBe(4);
-    expect(has(move(up, [], fast).events, 'lifeLost')).toBe(true); // за верхним краем
-    expect(up.lives).toBe(3);
-    const down = fresh();
-    move(down, ['down'], fast); // (4;11)
-    for (let row = 12; row <= 19; row++) {
-      move(down, [], fast);
-      expect(down.body[0], `строка ${row}`).toBe(row * 10 + 4);
-    }
-    expect(down.lives).toBe(4);
-    expect(has(move(down, [], fast).events, 'lifeLost')).toBe(true); // за нижним краем
-    expect(down.lives).toBe(3);
-  });
-
-  it('левый край поля — тоже стенка: змейка, свернув влево, доходит до колонки 0, а дальше теряет жизнь', () => {
-    const g = fresh();
-    move(g, ['up'], ['rotate']); // (4;9)
-    move(g, ['left'], ['rotate']); // (3;9)
-    for (const column of [2, 1, 0]) {
-      move(g, [], ['rotate']);
-      expect(g.body[0]).toBe(90 + column);
-    }
-    expect(g.lives).toBe(4);
-    expect(has(move(g, [], ['rotate']).events, 'lifeLost')).toBe(true);
-    expect(g.lives).toBe(3);
-  });
-
-  it('собственное тело: врезание в хвост стоит жизни', () => {
-    const g = fresh();
-    for (const cell of [105, 106, 107]) {
-      g.food = cell;
-      move(g);
-    }
-    g.food = 0;
-    expect(g.body).toEqual([107, 106, 105, 104, 103, 102]);
-    move(g, ['up']); // 97
-    move(g, ['left']); // 96
-    expect(g.lives).toBe(4);
-    const crash = move(g, ['down']); // клетка 106 — тело змейки
-    expect(has(crash.events, 'lifeLost')).toBe(true);
-    expect(g.lives).toBe(3);
-    expect(g.score).toBe(30);
-  });
-
-  it('кончик хвоста в момент хода освобождает клетку: змейка может «гнаться за хвостом» по кольцу из четырёх клеток', () => {
-    const g = fresh();
-    g.body = [54, 64, 63, 53]; // квадрат 2 × 2, голова (4;5) идёт вверх, хвост (3;5) — рядом с головой слева
-    g.directionNow = 0;
-    g['queued'] = 0;
-    move(g, ['left']);
-    expect(g.lives).toBe(4);
-    expect(g.body).toEqual([53, 54, 64, 63]);
-  });
-
-  it('стенка внутри карты (со второго уровня) убивает так же, как край поля', () => {
-    const g = fresh({ level: 2 });
-    expect([g.cells()[112], g.cells()[113], g.cells()[114]]).toEqual([1, 1, 0]); // стенка в колонках 2–3 строки 11, колонка 4 свободна
-    move(g, ['down']); // (4;11)
-    expect(g.body[0]).toBe(114);
-    expect(g.lives).toBe(4);
-    const crash = move(g, ['left']); // (3;11) — стенка
-    expect(has(crash.events, 'lifeLost')).toBe(true);
-    expect(g.lives).toBe(3);
-  });
-
-  coveredScenario('snake', 'неудача', 'четыре столкновения подряд: жизни 3, 2, 1, 0; на последнем — конец партии, рекорд сохраняется', () => {
-    const g = fresh();
-    g.food = 105;
-    move(g); // счёт 10
-    const fast = (): BrickInput => {
-      g.food = 0; // плод держим в углу: он не на пути змейки
-      return makeBrickInput([], ['rotate']);
-    };
-    for (let crash = 1; crash <= 4; crash++) {
-      const before = g.lives;
-      const played = playUntil(g, () => g.lives !== before, 400, fast);
-      expect(played.reached, `столкновение ${crash}`).toBe(true);
-      expect(g.lives, `столкновение ${crash}`).toBe(4 - crash);
-      expect(has(played.events, 'lifeLost'), `столкновение ${crash}`).toBe(true);
-      expect(has(played.events, 'gameOver'), `столкновение ${crash}`).toBe(crash === 4);
-    }
-    expect(g.score).toBe(10);
-    expectOverThenRestart(g, 10);
-    expect(g.lives).toBe(4);
+  coveredScenario('snake', 'неудача', 'четыре столкновения заканчивают партию, максимум очков сохраняется', () => {
+    const g=new SnakeGame();g.start();g.food=185;g.step(makeBrickInput(['up']));expect(g.score).toBe(10);
+    for(let lives=3;lives>=0;lives--){g.body=[109,108,107];g.directionNow=1;g.step(makeBrickInput(['right']));expect(g.lives).toBe(lives);if(lives)run(g,60);}
+    run(g,GAME_OVER_TICKS);expect(g.phase).toBe('over');expect(g.hiScore).toBe(10);
   });
 });
 

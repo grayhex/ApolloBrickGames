@@ -14,7 +14,6 @@ import { GAME_OVER_TICKS, NEUTRAL_BRICK_INPUT, makeBrickInput, type BrickAction,
 import { LIBRARY_GAMES } from '../../../src/brick/games/library';
 import { MergeGame, ReversiGame } from '../../../src/brick/games/library/puzzles';
 import { DiceGame, MatchingGame, PadsGame } from '../../../src/brick/games/library/arcade';
-import { deepClone } from '../safePath';
 
 const coveredScenario = scenarioSuite('scenarios.puzzles');
 
@@ -981,152 +980,25 @@ describe(`${DANCE}: танцы`, () => {
   });
 });
 
-// ── dice ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── dice: B0202 E02 ────────────────────────────────────────────────────────────────────────────
 
-describe(`${DICE}: три кости`, () => {
-  const sum = (dice: readonly number[]): number => dice.reduce((a, b) => a + b, 0);
-  /** Верно ли предсказание по правилам справки: 0 — малая сумма 3–10, 1 — большая 11–18, 2 — три пятёрки. */
-  const correct = (selection: number, dice: readonly number[]): boolean =>
-    selection === 0 ? sum(dice) >= 3 && sum(dice) <= 10 : selection === 1 ? sum(dice) >= 11 && sum(dice) <= 18 : dice.every((v) => v === 5);
-  const choose = (g: DiceGame, selection: number): void => {
-    for (let n = 0; n < 3 && g.selection < selection; n++) tap(g, 'right');
-    for (let n = 0; n < 3 && g.selection > selection; n++) tap(g, 'left');
-    expect(g.selection).toBe(selection);
-  };
-  /** Бросок: ROTATE; затем идут такты, пока кости крутятся (около 36). Возвращает события броска. */
-  const roll = (g: DiceGame): BrickEvent[] => [...g.step(makeBrickInput(['rotate'])), ...run(g, 50)];
-  /** Игра в начале партии с выбранным предсказанием. */
-  const game = (seed: number, selection = 0): DiceGame => {
-    const g = new DiceGame({ seed });
-    g.start();
-    choose(g, selection);
-    return g;
-  };
-  /** Кости, которые выпадут в партии с зерном `seed` на первом броске (проба на отдельной партии). */
-  const outcome = (seed: number): number[] => {
-    const g = game(seed);
-    roll(g);
-    return [...g.dice];
-  };
-  const findSeed = (accept: (dice: number[]) => boolean): number => {
-    for (let seed = 1; seed <= 30000; seed++) if (accept(outcome(seed))) return seed;
-    throw new Error('подходящее зерно не нашлось');
-  };
-
-  coveredScenario(DICE, 'прогресс', 'прогресс: верное предсказание — +1 очко и сигнал «бонус», без жизней и ставок; серия верных предсказаний копит очки', () => {
-    const g = game(11);
-    expect(g.id).toBe(DICE);
-    expect(g.lives).toBeNull();
-    for (let n = 1; n <= 6; n++) {
-      // Игрок угадывает: пробный бросок по копии партии показывает, что выпадет, и выбирается предсказание, которое сбудется.
-      const probe = deepClone(g);
-      roll(probe);
-      const selection = [0, 1, 2].find((s) => correct(s, probe.dice));
-      expect(selection, `бросок ${n}: есть верное предсказание`).toBeDefined();
-      choose(g, selection ?? 0);
-      const events = roll(g);
-      expect(g.dice).toEqual(probe.dice);
-      expect(count(events, 'bonus'), `бросок ${n}`).toBe(1);
-      expect(g.score).toBe(n);
-      for (const die of g.dice) expect(die >= 1 && die <= 6).toBe(true);
-      // На экране у каждой кости горит столько точек, сколько выпало (ровные клетки; мигающая клетка внизу — выбранное предсказание).
-      expect(g.cells().filter((v) => v === 1).length, `бросок ${n}: точки на экране`).toBe(sum(g.dice));
-      expect(g.cells().filter((v) => v === 2).length).toBe(1);
-    }
-    expect(g.score).toBe(6);
-    expect(g.hiScore).toBe(6);
-    expect(g.lives).toBeNull();
-    expect(g.phase).toBe('playing');
+describe(`${DICE}: четыре кости, банк и ставки`, () => {
+  const stop = (g: DiceGame, dice: number[]): void => { g.dice=dice;g.step(makeBrickInput(['down'])); };
+  coveredScenario(DICE, 'прогресс', 'победа возвращает двойную ставку; банк и максимум обновляются', () => {
+    const g=new DiceGame();g.start();g.step(makeBrickInput(['right']));expect(g.score).toBe(990);
+    g.step(makeBrickInput(['rotate']));stop(g,[1,1,3,4]);g.step(makeBrickInput(['rotate']));stop(g,[2,2,5,6]);
+    expect(g.score).toBe(1010);expect(g.peakBank).toBe(1010);expect(g.hiScore).toBe(1010);
   });
-
-  it('малая и большая сумма: граница между 10 и 11, малая — 3–10, большая — 11–18', () => {
-    const cases = [
-      { name: 'сумма 10', pick: (d: number[]) => sum(d) === 10, small: true },
-      { name: 'сумма 11', pick: (d: number[]) => sum(d) === 11, small: false },
-      { name: 'сумма не больше 6', pick: (d: number[]) => sum(d) <= 6, small: true },
-      { name: 'сумма не меньше 15', pick: (d: number[]) => sum(d) >= 15, small: false },
-    ];
-    for (const c of cases) {
-      const seed = findSeed(c.pick);
-      const small = game(seed, 0);
-      const smallEvents = roll(small);
-      expect(c.pick(small.dice), c.name).toBe(true);
-      expect(count(smallEvents, 'bonus'), `${c.name}: малая`).toBe(c.small ? 1 : 0);
-      expect(small.score).toBe(c.small ? 1 : 0);
-      const large = game(seed, 1);
-      const largeEvents = roll(large);
-      expect(large.dice).toEqual(small.dice);
-      expect(count(largeEvents, 'bonus'), `${c.name}: большая`).toBe(c.small ? 0 : 1);
-      expect(large.score).toBe(c.small ? 0 : 1);
-    }
+  coveredScenario(DICE, 'неудача', 'банкротство завершает партию, результат — максимум банка в этой партии', () => {
+    const g=new DiceGame();g.start();for(let i=0;i<100;i++)g.step(makeBrickInput(['right']));expect(g.score).toBe(0);
+    g.step(makeBrickInput(['rotate']));stop(g,[6,6,6,6]);run(g,60+GAME_OVER_TICKS);
+    expect(g.phase).toBe('over');expect(g.score).toBe(1000);
   });
-
-  it('три пятёрки: выигрывает только 5-5-5 (и тогда сумма 15 засчитывается как «большая»); близкие броски вроде 5-5-4 и 5-5-6 не считаются', () => {
-    const triple = findSeed((d) => d.every((v) => v === 5));
-    const win = game(triple, 2);
-    expect(count(roll(win), 'bonus')).toBe(1);
-    expect(win.dice).toEqual([5, 5, 5]);
-    expect(win.score).toBe(1);
-    const asLarge = game(triple, 1);
-    roll(asLarge);
-    expect(asLarge.score, '15 — большая сумма').toBe(1);
-    const asSmall = game(triple, 0);
-    roll(asSmall);
-    expect(asSmall.score, '15 — не малая сумма').toBe(0);
-    const near = findSeed((d) => d.filter((v) => v === 5).length === 2);
-    const miss = game(near, 2);
-    const events = roll(miss);
-    expect(count(events, 'bonus')).toBe(0);
-    expect(miss.score).toBe(0);
-  });
-
-  coveredScenario(DICE, 'неудача', 'неудача: неверное предсказание — очков нет, сигнал «нельзя», жизней у игры нет, партия продолжается; уже набранный счёт промахи не уменьшают', () => {
-    const g = game(11);
-    const bet = (wantCorrect: boolean): { events: BrickEvent[] } => {
-      // Пробный бросок по копии партии показывает, что выпадет; выбирается предсказание, которое сбудется (или нет).
-      const probe = deepClone(g);
-      roll(probe);
-      const selection = [0, 1, 2].find((s) => correct(s, probe.dice) === wantCorrect);
-      expect(selection, 'нужное предсказание нашлось').toBeDefined();
-      choose(g, selection ?? 0);
-      const events = roll(g);
-      expect(g.dice).toEqual(probe.dice);
-      return { events };
-    };
-    for (let n = 1; n <= 2; n++) expect(count(bet(true).events, 'bonus')).toBe(1);
-    expect(g.score).toBe(2);
-    for (let n = 1; n <= 6; n++) {
-      const { events } = bet(false);
-      expect(count(events, 'bonus'), `промах ${n}`).toBe(0);
-      expect(count(events, 'blocked'), `промах ${n}`).toBe(1);
-      expect(g.score, `после промаха ${n}`).toBe(2);
-      expect(g.lives).toBeNull();
-      expect(g.phase).toBe('playing');
-    }
-    expect(g.hiScore).toBe(2);
-    // после промахов игра принимает следующий бросок и верное предсказание засчитывает
-    bet(true);
-    expect(g.score).toBe(3);
-    expect(g.hiScore).toBe(3);
-  });
-
-  it('пока кости крутятся, ввод не принимается: предсказание не меняется, повторные нажатия не запускают второй бросок — исход один', () => {
-    const g = game(21, 1);
-    const events = [...g.step(makeBrickInput(['rotate']))];
-    const frames = new Set<string>();
-    for (let i = 0; i < 20; i++) {
-      events.push(...g.step(makeBrickInput(i % 2 ? ['left'] : ['rotate'])));
-      frames.add(g.dice.join(''));
-    }
-    expect(frames.size, 'кости на экране крутятся').toBeGreaterThan(1);
-    events.push(...run(g, 100));
-    expect(g.selection).toBe(1);
-    expect(count(events, 'bonus') + count(events, 'blocked'), 'ровно один исход').toBe(1);
-    const outcomeDice = [...g.dice];
-    expect(g.score).toBe(correct(1, outcomeDice) ? 1 : 0);
-    // ровно один бросок за нажатие: следующие тихие такты кости не трогают
-    run(g, 60);
-    expect(g.dice).toEqual(outcomeDice);
+  it('seeded rolls are deterministic; pause freezes an unfinished throw and controls cannot add a second wager mid-roll', () => {
+    const a=new DiceGame({seed:27}), b=new DiceGame({seed:27});
+    for(const g of [a,b]){g.start();g.step(makeBrickInput(['right']));g.step(makeBrickInput(['rotate']));}
+    a.pause();run(a,120);a.resume();
+    for(let i=0;i<60;i++){a.step(makeBrickInput(['right']));b.step(makeBrickInput(['right']));expect(a.dice).toEqual(b.dice);expect(a.stake).toBe(1);}
   });
 });
 

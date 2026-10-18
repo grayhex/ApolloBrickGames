@@ -127,7 +127,8 @@ it('uses bounded tone schedules, including deterministic pitched noise', () => {
     for (const note of notes) {
       expect(note.ms).toBeGreaterThan(4);
       expect(note.hz).toBeGreaterThanOrEqual(0);
-      expect(note.hz).toBeLessThan(5000);
+      // E88 sound ROM includes notes above 5 kHz; keep the original frequencies.
+      expect(note.hz).toBeLessThan(16000);
     }
   const { port, voices } = harness();
   port.unlock();

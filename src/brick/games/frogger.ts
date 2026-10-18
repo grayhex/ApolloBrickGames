@@ -27,6 +27,7 @@ import {
 } from '../types';
 import { LANE_COUNT, LANE_LENGTH, oncomingLanes, preloadedLanes, randomLanes, wrapLane, type Lane } from './frogger/lanes';
 import { DONOR_TYPES, FROGGER_MODES, rulesOfDonorType, type FroggerRules } from './frogger/modes';
+import { B0202FrogGame } from './frogger/b0202';
 
 export { FROGGER_MODES, rulesOfDonorType, type FroggerRules } from './frogger/modes';
 export type { Lane } from './frogger/lanes';
@@ -330,6 +331,6 @@ export const froggerDef: BrickGameDef = {
   id: 'frog',
   // число вариантов на настоящем устройстве не установлено; реализованы типы 1–16 из 32 донорских
   declaredModes: null,
-  modes: FROGGER_MODES,
-  create: (options) => new FroggerGame(options),
+  modes: [{ name: { ru: 'Apollo B0202 A01', en: 'Apollo B0202 A01' }, note: 'По ROM B0202 A01: одиночные шаги, две полосатые обочины, расписание движения рядов, очки за каждый переход. ГСЧ, сцены и часть условий остаются адаптацией.' }, ...FROGGER_MODES.slice(1)],
+  create: (options) => ((Math.trunc(options.mode ?? 0) % 16) + 16) % 16 === 0 ? new B0202FrogGame(options) : new FroggerGame(options),
 };
