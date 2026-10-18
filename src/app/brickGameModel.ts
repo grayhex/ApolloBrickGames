@@ -71,7 +71,7 @@ function padCross(): SVGSVGElement {
 /** Site branding distinguishes the universal toy from original hardware replicas. */
 function wordmark(games: number): HTMLElement {
   return h('div',{class:'classic__wordmark','aria-hidden':'true'},
-    h('img',{class:'classic__site-logo',src:`${import.meta.env.BASE_URL}brand/brick-game-online-logo.svg`,alt:'Brick Game Online',width:'1920',height:'760'}),
+    h('div',{class:'classic__site-logo'},h('span',{},'BRICK'),h('span',{},'GAME'),h('small',{},'.ONLINE')),
     h('span',{class:'classic__count'},`${games} IN 1`));
 }
 
@@ -160,7 +160,7 @@ export function brickGameMini(view: View = 'full', shell?: Shell): SVGSVGElement
     svg('rect', { x: '8', y: '10', width: '28', height: '33', fill: '#bac49c' }),
     svg('path', { d: 'M26 11V42M11 38h3v-3h3v3h3v3h-9Z', fill: '#3c4537', stroke: '#3c4537', 'stroke-width': '.4' }),
   );
-  if(transparent&&!screen)root.append(svg('path',{d:'M5 49H39V94H5Z',fill:'#548671',opacity:'.75'}),svg('path',{d:'M7 52V87H34V56M11 55V83H30V59M15 56V79H26V62',fill:'none',stroke:'#b7c595','stroke-width':'.6'}),svg('rect',{x:'17',y:'57',width:'11',height:'8',rx:'1',fill:'#273c33'}));
+  if(transparent&&!screen)root.append(svg('g',{opacity:'.24'},svg('path',{d:'M5 49H39V94H5Z',fill:'#548671',opacity:'.75'}),svg('path',{d:'M7 52V87H34V56M11 55V83H30V59M15 56V79H26V62',fill:'none',stroke:'#b7c595','stroke-width':'.6'}),svg('rect',{x:'17',y:'57',width:'11',height:'8',rx:'1',fill:'#273c33'})));
   if (!screen)
     root.append(
       svg('path', { d: 'M2 46Q22 43 42 46V53Q22 59 2 53Z', fill: ridge }),

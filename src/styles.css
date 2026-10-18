@@ -4704,13 +4704,14 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 /* Extra breathing room between the LCD glass and the printed yellow frame. */
 .toy[data-model='brickgame'] .lid__bezel { padding:2.2cqw 1.4cqw; }
 .classic__wordmark { display:flex; flex-direction:column; align-items:center; justify-content:center; right:11cqw; bottom:5cqw; width:78cqw; height:32cqw; gap:1cqw; }
-.classic__site-logo { display:block; width:100%; height:auto; max-height:27cqw; object-fit:contain; }
-.classic__wordmark .classic__count { font:700 3cqw/1.2 system-ui,sans-serif; letter-spacing:.18em; color:var(--classic-print); }
+.classic__site-logo { display:flex; flex-direction:column; align-items:flex-start; font:900 10cqw/.84 Arial,system-ui,sans-serif; letter-spacing:-.06em; color:var(--classic-print); transform:rotate(-8deg); background:none; }
+.classic__site-logo small { font:700 2.8cqw/1.4 ui-monospace,monospace; letter-spacing:.18em; margin-top:1.6cqw; }
+.classic__wordmark .classic__count { margin-top:3cqw; font:700 3cqw/1.2 system-ui,sans-serif; letter-spacing:.18em; color:var(--classic-print); }
 [data-shell='clear'] { --classic-cap:#7e6717; --classic-motif:#2c5446; --tone:#b8bdad; --classic-body:#d8e1d5; --classic-hi:#f0f3e7; --classic-lo:#a9b9ae; --classic-print:#243b31; --classic-border:#a4b6a7; --glass-tint:#eaf0df77; }
 [data-shell='smoke'] { --classic-cap:#efd35a; --classic-motif:#c0d2bc; --tone:#b5bd94; --classic-body:#151b18; --classic-hi:#303a32; --classic-lo:#080d0a; --classic-print:#eef2df; --classic-border:#192a20; --glass-tint:#07110be0; }
 .classic__pcb { position:absolute; inset:1.5%; width:97%; height:97%; opacity:0; pointer-events:none; }
 .classic__glass { display:none; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1; }
-.toy[data-model='brickgame']:is([data-shell='clear'],[data-shell='smoke']) .classic__pcb { opacity:.9; }
+.toy[data-model='brickgame']:is([data-shell='clear'],[data-shell='smoke']) .classic__pcb { opacity:.24; }
 .toy[data-model='brickgame']:is([data-shell='clear'],[data-shell='smoke']) .classic__glass { display:block; background:linear-gradient(112deg,#ffffff80,transparent 18%,var(--glass-tint) 46%,#ffffff24 65%,transparent 82%,#0003); box-shadow:inset .8cqw .4cqw 1cqw #fff9,inset -.6cqw -.6cqw 1.2cqw #0005; }
 .toy[data-model='brickgame']:is([data-shell='clear'],[data-shell='smoke'])::after { opacity:.72; }
 .toy[data-model='brickgame']:is([data-shell='clear'],[data-shell='smoke']) .base { z-index:2; }

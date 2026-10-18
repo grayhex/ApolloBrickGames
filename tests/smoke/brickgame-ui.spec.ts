@@ -78,7 +78,8 @@ test('корпус универсального Brick Game: без винтов,
   // Надпись двумя строками под углом и число игр, назначенных приставке сейчас.
   const games = universalGames(validateConfig(defaults)).length;
   await expect(page.locator('.classic__count')).toHaveText(`${games} IN 1`);
-  await expect(page.locator('.classic__site-logo')).toHaveAttribute('src',/brick-game-online-logo.svg$/);
+  await expect(page.locator('.classic__site-logo')).toHaveText('BRICKGAME.ONLINE');
+  await expect(page.locator('.classic__site-logo')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.classic__face')).toHaveCount(0);
   await expect(page.locator('.classic__wordmark')).toHaveCSS('pointer-events', 'none'); // не перекрывает кнопки
 });
@@ -380,7 +381,7 @@ test('clear and smoke shells reveal decorative electronics, without covering con
  await expect(page.locator('.classic__pcb')).toHaveCSS('opacity','0');
  for(const shell of ['clear','smoke']){
   await page.locator(`#shell-picker [data-shell=${shell}]`).click();
-  await expect(page.locator('.classic__pcb')).toHaveCSS('opacity','0.9');
+  await expect(page.locator('.classic__pcb')).toHaveCSS('opacity','0.24');
   await expect(page.locator('.classic__glass')).toHaveCSS('pointer-events','none');
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
   await page.locator('#base [data-key=sp]').click();
