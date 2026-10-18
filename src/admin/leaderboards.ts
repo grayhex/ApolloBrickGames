@@ -1,8 +1,9 @@
+import { rulesetFor } from '../games/rulesets';
 import { h } from '../app/dom';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { TOYS, type ToyId } from '../app/toys';
-import { categoryFor, RULESET_VERSION, STANDARD_START } from '../leaderboards/category';
+import { categoryFor, STANDARD_START } from '../leaderboards/category';
 interface AdminEntry {
   entryId: string;
   nickname: string;
@@ -20,10 +21,10 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
     toy = h('select', { 'aria-label': 'Профиль управления рейтинга' });
   for (const g of Object.values(GAMES).filter((g) => g.id === 'mario' || BRICK_GAMES[g.id])) game.append(h('option', { value: g.id }, g.names.ru));
   game.value = 'tetris';
-  const status = h('p', { role: 'status' }),
+  const revision = h('p'), status = h('p', { role: 'status' }),
     rows = h('div', { class: 'admin__record-list' });
   const category = (): string =>
-    categoryFor({ gameId: game.value, mode: Number(mode.value), toyId: toy.value, rulesetVersion: RULESET_VERSION, startProfile: STANDARD_START });
+    categoryFor({ gameId: game.value, mode: Number(mode.value), toyId: toy.value, rulesetVersion: rulesetFor(game.value), startProfile: STANDARD_START });
   const message = (text: string): void => {
     status.textContent = text;
   };
@@ -40,6 +41,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
     return response;
   };
   const refreshChoices = (): void => {
+    revision.textContent = `Стандартный старт · ruleset ${rulesetFor(game.value)}`;
     mode.replaceChildren(
       ...(game.value === 'mario' ? [{ name: { ru: 'Полная партия с уровня 1' } }] : BRICK_GAMES[game.value as GameId]!.modes).map((m, i) =>
         h('option', { value: String(i) }, `${i + 1}: ${m.name.ru}`),
@@ -48,7 +50,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
     toy.replaceChildren();
     for (const id of ['mario', 'clock99', 'seabattle', 'tank168', 'brickgame'] as const) {
       try {
-        categoryFor({ gameId: game.value, mode: 0, toyId: id, rulesetVersion: RULESET_VERSION, startProfile: STANDARD_START });
+        categoryFor({ gameId: game.value, mode: 0, toyId: id, rulesetVersion: rulesetFor(game.value), startProfile: STANDARD_START });
         toy.append(h('option', { value: id }, TOYS[id].name));
       } catch {
         /* incompatible hardware */
@@ -151,7 +153,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
     h('label', {}, 'Игра', game),
     h('label', {}, 'Вариант движка', mode),
     h('label', {}, 'Модель / управление', toy),
-    h('p', {}, 'Стандартный старт · ruleset 1'),
+    revision,
     loadButton,
     download,
     status,

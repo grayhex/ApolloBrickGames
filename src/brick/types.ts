@@ -113,6 +113,8 @@ export interface BrickGame {
 
   /** `ready` или `over` -> `playing`: новая партия, рекорд сохраняется. */
   start(): BrickEvent[];
+  /** Some original games repurpose START/P during play (Dice: bigger/smaller). */
+  startButton?(): BrickEvent[];
   pause(): BrickEvent[];
   resume(): BrickEvent[];
   /** Свежая партия в любой фазе, но без старта: `ready`. */

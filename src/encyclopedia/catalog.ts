@@ -9,7 +9,7 @@ export interface EncyclopediaEntry { id: GameId; family: Family; accuracy: 0 | 3
 const repo = 'https://github.com/grayhex/ApolloBrickGames/blob/main/';
 const wiki: EvidenceSource = { kind:'wiki', title:'Retro Consoles Wiki · Brick Game', url:'https://retroconsoles.fandom.com/wiki/Brick_Game#Games', note:gt('Описание основных правил и перечень вариантов устройств.', 'Descriptions of the core rules and device variants.') };
 const research = (path: string, note: GuideText): EvidenceSource => ({kind:'research',title:`Apollo Brick Games · ${path.split('/').at(-1)}`,url:repo+path,note});
-const rom: EvidenceSource = { kind:'rom', title:'BrickEmuPy · Apollo B0202 / E-23 / E-88', url:'https://github.com/azya52/BrickEmuPy/tree/376cca92c6d000ffd6046e5491f2a1c3d1a5eab0',note:gt('Машинный код оригинальных устройств; объём сверки указан отдельно для каждой игры.', 'Original device machine code; the verification scope is specified for each game.') };
+const rom: EvidenceSource = { kind:'rom', title:'BrickEmuPy · Brick Game ROMs', url:'https://github.com/azya52/BrickEmuPy/tree/376cca92c6d000ffd6046e5491f2a1c3d1a5eab0',note:gt('Машинный код оригинальных устройств; объём сверки указан отдельно для каждой игры.', 'Original device machine code; the verification scope is specified for each game.') };
 const donorFiles: Partial<Record<GameId,string>> = {tetris:'TetrisGameI','tetris-big':'TetrisGameI','tetris-pentix':'PentixGameQ',shooting:'InvadersGame','shooting-array':'GunGame','shooting-figures':'GunGame',racing:'RacingGame','racing-shooting':'RacingGame',tank:'TanksGame',arkanoid:'ArkanoidGame',frog:'FroggerGame',construction:'GunGame'};
 const blocks = new Set<GameId>(['tetris','tetris-big','tetris-pentix','tetris-flicker','tetris-shooting','columns','columns-flicker','dr-mario','construction','matching-blocks','romeo-juliet']);
 const puzzles = new Set<GameId>(['maze','jigsaw','sokoban','lights-out','peg-solitaire','reversi','2048','fill-connect','simon','dice','quarth']);
@@ -29,9 +29,20 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
     accuracy=id==='tetris'?100:90;
     sources.push(rom,research('docs/brick/rom-review.md',gt('Проверены интервалы падения, очки за ряды, пороги скорости, удержание и команды звука B0202.', 'Verified B0202 gravity intervals, line scores, speed thresholds, repeat input and sound commands.')));
     scope=gt('Общие правила Tetris сверены по дампу, коду и наблюдениям. Специальные варианты, наборы фигур и отдельные анимации подтверждены не полностью.', 'Shared Tetris rules were cross-checked against a ROM, code and observations. Special variants, piece sets and some animations are not fully verified.');
-  }else if(['racing','racing-shooting','frog','shooting','shooting-array','construction','arkanoid','honeybee','dice','pong','pong-double','pneumatic-ball','arkanoid-dots','space-invaders'].includes(id)){
+  }else if(['racing','racing-shooting','shooting','shooting-array','construction','space-invaders'].includes(id)){
     sources.push(rom,research('docs/brick/rom-review.md',gt('Найдены аналоги или отдельные наблюдения. Это не полная проверка правил данной реализации.', 'Related games or individual observations were found. This is not a complete verification of this implementation.')));
     // Finding a similarly named game in a ROM is not verification of our gameplay.
+  }
+  if(id==='snake'||id==='dice'||id==='frog'||id==='honeybee'){
+    accuracy=90;
+    sources.push(rom,research('docs/brick/rom-arcade.md',gt('Воспроизводимые трассы всех десяти скоростей змейки, таблица всех 1296 бросков Dice, расписание Frog, кадры Beetle и команды звука E88.', 'Reproducible traces of all ten Snake speeds, all 1296 Dice throws, the Frog schedule, Beetle frames and E88 sound commands.')));
+    scope=id==='snake'
+      ? gt('E-23 №93 / E88 №5: старт снизу, мгновенный поворот, разворот головы и хвоста, десять скоростей и звук по ROM. Рамка, генератор и полный цикл прогрессии остаются адаптацией.', 'E-23 #93 / E88 #5: bottom start, immediate steering, head/tail reversal, ten speeds and ROM sound. Frame, the random generator and the full progression cycle remain adapted.')
+      : id==='dice'
+        ? gt('Apollo B0202 E02: четыре кости, пары, перебросы, игровой банк, ставки и выплаты по ROM. Проверены все 1296 бросков. ГСЧ и пауза результата адаптированы; рейтинг — максимум банка за партию. E01/E03 не перенесены.', 'Apollo B0202 E02: four dice, pairs, rethrows, game bank, wagers and ROM payouts. All 1296 throws were checked. RNG and the result hold are adapted; ranking uses the party peak bank. E01/E03 are not ported.')
+        : id==='honeybee'
+          ? gt('Вариант 01 — Beetle B0202 D01: четыре жука, диагональный шаг, перенос через края, луч, очки и верхний резерв по ROM. ГСЧ, сцены и звук адаптированы. Варианты 02–08 остаются реконструкцией по вики.', 'Variant 01 follows Beetle B0202 D01: four beetles, diagonal steps, side wrapping, ray shots, scores and the upper reserve follow the ROM. RNG, scenes and audio are adapted. Variants 02–08 remain wiki reconstructions.')
+          : gt('Вариант 01 — B0202 A01: шаг, очки за переход, таблицы и период движения рядов сверены с ROM. ГСЧ, часть таймерных событий и сцены адаптированы. Варианты 02–16 сохраняют правила симулятора; процент относится к проверенным аспектам 01.', 'Variant 01 follows B0202 A01: steps, crossing scores, row tables and movement period were checked against the ROM. RNG, some timed events and scenes are adapted. Variants 02–16 keep simulator rules; the percentage refers to verified aspects of 01.');
   }
   if(id==='romeo-juliet'||id==='sea-battle'){
     accuracy=60;

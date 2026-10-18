@@ -1,3 +1,4 @@
+import { B0202_FROG_GUIDE } from './b0202Frog';
 import { LIBRARY_GUIDES } from './library';
 /**
  * Описания игр для левой панели: идентификатор игры каталога (`GameId`) -> описание «по факту реализации» (`GameGuideData`).
@@ -36,7 +37,7 @@ export const BRICK_GUIDES: Readonly<Record<string, GameGuideData>> = {
   'romeo-juliet': ROMEO_GUIDE,
   shooting: INVADERS_GUIDE,
   tank: TANKS_GUIDE,
-  frog: FROGGER_GUIDE,
+  frog: B0202_FROG_GUIDE,
   racing: RACING_GUIDE,
   'racing-shooting': RACING_SHOOT_GUIDE,
   'shooting-array': INVADERS_GUIDE,

@@ -165,11 +165,12 @@ describe('лягушка: варианты', () => {
   it('шестнадцать вариантов консоли, число на устройстве не установлено', () => {
     expect(froggerDef.id).toBe('frog');
     expect(froggerDef.declaredModes).toBeNull();
-    expect(froggerDef.modes).toBe(FROGGER_MODES);
+    expect(froggerDef.modes[0]?.name.en).toContain('B0202');
+    expect(froggerDef.modes.slice(1)).toEqual(FROGGER_MODES.slice(1));
     expect(froggerDef.modes).toHaveLength(16);
     expect(new Set(froggerDef.modes.map((mode) => mode.name.ru)).size).toBe(16);
     expect(new Set(froggerDef.modes.map((mode) => mode.name.en)).size).toBe(16);
-    for (const mode of froggerDef.modes) expect(mode.note).toContain('допущение');
+    for (const mode of froggerDef.modes.slice(1)) expect(mode.note).toContain('допущение');
   });
 
   it('правила типа донора: направление, перенос, встречное движение, готовые полосы, переворот', () => {
@@ -201,12 +202,12 @@ describe('лягушка: варианты', () => {
     expect(rules(32)).toBe('RL stay onc rand flip');
   });
 
-  it('все 32 типа донора различаются правилами; в консоли — первые 16, без переворота', () => {
+  it('все 32 типа донора различаются; варианты 2–16 консоли сохраняют правила донора', () => {
     const all = new Set(Array.from({ length: 32 }, (_, i) => JSON.stringify(rulesOfDonorType(i + 1))));
     expect(all.size).toBe(32);
     const shown = new Set(Array.from({ length: 16 }, (_, i) => JSON.stringify(rulesOfDonorType(i + 1))));
     expect(shown.size).toBe(16);
-    for (let mode = 0; mode < 16; mode++) {
+    for (let mode = 1; mode < 16; mode++) {
       const game = froggerDef.create({ seed: 1, mode });
       const ref = new FroggerGame({ seed: 1 }, rulesOfDonorType(mode + 1));
       expect(screen(game)).toEqual(screen(ref));
@@ -243,7 +244,7 @@ describe('лягушка: варианты', () => {
 
 describe('лягушка: поле и жизни', () => {
   it('до старта поле построено: восемь полос, разделители, обочина и дом пусты, лягушка внизу в центре', () => {
-    const game = froggerDef.create({ seed: 1, mode: 0 });
+    const game = new FroggerGame({ seed: 1 }, rulesOfDonorType(1));
     expect(screen(game)).toEqual([
       '..........', // 0: дом (ряд 19 донора)
       '..........', // 1: обочина
@@ -413,7 +414,7 @@ function longestRun(pattern: string, ch: string): number {
 
 describe('лягушка: полосы, их направление и скорость', () => {
   const roadChanges = (speed: number, ticks: number): number[] => {
-    const game = froggerDef.create({ seed: 1, mode: 0, speed });
+    const game = new FroggerGame({ seed: 1, speed }, rulesOfDonorType(1));
     game.start();
     const changes: number[] = [];
     let last = lanesOnScreen(game).join();
@@ -601,7 +602,7 @@ describe('лягушка: потеря жизни', () => {
   });
 
   coveredScenario('frog', 'неудача', 'четыре жизни — четыре гибели, затем конец игры: взрыв, снятие жизни, заливка поля, фаза `over`', () => {
-    const game = froggerDef.create({ seed: 1, mode: 0 });
+    const game = new FroggerGame({ seed: 1 }, rulesOfDonorType(1));
     game.start();
     const log: string[] = [];
     const lives: (number | null)[] = [];
@@ -838,9 +839,9 @@ function play(game: BrickGame, ticks: number, bot: (game: BrickGame) => BrickInp
 describe('лягушка: бот переходит дорогу', () => {
   const period = genuineTicks(1, 450, 120) * 3;
 
-  coveredScenario('frog', 'прогресс', 'на каждом из шестнадцати вариантов бот набирает очки, не теряя жизней, и проходит уровень', () => {
+  coveredScenario('frog', 'прогресс', 'на каждом из шестнадцати типов донора бот набирает очки и проходит уровень', () => {
     for (let mode = 0; mode < 16; mode++) {
-      const game = froggerDef.create({ seed: 2, mode, speed: 1 });
+      const game = new FroggerGame({ seed: 2, speed: 1 }, rulesOfDonorType(mode + 1));
       const events = play(game, 3000, botFor(period));
       expect(game.score, `вариант ${mode + 1}`).toBeGreaterThanOrEqual(20);
       expect(game.lives, `вариант ${mode + 1}`).toBe(4);
@@ -864,7 +865,7 @@ describe('лягушка: бот переходит дорогу', () => {
   });
 
   it('очки бота складываются по правилам донора: 1 за каждую лягушку и 10 за заполненный ряд домов', () => {
-    const game = froggerDef.create({ seed: 1, mode: 0, speed: 1 });
+    const game = new FroggerGame({ seed: 1, speed: 1 }, rulesOfDonorType(1));
     const events = play(game, 2200, botFor(period));
     const types = kinds(events);
     const locks = types.filter((type) => type === 'lock').length;

@@ -1,9 +1,10 @@
+import { rulesetFor } from '../../src/games/rulesets';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import worker, { LeaderboardStore } from '../../src/server/worker';
 import { signGuest, type LeaderboardEnv } from '../../src/server/leaderboards';
 import type { SqlStorage } from '../../src/server/leaderboardStore';
-import { categoryFor, RULESET_VERSION, STANDARD_START } from '../../src/leaderboards/category';
+import { categoryFor, STANDARD_START } from '../../src/leaderboards/category';
 const ORIGIN = 'https://games.example';
 const SECRET = 'test-leaderboard-secret-with-over-thirty-two-characters';
 const ADMIN = 'test-administrator-secret-with-over-thirty-two-characters';
@@ -40,7 +41,7 @@ const selected = (toyId = 'clock99', mode = 0, gameId = 'tetris') => ({
   gameId,
   toyId,
   mode,
-  rulesetVersion: RULESET_VERSION,
+  rulesetVersion: rulesetFor(gameId),
   startProfile: STANDARD_START,
 });
 function setup() {

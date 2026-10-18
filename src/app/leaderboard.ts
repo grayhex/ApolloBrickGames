@@ -1,8 +1,8 @@
+import { rulesetFor } from '../games/rulesets';
 import {
   categoryFor,
   nickname,
   rankedPage,
-  RULESET_VERSION,
   STANDARD_START,
   type RunSelection,
   type PublicTop,
@@ -213,7 +213,7 @@ export class LeaderboardCard {
     const identity = `${value.gameId}:${value.mode}:${value.toyId}`,
       eligible = this.pageEligible && standard;
     if (identity === this.selectionKey && eligible === this.eligible) return;
-    const selection = { ...value, rulesetVersion: RULESET_VERSION, startProfile: STANDARD_START };
+    const selection = { ...value, rulesetVersion: rulesetFor(value.gameId), startProfile: STANDARD_START };
     let category: string;
     try {
       category = categoryFor(selection);

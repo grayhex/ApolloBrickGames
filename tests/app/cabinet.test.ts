@@ -165,3 +165,25 @@ describe('универсальный Brick Game: кнопка FIRE и челов
     expect(moodOf([{ type: 'move' }, { type: 'shot' }, { type: 'hit' }, { type: 'lock' }])).toBeNull();
   });
 });
+
+describe('ROM rules through the cabinet',()=>{
+  for(const toy of ['clock99','seabattle','tank168','brickgame'] as const)it(`${toy}: Dice START/P changes the prediction; explicit pause freezes it`,()=>{
+    const c=createCabinet(assign(TOYS[toy],'dice'),options);
+    c.start();const before=c.scene({sound:false,allOn:false}).preview;
+    c.startButton?.();expect(c.phase).toBe('playing');
+    expect(c.scene({sound:false,allOn:false}).preview).not.toEqual(before);
+    c.step(makeFrame({pressed:['right']}));expect(c.score).toBe(990);
+    c.pause();const tick=c.tick;for(let i=0;i<100;i++)c.step(NEUTRAL_FRAME);
+    expect(c.phase).toBe('paused');expect(c.tick).toBe(tick);expect(c.score).toBe(990);
+    c.resume();c.startButton?.();expect(c.scene({sound:false,allOn:false}).preview).toEqual(before);
+  });
+  it('new local rules read new keys; unchanged Tetris still reads its original key',()=>{
+    for(const game of ['snake','dice','frog','honeybee','tetris'] as const){
+      const keys:string[]=[];
+      const c=createCabinet(assign(TOYS.clock99,game),{...options,loadHi:key=>{keys.push(key);return 0;}});
+      expect(c.hiKey()).toBe(`crocodile-mario:brick:clock99:${game}:0${game==='tetris'?':hi':':r2:hi'}`);
+      c.start();
+      expect(keys).toContain(c.hiKey());
+    }
+  });
+});

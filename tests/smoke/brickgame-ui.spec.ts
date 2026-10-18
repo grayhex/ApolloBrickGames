@@ -321,3 +321,32 @@ test('блок «Рекорды» не затемняется и всегда о
   await page.waitForTimeout(400);
   expect(await style()).toEqual({ column: '1', card: '1', border: '1px', style: 'solid' });
 });
+
+test('Dice ROM: START/P switches the prediction; the pause indicator freezes play; ruleset 2 is selected', async ({ page }) => {
+  const categories: string[] = [];
+  await page.route('**/api/leaderboards/top?**', route => {
+    const category=new URL(route.request().url()).searchParams.get('category')!;
+    categories.push(category);
+    return route.fulfill({json:{category,entries:[]}});
+  });
+  await open(page, '?toy=brickgame&power=on', config => {
+    config.toys.brickgame.games=[{id:'dice'}];config.toys.brickgame.defaultGame='dice';
+  });
+  await expect.poll(()=>area(page,'boot')).toBe('off');
+  await page.locator('[data-key=sp]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-score','1000');
+  await page.locator('[data-key=right]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-score','990');
+  const image=()=>page.locator('#screen').evaluate((canvas:HTMLCanvasElement)=>canvas.toDataURL());
+  // START/P is an in-game rule; explicit Pause must still freeze the canvas.
+  await page.locator('[data-key=sp]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await page.locator('[data-device=pause]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','paused');
+  const paused=await image();await page.waitForTimeout(150);expect(await image()).toBe(paused);
+  await page.locator('[data-device=pause]').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await expect.poll(()=>categories.some(c=>c==='dice:0:r2:standard-v1:matrix')).toBe(true);
+  await expect(page.locator('#gpanel')).toContainText('четырёх костей');
+});

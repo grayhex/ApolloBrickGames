@@ -240,6 +240,10 @@ export class BrickConsole implements BrickGame {
     return this.current?.pause() ?? [];
   }
 
+  startButton(): BrickEvent[] {
+    return this.current?.startButton ? this.current.startButton() : this.pause();
+  }
+
   resume(): BrickEvent[] {
     return this.current?.resume() ?? [];
   }

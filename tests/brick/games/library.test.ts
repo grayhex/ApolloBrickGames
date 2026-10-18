@@ -40,9 +40,8 @@ describe('library rules', () => {
   it('peg solitaire removes exactly the jumped peg', () => {
     const g = new SolitaireGame(); g.start(); g.cursor = 10; g.step(makeBrickInput(['rotate'])); g.cursor = 24; g.step(makeBrickInput(['rotate'])); expect(g.pegs.size).toBe(31); expect(g.pegs.has(17)).toBe(false); expect(g.pegs.has(24)).toBe(true);
   });
-  it('snake rejects immediate reversal and grows on food; thirteen fruits complete a board', () => {
-    const g = new SnakeGame(); g.start(); g.food = 105; g.step(makeBrickInput(['left'])); run(g,19); expect(g.body).toHaveLength(4); expect(g.body[0]).toBe(105);
-    g.food = 106; g.eaten = 12; run(g,20); expect(g.score).toBe(120); run(g,60); expect(g.level).toBe(2); expect(g.body).toHaveLength(3);
+  it('snake reverses its body and moves immediately on UP', () => {
+    const g=new SnakeGame();g.start();g.food=0;g.step(makeBrickInput(['left']));expect(g.body).toEqual([193,194,195]);g.step(makeBrickInput(['up']));expect(g.body[0]).toBe(183);
   });
   it('Simon ignores input during playback and checks ordered responses', () => {
     const g = new PadsGame('simon'); g.start(); g.step(makeBrickInput(['rotate'])); expect(g.lives).toBe(4); run(g,60); const expected = g.sequence[0]!;

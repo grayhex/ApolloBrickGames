@@ -41,7 +41,7 @@ test('search, categories, language, theme and browser history work without losin
   await expect(page.locator('.enc-item')).toHaveCount(1);
   await page.locator('.enc-item').click();
   await expect(page).toHaveURL(/game=snake/);
-  await expect(page.locator('.enc-accuracy strong')).toHaveText('30%');
+  await expect(page.locator('.enc-accuracy strong')).toHaveText('90%');
   await page.locator('#enc-lang').click();
   await expect(page.locator('h1')).toHaveText('Game encyclopedia');
   await expect(page.locator('.enc-article h2')).toHaveText('Snake');

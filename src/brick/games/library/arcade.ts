@@ -1,28 +1,38 @@
-import { LibraryGame, action, heldAction, DIRS, DX, DY, put } from './common';
+import { LibraryGame, action, DIRS, DX, DY, put } from './common';
+import { e88SnakeTicks } from '../../e88';
 import { DANCE_MODES, SNAKE_MODES } from './modes';
 import type { BrickGameOptions, BrickInput } from '../../types';
 
 export class SnakeGame extends LibraryGame {
-  readonly id = 'snake'; body = [104, 103, 102]; directionNow = 1; food = 0; eaten = 0; walls = new Set<number>(); private timer = 0; private queued = 1;
+  readonly id = 'snake'; body: number[] = []; directionNow = 1; food = 0; eaten = 0; walls = new Set<number>(); private timer = 0;
   /** Вариант 02 «Frame» (вики): по периметру поля горит рамка в одну клетку, игровая область 8 × 18. */
   readonly frame: boolean;
   constructor(o: BrickGameOptions = {}) { super(o, SNAKE_MODES.length); this.frame = this.mode === 1; this.init(); }
   protected reset(): void { this.setLives(4); this.setup(); }
   private setup(): void {
-    this.body = [104, 103, 102]; this.directionNow = this.queued = 1; this.eaten = 0; this.timer = 0; this.walls.clear();
+    // ROM coordinates: head (5,0), tail (3,0), with y counted from the bottom.
+    const row = this.frame ? 18 : 19;
+    this.body = [row * 10 + 5, row * 10 + 4, row * 10 + 3]; this.directionNow = 1; this.eaten = 0; this.timer = 0; this.walls.clear();
     if (this.frame) for (let p = 0; p < 200; p++) { const x = p % 10, y = Math.floor(p / 10); if (x === 0 || x === 9 || y === 0 || y === 19) this.walls.add(p); }
-    // Open-ended barriers keep both sides reachable and never cover the starting snake.
-    for (let y = 3; y < 17; y += 4) if (this.level > 1) for (let x = 2; x < Math.min(7, 2 + this.level); x++) this.walls.add(y * 10 + x);
     this.spawnFood();
   }
   private spawnFood(): void { const free = Array.from({ length: 200 }, (_, p) => p).filter((p) => !this.walls.has(p) && !this.body.includes(p)); this.food = this.rng.pick(free); }
   protected update(input: BrickInput): void {
-    const d = this.tap(input); if (d >= 0 && d !== (this.directionNow + 2) % 4) this.queued = d;
-    if (++this.timer < (heldAction(input) ? 4 : this.period(20, 5))) return; this.timer = 0; this.directionNow = this.queued;
+    // ROTATE is the fourth direction (up), not an invented turbo key.
+    const d = this.tap(input) >= 0 ? this.tap(input) : action(input) ? 0 : -1;
+    if (d === (this.directionNow + 2) % 4) {
+      // The firmware reverses the whole worm, even when its tail is around a corner.
+      this.body.reverse();
+      const head = this.body[0]!, neck = this.body[1]!;
+      this.directionNow = head === neck - 10 ? 0 : head === neck + 1 ? 1 : head === neck + 10 ? 2 : 3;
+      return; // reversal itself does not advance the new head or restart gravity
+    }
+    if (d >= 0) { this.directionNow = d; this.timer = 0; }
+    else { this.timer++; const period = e88SnakeTicks(this.speed); if (this.timer < period) return; this.timer -= period; }
     const head = this.body[0]!, x = head % 10 + DX[this.directionNow]!, y = Math.floor(head / 10) + DY[this.directionNow]!;
     const to = y * 10 + x, eat = to === this.food;
     if (x < 0 || x >= 10 || y < 0 || y >= 20 || this.walls.has(to) || this.body.slice(0, eat ? undefined : -1).includes(to)) { this.lose(() => this.setup()); return; }
-    this.body.unshift(to); if (!eat) this.body.pop(); else { this.addScore(10); this.emit({ type: 'bonus' }); if (++this.eaten === 13) this.win(() => this.setup()); else this.spawnFood(); }
+    this.body.unshift(to); if (!eat) { this.body.pop(); this.emit({ type: 'move' }); } else { this.addScore(10); this.emit({ type: 'bonus' }); if (++this.eaten === 13) this.win(() => this.setup()); else this.spawnFood(); }
   }
   protected draw(): Uint8Array { const out = new Uint8Array(200); for (const p of this.walls) out[p] = 1; for (const p of this.body) out[p] = 1; out[this.body[0]!] = 2; out[this.food] = 2; return out; }
 }
@@ -169,22 +179,7 @@ export class BomberGame extends LibraryGame {
   protected draw(): Uint8Array { const out = new Uint8Array(200); this.buildings.forEach((h, x) => { for (let y = 20 - h; y < 20; y++) put(out, x, y); }); put(out, this.x, this.y, 2); if (this.bomb) put(out, this.bomb.x, this.bomb.y, 2); return out; }
 }
 
-export class DiceGame extends LibraryGame {
-  readonly id = 'dice'; selection = 0; dice = [1, 1, 1]; private rolling = 0;
-  constructor(o: BrickGameOptions = {}) { super(o); this.init(); }
-  protected reset(): void { this.selection = 0; this.dice = [1, 1, 1]; this.rolling = 0; this.repeat.reset(); }
-  protected update(input: BrickInput): void {
-    if (this.rolling > 0) {
-      if (--this.rolling % 6 === 0) this.dice = [this.rng.range(1, 6), this.rng.range(1, 6), this.rng.range(1, 6)];
-      if (!this.rolling) { const total = this.dice.reduce((a, b) => a + b, 0); if (this.selection === 0 && total <= 10 || this.selection === 1 && total >= 11 || this.selection === 2 && this.dice.every((v) => v === 5)) { this.addScore(1); this.emit({ type: 'bonus' }); } else this.emit({ type: 'blocked' }); } return;
-    }
-    this.selection = this.horizontal(input, this.selection, 2); if (action(input)) this.rolling = 36;
-  }
-  protected draw(): Uint8Array {
-    const out = new Uint8Array(200); const pips = [[1,1],[0,0],[2,2],[2,0],[0,2],[0,1],[2,1]];
-    this.dice.forEach((n, i) => { const cells = n === 1 ? [0] : n === 2 ? [1,2] : n === 3 ? [0,1,2] : n === 4 ? [1,2,3,4] : n === 5 ? [0,1,2,3,4] : [1,2,3,4,5,6]; for (const p of cells) put(out, 3 + pips[p]![0]!, 2 + i * 5 + pips[p]![1]!); }); put(out, 1 + this.selection * 3, 19, 2); return out;
-  }
-}
+export { DiceGame } from '../dice';
 
 // Keep directions exported alongside the pad order for guide illustrations.
 export const PAD_ORDER = DIRS;

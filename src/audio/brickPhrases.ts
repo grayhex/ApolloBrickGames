@@ -1,4 +1,5 @@
 import { B0202_EFFECTS } from './b0202Effects';
+import { E88_EFFECTS } from './e88Effects';
 /** B0202 register traces plus synthesized transcription of other n0Live/BrickGame cues (MIT; see docs/THIRD_PARTY.md).
  * Frequencies retain the donor's tuning rather than imposing concert pitch.
  * No recording noise, codec padding or sampled waveforms are retained.
@@ -19,6 +20,7 @@ export const BRICK_PHRASES = {
   // Original short greeting for the universal console, not a firmware transcription.
   welcome: [{hz:523,ms:100},{hz:659,ms:100},{hz:784,ms:100},{hz:0,ms:50},{hz:1047,ms:180},{hz:784,ms:100},{hz:1047,ms:220}],
   ...B0202_EFFECTS,
+  ...E88_EFFECTS,
   select: [tone(1110, 45), tone(990, 45), tone(825, 45), tone(1560, 45)],
   move: [tone(620, 130, 1450)],
   turn: [tone(1350, 65, 800)],

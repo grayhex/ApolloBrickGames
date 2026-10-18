@@ -16,7 +16,7 @@ describe('encyclopedia evidence and published illustrations', () => {
     expect(ENTRIES.find(e=>e.id==='tetris')?.accuracy).toBe(100);
     expect(ENTRIES.find(e=>e.id==='tetris-pentix')?.accuracy).toBe(90);
     expect(ENTRIES.find(e=>e.id==='tank')?.accuracy).toBe(60);
-    expect(ENTRIES.find(e=>e.id==='snake')?.accuracy).toBe(30);
+    expect(ENTRIES.find(e=>e.id==='snake')?.accuracy).toBe(90);
   });
   it('keeps old configurations valid and round-trips game illustrations independently of toy menus', () => {
     const config=defaultConfig();
