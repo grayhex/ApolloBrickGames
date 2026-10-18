@@ -1,3 +1,4 @@
+import { isNativeDevice, NATIVE_DEVICE_IDS, NATIVE_MENUS, nativeEntry, type NativeDeviceId } from '../devices/catalog';
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
@@ -5,10 +6,12 @@ import { APOLLO_IDS, TOYS, type ApolloId } from '../app/toys';
 import { missingButtons } from '../app/bodyButtons';
 import { DEFAULT_LANG, isLang, type Lang } from '../input/lang';
 export interface ConfigGame {
+  entryId?: string;
   id: GameId;
   modes?: number[];
 }
 export interface ConfigToy {
+  defaultEntry?: string;
   games: ConfigGame[];
   defaultGame: GameId;
   shells: Shell[];
@@ -17,10 +20,10 @@ export interface ConfigToy {
   thumbShell: Shell;
 }
 /** Цвета миниатюры: у приставок Apollo — их палитра, у универсальной — серый, чёрный и белый (прежний вид переключателя). */
-export const thumbPalette = (id: ConfigToyId): readonly Shell[] => (id === 'brickgame' ? ['white', ...MONOBLOCK_SHELLS] : APOLLO_SHELLS);
+export const thumbPalette = (id: ConfigToyId): readonly Shell[] => (isNativeDevice(id) ? [id === 'e88' ? 'gray' : 'black'] : id === 'brickgame' ? ['white', ...MONOBLOCK_SHELLS] : APOLLO_SHELLS);
 export const DEFAULT_THUMB_SHELL: Shell = 'white';
-export const CONFIG_TOY_IDS = [...APOLLO_IDS, 'brickgame'] as const;
-export type ConfigToyId = ApolloId | 'brickgame';
+export const CONFIG_TOY_IDS = [...APOLLO_IDS, 'brickgame', ...NATIVE_DEVICE_IDS] as const;
+export type ConfigToyId = ApolloId | 'brickgame' | NativeDeviceId;
 export interface SiteConfig {
   version: 1;
   /** Язык интерфейса по умолчанию, пока игрок не выбрал свой (RU / EN); в старых документах нет — русский. */
@@ -57,6 +60,10 @@ export function validateConfig(value: unknown): SiteConfig {
   if (!isLang(language)) throw new Error('Язык по умолчанию: ru или en.');
   const toys = {} as SiteConfig['toys'];
   for (const id of CONFIG_TOY_IDS) {
+    if (isNativeDevice(id)) {
+      toys[id] = validateNativeToy(id, id in value['toys'] ? value['toys'][id] : nativeDefault(id));
+      continue;
+    }
     const source = id === 'brickgame' && !('brickgame' in value['toys']) ? UNIVERSAL_DEFAULT : value['toys'][id];
     if (!record(source) || !Array.isArray(source['games']) || source['games'].length < 1 || source['games'].length > 99)
       throw new Error(`${id}: в меню должно быть от 1 до 99 игр.`);
@@ -110,4 +117,31 @@ export function validateConfig(value: unknown): SiteConfig {
     }
   }
   return { version: 1, language, toys, ...(Object.keys(encyclopedia).length ? { encyclopedia } : {}) };
+}
+
+/** Additive v1 migration: only missing device documents are populated; existing values are validated intact. */
+export function nativeDefault(id: NativeDeviceId): ConfigToy {
+  const entries = NATIVE_MENUS[id];
+  const shell: Shell = id === 'e88' ? 'gray' : 'black';
+  return { games:entries.map(e => ({id:e.gameId, entryId:e.entryId})), defaultEntry:entries[0]!.entryId,
+    defaultGame:entries[0]!.gameId, shells:[shell], defaultShell:shell, thumbShell:shell };
+}
+function validateNativeToy(id: NativeDeviceId, source: unknown): ConfigToy {
+  if (!record(source) || !Array.isArray(source['games']) || !source['games'].length || source['games'].length > NATIVE_MENUS[id].length)
+    throw new Error(`${id}: недопустимое меню оригинальных позиций.`);
+  const seen = new Set<string>();
+  const games = source['games'].map((g: unknown): ConfigGame => {
+    if (!record(g) || typeof g['entryId'] !== 'string') throw new Error(`${id}: нужен entryId оригинальной позиции.`);
+    const entry = nativeEntry(id, g['entryId']);
+    if (!entry || entry.gameId !== g['id'] || seen.has(entry.entryId) || g['modes'] !== undefined)
+      throw new Error(`${id}: неизвестная, повторная или несовместимая позиция.`);
+    seen.add(entry.entryId);
+    return { id:entry.gameId, entryId:entry.entryId };
+  });
+  const first = games.find(g => g.entryId === source['defaultEntry']);
+  if (!first || first.id !== source['defaultGame']) throw new Error(`${id}: стартовая позиция должна входить в меню.`);
+  const expected = id === 'e88' ? 'gray' : 'black';
+  if (!Array.isArray(source['shells']) || source['shells'].length !== 1 || source['shells'][0] !== expected || source['defaultShell'] !== expected || (source['thumbShell'] ?? expected) !== expected)
+    throw new Error(`${id}: разрешён только подтверждённый цвет ${expected}.`);
+  return { games,defaultEntry:first.entryId,defaultGame:first.id,shells:[expected],defaultShell:expected,thumbShell:expected };
 }

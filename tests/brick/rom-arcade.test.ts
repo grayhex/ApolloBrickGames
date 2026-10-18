@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import reference from '../fixtures/brickemu/rom-arcade.json';
+import nativeReference from '../fixtures/brickemu/native-devices.json';
 import { SnakeGame } from '../../src/brick/games/library/arcade';
 import { DiceGame, diceValue } from '../../src/brick/games/dice';
 import { NEUTRAL_BRICK_INPUT as idle, makeBrickInput as input } from '../../src/brick/types';
@@ -33,9 +34,9 @@ describe('independent original ROM observations', () => {
     }
     expect(index).toBe(1296);
   });
-  for (const [channel, sound] of [[0,'e88_move'],[5,'e88_bonus'],[11,'e88_crash'],[12,'e88_win'],[13,'e88_over'],[14,'e88_start']] as const) {
+  for (const [channel, sound] of [[0,'e88_move'],[5,'e88_bonus'],[7,'e88_menu'],[11,'e88_crash'],[12,'e88_win'],[13,'e88_over'],[14,'e88_start']] as const) {
     it(`synthesizes every audible ROM frequency/duration in sound channel ${channel}`, () => {
-      const commands = reference.audio.channels[String(channel) as keyof typeof reference.audio.channels];
+      const commands = channel===7 ? nativeReference.e88.menuAudio : reference.audio.channels[String(channel) as keyof typeof reference.audio.channels];
       const expected: {hz:number;ms:number;noise:boolean}[] = [];
       for (let i = 0; i < commands.length - 1; i++) {
         const a = commands[i]!, b = commands[i + 1]!, hz = a.tone?.[0] ?? 0, noise = !!a.tone?.[1], ms = (b.cycle-a.cycle)/1000;

@@ -1,3 +1,5 @@
+import { nativeEntry, originalMenu } from '../devices/catalog';
+import { nativeGuide } from '../devices/guide';
 import { previewStage } from '../encyclopedia/catalog';
 import { guideForBody } from './bodyButtons';
 import { BRICK_GAMES } from '../brick/games';
@@ -113,9 +115,9 @@ export interface InfoPanelBox {
   onClose(): void;
   onPointerUse(): void;
   /** Игру выбрали в левой панели (список или стрелки): консоль в меню переключает выбор на неё. */
-  onChoose?(id: GameId): void;
+  onChoose?(id: string): void;
   /** Кнопка «запуск»: выбрать игру на консоли и начать партию. */
-  onLaunch?(id: GameId): void;
+  onLaunch?(id: string): void;
 }
 
 
@@ -126,19 +128,19 @@ export class InfoPanel {
   private readonly toy: ToyId;
   private readonly signal: AbortSignal | undefined;
   private readonly onPointerUse: (() => void) | undefined;
-  private readonly onChoose: ((id: GameId) => void) | undefined;
-  private readonly onLaunch: ((id: GameId) => void) | undefined;
+  private readonly onChoose: ((id: string) => void) | undefined;
+  private readonly onLaunch: ((id: string) => void) | undefined;
   /** Модель упаковки игрушки (если есть) и диалог, где её можно рассмотреть. */
   private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
   /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
   private thumb: BoxViewer | null = null;
   /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
-  private selected: GameId;
+  private selected: string;
   /** Игра, которая выбрана в меню консоли или играет сейчас (вкладка с точкой); у консоли с меню вкладка следует за выбором в меню. */
-  private active: GameId;
-  private tabEls = new Map<GameId, HTMLButtonElement>();
-  private showTab: ((id: GameId) => void) | null = null;
+  private active: string;
+  private tabEls = new Map<string, HTMLButtonElement>();
+  private showTab: ((id: string) => void) | null = null;
 
   constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal, box?: InfoPanelBox) {
     this.toy = toy;
@@ -148,7 +150,7 @@ export class InfoPanel {
     this.onPointerUse = box?.onPointerUse;
     this.onChoose = box?.onChoose;
     this.onLaunch = box?.onLaunch;
-    const first = TOYS[toy].defaultGame;
+    const first = TOYS[toy].defaultEntry ?? TOYS[toy].defaultGame;
     if (first === null) throw new Error('A playable information panel requires a game.');
     this.selected = first;
     this.active = first;
@@ -172,7 +174,7 @@ export class InfoPanel {
    * Игра консоли изменилась (выбрана в меню или запущена): вкладка с точкой и открытое описание переходят к ней. Пока игра та же, вкладку,
    * которую читатель открыл сам, не трогаем.
    */
-  setActive(id: GameId): void {
+  setActive(id: string): void {
     if (id === this.active) return;
     this.active = id;
     for (const [gameId, tab] of this.tabEls) {
@@ -187,7 +189,11 @@ export class InfoPanel {
     const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
 
     const model = TOYS[this.toy];
-    const sticker = h(
+    const availableProfiles = model.games.filter(game => game.status === 'ready').length;
+    const sticker = model.nativeDevice ? h('div', {class:'about__sticker'}, h('h2', {}, model.name),
+      h('p', {class:'side__text'}, getLang()==='ru'
+        ? `Корпус — по фотографиям; меню — по ROM. Доступно ${availableProfiles} из ${model.games.length} профилей; правила восстановлены частично.`
+        : `Housing follows photos; menu follows the ROM. ${availableProfiles} of ${model.games.length} profiles playable; rules are partially reconstructed.`)) : h(
       'div',
       { class: 'about__sticker' },
       h('img', {
@@ -210,7 +216,7 @@ export class InfoPanel {
     if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
       // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у модели без меню — только тетрис.
-      const rows = model.menu
+      const rows = model.nativeDevice ? [keyRow(model.labels.left.replace('/', ' / '),keys('left')),keyRow('RIGHT / SPEED',keys('right')),keyRow('DOWN / MODE',keys('down')),keyRow('ROTATE / DIRECTION',keys('jump','up'))] : model.menu
         ? [
             keyRow(`${t('info.m.leftRight')} (${t('info.m.leftRight.menu')})`, keys('left'), keys('right')),
             keyRow(`${t('info.m.upDown')} (${t('info.m.upDown.menu')})`, keys('up'), keys('down')),
@@ -345,10 +351,10 @@ export class InfoPanel {
     const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
     const panel = h('div', { class: 'gpanel', role: 'tabpanel', id: 'gpanel' });
     const chooser = h('select', {class:'pick', id:'guide-game', 'aria-label':t('games.tabs')});
-    const tabs = new Map<GameId, HTMLButtonElement>();
+    const tabs = new Map<string, HTMLButtonElement>();
     this.tabEls = tabs;
-    const ids = model.games.map((game) => game.id);
-    const select = (id: GameId, focus = false): void => {
+    const ids = model.games.map((game) => game.entryId ?? game.id);
+    const select = (id: string, focus = false): void => {
       this.selected = id;
       chooser.value = id;
       for (const [gameId, tab] of tabs) {
@@ -356,27 +362,29 @@ export class InfoPanel {
         tab.setAttribute('aria-selected', String(on));
         tab.tabIndex = on ? 0 : -1;
       }
-      panel.setAttribute('aria-labelledby', model.universal ? 'games-title' : `gtab-${id}`);
+      panel.setAttribute('aria-labelledby', model.universal || model.nativeDevice ? 'games-title' : `gtab-${id}`);
       panel.dataset['game'] = id;
       panel.replaceChildren(...this.gamePanel(model, id));
       if (focus) tabs.get(id)?.focus();
     };
     model.games.forEach((game, index) => {
-      const key = gameKey(model, index);
-      const name = GAMES[game.id].names[lang];
-      chooser.append(h('option',{value:game.id},`${key}: ${name}`));
+      const id = game.entryId ?? game.id;
+      const native = model.nativeDevice && game.entryId ? nativeEntry(model.nativeDevice,game.entryId) : undefined;
+      const key = native?.nativeCode ?? gameKey(model,index);
+      const name = native ? `${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
+      chooser.append(h('option',{value:id},`${key}: ${name}`));
       const tab = h(
         'button',
-        { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${game.id}`, 'data-game': game.id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
+        { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${id}`, 'data-game': id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
         key,
       );
-      if (game.id === this.active) tab.dataset['playing'] = '';
+      if (id === this.active) tab.dataset['playing'] = '';
       tab.addEventListener('click', (event) => {
-        select(game.id);
-        this.onChoose?.(game.id);
+        select(id);
+        this.onChoose?.(id);
         if (event.detail !== 0) this.onPointerUse?.(); // мышью — клавиатура возвращается игре; со стрелок фокус остаётся на вкладке
       });
-      tabs.set(game.id, tab);
+      tabs.set(id, tab);
       list.append(tab);
     });
     list.addEventListener('keydown', (event) => {
@@ -416,20 +424,30 @@ export class InfoPanel {
         this.onLaunch?.(this.selected);
       }),
     );
-    if (model.universal) panel.setAttribute('role','region');
+    if ((model.universal || model.nativeDevice)) panel.setAttribute('role','region');
     this.showTab = (id) => select(id);
-    select(ids.includes(this.selected) ? this.selected : model.defaultGame);
+    select(ids.includes(this.selected) ? this.selected : model.defaultEntry ?? model.defaultGame);
     return h(
       'section',
       { class: 'side__sec side__sec--games', 'aria-labelledby': 'games-title' },
       h('div', { class: 'side__hrow' }, h('h3', { class: 'side__h', id: 'games-title' }, t('help.games.h')), nav),
-      model.universal ? chooser : list,
+      model.universal || model.nativeDevice ? chooser : list,
       panel,
     );
   }
 
   /** Краткая памятка игроку; происхождение правил и статусы находятся в справке. */
-  private gamePanel(model: ToyModel, id: GameId): HTMLElement[] {
+  private gamePanel(model: ToyModel, selectedId: string): HTMLElement[] {
+    const entry = model.nativeDevice ? nativeEntry(model.nativeDevice, selectedId) : undefined;
+    if (entry) {
+      const lang = getLang(), ru = lang === 'ru';
+      const head = h('header',{class:'gpanel__head'},h('span',{class:'gkey'},entry.nativeCode),h('h4',{class:'gpanel__name'},entry.name[lang]));
+      const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
+      const menu = h('p',{class:'side__text'},(originalMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
+      const guide = nativeGuide(entry);
+      return [head, ...(guide ? compactGuide(guide, lang) : [state]), menu];
+    }
+    const id = selectedId as GameId;
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
     const stage=model.universal ? previewStage(id) : null;

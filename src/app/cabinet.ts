@@ -1,3 +1,5 @@
+import { nativeEntry, type NativeEntry } from '../devices/catalog';
+import { nativeDefinition } from '../devices/profiles';
 import { localHiSuffix } from '../games/rulesets';
 import { actionBit, maskOf, type InputFrame } from '../core';
 import type { AudioCue } from '../audio/audio';
@@ -39,13 +41,13 @@ export interface Cabinet {
   /** Нужна ли выбранной игре отдельная кнопка FIRE (не алиас ROTATE): только тогда универсальная приставка её рисует и принимает. */
   readonly usesFire: boolean;
   /** Canonical engine mode and menu start settings, never display/menu positions. */
-  readonly ranking: {mode:number;speed:number;level:number};
+  readonly ranking: {mode:number;speed:number;level:number;native?:NativeEntry;reverse?:boolean};
   /** Состояние для отладки и проверок: `data-*` игровой области. */
   readonly info: Readonly<Record<string, string | number>>;
   /** Ключ хранилища рекорда текущей игры (у консоли — игры и варианта); `null`, пока игра не выбрана. */
   hiKey(): string;
   /** Выбрать игру в меню (кнопка в левой справке); `false`, если игра идёт или такой игры в меню нет. */
-  selectGame(id: GameId): boolean;
+  selectGame(id: string): boolean;
   start(): CabinetEvent[];
   pause(): CabinetEvent[];
   startButton?(): CabinetEvent[];
@@ -160,7 +162,7 @@ class TetrisCabinet implements Cabinet {
   selectGame(): boolean {
     return false;
   }
-  get ranking(): {mode:number;speed:number;level:number} { return {mode:0,speed:0,level:0}; }
+  get ranking(): {mode:number;speed:number;level:number;native?:NativeEntry;reverse?:boolean} { return {mode:0,speed:0,level:0}; }
   get info(): Readonly<Record<string, string | number>> {
     return {};
   }
@@ -220,6 +222,10 @@ class TetrisCabinet implements Cabinet {
 
 /** Пункты меню консоли: игры игрушки по порядку (`ToyModel.games`) с восстановленными играми из `defs`. */
 export function consoleEntries(model: ToyModel, defs: Readonly<Record<string, BrickGameDef>>): BrickConsoleEntry[] {
+  if (model.nativeDevice) return model.games.map(game => {
+    const native = nativeEntry(model.nativeDevice!, game.entryId!)!;
+    return { id:game.id, entryId:native.entryId, symbol:native.nativeCode, native, def:nativeDefinition(native), modes:[0] };
+  });
   return model.games.map((game, index) => ({
     symbol: gameKey(model, index),
     id: game.id,
@@ -250,6 +256,7 @@ class ConsoleCabinet implements Cabinet {
   private readonly console_: BrickConsole;
   private readonly toy: string;
   private readonly allowed: ReadonlySet<BrickAction>;
+  private readonly nativeDevice: boolean;
   /** Игры, у которых FIRE делает своё действие (`usesFire`); у остальных приставка FIRE не принимает, как и не рисует. */
   private readonly fireGames: ReadonlySet<string>;
   private mood: Mood = 'idle';
@@ -258,9 +265,10 @@ class ConsoleCabinet implements Cabinet {
 
   constructor(model: ToyModel, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0) {
     this.toy = model.id;
+    this.nativeDevice = !!model.nativeDevice;
     this.allowed = bodyActions(model);
     this.fireGames = new Set(entries.filter((entry) => entry.def?.usesFire).map((entry) => entry.id));
-    this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game });
+    this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game, nativeMenu:model.nativeDevice });
   }
 
   get phase(): BrickPhase {
@@ -288,7 +296,7 @@ class ConsoleCabinet implements Cabinet {
   get activeGame(): GameId {
     return this.console_.gameId as GameId;
   }
-  get ranking(): {mode:number;speed:number;level:number} { return {mode:this.console_.mode,...this.console_.startSettings}; }
+  get ranking(): {mode:number;speed:number;level:number;native?:NativeEntry;reverse?:boolean} { return {mode:this.console_.mode,...this.console_.startSettings,...(this.console_.native ? {native:this.console_.native,reverse:this.console_.rotationDirection===-1} : {})}; }
   get usesFire(): boolean {
     return this.allowed.has('fire') && this.fireGames.has(this.console_.gameId);
   }
@@ -297,6 +305,7 @@ class ConsoleCabinet implements Cabinet {
     return {
       menu: c.inMenu ? 'menu' : 'game',
       game: c.gameId,
+      entry: c.entryId,
       symbol: c.symbol,
       mode: c.modeNumber,
       playable: c.playable ? 'yes' : 'no',
@@ -305,13 +314,13 @@ class ConsoleCabinet implements Cabinet {
     };
   }
   hiKey(): string {
-    return `crocodile-mario:brick:${this.toy}:${this.console_.gameId}:${this.console_.mode}${localHiSuffix(this.console_.gameId)}`;
+    return `crocodile-mario:brick:${this.toy}:${this.console_.entryId}:${this.console_.mode}${this.console_.native ? `:native-r${this.console_.native.rulesetVersion}` : localHiSuffix(this.console_.gameId)}`;
   }
   /** Звук движения: в меню и в тетрисах — да; в остальных играх шаг каждый такт слушался бы как трещотка. */
   get moveSound(): boolean {
     return this.console_.inMenu || STEP_SOUND_GAMES.has(this.console_.gameId);
   }
-  selectGame(id: GameId): boolean {
+  selectGame(id: string): boolean {
     return this.console_.selectGame(id);
   }
   start(): CabinetEvent[] {
@@ -336,6 +345,8 @@ class ConsoleCabinet implements Cabinet {
     buttons.delete('fire');
     return buttons;
   }
+  /** UP is only an alias for the real ROTATE key on these seven/eight-button devices. */
+  private nativeMask(mask: number): number { return this.nativeDevice && (mask & UP) ? (mask & ~UP) | JUMP : mask; }
   private react(events: CabinetEvent[]): CabinetEvent[] {
     const mood = moodOf(events);
     if (mood) {
@@ -347,16 +358,17 @@ class ConsoleCabinet implements Cabinet {
   step(frame: InputFrame): CabinetEvent[] {
     this.clock++;
     const buttons = this.buttons();
-    return this.react(this.console_.step(makeBrickInput(brickActions(frame.pressed, buttons), brickActions(frame.held, buttons))));
+    return this.react(this.console_.step(makeBrickInput(brickActions(this.nativeMask(frame.pressed), buttons), brickActions(this.nativeMask(frame.held), buttons))));
   }
   menu(frame: InputFrame): CabinetEvent[] {
     const buttons = this.buttons();
-    return this.console_.menu(makeBrickInput(brickActions(frame.pressed, buttons), brickActions(frame.held, buttons)));
+    return this.console_.menu(makeBrickInput(brickActions(this.nativeMask(frame.pressed), buttons), brickActions(this.nativeMask(frame.held), buttons)));
   }
   scene(extra: { sound: boolean; allOn: boolean }): TetrisScene {
     const c = this.console_;
     return {
       cells: c.cells(),
+      rotationDirection:c.rotationDirection,
       clearRows: [],
       clearTimer: 0,
       overFill: c.overFill,
@@ -396,8 +408,8 @@ export interface CabinetOptions {
 export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet {
   if (model.defaultGame === null) throw new Error('This console has no game engine yet.');
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
-  const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}${localHiSuffix(gameId)}`;
-  return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => g.id === model.defaultGame)));
+  const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}${model.nativeDevice ? `:native-r${nativeEntry(model.nativeDevice,gameId)?.rulesetVersion ?? '1'}` : localHiSuffix(gameId)}`;
+  return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => model.defaultEntry ? g.entryId === model.defaultEntry : g.id === model.defaultGame)));
 }
 
 /** Звук события для кабинета: в консоли движение звучит только там, где оно уместно. */

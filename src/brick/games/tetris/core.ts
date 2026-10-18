@@ -128,7 +128,7 @@ export abstract class TetrisCore extends BrickBase {
     return ((b0202FallMs(this.speed) + extra) * BRICK_TICK_HZ) / 1000;
   }
 
-  private cellAt(x: number, y: number): number {
+  protected cellAt(x: number, y: number): number {
     if (x < 0 || x >= BRICK_COLS || y < 0 || y >= BRICK_ROWS) return 0;
     return this.board[idx(x, y)] ?? 0;
   }
@@ -200,7 +200,7 @@ export abstract class TetrisCore extends BrickBase {
     this.downRepeat.reset();
     // уровень — число стартовых случайных рядов (на первом уровне их нет)
     for (let y = 0; y < this.startLevel - 1; y++) this.writeGarbageRow(y);
-    this.nextPiece = randomPiece(this.rng, this.variant.pool);
+    this.nextPiece = this.firstPiece();
     this.spawn();
   }
 
@@ -219,8 +219,11 @@ export abstract class TetrisCore extends BrickBase {
     for (let x = 0; x < BRICK_COLS; x++) this.board[idx(x, y)] = filled[x] ? CELL_ON : 0;
   }
 
+  protected firstPiece(): Piece { return randomPiece(this.rng, this.variant.pool); }
+  protected rotatedPiece(piece: Piece): Piece { return this.variant.morph ? (this.variant.pool === 'pentix' ? nextShape(piece) : nextTetromino(piece)) : rotatePiece(piece, 1); }
+
   /** Следующая фигура по правилам типа (`setPieceFromType`). */
-  private pickNext(): Piece {
+  protected pickNext(): Piece {
     const v = this.variant;
     if (v.family !== 'plain' && this.rng.int(SPECIAL_CHANCE) === 0) return withBlink(randomPiece(this.rng, v.pool));
     if (v.supers.length === 0) return randomPiece(this.rng, v.pool);
@@ -328,7 +331,7 @@ export abstract class TetrisCore extends BrickBase {
     if (piece.shape === SUPER_GUN) this.shoot(piece);
     else if (piece.shape === SUPER_MUD_GUN) this.mudShoot(piece);
     else if (!isSuperShape(piece.shape)) {
-      const turned = this.variant.morph ? (this.variant.pool === 'pentix' ? nextShape(piece) : nextTetromino(piece)) : rotatePiece(piece, 1);
+      const turned = this.rotatedPiece(piece);
       const changed = turned.shape !== piece.shape || turned.angle !== piece.angle;
       if (this.tryMove(turned, this.pieceX, this.pieceY) && changed) this.emit({ type: 'rotate' });
     }
@@ -569,7 +572,7 @@ export abstract class TetrisCore extends BrickBase {
       }
       removed++;
       if (removed === 1) this.emit({ type: 'lines', count: rows.length, rows: rows.map((r) => this.rowOf(r)) });
-      this.addPoints(removed <= 4 ? (LINE_POINTS[removed] ?? 1) : 1);
+      this.addPoints(this.linePoints(removed));
       this.eraseRow(y, anchorX, () => {
         this.dropRowsAbove(y);
         next();
@@ -604,6 +607,8 @@ export abstract class TetrisCore extends BrickBase {
     this.board.copyWithin(idx(0, y), idx(0, y + 1), BRICK_CELLS);
     this.board.fill(0, idx(0, BRICK_ROWS - 1), BRICK_CELLS);
   }
+
+  protected linePoints(removed: number): number { return removed <= 4 ? (LINE_POINTS[removed] ?? 1) : 1; }
 
   /** B0202: carry into the thousands digit raises speed; maximum speed stays at 10. */
   private addPoints(points: number): void {

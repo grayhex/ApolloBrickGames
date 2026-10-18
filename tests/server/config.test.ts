@@ -53,3 +53,18 @@ it('publishes original illustrations atomically with the existing authenticated 
   expect((await read.json() as {config:unknown}).config).toEqual(config);
   expect((await send(put({...config,encyclopedia:{snake:{imageUrl:'javascript:alert(1)'}}},1))).status).toBe(400);
 });
+
+it('normalizes a previously published four-device document without rewriting revision or saved settings',async()=>{
+  const {send,storage}=setup();
+  const c=defaultConfig();
+  const toys=Object.fromEntries(Object.entries(c.toys).filter(([id])=>id!=='e88'&&id!=='apollo-b0202'));
+  const saved={revision:17,config:{...c,language:'en',toys,encyclopedia:{snake:{imageUrl:'https://example.com/original.png'}}}};
+  await storage.put('published',saved);
+  const response=await send(new Request('https://games.example/api/config'));
+  const normalized=await response.json() as {revision:number;config:ReturnType<typeof defaultConfig>};
+  expect(normalized.revision).toBe(17);expect(normalized.config.toys.e88.games).toHaveLength(8);expect(normalized.config.toys['apollo-b0202'].games).toHaveLength(126);
+  for(const [id,toy]of Object.entries(toys))expect(normalized.config.toys[id as keyof typeof c.toys]).toEqual(toy);
+  expect(await storage.get('published')).toEqual(saved);
+  const next={...normalized.config};next.toys.e88.defaultEntry='e88.4';
+  expect((await send(put(next,17))).status).toBe(200);
+});

@@ -374,3 +374,27 @@ describe('leaderboard Worker + actual SQLite transactions', () => {
     expect((await s.top()).entries[0]!.nickname).toBe(name);
   });
 });
+
+it('keeps native variants and old categories separate through run, publication and public top',async()=>{
+  const s=setup(),cookie=await s.guest();
+  const profiles=[
+    {...selected('e88'),rulesetVersion:'1',profileId:'e88',variantId:'1'},
+    {...selected('e88'),rulesetVersion:'1',profileId:'e88',variantId:'2'},
+    {...selected('apollo-b0202'),rulesetVersion:'1',profileId:'apollo-b0202',variantId:'h01'},
+    selected(),
+  ];
+  const categories:string[]=[];
+  for(const [i,profile]of profiles.entries()){
+    const run=await s.complete(cookie,10+i,profile);categories.push(run.category);
+    expect((await s.publish(cookie,run,'Player')).status).toBe(200);
+    const top=await s.top(run.category);
+    expect(top.entries).toEqual([{rank:1,nickname:'Player',score:10+i,toyId:profile.toyId}]);
+  }
+  expect(new Set(categories).size).toBe(4);
+  for(const profile of [
+    {...profiles[0],profileId:'apollo-b0202'},
+    {...profiles[0],variantId:'8'},
+    {...profiles[0],profileId:undefined,variantId:undefined},
+    {...selected(),profileId:'e88',variantId:'1'},
+  ])expect((await s.send('leaderboards/runs',{...profile,requestId:crypto.randomUUID()},{cookie})).status).toBe(400);
+});

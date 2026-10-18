@@ -88,6 +88,7 @@ export abstract class BrickBase implements BrickGame {
   protected readonly mode: number;
   protected readonly startSpeed: number;
   protected readonly startLevel: number;
+  protected readonly levelLimit: number;
   /** Накладка: пока задана, `cells()` возвращает её вместо `draw()` (очистка поля, взрыв). Создаётся и снимается сценками. */
   protected overlay: Uint8Array | null = null;
   /** Если > 0 — каждый раз, когда счёт переваливает за очередную кратную, у игры с жизнями появляется ещё одна (или бонус к счёту при полных). */
@@ -102,7 +103,8 @@ export abstract class BrickBase implements BrickGame {
   protected constructor(options: BrickGameOptions, modeCount: number) {
     this.rng = new Rng(options.seed ?? DEFAULT_SEED);
     this.startSpeed = clampInt(options.speed ?? MIN_SPEED, MIN_SPEED, MAX_SPEED);
-    this.startLevel = clampInt(options.level ?? MIN_LEVEL, MIN_LEVEL, MAX_LEVEL);
+    this.levelLimit = options.levelLimit ?? MAX_LEVEL;
+    this.startLevel = clampInt(options.level ?? MIN_LEVEL, MIN_LEVEL, this.levelLimit);
     this.speed = this.startSpeed;
     this.level = this.startLevel;
     this.hiScore = clampInt(options.hiScore ?? 0, 0, MAX_SCORE);
@@ -218,7 +220,7 @@ export abstract class BrickBase implements BrickGame {
   /** Уровень 1..10; переполнение возвращает уровень на 1 и повышает скорость (как `GameWithLives.win` донора). */
   protected nextLevel(): void {
     const next = this.level + 1;
-    if (next > MAX_LEVEL) {
+    if (next > this.levelLimit) {
       this.level = MIN_LEVEL;
       this.setSpeed(this.speed + 1);
     } else {

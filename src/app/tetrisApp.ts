@@ -1,4 +1,4 @@
-import type { GameId } from '../games/catalog';
+import { NativeScreen } from '../render/nativeScreen';
 import { LeaderboardCard } from './leaderboard';
 import { ACTIONS } from '../core/actions';
 import { BrickAudio } from '../audio/brick';
@@ -26,7 +26,7 @@ import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
 import { applyToyModel, relabelKeys } from './toyModel';
 import { ToyPanel, type ToyKeyId } from './toy';
-import { shellFor, TOYS, type ToyId } from './toys';
+import { isMonoblock, shellFor, TOYS, type ToyId } from './toys';
 import { parseView, type View } from './view';
 import { deviceView } from './viewModel';
 
@@ -117,7 +117,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   // Игрушка, на которую перешли с другой на странице, продолжает с тем же видом, цветом и питанием (`carryIn`).
   let view: View = carryIn?.view ?? parseView(params.get('view'), params.get('power') === 'on');
   let powered = carryIn ? carryIn.powered : params.get('power') === 'on';
-  if ((powered || model.universal) && view === 'closed') view = 'full';
+  if ((powered || isMonoblock(model)) && view === 'closed') view = 'full';
   let bootTicks = powered ? BOOT_TICKS : 0;
   let context: 'game' | 'menu' = 'game';
   let gamepadStatus: GamepadStatus = { kind: 'none' };
@@ -129,7 +129,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   let rankedPhase = cabinet.phase;
   const selectRanking = (): void => {
     const r=cabinet.ranking;
-    leaderboard?.select({gameId:cabinet.activeGame,mode:r.mode,toyId:model.id},r.speed===0&&r.level===0);
+    leaderboard?.select({gameId:cabinet.activeGame,mode:r.mode,toyId:model.id,...(r.native ? {profileId:r.native.profileId,variantId:r.native.variantId} : {})},r.speed===0&&r.level===0&&!r.reverse);
   };
   if (params.has('debug')) Object.defineProperty(window, model.menu ? '__brick' : '__tetris', { configurable: true, get: () => cabinet.debugTarget() });
 
@@ -191,7 +191,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   // ── Экран ────────────────────────────────────────────────────────────
   refs.lid.style.setProperty('--lcd-aspect', `${SCREEN_WIDTH} / ${SCREEN_HEIGHT}`);
   refs.lid.style.setProperty('--lcd-bg', model.lcd.bg);
-  const screen = new TetrisScreen(refs.canvas, { glyph: model.glyph, panel: model.panel, ink: model.lcd.ink });
+  const screen = model.nativeDevice ? await NativeScreen.create(refs.canvas,model.nativeDevice) : new TetrisScreen(refs.canvas, { glyph: model.glyph, panel: model.panel, ink: model.lcd.ink });
   let lastScene: TetrisScene | null = null;
   const glitch = new CableGlitch();
   let glitchLevel = 0;
@@ -259,7 +259,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const refocusGame = (): void => refs.gameArea.focus({ preventScroll: true });
   const setView = (next: View): void => {
     if (next === view) return;
-    if (next === 'closed' && (powered || model.universal)) return; // включённую игрушку не закрыть: сначала ON/OFF
+    if (next === 'closed' && (powered || isMonoblock(model))) return; // включённую игрушку не закрыть: сначала ON/OFF
     view = next;
     applyView();
     applyDisplay();
@@ -292,7 +292,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     }
     rankedPhase=cabinet.phase;
     for (const event of events) {
-      if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu);
+      if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu, model.nativeDevice);
       else { const cue = cabinetCue(cabinet, event); if (cue) audio.play(cue); }
     }
     if (events.length > 0) persistHi();
@@ -398,8 +398,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     audio.play('confirm');
   };
   /** Кнопка «запуск» в левой панели: включить игрушку (если выключена), выбрать игру в меню и начать партию — как S./P. на корпусе. */
-  let pendingLaunch: GameId | null = null;
-  const launchGame = (id: GameId): void => {
+  let pendingLaunch: string | null = null;
+  const launchGame = (id: string): void => {
     if (!model.menu) return;
     if (!powered) setPower(true);
     if (bootTicks > 0) {
@@ -461,7 +461,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
       if (model.menu && powered && bootTicks === 0) restartGame();
       return true;
     },
-    onReset: () => { if (model.menu && powered && bootTicks === 0) restartGame(); },
+    onReset: () => { if (model.nativeDevice !== 'e88' && model.menu && powered && bootTicks === 0) restartGame(); },
   });
   refs.base.querySelector('[data-action=reset]')?.addEventListener('click', () => { if (powered && bootTicks === 0) restartGame(); }, { signal });
   const hotkeys: Record<string, 'onoff' | 'sound'> = { KeyO: 'onoff', KeyM: 'sound' };
@@ -577,7 +577,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     levels: false,
     music: false,
     speedrun: false,
-    remote: ['onoff', 'sp', 'reset'],
+    remote: model.nativeDevice === 'e88' ? ['onoff', 'sp'] : ['onoff', 'sp', 'reset'],
     signal,
   });
   toyPanel.bindRemote(refs.sideCtl);
@@ -639,7 +639,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   const updateUi = (): void => {
     selectRanking();
     setData('toy', model.id);
-    infoPanel.setActive(cabinet.activeGame);
+    infoPanel.setActive(String(cabinet.info['entry'] ?? cabinet.activeGame));
     if (model.universal) refs.toy.dataset['fire'] = cabinet.usesFire ? 'on' : 'off'; // кнопка FIRE рисуется только у игр, где она нужна
     setData('phase', cabinet.phase);
     setData('score', cabinet.score);

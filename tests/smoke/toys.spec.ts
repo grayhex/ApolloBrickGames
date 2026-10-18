@@ -42,9 +42,10 @@ test.describe('шапка и переключатель', () => {
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const items = page.locator('#real-models .toysw__item');
-    await expect(items).toHaveCount(6);
-    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'Alibaba Dance 99 in 1', 'Mini Brick Game B-S96']);
-    await expect(items.locator('svg.toysw__icon')).toHaveCount(6); // миниатюры закрытых игрушек
+    await expect(items).toHaveCount(8);
+    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'Alibaba Dance 99 in 1', 'Mini Brick Game B-S96', 'Brick Game E-88 · 8 in 1', 'Apollo B0202 · 126 in 1']);
+    await expect(items.locator('svg.toysw__icon')).toHaveCount(8);
+    await expect(items.locator('svg.toysw__icon image[href*="devices/"]')).toHaveCount(2); // моноблоки используют оригинальные векторы
     await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
     // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён), логотип правее них.
     const dots = page.locator('#devices .dev:visible');

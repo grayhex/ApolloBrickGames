@@ -1,3 +1,4 @@
+import { NATIVE_MENUS, type NativeDeviceId } from '../devices/catalog';
 import { GAMES, type GameId, type GameStatus } from '../games/catalog';
 import { SHELLS, type Shell } from '../input/settings';
 import type { MsgKey } from './messages';
@@ -12,7 +13,7 @@ import type { ToyKeyId } from './toy';
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -34,6 +35,7 @@ export interface ToyLabels {
 
 /** Игра из набора консоли — по наклейке или упаковке. Набор закреплён за консолью (игры у консолей пересекаются, см. `games/catalog.ts`). */
 export interface ToyGame {
+  entryId?: string;
   id: GameId;
   /** Название так, как напечатано на наклейке или упаковке. */
   label: string;
@@ -45,6 +47,10 @@ export interface ToyGame {
 }
 
 export interface ToyModel {
+  /** Mechanical shape is independent of brand and game buttons. */
+  chassis?: 'folding' | 'monoblock';
+  nativeDevice?: NativeDeviceId;
+  defaultEntry?: string;
   id: ToyId;
   /** Название на корпусе и в переключателе (не переводится). */
   name: string;
@@ -312,7 +318,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     },
   },
   brickgame: {
-    id: 'brickgame', family: 'other', name: 'Brick Game', universal: true,
+    id: 'brickgame', chassis: 'monoblock', family: 'other', name: 'Brick Game', universal: true,
     shells: ['gray', 'black'], defaultShell: 'gray',
     games: [{ id: 'tetris', label: 'Tetris', status: 'ready' }], defaultGame: 'tetris',
     menu: true, gameKeys: 'digits', glyph: 'square', panel: 'classic',
@@ -323,6 +329,8 @@ export const TOYS: Record<ToyId, ToyModel> = {
     keyWhat: { onoff:'help.row.onoff', sp:'help.row.sp', sound:'help.row.sound', fire:'key.fire',
       left:'help.m.left', right:'help.m.right', up:'help.m.up', down:'help.m.down', jump:'help.m.rotate' },
   },
+  e88: nativeToy('e88'),
+  'apollo-b0202': nativeToy('apollo-b0202'),
   alibaba: {
     id: 'alibaba', family: 'other', name: 'Alibaba Dance 99 in 1',
     shells: ['white'], defaultShell: 'white', games: [], defaultGame: null,
@@ -402,3 +410,22 @@ export function keyLabel(model: ToyModel, id: ToyKeyId): string {
     }
   }
 }
+
+/** Native firmware descriptors share only the application's lifecycle, not the universal controls. */
+function nativeToy(id: NativeDeviceId): ToyModel {
+  const apollo = id === 'apollo-b0202';
+  return {
+    id, name: apollo ? 'Apollo B0202 · 126 in 1' : 'Brick Game E-88 · 8 in 1',
+    family: apollo ? 'apollo' : 'other', chassis: 'monoblock', nativeDevice: id,
+    shells: [apollo ? 'black' : 'gray'], defaultShell: apollo ? 'black' : 'gray', thumbShell: apollo ? 'black' : 'gray',
+    games: NATIVE_MENUS[id].map(e => ({ id: e.gameId, entryId: e.entryId, label: `${e.nativeCode} · ${e.name.en}`, status: e.available ? 'ready' : 'planned' })),
+    defaultGame: NATIVE_MENUS[id][0]!.gameId, defaultEntry: NATIVE_MENUS[id][0]!.entryId,
+    gamesCount: apollo ? 126 : 8, menu: true, gameKeys: apollo ? 'letters' : 'digits',
+    glyph: 'square', panel: 'sea', deco: 'frame', leds: false, info: true, pack: null, levels: false,
+    lcd: {bg: '#b7beb1', ink: '#202720'}, stageLabel: 'stage.label.brickgame',
+    labels: {round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:apollo?'START/P':'START/PAUSE'},{key:'sound',top:'MUTE'},...(apollo?[{key:'fire' as const,top:'RESET'}]:[])],
+      up:'',left:apollo?'LEFT/HEIGHT':'LEFT/LEVEL',right:'RIGHT/SPEED',down:'DOWN/MODE',big:'ROTATE/DIRECTION'},
+    keyWhat: {onoff:'help.row.onoff',sp:'help.row.sp',sound:'help.row.sound',left:'help.m.left',right:'help.m.right',down:'help.m.down',jump:'help.m.rotate',...(apollo?{fire:'help.row.menu' as const}:{})},
+  };
+}
+export const isMonoblock = (model: ToyModel): boolean => model.chassis === 'monoblock' || !!model.universal;

@@ -4475,7 +4475,7 @@ body[data-chrome='toy'] .arena > .brand { height:76px; width:min(820px,calc(100v
 .toysw__arrow:disabled { opacity:.25; cursor:default; }
 .toysw__carousel { display:flex; overflow-x:auto; scrollbar-width:none; scroll-snap-type:x proximity; gap:4px; }
 .toysw__carousel::-webkit-scrollbar { display:none; }
-.toysw__carousel .toysw__item { flex:0 0 auto; min-width:118px; min-height:42px; height:auto; border-radius:12px; padding:5px 7px; scroll-snap-align:start; }
+.toysw__carousel .toysw__item { flex:0 0 auto; min-width:118px; min-height:42px; height:auto; border-radius:12px; padding:5px 7px; scroll-snap-align:center; }
 .toysw__carousel .toysw__name { display:block; white-space:normal; max-width:none; font-size:11px; line-height:1.25; }
 .toysw .toysw__carousel .toysw__item .toysw__name { white-space:nowrap; overflow-wrap:normal; }
 .toysw__carousel .toysw__icon { flex:0 0 22px; width:22px; height:33px; }
@@ -4499,7 +4499,8 @@ body[data-chrome='toy'] .arena > .brand { height:76px; width:min(820px,calc(100v
   .topleft .dev { width:25px; }
   .toysw__universal { flex-basis:80px; }
   .toysw__universal .toysw__name { display:block; font-size:10px; }
-  .toysw__carousel .toysw__item { min-width:104px; }
+  .toysw__carousel .toysw__item { min-width:104px; max-width:100%; box-sizing:border-box; }
+  .toysw .toysw__carousel .toysw__item .toysw__name { white-space:normal; min-width:0; }
 }
 
 /* Universal grey/black monoblock. Its seam is moulded plastic, never a folding hinge. */

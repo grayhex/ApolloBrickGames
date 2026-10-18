@@ -4,7 +4,14 @@ import { BRICK_PHRASES, type BrickSound, type BrickTone } from './brickPhrases';
 import { MASTER_GAIN } from './beeper';
 
 const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker']);
-export function brickSound(event: BrickEvent, game: string, inMenu: boolean): BrickSound | null {
+export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): BrickSound | null {
+  if (nativeProfile === 'e88') {
+    if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
+    if (event.type === 'started') return 'e88_start';
+    if (event.type === 'gameOver') return 'e88_over';
+    // Tetris GPIO cues have not been transcribed; do not substitute another device's tune.
+    if (game !== 'snake') return null;
+  }
   if (game === 'snake' && !inMenu) {
     switch (event.type) {
       case 'started': return 'e88_start';
@@ -85,12 +92,12 @@ export class BrickAudio {
     this.volume = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0.25;
     if (this.gain) this.gain.gain.value = this.muted ? 0 : this.volume * MASTER_GAIN;
   }
-  play(event: BrickEvent, game: string, inMenu: boolean): void {
+  play(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): void {
     if (event.type === 'paused') {
       this.silence();
       return;
     }
-    const sound = brickSound(event, game, inMenu);
+    const sound = brickSound(event, game, inMenu, nativeProfile);
     const padHz = event.type === 'tone' ? PAD_HZ[event.pad] : undefined;
     const notes: readonly BrickTone[] | null =
       event.type === 'tone' && padHz && Number.isFinite(event.ticks) && event.ticks > 0
