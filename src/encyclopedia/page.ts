@@ -115,7 +115,8 @@ export function startEncyclopedia(): void {
   theme.addEventListener('click',()=>{settings.display.theme=settings.display.theme==='dark'?'light':'dark';applyTheme(settings.display.theme);saveSettings(storage,settings);renderArticle();});
   lang.addEventListener('click',()=>{settings.display.lang=getLang()==='ru'?'en':'ru';settings.display.langSet=true;saveSettings(storage,settings);setLang(settings.display.lang);relabel();});
   window.addEventListener('popstate',()=>{const id=articleId(new URLSearchParams(location.search).get('game'));if(id!==selected){selected=id;renderList();renderArticle();}});
-  window.addEventListener('pagehide',()=>articleLife.abort(),{once:true});
+  // A document restored from the browser's back/forward cache resumes its timers.
+  // Article changes dispose their own recording; document destruction cleans up the rest.
   relabel();
   if (['#rules','#modes','#sources'].includes(location.hash)) requestAnimationFrame(()=>document.querySelector(location.hash)?.scrollIntoView());
 }

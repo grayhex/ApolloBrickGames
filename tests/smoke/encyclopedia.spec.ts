@@ -87,6 +87,12 @@ test('large real-gameplay recording supports pause and respects reduced motion',
   expect(await canvas.getAttribute('data-frame')).toBe(paused);
   await page.locator('.enc-play').click();
   await expect.poll(()=>canvas.getAttribute('data-frame')).not.toBe(paused);
+  const beforeRestore=await canvas.getAttribute('data-frame');
+  await page.evaluate(()=>{
+    window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+    window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+  });
+  await expect.poll(()=>canvas.getAttribute('data-frame')).not.toBe(beforeRestore);
   await context.close();
 });
 
