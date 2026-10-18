@@ -9293,6 +9293,8 @@
     "crossings": [
       {
         "speedDigit": 0,
+        "scoreBefore": 0,
+        "speedAfter": 0,
         "score": 1,
         "head": [
           5,
@@ -9301,7 +9303,39 @@
       },
       {
         "speedDigit": 9,
+        "scoreBefore": 0,
+        "speedAfter": 9,
         "score": 10,
+        "head": [
+          5,
+          0
+        ]
+      },
+      {
+        "speedDigit": 0,
+        "scoreBefore": 99,
+        "speedAfter": 0,
+        "score": 100,
+        "head": [
+          5,
+          0
+        ]
+      },
+      {
+        "speedDigit": 0,
+        "scoreBefore": 999,
+        "speedAfter": 1,
+        "score": 1000,
+        "head": [
+          5,
+          0
+        ]
+      },
+      {
+        "speedDigit": 9,
+        "scoreBefore": 990,
+        "speedAfter": 9,
+        "score": 1000,
         "head": [
           5,
           0

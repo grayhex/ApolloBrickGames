@@ -203,18 +203,18 @@ def main():
             base.key(key, .08, .2)
             moves.append({'key': key, 'head': [base.cpu._RAM[0xA2 - 0x30], base.cpu._RAM[0xA3 - 0x30]]})
         crossings = []
-        for speed in [0, 9]:
+        for speed, initial_score in [(0,0),(9,0),(0,99),(0,999),(9,990)]:
             probe = copy.deepcopy(base)
             ram = probe.cpu._RAM
             ram[0x70 - 0x30], ram[0xA2 - 0x30], ram[0xA3 - 0x30] = speed, 5, 17
             for i in range(5):
-                ram[0x82 + i - 0x30] = 0
+                ram[0x82 + i - 0x30] = initial_score // 10**i % 10
             for y in [17, 18, 19]:
                 for segment in maps['Apollo126in1B0202'][19 - y]:
                     address, bit = map(int, segment.split('_'))
                     probe.cpu._LCDRAM[address] &= ~(1 << bit)
             probe.key('Rotate', .08, 5)
-            crossings.append({'speedDigit': speed, 'score': sum(ram[0x82 + i - 0x30] * 10 ** i for i in range(5)), 'head': [ram[0xA2 - 0x30], ram[0xA3 - 0x30]]})
+            crossings.append({'speedDigit': speed, 'scoreBefore':initial_score, 'speedAfter':ram[0x70-0x30], 'score': sum(ram[0x82 + i - 0x30] * 10 ** i for i in range(5)), 'head': [ram[0xA2 - 0x30], ram[0xA3 - 0x30]]})
         rom = machine.cpu.get_ROM()
         result['frog'] = {'device': 'Apollo126in1B0202', 'mode': 'A01', 'method': 'Natural input/row-update traces. Crossing tests explicitly set head ($A2/$A3), decimal score and speed registers and clear the landing rows in LCD RAM; game code is unchanged.', 'roadGroups': groups, 'moves': moves, 'crossings': crossings,
                           'runLengths': [rom.get_byte(0x21F7 + i) for i in range(48)]}

@@ -49,7 +49,10 @@ export class B0202FrogGame extends BrickBase {
     if (x < 0 || x > 9 || this.road[y * 10 + x]) { this.lose(); return; }
     if (y >= 19) {
       this.x = x; this.y = 19;
-      this.addScore(this.speed); this.emit({ type: 'bonus' });
+      const thousands=Math.floor(this.score/1000);
+      this.addScore(this.speed);
+      if(Math.floor(this.score/1000)>thousands && this.speed<10)this.setSpeed(this.speed+1);
+      this.emit({ type: 'bonus' });
       // Measured $2588 crossing blink: 1935.820 ms, rounded only for this finite scene.
       this.cutscene(117, null, () => { this.x = 5; this.y = 0; this.keys.reset(); });
     } else { this.x = x; this.y = y; this.emit({ type: 'move' }); }

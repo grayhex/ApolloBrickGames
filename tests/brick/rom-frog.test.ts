@@ -28,9 +28,9 @@ describe('Frog A01 reference, original B0202 code', () => {
       g.step(idle);
     }
   });
-  for(const crossing of reference.frog.crossings)it(`crossing scores ${crossing.score} at speed digit ${crossing.speedDigit}; no ten-home goal`,()=>{
-    const g=new B0202FrogGame({speed:crossing.speedDigit+1});g.start();g.road.fill(0);g.y=17;
-    g.step(input(['rotate']));expect(g.score).toBe(crossing.score);expect(g.y).toBe(19);
+  for(const crossing of reference.frog.crossings)it(`crossing scores ${crossing.score} at speed digit ${crossing.speedDigit}, starting score ${crossing.scoreBefore}; no ten-home goal`,()=>{
+    const g=new B0202FrogGame({speed:crossing.speedDigit+1});g.start();g.road.fill(0);g.y=17;g.score=crossing.scoreBefore;
+    g.step(input(['rotate']));expect(g.score).toBe(crossing.score);expect(g.speed).toBe(crossing.speedAfter+1);expect(g.y).toBe(19);
     for(let i=0;i<117;i++)g.step(idle);expect([g.x,g.y]).toEqual(crossing.head);
   });
   it('preserves canonical indices and the other documented donor variants',()=>{
