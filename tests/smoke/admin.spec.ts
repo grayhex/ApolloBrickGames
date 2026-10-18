@@ -60,7 +60,8 @@ for (const id of ASSIGNABLE) test(`library: ${id} starts from a published menu, 
   await page.keyboard.press('Enter'); await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
   const game = await page.evaluate(() => { const g = (window as unknown as {__brick:{game:{id:string;cells():Uint8Array}}}).__brick.game; return {id:g.id,cells:Array.from(g.cells())}; });
   expect(game.id).toBe(id); expect(game.cells).toHaveLength(200); expect(game.cells.every((v)=>v>=0&&v<=2)).toBe(true);
-  await page.keyboard.press('ArrowLeft'); await page.locator('[data-key="sp"]').click(); await expect(page.locator('#game-area')).toHaveAttribute('data-phase','paused');
+  // S/P belongs to the active game's rules (Dice selects higher/lower); explicit Pause is universal.
+  await page.keyboard.press('ArrowLeft'); await page.locator('[data-device="pause"]').click(); await expect(page.locator('#game-area')).toHaveAttribute('data-phase','paused');
   await page.locator('[data-key="fire"]').click(); await expect(page.locator('#game-area')).toHaveAttribute('data-menu','menu');
   expect(errors).toEqual([]);
 });
