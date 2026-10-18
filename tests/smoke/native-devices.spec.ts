@@ -21,9 +21,11 @@ for(const toy of ['e88','apollo-b0202'] as const){
     await expect(page.locator('.native__key')).toHaveCount(toy==='e88'?7:8);
     if(toy==='e88')await expect(page.locator('#side-ctl [data-action=reset]')).toHaveCount(0);
     const entry=toy==='e88'?'e88.2':'apollo-b0202.H02';
-    await page.locator('#guide-game').selectOption(entry);await expect(area).toHaveAttribute('data-entry',entry);
+    await page.locator('#guide-game').selectOption(toy==='e88'?entry:'apollo-b0202.H01');
+    if(toy==='apollo-b0202')await page.locator('#base [data-key=down]').click();
+    await expect(area).toHaveAttribute('data-entry',entry);
     await page.locator('.gnav__btn--launch').click();await expect(area).toHaveAttribute('data-phase','playing');
-    await expect(page.locator('#guide-game')).toHaveValue(entry);
+    await expect(page.locator('#guide-game')).toHaveValue(toy==='e88'?entry:'apollo-b0202.H01');
     await page.locator('#base [data-key=sp]').click();await expect(area).toHaveAttribute('data-phase','paused');
     const tick=await area.getAttribute('data-tick');await page.waitForTimeout(120);expect(await area.getAttribute('data-tick')).toBe(tick);
     await page.locator('#view-screen').click();await expect(page.locator('#toy')).toHaveAttribute('data-view','screen');
@@ -73,4 +75,36 @@ test('native admin preserves repeated engine IDs and start entry through JSON ex
   const stream=await file.createReadStream();const chunks:Buffer[]=[];for await(const chunk of stream!)chunks.push(Buffer.from(chunk));
   const exported=validateConfig(JSON.parse(Buffer.concat(chunks).toString()));
   expect(exported.toys.e88.defaultEntry).toBe('e88.4');expect(exported.toys.e88.games[2]!.entryId).toBe('e88.4');
+});
+
+test('B0202 lists games once and hides unfinished modes; H02 stays on the physical menu',async({page})=>{
+ await page.goto('./?toy=apollo-b0202&power=on');await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+ await expect(page.locator('#guide-game option')).toHaveText(['A: Лягушка','D: Жуки','E: Кости','H: Тетрис']);
+ await expect(page.locator('#side-info')).not.toContainText('исследуется');
+ await page.locator('#guide-game').selectOption('apollo-b0202.H01');
+ await page.locator('#base [data-key=down]').click();await expect(page.locator('#game-area')).toHaveAttribute('data-entry','apollo-b0202.H02');
+ await expect(page.locator('#guide-game')).toHaveValue('apollo-b0202.H01');
+ await page.locator('#base [data-key=down]').click();await expect(page.locator('#game-area')).toHaveAttribute('data-entry','apollo-b0202.H01');
+});
+for(const entry of ['6','7','8'])test(`E88 ${entry}: labelled library adaptation starts and accepts ROTATE`,async({page})=>{
+ await page.goto('./?toy=e88&power=on');await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+ await page.locator('#guide-game').selectOption('e88.'+entry);
+ await expect(page.locator('#gpanel')).toContainText('Приближённый вариант');
+ await page.locator('.gnav__btn--launch').click();await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+ await page.locator('#base [data-key=jump]').click();
+});
+test('carousel shows Apollo brands and mouse wheel/drag scroll without selecting a toy',async({page})=>{
+ await page.setViewportSize({width:1280,height:900});await page.goto('./?toy=mario');
+ await expect(page.locator('#real-models .toysw__maker')).toHaveText(['Apollo','Apollo','Apollo','Apollo']);
+ const shelf=page.locator('#real-models');await shelf.hover();
+ const start=await shelf.evaluate(e=>e.scrollLeft);await page.mouse.wheel(0,160);
+ await expect.poll(()=>shelf.evaluate(e=>e.scrollLeft)).toBeGreaterThan(start+30);
+ await expect(page.locator('.toysw__item[aria-current=page]')).toHaveAttribute('data-toy','mario');
+ const box=(await shelf.boundingBox())!,before=await shelf.evaluate(e=>e.scrollLeft);
+ await page.mouse.move(box.x+box.width*.7,box.y+box.height/2);await page.mouse.down();
+ await page.mouse.move(box.x+box.width*.2,box.y+box.height/2,{steps:10});await page.mouse.up();
+ await expect.poll(()=>shelf.evaluate(e=>e.scrollLeft)).toBeGreaterThan(before+30);
+ await expect(page.locator('.toysw__item[aria-current=page]')).toHaveAttribute('data-toy','mario');
+ // A normal click after dragging remains functional.
+ await page.locator('#real-models [data-toy=e88]').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','e88');
 });

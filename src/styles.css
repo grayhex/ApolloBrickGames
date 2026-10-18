@@ -4679,3 +4679,18 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 @media(max-width:1359px) { .corner__btn--book>span { display:none; } .topleft .corner__btn--book { padding:5px 9px; } }
 @media(min-width:1360px) and (max-width:1399px) { .topleft:has([data-device='gamepad']:not([hidden])) .corner__btn--book>span { display:none; } }
 @media(max-width:400px) { .topleft .corner__btn--lang { min-width:38px; } .topleft .corner__btn--book { width:36px; min-width:36px; padding:5px 4px; } }
+
+/* Model brands stay distinct from their names; the shelf supports mouse drag and wheel. */
+.toysw__label { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.toysw__maker { font-size:9px; letter-spacing:.07em; line-height:1; color:var(--muted); }
+.toysw__carousel { cursor:grab; }
+.toysw__carousel[data-dragging] { cursor:grabbing; scroll-snap-type:none; user-select:none; }
+.toysw__carousel[data-dragging] * { cursor:grabbing; user-select:none; }
+.about__model { margin:8px 0 0; font-size:13px; font-weight:650; letter-spacing:.04em; white-space:nowrap; text-align:center; color:var(--muted); }
+.about__logo--e88,.about__logo--apollo-b0202 { width:100%; height:110px; object-fit:contain; }
+:root:not([data-theme='light']) .about__logo--e88 { filter:brightness(0) invert(1); }
+.gpanel__approx { font-size:11px; line-height:1.5; color:var(--muted); padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
+
+.toysw__carousel[data-wheeling] { scroll-snap-type:none; }
+
+:root:not([data-theme="light"]) .about__logo--apollo-b0202 { filter:brightness(1.55); }

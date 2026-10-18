@@ -189,21 +189,11 @@ export class InfoPanel {
     const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
 
     const model = TOYS[this.toy];
-    const availableProfiles = model.games.filter(game => game.status === 'ready').length;
-    const sticker = model.nativeDevice ? h('div', {class:'about__sticker'}, h('h2', {}, model.name),
-      h('p', {class:'side__text'}, getLang()==='ru'
-        ? `Корпус — по фотографиям; меню — по ROM. Доступно ${availableProfiles} из ${model.games.length} профилей; правила восстановлены частично.`
-        : `Housing follows photos; menu follows the ROM. ${availableProfiles} of ${model.games.length} profiles playable; rules are partially reconstructed.`)) : h(
-      'div',
-      { class: 'about__sticker' },
-      h('img', {
-        class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}`,
-        src: `${import.meta.env.BASE_URL}brand/${this.toy === 'brickgame' ? 'brick-game-wordmark.svg' : this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
-        width: '1000',
-        height: '443',
-        alt: model.name,
-      }),
-    );
+    const sticker = h('div', {class:'about__sticker'}, h('img', {
+      class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}${model.nativeDevice ? ` about__logo--${model.nativeDevice}` : ''}`,
+      src: `${import.meta.env.BASE_URL}brand/${model.nativeDevice ? `${model.nativeDevice}-wordmark.svg` : this.toy === 'brickgame' ? 'brick-game-wordmark.svg' : this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
+      width:'1000', height:'443', alt:model.name,
+    }), ...(model.nativeDevice ? [h('p',{class:'about__model'}, model.nativeDevice==='e88' ? 'E‑88 · 8 in 1' : 'B0202 · 126 in 1')] : []));
     const boxButton = this.boxButton();
     const head = h(
       'header',
@@ -353,10 +343,15 @@ export class InfoPanel {
     const chooser = h('select', {class:'pick', id:'guide-game', 'aria-label':t('games.tabs')});
     const tabs = new Map<string, HTMLButtonElement>();
     this.tabEls = tabs;
-    const ids = model.games.map((game) => game.entryId ?? game.id);
+    const games = model.nativeDevice === 'apollo-b0202'
+      ? model.games.filter((game,index,all)=>all.findIndex(g=>g.id===game.id)===index)
+      : model.games;
+    const ids = games.map((game) => game.entryId ?? game.id);
+    const representative = (id:string):string => model.nativeDevice === 'apollo-b0202'
+      ? games.find(g=>g.id===nativeEntry(model.nativeDevice!,id)?.gameId)?.entryId ?? id : id;
     const select = (id: string, focus = false): void => {
       this.selected = id;
-      chooser.value = id;
+      chooser.value = representative(id);
       for (const [gameId, tab] of tabs) {
         const on = gameId === id;
         tab.setAttribute('aria-selected', String(on));
@@ -367,10 +362,10 @@ export class InfoPanel {
       panel.replaceChildren(...this.gamePanel(model, id));
       if (focus) tabs.get(id)?.focus();
     };
-    model.games.forEach((game, index) => {
+    games.forEach((game, index) => {
       const id = game.entryId ?? game.id;
       const native = model.nativeDevice && game.entryId ? nativeEntry(model.nativeDevice,game.entryId) : undefined;
-      const key = native?.nativeCode ?? gameKey(model,index);
+      const key = native ? model.nativeDevice === 'apollo-b0202' ? native.group : native.nativeCode : gameKey(model,index);
       const name = native ? `${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
       chooser.append(h('option',{value:id},`${key}: ${name}`));
       const tab = h(
@@ -388,7 +383,7 @@ export class InfoPanel {
       list.append(tab);
     });
     list.addEventListener('keydown', (event) => {
-      const at = ids.indexOf(this.selected);
+      const at = ids.indexOf(representative(this.selected));
       const last = ids.length - 1;
       const next = { ArrowRight: at >= last ? 0 : at + 1, ArrowDown: at >= last ? 0 : at + 1, ArrowLeft: at <= 0 ? last : at - 1, ArrowUp: at <= 0 ? last : at - 1, Home: 0, End: last }[event.key];
       if (next === undefined) return;
@@ -402,7 +397,7 @@ export class InfoPanel {
     });
     // Стрелки и запуск рядом с заголовком: листать игры по кругу, не открывая список, и сразу запускать выбранную.
     const step = (delta: number): void => {
-      const at = Math.max(0, ids.indexOf(this.selected));
+      const at = Math.max(0, ids.indexOf(representative(this.selected)));
       select(ids[(at + delta + ids.length) % ids.length] ?? this.selected);
       this.onChoose?.(this.selected);
     };
@@ -426,7 +421,7 @@ export class InfoPanel {
     );
     if ((model.universal || model.nativeDevice)) panel.setAttribute('role','region');
     this.showTab = (id) => select(id);
-    select(ids.includes(this.selected) ? this.selected : model.defaultEntry ?? model.defaultGame);
+    select(model.games.some(game=>(game.entryId??game.id)===this.selected) ? this.selected : model.defaultEntry ?? model.defaultGame);
     return h(
       'section',
       { class: 'side__sec side__sec--games', 'aria-labelledby': 'games-title' },
@@ -445,7 +440,7 @@ export class InfoPanel {
       const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
       const menu = h('p',{class:'side__text'},(originalMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
       const guide = nativeGuide(entry);
-      return [head, ...(guide ? compactGuide(guide, lang) : [state]), menu];
+      return [head, ...(entry.approximate ? [h('p',{class:'gpanel__approx'},ru ? '≈ Приближённый вариант из общей библиотеки. Точные правила E‑88 ещё уточняются.' : '≈ Adapted library game. Exact E‑88 rules are still being researched.')] : []), ...(guide ? compactGuide(guide, lang) : [state]), menu];
     }
     const id = selectedId as GameId;
     const lang = getLang();

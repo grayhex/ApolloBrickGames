@@ -140,12 +140,12 @@ test.describe('«168 в 1 танк»', () => {
 test.describe('панель «Цвет»', () => {
   const EXPECTED: Record<string, string[]> = {
     mario: ['blue', 'red', 'yellow', 'white'],
-    clock99: ['blue:off', 'red', 'yellow', 'white'],
-    seabattle: ['blue', 'red', 'yellow:off', 'white:off'],
-    tank168: ['blue:off', 'red', 'yellow', 'white:off'],
+    clock99: ['yellow', 'red', 'white'],
+    seabattle: ['red', 'blue'],
+    tank168: ['red', 'yellow'],
   };
 
-  test('называется «Цвет», кнопок всегда четыре в одном порядке, цвета без фото оригинала недоступны', async ({ page }) => {
+  test('называется «Цвет», видны только назначенные подтверждённые цвета', async ({ page }) => {
     for (const toy of Object.keys(EXPECTED)) {
       await ready(page, toy === 'mario' ? '?power=on' : `?toy=${toy}&power=on`);
       await expect(page.locator('#side-ctl').getByRole('heading', { name: 'Цвет', exact: true })).toBeVisible();
@@ -154,13 +154,10 @@ test.describe('панель «Цвет»', () => {
     }
   });
 
-  test('недоступный цвет не выбирается ни щелчком, ни стрелками; название и подсказка объясняют почему', async ({ page }) => {
+  test('неподтверждённые цвета отсутствуют, стрелки обходят только разрешённую палитру', async ({ page }) => {
     await ready(page, '?toy=tank168&power=on');
     const white = page.locator('#shell-picker [data-shell="white"]');
-    await expect(white).toHaveAttribute('aria-disabled', 'true');
-    await expect(white).toHaveAttribute('title', /такого цвета нет/);
-    await white.click({ force: true });
-    expect(await shell(page)).toBe('red');
+    await expect(white).toHaveCount(0);
     // Стрелки обходят только доступные цвета: красный → жёлтый → красный.
     await page.locator('#shell-picker [data-shell="red"]').focus();
     await page.keyboard.press('ArrowRight');

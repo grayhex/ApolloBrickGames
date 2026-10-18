@@ -1,4 +1,4 @@
-import { isNativeDevice, nativeEntry } from '../devices/catalog';
+import { isNativeDevice, nativeEntry, playableEntries } from '../devices/catalog';
 import raw from './default.json';
 import { validateConfig, universalGames, CONFIG_TOY_IDS, type SiteConfig } from './schema';
 import { GAMES } from '../games/catalog';
@@ -19,8 +19,10 @@ export function applyConfig(config: SiteConfig): void {
     model.thumbShell = settings.thumbShell;
     model.defaultGame = settings.defaultGame;
     if (isNativeDevice(id)) {
-      model.defaultEntry = settings.defaultEntry;
-      model.games = settings.games.map(g => {
+      const games = playableEntries(id, settings.games);
+      model.defaultEntry = games.some(g => g.entryId === settings.defaultEntry) ? settings.defaultEntry : games[0]!.entryId;
+      model.defaultGame = games.find(g => g.entryId === model.defaultEntry)!.id;
+      model.games = games.map(g => {
         const entry = nativeEntry(id, g.entryId!)!;
         return {id:g.id, entryId:entry.entryId, label:`${entry.nativeCode} · ${entry.name.en}`, status:entry.available ? 'ready' : 'planned'};
       });

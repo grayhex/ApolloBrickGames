@@ -35,6 +35,7 @@ describe('native firmware manifests',()=>{
       expect([...bodyActions(TOYS[id])].sort()).toEqual(['down','left','right','rotate']);
       for(const entry of NATIVE_MENUS[id]){
         const a=createCabinet(TOYS[id],options),b=createCabinet(TOYS[id],options);
+        if(!entry.available){expect(a.selectGame(entry.entryId)).toBe(false);continue;}
         expect(a.selectGame(entry.entryId)).toBe(true);expect(b.selectGame(entry.entryId)).toBe(true);
         expect(a.info['symbol']).toBe(entry.nativeCode);
         expect(a.start()).toEqual(b.start());expect(a.inMenu).toBe(!entry.available);
@@ -68,11 +69,13 @@ describe('native firmware manifests',()=>{
   });
   it('B0202 wraps variants within a group, and RIGHT + DOWN traverses groups',()=>{
     const c=createCabinet(TOYS['apollo-b0202'],options);
-    c.menu(makeFrame({pressed:['jump']}));expect(c.info['symbol']).toBe('A10');
+    c.menu(makeFrame({pressed:['jump']}));expect(c.info['symbol']).toBe('A01');
     c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('A01');
-    for(const group of 'BCDEFGHIA'){
-      c.menu(makeFrame({pressed:['down'],held:['right']}));expect(c.info['symbol']).toBe(`${group}01`);
+    for(const code of ['D01','E02','H01','A01']){
+      c.menu(makeFrame({pressed:['down'],held:['right']}));expect(c.info['symbol']).toBe(code);
     }
+    c.selectGame('apollo-b0202.H01');c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('H02');
+    c.menu(makeFrame({pressed:['down']}));expect(c.info['symbol']).toBe('H01');
   });
 });
 

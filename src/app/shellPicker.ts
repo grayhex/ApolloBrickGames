@@ -3,7 +3,7 @@ import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
 import { miniBrickMini } from './minibrickModel';
 import { alibabaMini } from './alibabaModel';
-import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
+import { APOLLO_SHELLS, type Shell } from '../input/settings';
 import { h, svg } from './dom';
 import { t } from './i18n';
 import type { ToyId } from './toys';
@@ -103,8 +103,8 @@ export interface ShellPickerOptions {
   /** Идентификатор контейнера (для тестов и подписи). */
   id: string;
   /**
-   * Какие цвета доступны игрушке (подтверждены фото оригинала). Кнопок всегда четыре и в одном порядке — как у Crocodile Mario;
-   * остальные видны, но недоступны (`aria-disabled`). По умолчанию доступны все.
+   * Подтверждённые цвета игрушки в порядке показа. Остальные цвета не отображаются.
+   * По умолчанию доступны все четыре цвета Apollo.
    */
   shells?: readonly Shell[];
   /** Чья наклейка на миниатюрах (по умолчанию Crocodile Mario). */
@@ -116,7 +116,7 @@ export interface ShellPickerOptions {
 }
 
 /**
- * Переключатель цвета: четыре миниатюрные консоли — радиогруппа с доступными названиями цветов. Стрелки двигают выбор,
+ * Переключатель цвета: миниатюрные консоли — радиогруппа с доступными названиями цветов. Стрелки двигают выбор,
  * Tab входит в группу одним остановом (выбранный цвет).
  */
 export class ShellPicker {
@@ -133,15 +133,14 @@ export class ShellPicker {
     this.enabled = options.shells ?? APOLLO_SHELLS;
     const serial = ++pickerSerial;
     this.root = h('div', { class: 'shellpick', id: options.id, role: 'radiogroup', 'aria-label': options.label });
-    for (const shell of options.toy && isNativeDevice(options.toy) ? this.enabled : options.toy === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS) {
+    for (const shell of this.enabled) {
       const button = h(
         'button',
         { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },
         miniConsole(shell, serial, options.toy ?? 'mario'),
       );
-      if (!this.enabled.includes(shell)) button.setAttribute('aria-disabled', 'true');
       button.addEventListener('click', (event) => {
-        if (this.enabled.includes(shell)) this.pick(shell, event.detail !== 0);
+        this.pick(shell, event.detail !== 0);
       });
       button.addEventListener('keydown', (event) => this.onKey(event, shell));
       this.buttons.set(shell, button);
@@ -156,9 +155,8 @@ export class ShellPicker {
     if (label !== undefined) this.root.setAttribute('aria-label', label);
     for (const [shell, button] of this.buttons) {
       const name = shellLabel(shell);
-      const unavailable = !this.enabled.includes(shell);
-      button.title = t(unavailable ? 'clr.unavailable' : 'shell.title', { name });
-      button.setAttribute('aria-label', unavailable ? t('clr.unavailable', { name }) : name);
+      button.title = t('shell.title', { name });
+      button.setAttribute('aria-label', name);
       const caption = button.querySelector('.shellpick__name');
       if (caption) caption.textContent = name;
     }
