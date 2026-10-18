@@ -21,7 +21,8 @@ export function startEncyclopedia(): void {
   document.body.dataset['chrome']='encyclopedia';
   delete document.body.dataset['booting'];
   const params=new URLSearchParams(location.search);
-  let selected: GameId=isGameId(params.get('game')??'')?params.get('game') as GameId:'tetris';
+  const articleId = (value: string | null): GameId => value && isGameId(value) ? value : 'tetris';
+  let selected: GameId=articleId(params.get('game'));
   let family:Family|'all'='all', query='';
   let articleLife=new AbortController();
   const root=h('main',{class:'encyclopedia'});
@@ -113,7 +114,7 @@ export function startEncyclopedia(): void {
   search.addEventListener('input',()=>{query=search.value.trim();renderList();});
   theme.addEventListener('click',()=>{settings.display.theme=settings.display.theme==='dark'?'light':'dark';applyTheme(settings.display.theme);saveSettings(storage,settings);renderArticle();});
   lang.addEventListener('click',()=>{settings.display.lang=getLang()==='ru'?'en':'ru';settings.display.langSet=true;saveSettings(storage,settings);setLang(settings.display.lang);relabel();});
-  window.addEventListener('popstate',()=>{const id=new URLSearchParams(location.search).get('game');if(id&&isGameId(id)&&id!==selected){selected=id;renderList();renderArticle();}});
+  window.addEventListener('popstate',()=>{const id=articleId(new URLSearchParams(location.search).get('game'));if(id!==selected){selected=id;renderList();renderArticle();}});
   window.addEventListener('pagehide',()=>articleLife.abort(),{once:true});
   relabel();
   if (['#rules','#modes','#sources'].includes(location.hash)) requestAnimationFrame(()=>document.querySelector(location.hash)?.scrollIntoView());

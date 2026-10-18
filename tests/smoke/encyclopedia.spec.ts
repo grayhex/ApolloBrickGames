@@ -4,6 +4,20 @@ import { validateConfig } from '../../src/config/schema';
 import { ENTRIES } from '../../src/encyclopedia/catalog';
 import { GAMES } from '../../src/games/catalog';
 
+for(const width of [1200,1366,1440])test(`corner controls fit ${width}px with all controller indicators`,async({page})=>{
+  await page.setViewportSize({width,height:900});
+  await page.goto('./?toy=brickgame');
+  await page.locator('body:not([data-booting])').waitFor();
+  await page.locator('[data-device=gamepad]').evaluate(node=>node.removeAttribute('hidden'));
+  const boxes=await page.locator('#devices,#corner-settings,#corner-theme,#corner-lang,#corner-help').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().toJSON()));
+  const dock=(await page.locator('#topleft').boundingBox())!;
+  for(let i=0;i<boxes.length;i++){
+    expect(boxes[i]!.left).toBeGreaterThanOrEqual(dock.x);
+    expect(boxes[i]!.right).toBeLessThanOrEqual(dock.x+dock.width);
+    if(i)expect(boxes[i]!.left).toBeGreaterThanOrEqual(boxes[i-1]!.right);
+  }
+});
+
 test('deep-linked encyclopedia covers the complete catalog, links its evidence and omits control setup and old status phrases',async({page})=>{
   test.setTimeout(90000);
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
@@ -46,6 +60,18 @@ test('search, categories, language, theme and browser history work without losin
   await page.locator('.enc-filters button').filter({hasText:'Puzzles'}).click();
   await expect(page.locator('.enc-item[data-game=sokoban]')).toBeVisible();
   await expect(page.locator('.enc-item[data-game=tank]')).toHaveCount(0);
+});
+
+test('Back restores the default article when the initial URL has no game parameter',async({page})=>{
+  await page.goto('./encyclopedia');
+  await expect(page.locator('.enc-article h2')).toHaveText('Тетрис');
+  await page.locator('.enc-item[data-game=snake]').click();
+  await expect(page.locator('.enc-article h2')).toHaveText('Змейка');
+  await page.goBack();
+  expect(new URL(page.url()).search).toBe('');
+  await expect(page.locator('.enc-article h2')).toHaveText('Тетрис');
+  await page.goForward();
+  await expect(page.locator('.enc-article h2')).toHaveText('Змейка');
 });
 
 test('large real-gameplay recording supports pause and respects reduced motion',async({browser})=>{

@@ -4644,9 +4644,12 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 .corner__btn--book>span { max-width:77px; font-size:10px; line-height:1.25; text-align:left; }
 .topleft .corner__btn--book svg { flex-shrink:0; }
 .topleft[data-aligned] { gap:4px; }
+.topleft[data-aligned] .dev { width:30px; }
+.topleft[data-aligned] .corner__btn--book { flex:1; }
 .topleft[data-aligned] .corner__btn:not(.corner__btn--book):not(.corner__btn--lang) { width:29px; }
 .topleft[data-aligned] .corner__btn--lang { width:48px; }
 .gquick__schemes:has(>.gscheme:only-child) { grid-template-columns:1fr; }
 .gquick__schemes>.gscheme:only-child { max-width:180px; margin-inline:auto; }
-@media(max-width:1399px) { .corner__btn--book>span { display:none; } .topleft .corner__btn--book { padding:5px 9px; } }
+@media(max-width:1359px) { .corner__btn--book>span { display:none; } .topleft .corner__btn--book { padding:5px 9px; } }
+@media(min-width:1360px) and (max-width:1399px) { .topleft:has([data-device='gamepad']:not([hidden])) .corner__btn--book>span { display:none; } }
 @media(max-width:400px) { .topleft .corner__btn--lang { min-width:38px; } .topleft .corner__btn--book { width:36px; min-width:36px; padding:5px 4px; } }
