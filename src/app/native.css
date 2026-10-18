@@ -1,0 +1,27 @@
+/* Real monoblocks use one unbroken vector housing. LCD and key targets scale in the same space. */
+body[data-chrome='toy'] .arena[data-chassis='native']:not([data-compact]) { --stage-w:clamp(280px,calc((100dvh - 30px - var(--head-h)) / 2.44),480px); }
+.arena .toy[data-chassis='native'][data-model] { --flip:0s; background:transparent; box-shadow:none; border-radius:0; position:relative; }
+.arena .toy[data-chassis='native'][data-model]::before { content:'';position:absolute;inset:0; height:var(--native-height);background:var(--native-body) top / 100% auto no-repeat;pointer-events:none; }
+.arena .toy[data-chassis='native'][data-model] .toy__lidslot { perspective:none; }
+.arena .toy[data-chassis='native'][data-model] .lid { transform:none;transition:none; }
+.arena .toy[data-chassis='native'][data-model] .lid__shell,.arena .toy[data-chassis='native'][data-model] .lid__cover,.arena .toy[data-chassis='native'][data-model] .toy__band,.arena .toy[data-chassis='native'][data-model] .toy__hinge,.arena .toy[data-chassis='native'][data-model] .hinge {display:none;}
+.arena .toy[data-chassis='native'][data-model] .lid__front {aspect-ratio:auto;height:92cqw;padding:0;background:none;box-shadow:none;border:0;border-radius:0;}
+.arena .toy[data-chassis='native'][data-model] .lid__face {position:static;display:block;padding:0;background:none;border:0;box-shadow:none;}
+.arena .toy[data-chassis='native'][data-model] .lid__bezel {position:static;width:auto;padding:0;border:0;background:none;box-shadow:none;}
+.arena .toy[data-chassis='native'][data-model] .lid__bezel::before,.arena .toy[data-chassis='native'][data-model] .lid__bezel::after {display:none;}
+.arena .toy[data-chassis='native'][data-model] .lid__window {position:absolute;left:var(--native-lcd-x);top:var(--native-lcd-y);width:var(--native-lcd-w);height:var(--native-lcd-h);aspect-ratio:auto;box-shadow:none;border:0;border-radius:0;background:transparent;}
+.arena .toy[data-chassis='native'][data-model] .toy__lower {position:static;margin:0;height:calc(var(--native-height) - 92cqw);}
+.arena .toy[data-chassis='native'][data-model] .toy__lower-in {position:static;padding:0;height:100%;}
+.arena .toy[data-chassis='native'][data-model] .base {position:absolute;inset:0;height:var(--native-height);width:100%;aspect-ratio:auto;background:none;border:0;box-shadow:none;pointer-events:none;}
+.arena .toy[data-chassis='native'][data-model] .native__key {position:absolute;transform:translate(-50%,-50%);border:0;border-radius:50%;margin:0;padding:0;background:transparent;box-shadow:none;pointer-events:auto;touch-action:none;}
+.arena .toy[data-chassis='native'][data-model] .native__key[data-pressed],.arena .toy[data-chassis='native'][data-model] .native__key:active {background:#0004;box-shadow:inset 0 2px 5px #0006;}
+.arena .toy[data-chassis='native'][data-model][data-compact] {overflow:hidden;}
+.arena .toy[data-chassis='native'][data-model][data-compact] .toy__lower {height:0;visibility:hidden;}
+.native__lcd {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+body[data-chrome='toy'] .arena[data-chassis='native'][data-compact] {--stage-w:clamp(280px,calc((100dvh - 30px - var(--head-h)) / .92),950px);}
+body[data-toy='e88'] #view-state,body[data-toy='apollo-b0202'] #view-state {grid-template-columns:repeat(2,minmax(0,1fr));}
+@media(max-width:899px) {body[data-chrome='toy'] .arena[data-chassis='native']:not([data-compact]) {--stage-w:clamp(280px,calc((100dvh - var(--toy-top) - 20px) / 2.44),390px);}}
+.arena .toy[data-chassis='native'][data-model] .lid__window::before,.arena .toy[data-chassis='native'][data-model] .lid__window::after {display:none;}
+
+.arena .toy[data-chassis='native'] .game-area {width:100%;height:100%;}
+.arena .toy[data-chassis='native'] canvas {display:none;}

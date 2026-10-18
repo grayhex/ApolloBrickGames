@@ -4,6 +4,8 @@
  * Это допущение: как именно листается меню на настоящем устройстве, неизвестно (по подписям клавиш: UP/MODE — вариант, LEFT/LEVEL — уровень,
  * RIGHT/SPEED — скорость, а игру листает большая кнопка ROTATE). Набор игр, их знаки и число вариантов — у каждой консоли свои (`BrickConsoleEntry`). Настройки меню — число 0..9 (на экране у настоящего устройства в меню SPEED 0 и LEVEL 0).
  */
+import type { NativeEntry } from '../devices/catalog';
+import nativeMenuFrames from '../devices/menu-frames.json';
 import { menuField } from './menuArt';
 import {
   MAX_LEVEL,
@@ -22,6 +24,8 @@ export const MENU_SETTING_MAX = 9;
 
 /** Пункт меню консоли. Игры у консолей пересекаются, а знаки, число вариантов и порядок — свои. */
 export interface BrickConsoleEntry {
+  entryId?: string;
+  native?: NativeEntry;
   /** Знак игры на экране: цифра `1`–`9` («168 в 1 танк») или буква `A`–`F` («Морской бой»). */
   symbol: string;
   /** Идентификатор игры: иллюстрация меню и ключ рекорда. */
@@ -43,13 +47,14 @@ export interface BrickConsoleOptions {
   hiScore?: (gameId: string, mode: number) => number;
   /** Начальный выбор в меню (с нуля): игра, вариант, скорость и уровень. */
   game?: number;
+  nativeMenu?: 'e88' | 'apollo-b0202';
   mode?: number;
   speed?: number;
   level?: number;
 }
 
 const wrap = (value: number, count: number): number => ((value % count) + count) % count;
-const clampSetting = (value: number | undefined): number => Math.min(MENU_SETTING_MAX, Math.max(0, Math.trunc(value ?? 0) || 0));
+const clampSetting = (value: number | undefined, max = MENU_SETTING_MAX): number => Math.min(max, Math.max(0, Math.trunc(value ?? 0) || 0));
 
 export class BrickConsole implements BrickGame {
   readonly id = 'console';
@@ -59,6 +64,8 @@ export class BrickConsole implements BrickGame {
   private readonly hiOf: (gameId: string, mode: number) => number;
   private current: BrickGame | null = null;
   private starts = 0;
+  rotationDirection:1|-1=1;
+  private readonly nativeMenu: BrickConsoleOptions['nativeMenu'];
   private gameIndex: number;
   private modeIndex: number;
   private menuSpeed: number;
@@ -67,12 +74,13 @@ export class BrickConsole implements BrickGame {
   constructor(options: BrickConsoleOptions) {
     if (options.catalog.length === 0) throw new Error('BrickConsole: пустой каталог игр');
     this.catalog = options.catalog;
+    this.nativeMenu = options.nativeMenu;
     this.seed = (options.seed ?? 1) >>> 0;
     this.hiOf = options.hiScore ?? (() => 0);
     this.gameIndex = wrap(Math.trunc(options.game ?? 0) || 0, this.catalog.length);
     this.modeIndex = wrap(Math.trunc(options.mode ?? 0) || 0, this.modeCount);
     this.menuSpeed = clampSetting(options.speed);
-    this.menuLevel = clampSetting(options.level);
+    this.menuLevel = clampSetting(options.level, this.nativeMenu==='e88'?12:9);
   }
 
   // ---------------------------------------------------------------- выбор в меню
@@ -101,7 +109,7 @@ export class BrickConsole implements BrickGame {
 
   /** Выбрать игру в меню по идентификатору (кнопка в справке); вне меню или для чужой игры — `false`. Вариант сбрасывается на первый, как при листании. */
   selectGame(id: string): boolean {
-    const index = this.catalog.findIndex((entry) => entry.id === id);
+    const index = this.catalog.findIndex((entry) => (entry.entryId ?? entry.id) === id);
     if (this.current || index < 0) return false;
     this.gameIndex = index;
     this.modeIndex = 0;
@@ -120,10 +128,14 @@ export class BrickConsole implements BrickGame {
 
   /** Номер выбранного варианта на экране (с единицы). */
   get modeNumber(): number {
+    if (this.selected.native) return Number(this.selected.native.nativeCode.replace(/^[A-I]/, ''));
     return this.modeIndex + 1;
   }
 
   /** Идентификатор выбранной (в меню) или запущенной игры. */
+  get entryId(): string { return this.selected.entryId ?? this.selected.id; }
+  get native(): NativeEntry | undefined { return this.selected.native; }
+
   get gameId(): string {
     return this.selected.id;
   }
@@ -157,6 +169,7 @@ export class BrickConsole implements BrickGame {
   /** Кнопки меню (по фронту нажатия): ROTATE — следующая игра, UP/DOWN — вариант вперёд/назад, LEFT — уровень, RIGHT — скорость. */
   menu(input: BrickInput): BrickEvent[] {
     if (this.current) return [];
+    if (this.nativeMenu) return this.nativeInput(input);
     const events: BrickEvent[] = [];
     const moved = (): void => {
       events.push({ type: 'move' });
@@ -185,6 +198,28 @@ export class BrickConsole implements BrickGame {
     return events;
   }
 
+  private nativeInput(input: BrickInput): BrickEvent[] {
+    const before = `${this.gameIndex}:${this.menuSpeed}:${this.menuLevel}:${this.rotationDirection}`;
+    const apollo = this.nativeMenu === 'apollo-b0202';
+    if (!apollo && input.pressed.has('rotate')) this.rotationDirection = this.rotationDirection === 1 ? -1 : 1;
+    if (input.pressed.has('down')) {
+      if (apollo && input.held.has('right')) {
+        const groups = [...new Set(this.catalog.map(e => e.native!.group))];
+        const next = groups[wrap(groups.indexOf(this.selected.native!.group) + 1, groups.length)];
+        this.gameIndex = this.catalog.findIndex(e => e.native!.group === next);
+      } else if (apollo) {
+        const group = this.catalog.map((e, i) => ({e,i})).filter(({e}) => e.native!.group === this.selected.native!.group);
+        this.gameIndex = group[wrap(group.findIndex(({i}) => i === this.gameIndex) + 1, group.length)]!.i;
+      } else this.gameIndex = wrap(this.gameIndex + 1, this.catalog.length);
+    } else if (apollo && input.pressed.has('rotate')) {
+      const group = this.catalog.map((e, i) => ({e,i})).filter(({e}) => e.native!.group === this.selected.native!.group);
+      this.gameIndex = group[wrap(group.findIndex(({i}) => i === this.gameIndex) - 1, group.length)]!.i;
+    }
+    if (input.pressed.has('left')) this.menuLevel = wrap(this.menuLevel + 1, apollo ? 10 : 13);
+    if (input.pressed.has('right')) this.menuSpeed = wrap(this.menuSpeed + 1, 10);
+    return before === `${this.gameIndex}:${this.menuSpeed}:${this.menuLevel}:${this.rotationDirection}` ? [] : [{ type:'move' }];
+  }
+
   // ---------------------------------------------------------------- BrickGame
 
   get phase(): BrickPhase {
@@ -197,7 +232,7 @@ export class BrickConsole implements BrickGame {
 
   /** В меню — рекорд выбранной игры и варианта, в игре — рекорд партии. */
   get hiScore(): number {
-    return this.current ? this.current.hiScore : this.hiOf(this.selected.id, this.selectedMode);
+    return this.current ? this.current.hiScore : this.hiOf(this.selected.entryId ?? this.selected.id, this.selectedMode);
   }
 
   get speed(): number {
@@ -205,7 +240,7 @@ export class BrickConsole implements BrickGame {
   }
 
   get level(): number {
-    return this.current ? this.current.level : Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, this.menuLevel + 1));
+    return this.current ? this.current.level : Math.min(this.nativeMenu==='e88'?13:MAX_LEVEL, Math.max(MIN_LEVEL, this.menuLevel + 1));
   }
 
   get lives(): number | null {
@@ -228,10 +263,11 @@ export class BrickConsole implements BrickGame {
     this.starts++;
     this.current = def.create({
       seed: (this.seed + Math.imul(this.starts, 0x9e3779b1)) >>> 0,
-      hiScore: this.hiOf(id, this.selectedMode),
+      hiScore: this.hiOf(this.selected.entryId ?? id, this.selectedMode),
       speed: this.menuSpeed + 1,
       level: this.menuLevel + 1,
       mode: this.selectedMode,
+      ...(this.nativeMenu==='e88' ? {rotationDirection:this.rotationDirection} : {}),
     });
     return this.current.start();
   }
@@ -259,7 +295,13 @@ export class BrickConsole implements BrickGame {
   }
 
   cells(): Uint8Array {
-    return this.current ? this.current.cells() : menuField(this.selected.symbol, this.modeNumber, this.selected.id);
+    if (this.current) return this.current.cells();
+    const native = this.selected.native;
+    if (native) {
+      const frames = nativeMenuFrames[native.profileId] as Record<string, string[]>;
+      return Uint8Array.from((frames[native.nativeCode] ?? []).join(''), Number);
+    }
+    return menuField(this.selected.symbol, this.modeNumber, this.selected.id);
   }
 
   preview(): Uint8Array | null {

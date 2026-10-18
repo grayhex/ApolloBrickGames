@@ -1,3 +1,4 @@
+import { nativeEntry } from '../../src/devices/catalog';
 import { describe, expect, it } from 'vitest';
 import { GAME_IDS } from '../../src/games/catalog';
 import { GAME_GUIDE, SOURCE_KEYS } from '../../src/app/gameGuide';
@@ -25,6 +26,8 @@ describe('описания игр для вкладок левой панели'
   it('у каждой игры любой консоли есть описание; ключи называют игру («game.<id>.…»)', () => {
     for (const toy of TOY_IDS) {
       for (const game of TOYS[toy].games) {
+        const device=TOYS[toy].nativeDevice;
+        if(device) { const entry=nativeEntry(device,game.entryId!);expect(entry?.gameId).toBe(game.id);expect(entry?.name.ru).toBeTruthy();expect(entry?.name.en).toBeTruthy();continue; }
         const guide = GAME_GUIDE[game.id];
         expect(guide.what, `${toy}:${game.id}`).toBe(`game.${game.id}.what`);
         expect(guide.open, `${toy}:${game.id}`).toBe(`game.${game.id}.open`);

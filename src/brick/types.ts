@@ -80,6 +80,10 @@ export type BrickEvent =
 
 /** Что нужно игре при создании. Все числа — «донорские»: скорость и уровень 1..10, режим — номер варианта с нуля. */
 export interface BrickGameOptions {
+  /** Physical menu rotation setting, used only by native E88 profiles. */
+  rotationDirection?: 1 | -1;
+  /** Native E88 exposes thirteen levels; other profiles retain ten. Internal profile option. */
+  levelLimit?: 10 | 13;
   seed?: number;
   hiScore?: number;
   /** Начальная скорость 1..10 (по умолчанию 1). */

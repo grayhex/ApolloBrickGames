@@ -1,3 +1,5 @@
+import { isNativeDevice } from '../devices/catalog';
+import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
 import { miniBrickMini } from './minibrickModel';
 import { alibabaMini } from './alibabaModel';
@@ -17,6 +19,7 @@ let pickerSerial = 0;
  * печати берётся из палитры `[data-shell]` (CSS-переменные), поэтому совпадает с настоящей игрушкой.
  */
 export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'): SVGSVGElement {
+  if (isNativeDevice(toy)) return nativeMini(toy);
   if (toy === 'brickgame') {
     const icon = brickGameMini('full', shell);
     icon.classList.add('mini');
@@ -130,7 +133,7 @@ export class ShellPicker {
     this.enabled = options.shells ?? APOLLO_SHELLS;
     const serial = ++pickerSerial;
     this.root = h('div', { class: 'shellpick', id: options.id, role: 'radiogroup', 'aria-label': options.label });
-    for (const shell of options.toy === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS) {
+    for (const shell of options.toy && isNativeDevice(options.toy) ? this.enabled : options.toy === 'brickgame' ? MONOBLOCK_SHELLS : APOLLO_SHELLS) {
       const button = h(
         'button',
         { type: 'button', class: 'shellpick__btn', role: 'radio', 'data-shell': shell },

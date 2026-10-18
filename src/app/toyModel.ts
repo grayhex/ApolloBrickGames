@@ -1,3 +1,4 @@
+import { applyNativeModel } from './nativeModel';
 import { applyBrickGame } from './brickGameModel';
 import { h, svg } from './dom';
 import { t } from './i18n';
@@ -73,6 +74,7 @@ export function applyToyModel(model: ToyModel, refs: ToyModelRefs): void {
   toy.dataset['deco'] = model.deco;
   arena.dataset['model'] = model.id;
   document.title = `${model.name} — Brick Game Online`;
+  if (model.nativeDevice) { applyNativeModel(refs,model); relabelKeys(model,base); return; }
   if (model.universal) { applyBrickGame(refs, model); relabelKeys(model, base); return; }
 
   // ── Нижняя половина: подписи и порядок кнопок ──────────────────────────

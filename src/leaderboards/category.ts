@@ -1,3 +1,4 @@
+import { nativeVariant, isNativeDevice } from '../devices/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { TOYS, type ToyId } from '../app/toys';
 import { canAssign } from '../app/bodyButtons';
@@ -8,6 +9,8 @@ import { rulesetFor } from '../games/rulesets';
 export const RULESET_VERSION = '1';
 export const STANDARD_START = 'standard-v1';
 export interface RankingSpec {
+  profileId?: string;
+  variantId?: string;
   gameId: GameId;
   mode: number;
   rulesetVersion: string;
@@ -15,6 +18,8 @@ export interface RankingSpec {
   controls: string;
 }
 export interface RunSelection {
+  profileId?: string;
+  variantId?: string;
   gameId: GameId;
   mode: number;
   toyId: ToyId;
@@ -36,7 +41,7 @@ export const MAX_RANKED_SCORE = 9_999_999;
 export function selection(value: unknown): RunSelection {
   if (!value || typeof value !== 'object') throw new Error('Invalid selection');
   const v = value as Record<string, unknown>;
-  const allowed = new Set(['gameId', 'mode', 'toyId', 'rulesetVersion', 'startProfile', 'requestId']);
+  const allowed = new Set(['gameId', 'mode', 'toyId', 'rulesetVersion', 'startProfile', 'requestId', 'profileId', 'variantId']);
   if (Object.keys(v).some((key) => !allowed.has(key))) throw new Error('Nonstandard start');
   if (typeof v['gameId'] !== 'string' || !isGameId(v['gameId'])) throw new Error('Invalid game');
   const gameId = v['gameId'];
@@ -44,6 +49,12 @@ export function selection(value: unknown): RunSelection {
   const toyId = v['toyId'] as ToyId;
   if (toyId === 'alibaba' || toyId === 'minibrick') throw new Error('Exhibition model');
   const mode = v['mode'];
+  if (isNativeDevice(toyId)) {
+    const entry = typeof v['profileId'] === 'string' && typeof v['variantId'] === 'string' ? nativeVariant(v['profileId'], v['variantId']) : undefined;
+    if (!entry?.available || entry.profileId !== toyId || entry.gameId !== gameId || mode !== 0 || v['rulesetVersion'] !== entry.rulesetVersion || v['startProfile'] !== STANDARD_START) throw new Error('Invalid native profile');
+    return { gameId,mode:0,toyId,profileId:entry.profileId,variantId:entry.variantId,rulesetVersion:entry.rulesetVersion,startProfile:STANDARD_START };
+  }
+  if (v['profileId'] !== undefined || v['variantId'] !== undefined) throw new Error('Unexpected native profile');
   const def = BRICK_GAMES[gameId];
   if (
     !Number.isInteger(mode) ||
@@ -61,15 +72,21 @@ export function specFor(value: unknown): RankingSpec {
   const s = selection(value);
   // FIRE is exposed only where it changes an action. Other matrix models share identical input capabilities.
   const controls = s.gameId === 'mario' ? 'mario' : BRICK_GAMES[s.gameId]?.usesFire && TOYS[s.toyId].universal ? 'matrix-fire' : 'matrix';
-  return { gameId: s.gameId, mode: s.mode, rulesetVersion: s.rulesetVersion, startProfile: s.startProfile, controls };
+  return { gameId: s.gameId, mode: s.mode, rulesetVersion: s.rulesetVersion, startProfile: s.startProfile, controls, ...(s.profileId ? {profileId:s.profileId,variantId:s.variantId} : {}) };
 }
 export function categoryFor(value: unknown): string {
   const s = specFor(value);
-  return `${s.gameId}:${s.mode}:r${s.rulesetVersion}:${s.startProfile}:${s.controls}`;
+  return `${s.gameId}:${s.mode}:r${s.rulesetVersion}:${s.startProfile}:${s.controls}${s.profileId ? `:${s.profileId}:${s.variantId}` : ''}`;
 }
 export function validateCategory(value: unknown): string {
   if (typeof value !== 'string' || value.length > 160) throw new Error('Invalid category');
   const parts = value.split(':');
+  if (parts.length === 7) {
+    const [gameId,mode,rules,startProfile,,profileId,variantId] = parts;
+    const entry = nativeVariant(profileId!,variantId!);
+    if (!entry || categoryFor({gameId,mode:Number(mode),rulesetVersion:rules?.slice(1),startProfile,toyId:profileId,profileId,variantId}) !== value) throw new Error('Unknown native category');
+    return value;
+  }
   if (parts.length !== 5) throw new Error('Invalid category');
   const [gameId, mode, rules, startProfile, controls] = parts;
   const toyId = controls === 'mario' ? 'mario' : controls === 'matrix-fire' ? 'brickgame' : 'clock99';

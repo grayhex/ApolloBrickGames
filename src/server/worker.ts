@@ -34,7 +34,11 @@ export class ConfigurationStore {
   constructor(state: { storage: Storage }) { this.storage = state.storage; }
   async fetch(request: Request): Promise<Response> {
     const fallback = (): Snapshot => ({ revision:0, config:validateConfig(raw) });
-    if (request.method === 'GET') return json(await this.storage.get<Snapshot>('published') ?? fallback());
+    if (request.method === 'GET') {
+      const snapshot = await this.storage.get<Snapshot>('published') ?? fallback();
+      // Read-only additive normalization: keep the administrator's revision and saved document intact.
+      return json({revision:snapshot.revision,config:validateConfig(snapshot.config)});
+    }
     if (request.method !== 'PUT') return json({ error:'Method not allowed' },405);
     try {
       const body = await readJson(request);

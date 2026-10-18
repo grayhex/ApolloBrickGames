@@ -33,6 +33,7 @@ export interface TetrisScreenOptions {
 export type Mood = 'idle' | 'cheer' | 'sad';
 
 export interface TetrisScene {
+  rotationDirection?: 1 | -1;
   /** Поле с фигурой на нём: FIELD_COLUMNS × FIELD_ROWS, 0 — пусто. */
   cells: Uint8Array;
   /** Сгорающие ряды (мигают) и сколько тактов анимации осталось. */

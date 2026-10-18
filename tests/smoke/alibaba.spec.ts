@@ -11,11 +11,11 @@ test('прокрутка карусели сохраняет игру, ссыл�
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./?toy=clock99&power=on');
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
-  await expect(page.locator('#real-models .toysw__item')).toHaveCount(6);
+  await expect(page.locator('#real-models .toysw__item')).toHaveCount(8);
   await page.getByRole('button',{name:'Следующие модели'}).click();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
-  await expect(page.locator('#real-models .toysw__item')).toHaveCount(6);
+  await expect(page.locator('#real-models .toysw__item')).toHaveCount(8);
   await page.locator('.toysw__item[data-toy=alibaba]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');

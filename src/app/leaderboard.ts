@@ -1,3 +1,4 @@
+import { nativeVariant } from '../devices/catalog';
 import { rulesetFor } from '../games/rulesets';
 import {
   categoryFor,
@@ -210,14 +211,15 @@ export class LeaderboardCard {
     );
   }
   select(value: Omit<RunSelection, 'rulesetVersion' | 'startProfile'>, standard: boolean): void {
-    const identity = `${value.gameId}:${value.mode}:${value.toyId}`,
+    const identity = `${value.gameId}:${value.mode}:${value.toyId}:${value.profileId ?? ''}:${value.variantId ?? ''}`,
       eligible = this.pageEligible && standard;
     if (identity === this.selectionKey && eligible === this.eligible) return;
-    const selection = { ...value, rulesetVersion: rulesetFor(value.gameId), startProfile: STANDARD_START };
+    const selection = { ...value, rulesetVersion: nativeVariant(value.profileId ?? '',value.variantId ?? '')?.rulesetVersion ?? rulesetFor(value.gameId), startProfile: STANDARD_START };
     let category: string;
     try {
       category = categoryFor(selection);
     } catch {
+      this.cancel(); this.selectionKey='';this.selected=null;this.category='';this.topRequest?.abort();this.generation++;
       this.root.hidden = true;
       return;
     }
@@ -344,7 +346,7 @@ export class LeaderboardCard {
     const title = h('h2', { class: 'side__title', id: 'leaderboard-title' }, copy.title);
     const heading = h('div', { class: 'leaderboard__heading' }, title, h('span', { class: 'leaderboard__badge' }, 'TOP 20'));
     const game = selected ? GAMES[selected.gameId].names[getLang()] : '';
-    const mode = selected?.gameId === 'mario' ? '' : `${copy.variant} ${(selected?.mode ?? 0) + 1}`;
+    const mode = selected?.gameId === 'mario' ? '' : `${copy.variant} ${selected?.variantId?.toUpperCase() ?? ((selected?.mode ?? 0) + 1)}`;
     const caption = h(
       'p',
       { class: 'leaderboard__caption' },

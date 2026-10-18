@@ -1,7 +1,8 @@
 /** Frequencies/durations decoded from the original E88 sound ROM by BrickEmuPy.
- * See rom-arcade.json: channels 0,5,11,12,13,14. No sampled audio or ROM bytes. */
+ * See rom-arcade.json: channels 0,5,7,11,12,13,14 (7: native-devices.json). No sampled audio or ROM bytes. */
 import type { BrickTone } from './brickPhrases';
 export const E88_EFFECTS = {
+  "e88_menu": [{"hz": 1041.6666666666667, "ms": 49.148}, {"hz": 919.1176470588235, "ms": 49.152}, {"hz": 762.1951219512196, "ms": 49.152}, {"hz": 480.7692307692308, "ms": 49.152}],
   "e88_move": [
     {
       "hz": 578.7037037037037,
