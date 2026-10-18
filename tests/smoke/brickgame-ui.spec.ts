@@ -322,15 +322,15 @@ test('блок «Рекорды» не затемняется и всегда о
   expect(await style()).toEqual({ column: '1', card: '1', border: '1px', style: 'solid' });
 });
 
-test('Dice ROM: START/P switches the prediction; the pause indicator freezes play; ruleset 2 is selected', async ({ page }) => {
+for(const toy of ['brickgame','clock99','seabattle','tank168'] as const)test(`${toy}: Dice ROM START/P changes prediction; explicit Pause still freezes; ruleset 2 is selected`, async ({ page }) => {
   const categories: string[] = [];
   await page.route('**/api/leaderboards/top?**', route => {
     const category=new URL(route.request().url()).searchParams.get('category')!;
     categories.push(category);
     return route.fulfill({json:{category,entries:[]}});
   });
-  await open(page, '?toy=brickgame&power=on', config => {
-    config.toys.brickgame.games=[{id:'dice'}];config.toys.brickgame.defaultGame='dice';
+  await open(page, `?toy=${toy}&power=on`, config => {
+    config.toys[toy].games=[{id:'dice'}];config.toys[toy].defaultGame='dice';
   });
   await expect.poll(()=>area(page,'boot')).toBe('off');
   await page.locator('[data-key=sp]').click();
@@ -339,16 +339,25 @@ test('Dice ROM: START/P switches the prediction; the pause indicator freezes pla
   await page.locator('[data-key=right]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-score','990');
   const image=()=>page.locator('#screen').evaluate((canvas:HTMLCanvasElement)=>canvas.toDataURL());
-  // START/P is an in-game rule; explicit Pause must still freeze the canvas.
+  // Wait for input consumption: an immediate phase assertion can pass before PAUSE is processed.
+  const before=await image();
   await page.locator('[data-key=sp]').click();
+  await page.waitForTimeout(120);
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  expect(await image()).not.toBe(before);
   await page.locator('[data-device=pause]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase','paused');
   const paused=await image();await page.waitForTimeout(150);expect(await image()).toBe(paused);
+  expect(paused).not.toBe(before);
   await page.locator('[data-device=pause]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
   await expect.poll(()=>categories.some(c=>c==='dice:0:r2:standard-v1:matrix')).toBe(true);
   await expect(page.locator('#gpanel')).toContainText('четырёх костей');
+  await page.locator('#view-screen').click();
+  await page.locator('[data-remote=sp]').click();await page.waitForTimeout(120);
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await page.locator('[data-remote=sp]').dispatchEvent('click',{detail:0});await page.waitForTimeout(120);
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
 });
 
 test('universal Brick Game descriptions mark alpha/beta accuracy in both languages and themes',async({page})=>{

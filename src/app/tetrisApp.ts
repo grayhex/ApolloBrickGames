@@ -448,6 +448,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   };
 
   const toyPanel = new ToyPanel(refs.toy, hub, {
+    // Let the active engine interpret S/P; explicit PAUSE stays a separate action.
+    startPauseAction: () => START,
     phase: (): Phase => (cabinet.phase === 'playing' ? 'playing' : cabinet.phase === 'paused' ? 'paused' : 'ready'),
     powered: () => powered,
     onPower: () => setPower(!powered),
