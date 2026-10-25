@@ -104,6 +104,7 @@ test('корпус по фото: кнопки меньше и в лунках, 
   expect(await page.locator('#base .key--pad .key__dish').count()).toBe(4);
   expect(await page.locator('#base .key--pad .key__dish').first().evaluate((el) => getComputedStyle(el).stroke)).toBe('none');
   expect(await page.locator('#base .key--pad .key__wall').count()).toBe(0);
+  expect(await page.locator('#base .key--jump .key__dish').evaluate((el) => getComputedStyle(el).stroke)).toBe('none'); // и у ROTATE выемка без белой обводки
   // Динамик: три ряда 9 + 7 + 5, симметрично относительно оси корпуса, бледные края.
   const rowsOfHoles = await page.locator('#base .base__speaker circle').evaluateAll((items) => {
     const out = new Map<string, number[]>();
