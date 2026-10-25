@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { BrickAudio, brickSound } from '../../src/audio/brick';
+import { BrickAudio, brickSound, seekTones } from '../../src/audio/brick';
 import { BRICK_PHRASES } from '../../src/audio/brickPhrases';
 import rom from '../fixtures/brickemu/b0202.json';
 import { MASTER_GAIN } from '../../src/audio/beeper';
@@ -50,9 +50,12 @@ it('maps effects without duplicate death cues', () => {
   expect(brickSound({ type: 'started' }, 'tetris', false)).toBe('select');
   expect(brickSound({ type: 'lines', count: 4 }, 'tetris', false)).toBe('tetris');
 });
-it('Sea Battle: intro, game A animation and Romeo music are only mapped for the sea profile', () => {
+it('Sea Battle: intro, its flashes, Romeo music and the falling-figure tick are only mapped for the sea profile', () => {
   expect(brickSound({ type: 'intro' }, 'sea-battle', true, 'sea')).toBe('sea_intro');
-  expect(brickSound({ type: 'attract' }, 'sea-battle', true, 'sea')).toBe('sea_attract');
+  expect(brickSound({ type: 'introFx' }, 'sea-battle', true, 'sea')).toBe('sea_blast');
+  expect(brickSound({ type: 'step' }, 'romeo-juliet', false, 'sea')).toBe('sea_fall_tick');
+  expect(brickSound({ type: 'step' }, 'sea-battle', false, 'sea')).toBeNull();
+  expect(brickSound({ type: 'introFx' }, 'sea-battle', true)).toBeNull();
   expect(brickSound({ type: 'started' }, 'romeo-juliet', false, 'sea')).toBe('sea_romeo_music');
   expect(brickSound({ type: 'started' }, 'romeo-juliet', false)).toBe('start');
   expect(brickSound({ type: 'started' }, 'tank', false, 'sea')).toBe('start');
@@ -62,14 +65,45 @@ it('Sea Battle: background tunes use their own voices, so a key beep does not cu
   const { port, voices } = harness();
   port.unlock();
   port.play({ type: 'started' }, 'romeo-juliet', false, 'sea');
-  expect(voices).toHaveLength(1);
+  expect(voices).toHaveLength(2); // the two voices of the tune
   port.play({ type: 'move' }, 'romeo-juliet', false, 'sea'); // in-game beep layers over the music
-  expect(voices).toHaveLength(2);
+  expect(voices).toHaveLength(3);
   expect(voices[0]!.stop).toHaveBeenCalledTimes(1); // only the scheduled end, not cut
+  expect(voices[1]!.stop).toHaveBeenCalledTimes(1);
+  port.play({ type: 'step' }, 'romeo-juliet', false, 'sea'); // falling-figure tick is a quiet effect, it layers too
+  expect(voices[0]!.stop).toHaveBeenCalledTimes(1);
   port.play({ type: 'intro' }, 'sea-battle', true, 'sea');
   expect(voices[0]!.stop).toHaveBeenCalledTimes(2); // menu events silence everything first
   port.play({ type: 'move' }, 'sea-battle', true, 'sea');
-  expect(voices.length).toBeGreaterThan(2);
+  expect(voices.length).toBeGreaterThan(3);
+});
+it('Sea Battle: an intro flash plays over the intro melody without cutting it', () => {
+  const { port, voices } = harness();
+  port.unlock();
+  port.play({ type: 'intro' }, 'sea-battle', true, 'sea');
+  expect(voices).toHaveLength(2); // two voices of the tune
+  expect(voices.map((voice) => voice.type)).toEqual(['sine', 'sine']);
+  port.play({ type: 'introFx' }, 'sea-battle', true, 'sea');
+  expect(voices).toHaveLength(3);
+  expect(voices[0]!.stop).toHaveBeenCalledTimes(1); // the melody keeps going
+  expect(voices[1]!.stop).toHaveBeenCalledTimes(1);
+});
+it('seekTones continues a two-voice tune from a given time on the shared clock', () => {
+  const tune = [
+    { hz: 800, ms: 100, track: 0, atMs: 50 },
+    { hz: 900, ms: 200, track: 0 },
+    { hz: 1000, ms: 400, track: 1, atMs: 0 },
+  ];
+  expect(seekTones(tune, 0)).toEqual([
+    { hz: 800, ms: 100, track: 0, atMs: 50 },
+    { hz: 900, ms: 200, track: 0, atMs: 150 },
+    { hz: 1000, ms: 400, track: 1, atMs: 0 },
+  ]);
+  expect(seekTones(tune, 200)).toEqual([
+    { hz: 900, ms: 150, track: 0, atMs: 0 },
+    { hz: 1000, ms: 200, track: 1, atMs: 0 },
+  ]);
+  expect(seekTones(tune, 400)).toEqual([]);
 });
 it('plays the first gesture immediately with no fetch or decoded recording', () => {
   const { port, voices } = harness();
