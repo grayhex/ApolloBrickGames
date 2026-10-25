@@ -65,6 +65,10 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
     if (toy === 'seabattle') {
       await pad([]);
       await page.waitForTimeout(100);
+      await pad([2]); // первое нажатие только будит геймпад (как в остальном тесте), FIRE корпусу не нужна
+      await page.waitForTimeout(100);
+      await pad([]);
+      await page.waitForTimeout(100);
       await pad([0]); // A: заставка уходит в меню, игра прежняя
       await expect(area).toHaveAttribute('data-stage', 'menu');
       await pad([]);
