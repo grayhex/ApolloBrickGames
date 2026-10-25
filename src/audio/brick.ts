@@ -6,10 +6,17 @@ import { MASTER_GAIN } from './beeper';
 const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker']);
 export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): BrickSound | null {
   if (nativeProfile === 'sea') {
-    // «Морской бой»: мелодии сняты с видео оригинала (`seaTunes.ts`); остальное — общие сигналы Brick Game.
+    // «Морской бой»: мелодии и эффекты сняты с записей оригинала (`seaTunes.ts`); остальное — общие сигналы Brick Game.
     if (event.type === 'intro') return 'sea_intro';
-    if (event.type === 'attract') return 'sea_attract';
-    if (event.type === 'started' && game === 'romeo-juliet') return 'sea_romeo_music';
+    if (event.type === 'introFx') return 'sea_blast';
+    // Музыка партии (владелец): у всех игр, кроме A, играет мелодия «Ромео» по кругу; в игре A один раз, без повтора, играет мелодия заставки.
+    if (event.type === 'started') return game === 'sea-battle' ? 'sea_intro_once' : 'sea_romeo_music';
+    if (event.type === 'step') return game === 'romeo-juliet' ? 'sea_fall_tick' : null;
+    if (game === 'sea-battle') {
+      // Ход игры A: вспышка при выстреле, «капля» из шести ступеней на падении мины, вспышка на потоплении корабля (звук `game-a.MOV`).
+      if (event.type === 'launch' || event.type === 'explode') return 'sea_blast';
+      if (event.type === 'hit' || event.type === 'shot') return 'sea_splash';
+    }
   }
   if (nativeProfile === 'e88') {
     if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
@@ -69,12 +76,27 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
       return null; // lifeLost follows crash: do not play a second death cue
   }
 }
+/** Фрагмент записи с момента `offsetMs`: каждая нота получает собственное `atMs` (у дорожек общие часы), нота на границе обрезается. */
+export function seekTones(notes:readonly BrickTone[],offsetMs:number):BrickTone[]{
+  const clocks=new Map<number,number>();
+  const out:BrickTone[]=[];
+  for(const note of notes){
+    const track=note.track??0;
+    const start=note.atMs??clocks.get(track)??0;
+    const end=start+note.ms;
+    clocks.set(track,end);
+    if(end<=offsetMs)continue;
+    const from=Math.max(start,offsetMs);
+    out.push({...note,ms:end-from,atMs:from-offsetMs});
+  }
+  return out;
+}
 /** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
-const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_attract', 'sea_romeo_music']);
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>
-  sound.startsWith('e88_') ? 0 : MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' ? 0 : sound === 'turn' || sound === 'b0202_turn' ? 1 : 2;
+  sound.startsWith('e88_') ? 0 : MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' || sound === 'sea_fall_tick' ? 0 : sound === 'turn' || sound === 'b0202_turn' ? 1 : 2;
 
 /** Synthesized tones with priority; B0202 effects may overlay its separate noise channel. */
 export class BrickAudio {
@@ -120,7 +142,8 @@ export class BrickAudio {
       return;
     }
     if(event.type==='resumed'){this.resumeMusic();return;}
-    if(inMenu||event.type==='started'||event.type==='gameOver')this.silence();
+    // Вспышка заставки идёт поверх её мелодии: единственное событие меню, которое музыку не обрывает.
+    if((inMenu&&event.type!=='introFx')||event.type==='started'||event.type==='gameOver')this.silence();
     const sound = brickSound(event, game, inMenu, nativeProfile);
     const padHz = event.type === 'tone' ? PAD_HZ[event.pad] : undefined;
     const notes: readonly BrickTone[] | null =
@@ -158,7 +181,7 @@ export class BrickAudio {
     for (const track of new Set(notes.map((note) => note.track ?? 0))) {
       const oscillator = context.createOscillator();
       const envelope = context.createGain();
-      oscillator.type = 'square';
+      oscillator.type = notes.find((note) => (note.track ?? 0) === track)?.wave ?? 'square';
       oscillator.connect(envelope);
       envelope.connect(this.gain!);
       const voice = { oscillator, envelope };
@@ -223,8 +246,7 @@ export class BrickAudio {
   private resumeMusic():void {
     const music=this.music;
     if(!music?.paused||this.muted||!this.context||this.disposed)return;
-    let skip=music.offset*1000;
-    const notes=music.notes.flatMap(note=>{if(skip>=note.ms){skip-=note.ms;return [];}const rest={...note,ms:note.ms-skip};skip=0;return [rest];});
+    const notes=seekTones(music.notes,music.offset*1000);
     if(!notes.length){this.music=null;return;}
     music.paused=false;music.since=this.context.currentTime;this.schedule(notes,true);
   }

@@ -2,13 +2,11 @@ import { test, expect, type Page } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
 import { marioUrl } from './url';
 
-/** «Морской бой»: после включения заставка, на игре A перед партией — анимация; обе уходят по кнопке, партия начнётся следующим S./P. */
+/** «Морской бой»: после включения заставка уходит по кнопке в меню; следующий S./P. начинает партию (заставки игры A нет). */
 async function skipSeaScreens(page: Page): Promise<void> {
   const area = page.locator('#game-area');
   await page.keyboard.press('Enter');
   await expect(area).toHaveAttribute('data-stage', 'menu');
-  await page.keyboard.press('Enter');
-  await expect(area).toHaveAttribute('data-stage', 'attract');
 }
 
 for (const toy of ['clock99', 'seabattle', 'tank168']) {
@@ -35,7 +33,8 @@ for (const toy of ['clock99', 'seabattle', 'tank168']) {
     await page.locator('#game-area').focus();
     await page.keyboard.press('Space');
     await expect.poll(() => page.evaluate(() => (window as unknown as { tones: string[] }).tones.length)).toBeGreaterThan(0);
-    expect(await page.evaluate(() => (window as unknown as { tones: string[] }).tones.every((t) => t === 'square'))).toBe(true);
+    // У «Морского боя» мелодии — синус (пищалка почти синусоидальна), всё остальное — меандр.
+    expect(await page.evaluate((sine) => (window as unknown as { tones: string[] }).tones.every((t) => t === 'square' || (sine && t === 'sine')), toy === 'seabattle')).toBe(true);
     expect(requests).toEqual([]);
   });
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BONUS_START } from '../../src/brick/games/romeoJuliet';
 import {
   BRICK_CELLS,
   BRICK_ROWS,
@@ -87,6 +88,9 @@ export function expectValid(game: BrickGame): void {
  * Общие проверки для любой игры из каталога — на каждом из её вариантов: форма данных, фазы, повторяемость, устойчивость к случайному вводу.
  * Игра сверх этого пишет свои тесты правил.
  */
+/** Games whose counter starts above zero before any point is earned. */
+const startingScore = (id: string): number => (id === 'dice' ? 1000 : id === 'romeo-juliet' ? BONUS_START : 0);
+
 export function conformance(def: BrickGameDef, options: { fuzzTicks?: number; seeds?: number[] } = {}): void {
   const fuzzTicks = options.fuzzTicks ?? 2500;
   const seeds = options.seeds ?? [1, 7];
@@ -109,7 +113,7 @@ export function conformance(def: BrickGameDef, options: { fuzzTicks?: number; se
           const game = make();
           expect(game.id).toBe(def.id);
           expect(game.phase).toBe('ready');
-          expect(game.score).toBe(def.id === 'dice' ? 1000 : 0); // Dice starts with a ROM bank, rather than an earned-point counter.
+          expect(game.score).toBe(startingScore(def.id)); // Dice starts with a ROM bank and Romeo with starting points, rather than an earned-point counter.
           expect(game.tick).toBe(0);
           expectValid(game);
           const before = frameHash(game);
@@ -133,7 +137,7 @@ export function conformance(def: BrickGameDef, options: { fuzzTicks?: number; se
           expect(game.phase).toBe('playing');
           game.restart();
           expect(game.phase).toBe('ready');
-          expect(game.score).toBe(def.id === 'dice' ? 1000 : 0); // Dice starts with a ROM bank, rather than an earned-point counter.
+          expect(game.score).toBe(startingScore(def.id)); // Dice starts with a ROM bank and Romeo with starting points, rather than an earned-point counter.
           expect(game.tick).toBe(0);
           expectValid(game);
         });

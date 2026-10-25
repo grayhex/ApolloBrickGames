@@ -7,7 +7,7 @@
 import type { NativeEntry } from '../devices/catalog';
 import nativeMenuFrames from '../devices/menu-frames.json';
 import { menuField } from './menuArt';
-import { SEA_GAME_A, SEA_START, SEA_START_LEAD_TICKS } from './seaAnimations';
+import { SEA_START, SEA_START_FX_TICKS, SEA_START_LEAD_TICKS } from './seaAnimations';
 import { seaMenuField } from './seaMenu';
 import {
   BRICK_CELLS,
@@ -58,8 +58,8 @@ export interface BrickConsoleOptions {
   level?: number;
 }
 
-/** Экран до партии у консоли в стиле `sea`: заставка → меню → анимация игры (до первой нажатой кнопки). */
-type SeaStage = 'intro' | 'menu' | 'attract';
+/** Экран до партии у консоли в стиле `sea`: заставка (до первой нажатой кнопки) → меню. */
+type SeaStage = 'intro' | 'menu';
 
 const wrap = (value: number, count: number): number => ((value % count) + count) % count;
 const clampSetting = (value: number | undefined, max = MENU_SETTING_MAX): number => Math.min(max, Math.max(0, Math.trunc(value ?? 0) || 0));
@@ -76,7 +76,7 @@ export class BrickConsole implements BrickGame {
   private readonly nativeMenu: BrickConsoleOptions['nativeMenu'];
   private readonly menuStyle: BrickConsoleOptions['menuStyle'];
   private stage: SeaStage = 'menu';
-  /** Такты в текущем экране до партии (заставка, меню, анимация игры): с него идут кадры анимаций. */
+  /** Такты в текущем экране до партии (заставка, меню): с него идут кадры анимаций. */
   private stageTicks = 0;
   private gameIndex: number;
   private modeIndex: number;
@@ -191,8 +191,7 @@ export class BrickConsole implements BrickGame {
       this.enterMenu();
       return [{ type: 'move' }];
     }
-    if (this.stage === 'attract') return input.pressed.size > 0 ? this.begin() : [];
-    if (this.stage === 'intro') return [];
+    if (this.stage === 'intro') return this.introFx();
     const shown = this.gameIndex;
     const events: BrickEvent[] = [];
     const moved = (): void => {
@@ -223,12 +222,18 @@ export class BrickConsole implements BrickGame {
     return events;
   }
 
+  /** Вспышки заставки (выстрел, взрыв снаряда) звучат на тактах петли `SEA_START_FX_TICKS`: звук привязан к кадрам анимации, а не к мелодии. */
+  private introFx(): BrickEvent[] {
+    const t = this.stageTicks - SEA_START_LEAD_TICKS;
+    return t > 0 && SEA_START_FX_TICKS.includes(t % SEA_START.total) ? [{ type: 'introFx' }] : [];
+  }
+
   private enterMenu(): void {
     this.stage = 'menu';
     this.stageTicks = 0;
   }
 
-  /** Экран консоли: заставка, меню, анимация игры A или партия (для проверок и `data-stage`). */
+  /** Экран консоли: заставка, меню или партия (для проверок и `data-stage`). */
   get screenStage(): SeaStage | 'game' {
     return this.current ? 'game' : this.stage;
   }
@@ -317,11 +322,6 @@ export class BrickConsole implements BrickGame {
         this.enterMenu();
         return [{ type: 'move' }];
       }
-      if (this.stage === 'menu' && this.selected.id === 'sea-battle' && this.selected.def) {
-        this.stage = 'attract';
-        this.stageTicks = 0;
-        return [{ type: 'attract' }];
-      }
     }
     return this.begin();
   }
@@ -376,14 +376,12 @@ export class BrickConsole implements BrickGame {
         const t = this.stageTicks - SEA_START_LEAD_TICKS;
         return t < 0 ? new Uint8Array(BRICK_CELLS) : SEA_START.at(t).cells;
       }
-      if (this.stage === 'attract') return SEA_GAME_A.at(this.stageTicks).cells;
       return seaMenuField(this.selected.symbol, this.modeNumber, this.stageTicks);
     }
     return menuField(this.selected.symbol, this.modeNumber, this.selected.id);
   }
 
   preview(): Uint8Array | null {
-    if (this.current) return this.current.preview();
-    return this.menuStyle === 'sea' && this.stage === 'attract' ? SEA_GAME_A.at(this.stageTicks).preview : null;
+    return this.current ? this.current.preview() : null;
   }
 }
