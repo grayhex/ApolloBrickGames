@@ -9,7 +9,8 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
     // «Морской бой»: мелодии и эффекты сняты с записей оригинала (`seaTunes.ts`); остальное — общие сигналы Brick Game.
     if (event.type === 'intro') return 'sea_intro';
     if (event.type === 'introFx') return 'sea_blast';
-    if (event.type === 'started' && game === 'romeo-juliet') return 'sea_romeo_music';
+    // Музыка партии (владелец): у всех игр, кроме A, играет мелодия «Ромео» по кругу; в игре A один раз, без повтора, играет мелодия заставки.
+    if (event.type === 'started') return game === 'sea-battle' ? 'sea_intro_once' : 'sea_romeo_music';
     if (event.type === 'step') return game === 'romeo-juliet' ? 'sea_fall_tick' : null;
     if (game === 'sea-battle') {
       // Ход игры A: вспышка при выстреле, «капля» из шести ступеней на падении мины, вспышка на потоплении корабля (звук `game-a.MOV`).
@@ -91,7 +92,7 @@ export function seekTones(notes:readonly BrickTone[],offsetMs:number):BrickTone[
   return out;
 }
 /** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
-const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_romeo_music']);
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>

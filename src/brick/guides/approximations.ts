@@ -32,7 +32,7 @@ export const ROMEO_GUIDE: GameGuideData = {
     gt('Перемещайте и поворачивайте падающие фигуры, оставляя подъём по одной клетке.', 'Move and rotate falling pieces, leaving steps one cell high.'),
     gt('Точка поднимается автоматически; перед высокой стеной или разрывом она ждёт.', 'The dot climbs automatically; it waits at tall walls or gaps.'),
     gt('Ряды не исчезают. Не засыпайте героя и не перекрывайте появление новых фигур.', 'Rows do not clear. Do not bury the hero or block new pieces from spawning.'),
-    gt('Стартовые очки (500) убывают на 1 за полсекунды; остаток достаётся при встрече с Джульеттой — стройте быстро.', 'Starting points (500) drop by 1 every half second; what is left is kept on reaching Juliet, so build fast.'),
+    gt('Стартовые очки (400) убывают на 1 за полсекунды; остаток достаётся при встрече с Джульеттой — стройте быстро.', 'Starting points (400) drop by 1 every half second; what is left is kept on reaching Juliet, so build fast.'),
     gt('NEXT показывает следующую фигуру: используются трёх- и четырёхклеточные фигуры.', 'NEXT shows the next piece; three- and four-cell shapes are used.'),
   ],
   controls: [
@@ -42,7 +42,7 @@ export const ROMEO_GUIDE: GameGuideData = {
     { button: 'down', text: gt('Ускорить падение', 'Drop faster'), hold: true },
     { button: 'fire', text: gt('Бросок фигуры до упора', 'Hard drop'), keyboardOnly: true },
   ],
-  scoring: [{ what: gt('Стартовые очки попытки', 'Starting points of an attempt'), points: '500 → 0' }, { what: gt('Уложенная клетка', 'Placed cell'), points: '+1' }, { what: gt('Шаг героя', 'Hero step'), points: '+10' }, { what: gt('Джульетта достигнута', 'Juliet reached'), points: '+100' }],
+  scoring: [{ what: gt('Стартовые очки попытки', 'Starting points of an attempt'), points: '400 → 0' }, { what: gt('Уложенная клетка', 'Placed cell'), points: '+1' }, { what: gt('Шаг героя', 'Hero step'), points: '+10' }, { what: gt('Джульетта достигнута', 'Juliet reached'), points: '+100' }],
   facts: [{ value: '4', label: gt('жизни', 'lives') }, { value: '1', label: gt('высота шага', 'step height') }],
   progression: gt('После встречи — новая лестница. Столбик растёт с 7 до 9 клеток, после уровня 10 повышается скорость.', 'Reaching Juliet starts a new staircase. The column grows from 7 to 9 cells; speed rises after level 10.'),
   lives: gt('Четыре жизни. Засыпанный герой или перекрытый вход фигур отнимает жизнь; счёт сохраняется.', 'Four lives. Burying the hero or blocking the spawn costs a life; score is retained.'),

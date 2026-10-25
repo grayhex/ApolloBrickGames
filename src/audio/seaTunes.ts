@@ -76,7 +76,9 @@ const INTRO_LEAD_MS = 347;
 
 /** Заставка идёт, пока не нажата кнопка: 24 прохода (≈ 4,4 мин). */
 export const SEA_INTRO_TUNE: readonly BrickTone[] = loop(INTRO_A, INTRO_B, lengthOf(INTRO_A) + REPEAT_GAP_MS, 24, INTRO_LEAD_MS);
-/** Музыка «Ромео и Джульетты» играет всю партию: 24 прохода (≈ 7,8 мин). */
+/** Мелодия заставки один раз, без повтора и без паузы в начале: музыка партии в игре A (владелец). */
+export const SEA_INTRO_ONCE_TUNE: readonly BrickTone[] = loop(INTRO_A, INTRO_B, lengthOf(INTRO_A), 1, 0);
+/** Музыка партии во всех остальных играх консоли (владелец: мелодия «Ромео» везде, кроме A): 24 прохода (≈ 7,8 мин). */
 export const SEA_ROMEO_TUNE: readonly BrickTone[] = loop(ROMEO_A, ROMEO_B, lengthOf(ROMEO_A) + REPEAT_GAP_MS, 24, 0);
 
 /**

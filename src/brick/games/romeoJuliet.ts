@@ -1,7 +1,7 @@
 /**
  * Owner: falling figures build a staircase for an automatic dot heading up/right to Juliet's column.
  * Owner (25 Oct 2026): the original starts every attempt with starting points that shrink with time, which pushes the player to finish the staircase fast.
- * The starting value and the pace are assumptions (`BONUS_START`, `BONUS_STEP_TICKS`): the counter shows what has been earned plus the starting points still left
+ * The starting value is the owner's (400), the pace is an assumption (`BONUS_START`, `BONUS_STEP_TICKS`): the counter shows what has been earned plus the starting points still left
  * (the counter can go down, and, as with Dice's bank, the record never drops below it), and reaching Juliet's column keeps whatever is left.
  */
 import { BrickBase } from '../base';
@@ -10,8 +10,8 @@ import { Countdown, genuineTicks, Repeater } from '../timing';
 import type { BrickGameDef, BrickGameOptions, BrickInput } from '../types';
 import { makePiece, rotatePiece, type Piece } from './tetris/shapes';
 
-/** Starting points of an attempt and the time per point (assumption: 500 points, one per half second — a minute and a half of building leaves about 320). */
-export const BONUS_START = 500;
+/** Starting points of an attempt (owner: 400) and the time per point (assumption: one per half second — a minute and a half of building leaves about 220). */
+export const BONUS_START = 400;
 export const BONUS_STEP_TICKS = 30;
 
 export class RomeoJulietGame extends BrickBase {

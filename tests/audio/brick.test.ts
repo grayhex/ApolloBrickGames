@@ -58,8 +58,26 @@ it('Sea Battle: intro, its flashes, Romeo music and the falling-figure tick are 
   expect(brickSound({ type: 'introFx' }, 'sea-battle', true)).toBeNull();
   expect(brickSound({ type: 'started' }, 'romeo-juliet', false, 'sea')).toBe('sea_romeo_music');
   expect(brickSound({ type: 'started' }, 'romeo-juliet', false)).toBe('start');
-  expect(brickSound({ type: 'started' }, 'tank', false, 'sea')).toBe('start');
+  // Музыка партии (владелец): у всех игр, кроме A, мелодия «Ромео» по кругу; в игре A один раз, без повтора, мелодия заставки.
+  for (const game of ['tank', 'tetris', 'romeo-juliet']) expect(brickSound({ type: 'started' }, game, false, 'sea')).toBe('sea_romeo_music');
+  expect(brickSound({ type: 'started' }, 'sea-battle', false, 'sea')).toBe('sea_intro_once');
+  expect(brickSound({ type: 'started' }, 'tank', false)).toBe('start');
   expect(brickSound({ type: 'intro' }, 'sea-battle', true)).toBeNull();
+});
+it('Sea Battle: game A plays the intro melody once and stops, other games loop the Romeo music', () => {
+  const total = (notes: readonly { ms: number; atMs?: number; track?: number }[]) => Math.max(...notes.map((n) => (n.atMs ?? 0) + n.ms));
+  expect(total(BRICK_PHRASES.sea_intro_once)).toBeLessThan(11000); // one pass: 10.435 s, no pause in front
+  expect(total(BRICK_PHRASES.sea_romeo_music)).toBeGreaterThan(400000); // 24 passes
+  expect(BRICK_PHRASES.sea_intro_once.every((tone) => tone.atMs === undefined || tone.atMs === 0)).toBe(true);
+  const { port, voices } = harness();
+  port.unlock();
+  port.play({ type: 'started' }, 'tank', false, 'sea');
+  expect(voices).toHaveLength(2);
+  const first = voices[0]!;
+  expect(first.stop.mock.calls[0]![0]).toBeGreaterThan(400);
+  port.play({ type: 'started' }, 'sea-battle', false, 'sea'); // a new game: the previous music is cut
+  expect(first.stop).toHaveBeenCalledTimes(2);
+  expect(voices.slice(2).map((voice) => voice.stop.mock.calls[0]![0] as number).every((end) => end < 11)).toBe(true);
 });
 it('Sea Battle: background tunes use their own voices, so a key beep does not cut them, and the next menu event silences them', () => {
   const { port, voices } = harness();

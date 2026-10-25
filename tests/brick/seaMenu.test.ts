@@ -13,7 +13,7 @@ import { SEA_ART_TOP, SEA_MENU_ART, seaMenuField } from '../../src/brick/seaMenu
 import { BRICK_GAMES } from '../../src/brick/games';
 import { seekTones } from '../../src/audio/brick';
 import type { BrickTone } from '../../src/audio/brickPhrases';
-import { SEA_BLAST_TONES, SEA_FALL_TICK_TONES, SEA_INTRO_TUNE, SEA_ROMEO_TUNE } from '../../src/audio/seaTunes';
+import { SEA_BLAST_TONES, SEA_FALL_TICK_TONES, SEA_INTRO_ONCE_TUNE, SEA_INTRO_TUNE, SEA_ROMEO_TUNE } from '../../src/audio/seaTunes';
 
 const rows = (field: Uint8Array): string[] =>
   Array.from({ length: BRICK_ROWS }, (_, y) => Array.from({ length: BRICK_COLS }, (_, x) => (field[y * BRICK_COLS + x] ? '#' : '.')).join(''));
@@ -102,6 +102,7 @@ describe('звук «Морского боя»', () => {
     expect(ends(SEA_INTRO_TUNE)).toEqual([347 + 23 * 10935 + 10435, 347 + 23 * 10935 + 10435]);
     expect(ends(SEA_ROMEO_TUNE)).toEqual([23 * 19615 + 19115, 23 * 19615 + 19115]);
     expect(new Set(SEA_INTRO_TUNE.map((tone) => tone.track))).toEqual(new Set([0, 1]));
+    expect(ends(SEA_INTRO_ONCE_TUNE)).toEqual([10435, 10435]); // музыка партии в игре A: мелодия заставки один раз, без паузы в начале и без повтора
   });
 
   it('все ноты мелодий — ступени звукоряда устройства (синус, усиление по уровню ступени), без шума', () => {

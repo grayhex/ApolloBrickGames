@@ -98,10 +98,11 @@ test('корпус по фото: кнопки меньше и в лунках, 
   const width = await page.locator('#base .key--round').first().evaluate((el) => (el as HTMLElement).style.getPropertyValue('--w'));
   expect(Number(width)).toBeLessThan(39);
   expect(await page.locator('#base .base__dimples .base__rim-deep').count()).toBe(5);
-  // Клавиши направлений — квадраты с двумя срезанными углами со стороны хода и большой круглой вмятиной; объёма нет (ни стенки, ни кромок).
-  const cuts = await page.locator('#base .key--pad .key__shape').evaluateAll((items) => items.map((item) => (item.getAttribute('d')?.match(/L/g) ?? []).length));
-  expect(cuts).toEqual([2, 2, 2, 2]);
+  // Клавиши направлений — стрелки (пятиугольник острием по ходу), внутри круглая выемка без светлой обводки; объёма нет.
+  const tips = await page.locator('#base .key--pad .key__shape').evaluateAll((items) => items.map((item) => item.getAttribute('d')?.slice(0, 8)));
+  expect(tips).toEqual(['M20 2.5 ', 'M2.5 20 ', 'M37.5 20', 'M20 37.5']); // вверх, влево, вправо, вниз
   expect(await page.locator('#base .key--pad .key__dish').count()).toBe(4);
+  expect(await page.locator('#base .key--pad .key__dish').first().evaluate((el) => getComputedStyle(el).stroke)).toBe('none');
   expect(await page.locator('#base .key--pad .key__wall').count()).toBe(0);
   // Динамик: три ряда 9 + 7 + 5, симметрично относительно оси корпуса, бледные края.
   const rowsOfHoles = await page.locator('#base .base__speaker circle').evaluateAll((items) => {

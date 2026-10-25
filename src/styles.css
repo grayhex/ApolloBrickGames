@@ -4758,6 +4758,15 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
     inset 0 0.2cqw 0.3cqw rgba(255, 255, 255, 0.5), inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.26);
 }
 
+/* Клавиши-стрелки «Морского боя»: острие остаётся острым (тонкая обводка вместо мягкой), выемка внутри — просто углубление, без светлого кружка-обводки (рисунок — `seaBody.ts`). */
+.toy[data-model='seabattle'] .key--pad .key__shape {
+  stroke-width: 1.6;
+}
+
+.toy[data-model='seabattle'] .key--pad .key__dish {
+  stroke: none;
+}
+
 .toy[data-model='seabattle'] .base__sticker {
   top: 67.5%;
 }

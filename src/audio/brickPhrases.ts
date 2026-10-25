@@ -1,7 +1,7 @@
 import { E88_TETRIS_EFFECTS } from './e88TetrisEffects';
 import { B0202_EFFECTS } from './b0202Effects';
 import { E88_EFFECTS } from './e88Effects';
-import { SEA_BLAST_TONES, SEA_FALL_TICK_TONES, SEA_INTRO_TUNE, SEA_ROMEO_TUNE, SEA_SPLASH_TONES } from './seaTunes';
+import { SEA_BLAST_TONES, SEA_FALL_TICK_TONES, SEA_INTRO_ONCE_TUNE, SEA_INTRO_TUNE, SEA_ROMEO_TUNE, SEA_SPLASH_TONES } from './seaTunes';
 /** B0202 register traces plus synthesized transcription of other n0Live/BrickGame cues (MIT; see docs/THIRD_PARTY.md).
  * Frequencies retain the donor's tuning rather than imposing concert pitch.
  * No recording noise, codec padding or sampled waveforms are retained.
@@ -27,6 +27,7 @@ export const BRICK_PHRASES = {
   ...E88_EFFECTS,
   ...E88_TETRIS_EFFECTS,
   sea_intro: SEA_INTRO_TUNE,
+  sea_intro_once: SEA_INTRO_ONCE_TUNE,
   sea_romeo_music: SEA_ROMEO_TUNE,
   sea_blast: SEA_BLAST_TONES,
   sea_splash: SEA_SPLASH_TONES,
