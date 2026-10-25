@@ -2,18 +2,19 @@ import { svg } from './dom';
 import type { ToyModel } from './toys';
 
 /**
- * Нижняя половина «Морского боя» по фотографии оригинала (владелец, 25 октября 2026), в единицах рисунка корпуса 400 × 620:
- * четыре круглые кнопки меньше обычных и сидят в глубоких лунках (без точек и бликов под ними — на оригинале их нет), подписи изогнуты дугами (над кнопками веером, вокруг крестовины и над ROTATE по эллипсу),
- * клавиши направлений — стрелки (пятиугольник остриём в сторону хода и круглая вмятина), динамик — три ряда отверстий ромбом: тёмное ядро и бледные края.
+ * Нижняя половина «Морского боя» по фотографиям оригинала (владелец, 25 октября 2026), в единицах рисунка корпуса 400 × 620:
+ * четыре круглые кнопки меньше обычных и сидят в глубоких лунках (без точек и бликов под ними — на оригинале их нет), подписи почти горизонтальны (едва выгнуты и чуть наклонены: над кнопками веером,
+ * над ROTATE и вокруг крестовины — UP и DOWN горизонтально, LEFT и RIGHT вдоль левого и правого края почти вертикально), клавиши направлений — плоские квадраты со скошенными двумя углами в сторону хода и большой круглой
+ * вмятиной посередине (форма — по фото снизу; объём не рисуется, клавиши в общем стиле игрушек), динамик — три ряда отверстий ромбом: тёмное ядро и бледные края.
  * Размеры сняты с фото в масштабе 0,2837 единицы на пиксель (ширина корпуса 1410 px); что на фото не видно (наклейка ниже шва), не менялось.
  */
 
-/** Позиции круглых кнопок слева направо и их подписи: веер дуг, наружные подписи ниже и сильнее наклонены. */
+/** Позиции круглых кнопок слева направо и их подписи: почти горизонтальные, наружные чуть ниже и наклонены к краям. */
 const ROUND = [
-  { x: 75, tilt: -10, drop: 2 },
-  { x: 158, tilt: -3.5, drop: 0 },
-  { x: 242, tilt: 3.5, drop: 0 },
-  { x: 325, tilt: 10, drop: 2 },
+  { x: 75, tilt: -4, drop: 1 },
+  { x: 158, tilt: -1.5, drop: 0 },
+  { x: 242, tilt: 1.5, drop: 0 },
+  { x: 325, tilt: 4, drop: 1 },
 ] as const;
 const ROUND_Y = 74;
 const ROUND_W = 34;
@@ -22,8 +23,13 @@ const DIMPLE = { r: 33, dy: 10 };
 
 const PAD = { cx: 105, cy: 222, arm: 55, w: 48 } as const;
 const PAD_DISH_R = 76;
-/** Эллипс подписей крестовины: центр, полуоси базовой линии подписей «наружу» и базовая линия DOWN (буквы развёрнуты к центру). */
-const RING = { cx: PAD.cx - 0.2, cy: PAD.cy, outRx: 86, outRy: 89, downRy: 101, downRx: 86 } as const;
+/** Подписи крестовины: центр, длина пути, направление чтения (градусы по часовой от оси x) и выгиб; UP, DOWN и ROTATE почти горизонтальны, LEFT и RIGHT идут вдоль краёв почти вертикально. */
+const CAPTIONS = {
+  up: { x: PAD.cx, y: 133, length: 120, deg: 4, bulge: 3 },
+  down: { x: PAD.cx, y: 323, length: 90, deg: -6, bulge: -2.5 },
+  left: { x: PAD.cx - 81, y: PAD.cy + 4, length: 128, deg: -80, bulge: 2.5 },
+  right: { x: PAD.cx + 86, y: PAD.cy - 2, length: 138, deg: 80, bulge: 2.5 },
+} as const;
 
 const BIG = { x: 302, y: 224, w: 85, bowl: 62 } as const;
 
@@ -37,38 +43,52 @@ const SPEAKER_ROWS = [
 
 const SEAM = { edge: 377, control: 443 };
 
-/** Сторона квадратной клавиши-стрелки в единицах её SVG (40 × 40). */
-const ARROWS: Record<'up' | 'down' | 'left' | 'right', { shape: string; dish: [number, number] }> = {
-  up: { shape: 'M20 2.5 37 17V33Q37 36 34 36H6Q3 36 3 33V17Z', dish: [20, 23] },
-  down: { shape: 'M20 37.5 3 23V7Q3 4 6 4H34Q37 4 37 7V23Z', dish: [20, 17] },
-  left: { shape: 'M2.5 20 17 3H33Q36 3 36 6V34Q36 37 33 37H17Z', dish: [23, 20] },
-  right: { shape: 'M37.5 20 23 3H7Q4 3 4 6V34Q4 37 7 37H23Z', dish: [17, 20] },
+/**
+ * Клавиша-стрелка в её SVG 40 × 40: квадрат 27 × 30 единиц (контур `.key__shape` ещё расширяет его обводкой в 5 единиц), два угла со стороны хода срезаны под 45°, остальные скруглены;
+ * посередине большая круглая вмятина (диаметр 23, около 3/4 клавиши, как на фото). Объёма нет: тень и градиент — общие для клавиш игрушек (`.key--pad` в styles.css).
+ */
+const KEY = { x0: 6.5, x1: 33.5, y0: 5, y1: 33, cut: 7, round: 2, dish: { cx: 20, cy: 19, r: 11.5 } } as const;
+const ARROW_CUTS: Record<'up' | 'down' | 'left' | 'right', readonly ('tl' | 'tr' | 'br' | 'bl')[]> = {
+  up: ['tl', 'tr'],
+  down: ['bl', 'br'],
+  left: ['tl', 'bl'],
+  right: ['tr', 'br'],
 };
+
+function keyPath(cuts: readonly ('tl' | 'tr' | 'br' | 'bl')[]): string {
+  const { x0, x1, y0, y1, cut: c, round: r } = KEY;
+  const has = (corner: 'tl' | 'tr' | 'br' | 'bl'): boolean => cuts.includes(corner);
+  return [
+    `M${x0 + (has('tl') ? c : r)} ${y0}`,
+    has('tr') ? `H${x1 - c}L${x1} ${y0 + c}` : `H${x1 - r}Q${x1} ${y0} ${x1} ${y0 + r}`,
+    has('br') ? `V${y1 - c}L${x1 - c} ${y1}` : `V${y1 - r}Q${x1} ${y1} ${x1 - r} ${y1}`,
+    has('bl') ? `H${x0 + c}L${x0} ${y1 - c}` : `H${x0 + r}Q${x0} ${y1} ${x0} ${y1 - r}`,
+    has('tl') ? `V${y0 + c}L${x0 + c} ${y0}Z` : `V${y0 + r}Q${x0} ${y0} ${x0 + r} ${y0}Z`,
+  ].join('');
+}
+
+/** Содержимое SVG клавиши-стрелки: контур и круглая вмятина. */
+function arrowKey(direction: 'up' | 'down' | 'left' | 'right'): SVGElement[] {
+  const { cx, cy, r } = KEY.dish;
+  return [
+    svg('path', { class: 'key__shape', d: keyPath(ARROW_CUTS[direction]) }),
+    svg('circle', { class: 'key__dish', cx: String(cx), cy: String(cy), r: String(r) }),
+  ];
+}
 
 const num = (value: number): string => String(Math.round(value * 100) / 100);
 
-function rotate(point: readonly [number, number], deg: number, about: readonly [number, number]): [number, number] {
+/**
+ * Путь подписи: отрезок длиной `length` через (cx, cy) в направлении чтения `deg` (градусы по часовой стрелке от оси x: плюс — вниз вправо), едва выгнутый на `sagitta`
+ * (плюс — выпуклостью в сторону верха букв, минус — «улыбкой»). Подпись на фото почти прямая, поэтому кривизна — единицы.
+ */
+function linePath(cx: number, cy: number, length: number, deg: number, sagitta: number): string {
   const a = (deg * Math.PI) / 180;
-  const dx = point[0] - about[0];
-  const dy = point[1] - about[1];
-  return [about[0] + dx * Math.cos(a) - dy * Math.sin(a), about[1] + dx * Math.sin(a) + dy * Math.cos(a)];
-}
-
-/** Дуга-«улыбка наоборот» (края ниже середины), повёрнутая вокруг своей середины, чтобы подпись осталась точно над кнопкой; по ней идёт подпись. */
-function archPath(x: number, y: number, tilt: number): string {
-  const about: readonly [number, number] = [x, y - 1]; // середина квадратичной дуги
-  const [p0, c, p1] = [
-    rotate([x - 34, y + 10], tilt, about),
-    rotate([x, y - 12], tilt, about),
-    rotate([x + 34, y + 10], tilt, about),
-  ];
-  return `M${num(p0[0])} ${num(p0[1])}Q${num(c[0])} ${num(c[1])} ${num(p1[0])} ${num(p1[1])}`;
-}
-
-/** Дуга по эллипсу от угла `from` к `to` (градусы по часовой стрелке от оси x, как на экране). */
-function ellipseArc(cx: number, cy: number, rx: number, ry: number, from: number, to: number): string {
-  const at = (deg: number): string => `${num(cx + rx * Math.cos((deg * Math.PI) / 180))} ${num(cy + ry * Math.sin((deg * Math.PI) / 180))}`;
-  return `M${at(from)}A${rx} ${ry} 0 0 ${to > from ? 1 : 0} ${at(to)}`;
+  const [ux, uy] = [Math.cos(a), Math.sin(a)];
+  const [nx, ny] = [Math.sin(a), -Math.cos(a)]; // нормаль в сторону верха букв
+  const [x0, y0] = [cx - (ux * length) / 2, cy - (uy * length) / 2];
+  const [x1, y1] = [cx + (ux * length) / 2, cy + (uy * length) / 2];
+  return `M${num(x0)} ${num(y0)}Q${num(cx + 2 * sagitta * nx)} ${num(cy + 2 * sagitta * ny)} ${num(x1)} ${num(y1)}`;
 }
 
 function labelOn(id: string, path: string, text: string): SVGElement[] {
@@ -118,16 +138,17 @@ function drawArt(art: Element, model: ToyModel): void {
   // Подписи верхнего ряда: дуги веером над кнопками.
   ROUND.forEach(({ x, tilt, drop }, index) => {
     const caption = labels.round[index]?.top ?? '';
-    art.append(...labelOn(`sea-arc-${index}`, archPath(x, ROUND_Y - 29.5 + drop, tilt), caption));
+    art.append(...labelOn(`sea-arc-${index}`, linePath(x, ROUND_Y - 29.5 + drop, 84, tilt, 2.5), caption));
   });
 
-  // Подписи крестовины: по эллипсу вокруг неё; UP/LEFT/RIGHT — буквами наружу, DOWN — к центру.
+  // Подписи крестовины и ROTATE: почти прямые.
+  const caption = ({ x, y, length, deg, bulge }: (typeof CAPTIONS)[keyof typeof CAPTIONS]): string => linePath(x, y, length, deg, bulge);
   art.append(
-    ...labelOn('sea-arc-up', ellipseArc(RING.cx, RING.cy, RING.outRx, RING.outRy, -90 - 40, -90 + 40), labels.up),
-    ...labelOn('sea-arc-left', ellipseArc(RING.cx, RING.cy, RING.outRx, RING.outRy, 135, 225), labels.left),
-    ...labelOn('sea-arc-right', ellipseArc(RING.cx, RING.cy, RING.outRx, RING.outRy, -45, 45), labels.right),
-    ...labelOn('sea-arc-down', ellipseArc(RING.cx, RING.cy, RING.downRx, RING.downRy, 90 + 38, 90 - 38), labels.down),
-    ...labelOn('sea-arc-big', archPath(BIG.x + 2, 158, 7), labels.big),
+    ...labelOn('sea-arc-up', caption(CAPTIONS.up), labels.up),
+    ...labelOn('sea-arc-left', caption(CAPTIONS.left), labels.left),
+    ...labelOn('sea-arc-right', caption(CAPTIONS.right), labels.right),
+    ...labelOn('sea-arc-down', caption(CAPTIONS.down), labels.down),
+    ...labelOn('sea-arc-big', linePath(BIG.x + 2, 158, 100, 5, 3), labels.big),
   );
 
   // Лунки: четыре под круглыми кнопками, большая чаша под ROTATE и блюдце крестовины.
@@ -174,11 +195,7 @@ export function applySeaBody(base: HTMLElement, model: ToyModel): void {
     if (!button) continue;
     const [dx, dy] = arms[direction];
     place(button, PAD.cx + dx, PAD.cy + dy, PAD.w);
-    const { shape, dish } = ARROWS[direction];
-    button.querySelector('svg')?.replaceChildren(
-      svg('path', { class: 'key__shape', d: shape }),
-      svg('circle', { class: 'key__dish', cx: String(dish[0]), cy: String(dish[1]), r: '8.5' }),
-    );
+    button.querySelector('svg')?.replaceChildren(...arrowKey(direction));
   }
   const jump = base.querySelector('.key--jump');
   if (jump) place(jump, BIG.x, BIG.y, BIG.w);

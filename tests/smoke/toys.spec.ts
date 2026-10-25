@@ -306,9 +306,7 @@ test.describe('«Морской бой»', () => {
     expect(await area(page, 'playable')).toBe('yes');
     await key(page, 'sp').click(); // заставка → меню
     await expect.poll(() => area(page, 'stage')).toBe('menu');
-    await key(page, 'sp').click(); // игра A: анимация перед партией
-    await expect.poll(() => area(page, 'stage')).toBe('attract');
-    await key(page, 'sp').click();
+    await key(page, 'sp').click(); // игра A: партия сразу, без заставки
     await expect.poll(phase(page)).toBe('playing');
     await key(page, 'fire').click();
     await expect.poll(phase(page)).toBe('ready');

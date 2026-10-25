@@ -410,7 +410,6 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     if (!cabinet.inMenu || cabinet.phase !== 'ready') restartGame();
     cabinet.selectGame(id);
     emit(cabinet.start());
-    if (model.menuStyle === 'sea' && cabinet.inMenu) emit(cabinet.start()); // «Морской бой»: «запуск» из справки пропускает анимацию игры и сразу начинает партию
     refocusGame();
   };
   const setPower = (on: boolean): void => {
@@ -431,6 +430,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     if (on) {
       cabinet.restart();
       bootTicks = cabinet.bootCheck ? BOOT_TICKS : 0;
+      unlockAudio(); // кнопка ON/OFF срабатывает раньше слушателя окна: без этого мелодия заставки не успевала бы зазвучать
       emit(cabinet.powerOn());
       if (model.universal) { brickAudio.unlock(); brickAudio.play({type:'started'}, 'brickgame', true); }
     } else {

@@ -277,12 +277,9 @@ test.describe('«Морской бой»: режимы A–F', () => {
   test('A и C запускаются: корабли и лестница; RESET возвращает в меню', async ({ page }) => {
     await openConsole(page, 'seabattle');
     await expect.poll(() => area(page, 'game')).toBe('sea-battle');
-    await key(page, 'sp').click();
-    await expect.poll(() => area(page, 'stage')).toBe('attract'); // анимация игры A, партия начнётся по следующей кнопке
-    expect(await area(page, 'phase')).toBe('ready');
-    await key(page, 'sp').click();
+    await key(page, 'sp').click(); // заставки игры нет: партия начинается сразу
     await expect.poll(() => area(page, 'phase')).toBe('playing');
-    await page.keyboard.press('KeyZ');
+    await page.keyboard.press('KeyZ'); // ход: сцена с кораблём и миной, результат — в конце сцены
     await expect.poll(() => page.evaluate(() => {
       const game = (window as unknown as { __brick: { game: { ownShots: Uint8Array } } }).__brick.game;
       return [...game.ownShots].filter(Boolean).length;

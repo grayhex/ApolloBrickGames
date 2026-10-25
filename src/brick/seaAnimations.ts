@@ -4,7 +4,7 @@
  * в кадрах видео (1/30 с), у игры 1 кадр видео = 2 такта по 1/60 с. Как снято: `scripts/research/sea_video_*.py`, `docs/brick/sea-battle-originals.md`.
  * Видео — съёмка камерой с руки: переходные «серые» состояния жидкого кристалла сведены к ближайшему включённому/выключенному; что не видно на видео, не восстановлено.
  */
-import data from './data/sea-animations.json';
+import data from './data/sea-animations.json' with { type: 'json' };
 import { BRICK_CELLS, BRICK_COLS, BRICK_ROWS, BRICK_TICK_HZ, PREVIEW_CELLS } from './types';
 
 /** Кадр анимации в тактах. */
