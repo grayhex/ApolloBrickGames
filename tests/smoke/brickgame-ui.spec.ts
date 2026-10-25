@@ -334,6 +334,7 @@ for(const toy of ['brickgame','clock99','seabattle','tank168'] as const)test(`${
     config.toys[toy].games=[{id:'dice'}];config.toys[toy].defaultGame='dice';
   });
   await expect.poll(()=>area(page,'boot')).toBe('off');
+  if(toy==='seabattle'){await page.locator('[data-key=sp]').click();await expect.poll(()=>area(page,'stage')).toBe('menu');} // заставка уходит по первой кнопке
   await page.locator('[data-key=sp]').click();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
   await expect(page.locator('#game-area')).toHaveAttribute('data-score','1000');

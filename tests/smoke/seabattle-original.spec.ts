@@ -82,23 +82,23 @@ test('корпус по фото: кнопки меньше и в лунках, 
   const base = page.locator('#base');
   await expect(base).toHaveAttribute('data-body', 'sea');
   // Подписи идут по путям (дуги), а не плоским текстом.
-  const arcs = await page.locator('.base__art text textPath').evaluateAll((items) => items.map((item) => [item.textContent, item.getAttribute('href')]));
+  const arcs = await page.locator('#base .base__art text textPath').evaluateAll((items) => items.map((item) => [item.textContent, item.getAttribute('href')]));
   expect(arcs.map(([text]) => text)).toEqual(['ON/OFF', 'S./P.', 'MUTE', 'RESET', 'UP/MODE', 'LEFT/LEVEL', 'RIGHT/SPEED', 'DOWN', 'ROTATE']);
-  for (const [, href] of arcs) expect(await page.locator(`path${href}`).count()).toBe(1);
+  for (const [, href] of arcs) expect(await page.locator(`#base path${href}`).count()).toBe(1);
   // Круглые кнопки: уже, чем у «Часов+99» (ширина 39), с лунками глубже кнопки.
-  const width = await page.locator('.key--round').first().evaluate((el) => (el as HTMLElement).style.getPropertyValue('--w'));
+  const width = await page.locator('#base .key--round').first().evaluate((el) => (el as HTMLElement).style.getPropertyValue('--w'));
   expect(Number(width)).toBeLessThan(39);
-  expect(await page.locator('.base__dimples .base__rim-deep').count()).toBe(5);
+  expect(await page.locator('#base .base__dimples .base__rim-deep').count()).toBe(5);
   // Клавиши направлений — пятиугольные стрелки остриём по направлению хода.
-  const tips = await page.locator('.key--pad .key__shape').evaluateAll((items) => items.map((item) => item.getAttribute('d')?.slice(0, 7)));
+  const tips = await page.locator('#base .key--pad .key__shape').evaluateAll((items) => items.map((item) => item.getAttribute('d')?.slice(0, 7)));
   expect(tips).toEqual(['M20 2.5', 'M2.5 20', 'M37.5 2', 'M20 37.']); // вверх, влево, вправо, вниз
   // Динамик: три ряда 9 + 7 + 5, симметрично относительно оси корпуса, бледные края.
-  const rowsOfHoles = await page.locator('.base__speaker circle').evaluateAll((items) => {
+  const rowsOfHoles = await page.locator('#base .base__speaker circle').evaluateAll((items) => {
     const out = new Map<string, number[]>();
     for (const item of items) out.set(item.getAttribute('cy')!, [...(out.get(item.getAttribute('cy')!) ?? []), Number(item.getAttribute('cx'))]);
     return [...out.values()].map((xs) => xs.sort((p, q) => p - q));
   });
   expect(rowsOfHoles.map((xs) => xs.length)).toEqual([9, 7, 5]);
   for (const xs of rowsOfHoles) expect(xs[0]! + xs[xs.length - 1]!).toBeCloseTo(400, 1);
-  expect(await page.locator('.base__hole--faint').count()).toBe(4 + 4 + 2);
+  expect(await page.locator('#base .base__hole--faint').count()).toBe(4 + 4 + 2);
 });

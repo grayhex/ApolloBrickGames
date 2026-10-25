@@ -3,17 +3,17 @@ import type { ToyModel } from './toys';
 
 /**
  * Нижняя половина «Морского боя» по фотографии оригинала (владелец, 25 октября 2026), в единицах рисунка корпуса 400 × 620:
- * четыре круглые кнопки меньше обычных и сидят в глубоких лунках, подписи изогнуты дугами (над кнопками веером, вокруг крестовины и над ROTATE по эллипсу),
+ * четыре круглые кнопки меньше обычных и сидят в глубоких лунках (без точек и бликов под ними — на оригинале их нет), подписи изогнуты дугами (над кнопками веером, вокруг крестовины и над ROTATE по эллипсу),
  * клавиши направлений — стрелки (пятиугольник остриём в сторону хода и круглая вмятина), динамик — три ряда отверстий ромбом: тёмное ядро и бледные края.
  * Размеры сняты с фото в масштабе 0,2837 единицы на пиксель (ширина корпуса 1410 px); что на фото не видно (наклейка ниже шва), не менялось.
  */
 
 /** Позиции круглых кнопок слева направо и их подписи: веер дуг, наружные подписи ниже и сильнее наклонены. */
 const ROUND = [
-  { x: 75, tilt: -10, drop: 3 },
+  { x: 75, tilt: -10, drop: 2 },
   { x: 158, tilt: -3.5, drop: 0 },
   { x: 242, tilt: 3.5, drop: 0 },
-  { x: 325, tilt: 10, drop: 3 },
+  { x: 325, tilt: 10, drop: 2 },
 ] as const;
 const ROUND_Y = 74;
 const ROUND_W = 34;
@@ -23,7 +23,7 @@ const DIMPLE = { r: 33, dy: 10 };
 const PAD = { cx: 105, cy: 222, arm: 55, w: 48 } as const;
 const PAD_DISH_R = 76;
 /** Эллипс подписей крестовины: центр, полуоси базовой линии подписей «наружу» и базовая линия DOWN (буквы развёрнуты к центру). */
-const RING = { cx: 109, cy: 224, outRx: 86, outRy: 89, downRy: 101, downRx: 86 } as const;
+const RING = { cx: PAD.cx - 0.2, cy: PAD.cy, outRx: 86, outRy: 89, downRy: 101, downRx: 86 } as const;
 
 const BIG = { x: 302, y: 224, w: 85, bowl: 62 } as const;
 
@@ -54,8 +54,9 @@ function rotate(point: readonly [number, number], deg: number, about: readonly [
   return [about[0] + dx * Math.cos(a) - dy * Math.sin(a), about[1] + dx * Math.sin(a) + dy * Math.cos(a)];
 }
 
-/** Дуга-«улыбка наоборот» над кнопкой (края ниже середины), повёрнутая вокруг кнопки; по ней идёт подпись. */
-function archPath(x: number, y: number, tilt: number, about: readonly [number, number]): string {
+/** Дуга-«улыбка наоборот» (края ниже середины), повёрнутая вокруг своей середины, чтобы подпись осталась точно над кнопкой; по ней идёт подпись. */
+function archPath(x: number, y: number, tilt: number): string {
+  const about: readonly [number, number] = [x, y - 1]; // середина квадратичной дуги
   const [p0, c, p1] = [
     rotate([x - 34, y + 10], tilt, about),
     rotate([x, y - 12], tilt, about),
@@ -92,7 +93,7 @@ function speaker(): SVGElement {
     for (let k = -half; k <= half; k++) {
       const faint = Math.abs(k) > core;
       group.append(
-        svg('circle', { cx: num(200 + k * SPEAKER_STEP), cy: String(y), r: faint ? '4.2' : '4.8', ...(faint ? { class: 'base__hole--faint' } : {}) }),
+        svg('circle', { cx: num(200 + k * SPEAKER_STEP), cy: String(y), r: faint ? '3.2' : '4.8', ...(faint ? { class: 'base__hole--faint' } : {}) }),
       );
     }
   return group;
@@ -117,7 +118,7 @@ function drawArt(art: Element, model: ToyModel): void {
   // Подписи верхнего ряда: дуги веером над кнопками.
   ROUND.forEach(({ x, tilt, drop }, index) => {
     const caption = labels.round[index]?.top ?? '';
-    art.append(...labelOn(`sea-arc-${index}`, archPath(x, ROUND_Y - 28 + drop, tilt, [x, ROUND_Y]), caption));
+    art.append(...labelOn(`sea-arc-${index}`, archPath(x, ROUND_Y - 29.5 + drop, tilt), caption));
   });
 
   // Подписи крестовины: по эллипсу вокруг неё; UP/LEFT/RIGHT — буквами наружу, DOWN — к центру.
@@ -126,7 +127,7 @@ function drawArt(art: Element, model: ToyModel): void {
     ...labelOn('sea-arc-left', ellipseArc(RING.cx, RING.cy, RING.outRx, RING.outRy, 135, 225), labels.left),
     ...labelOn('sea-arc-right', ellipseArc(RING.cx, RING.cy, RING.outRx, RING.outRy, -45, 45), labels.right),
     ...labelOn('sea-arc-down', ellipseArc(RING.cx, RING.cy, RING.downRx, RING.downRy, 90 + 38, 90 - 38), labels.down),
-    ...labelOn('sea-arc-big', archPath(BIG.x + 7, 158, 7, [BIG.x + 7, 200]), labels.big),
+    ...labelOn('sea-arc-big', archPath(BIG.x + 2, 158, 7), labels.big),
   );
 
   // Лунки: четыре под круглыми кнопками, большая чаша под ROTATE и блюдце крестовины.
@@ -134,8 +135,6 @@ function drawArt(art: Element, model: ToyModel): void {
   for (const { x } of ROUND) {
     const cy = ROUND_Y + DIMPLE.dy;
     dimples.append(...dimple(x, cy, DIMPLE.r));
-    // Два блика на дне лунки под кнопкой.
-    for (const dx of [-17, 15]) dimples.append(svg('ellipse', { class: 'base__glint', cx: num(x + dx), cy: num(cy + 14), rx: '2.1', ry: '1.5' }));
   }
   const bowl = svg('g', { class: 'base__bowl' });
   bowl.append(...dimple(BIG.x, BIG.y + 6, BIG.bowl));

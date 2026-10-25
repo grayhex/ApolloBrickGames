@@ -1,4 +1,5 @@
 import { cellsOf, FIELD_COLUMNS, FIELD_ROWS, type PieceKind } from '../tetris';
+import { seaCupPath } from './seaCup';
 
 /**
  * Экран «Часов+99» и «Морского боя» (заглушка-тетрис): LCD с матрицей 10 × 20 и боковой панелью, как на фотографиях оригинала —
@@ -74,12 +75,14 @@ const GHOST_ALPHA = 0.12;
  * (на пустой панели заставки их нет), семь полных цифр счёта, у SPEED и LEVEL одна цифра, нота и NEXT 4 × 4 разнесены по высоте панели.
  */
 const SEA = {
-  label: { size: 13, spacing: 0.9 },
+  /** Середина панели: на ней стоят подписи NEXT, SPEED, LEVEL, сетка NEXT, цифры SPEED/LEVEL и чашка. */
+  cx: 209.7,
+  label: { size: 13.5, spacing: 1.1 },
   score: { hiX: 173, scoreX: 195, baseline: 12.6, digitsX: 174.4, digitsY: 27, w: 10.2, h: 22.3, step: 11.6 },
   note: { x: 209, y: 69, scale: 1.2 },
-  next: { label: 98, x: PANEL_CX - 33, top: 108 },
-  speed: { label: 185.7, digitY: 194.8, level: 277, levelDigitY: 231.5, w: 15.5, h: 26, x: 209.2 },
-  cup: { y: 302 },
+  next: { label: 97, x: 182, top: 105.5, size: 14 },
+  /** Цифры SPEED и LEVEL: старшая (умеет показывать только «1») стоит левее единиц на ширину цифры и просвет. */
+  speed: { label: 182, digitY: 190.5, level: 278, levelDigitY: 231.5, w: 16.4, h: 27.5, x: 207, tensGap: 4 },
 } as const;
 
 /** Хэш для «рассыпания» экрана (детерминированный, без Math.random). */
@@ -323,9 +326,9 @@ export class TetrisScreen {
 
     // NEXT 4 × 4: горит, когда у игры есть превью (следующая фигура, палки анимации игры A).
     const previewOn = !off && scene.preview !== undefined && scene.preview !== null;
-    this.label('NEXT', PANEL_CX, SEA.next.label, 'center', segmentAlpha(all || previewOn));
+    this.label('NEXT', SEA.cx, SEA.next.label, 'center', segmentAlpha(all || previewOn));
     const blinkHidden = scene.blinkValue !== undefined && Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 1;
-    const size = 15;
+    const size = SEA.next.size;
     for (let gy = 0; gy < 4; gy++) {
       for (let gx = 0; gx < 4; gx++) {
         const cell = scene.preview?.[gy * 4 + gx] ?? 0;
@@ -333,13 +336,28 @@ export class TetrisScreen {
       }
     }
 
-    // SPEED и LEVEL: подпись над цифрой и одна цифра 0–9 (скорость сверху, уровень снизу, подпись LEVEL под ней).
-    this.label('SPEED', SEA.speed.x + SEA.speed.w / 2 - 6, SEA.speed.label, 'center', printed);
-    this.digit(SEA.speed.x, SEA.speed.digitY, SEA.speed.w, SEA.speed.h, off ? null : scene.speed % 10, all);
-    this.digit(SEA.speed.x, SEA.speed.levelDigitY, SEA.speed.w, SEA.speed.h, off ? null : scene.level % 10, all);
-    this.label('LEVEL', SEA.speed.x + SEA.speed.w / 2 - 6, SEA.speed.level, 'center', printed);
+    // SPEED и LEVEL: подпись, две цифры (старшая показывает только «1») — скорость сверху, уровень снизу, подпись LEVEL под ними.
+    const { speed } = SEA;
+    const tensX = speed.x - speed.w - speed.tensGap;
+    this.label('SPEED', SEA.cx, speed.label, 'center', printed);
+    this.digit(tensX, speed.digitY, speed.w, speed.h, !off && scene.speed >= 10 ? 1 : null, all, true);
+    this.digit(speed.x, speed.digitY, speed.w, speed.h, off ? null : scene.speed % 10, all);
+    this.digit(tensX, speed.levelDigitY, speed.w, speed.h, !off && scene.level >= 10 ? 1 : null, all, true);
+    this.digit(speed.x, speed.levelDigitY, speed.w, speed.h, off ? null : scene.level % 10, all);
+    this.label('LEVEL', SEA.cx, speed.level, 'center', printed);
 
-    this.cup(PANEL_CX, SEA.cup.y, segmentAlpha(all || (!off && scene.phase === 'paused')));
+    // Чашка — значок паузы (допущение, как у «168 в 1 танк»); контуры сняты с фото.
+    this.seaCup(segmentAlpha(all || (!off && scene.phase === 'paused')));
+  }
+
+  /** Чашка с паром, ручкой и блюдцем по фото оригинала. */
+  private seaCup(alpha: number): void {
+    if (alpha <= 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fill(seaCupPath(), 'evenodd');
+    ctx.restore();
   }
 
   /** Печатная подпись панели «Морского боя»: чуть шире обычного шрифта, как у LCD оригинала. */
@@ -348,7 +366,7 @@ export class TetrisScreen {
     const ctx = this.ctx;
     ctx.save();
     ctx.letterSpacing = `${SEA.label.spacing}px`;
-    this.text(text, x, baseline, SEA.label.size, alpha, align);
+    this.text(text, x, baseline, SEA.label.size, alpha, align, true); // подписи ЖК наклонены, как на фото
     ctx.restore();
   }
 
@@ -489,11 +507,11 @@ export class TetrisScreen {
     });
   }
 
-  private text(text: string, x: number, baseline: number, size: number, alpha: number, align: CanvasTextAlign): void {
+  private text(text: string, x: number, baseline: number, size: number, alpha: number, align: CanvasTextAlign, italic = false): void {
     if (alpha <= 0) return;
     const ctx = this.ctx;
     ctx.globalAlpha = alpha;
-    ctx.font = `700 ${size}px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
+    ctx.font = `${italic ? 'italic ' : ''}${italic ? 600 : 700} ${size}px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
     ctx.textAlign = align;
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(text, x, baseline);

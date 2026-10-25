@@ -4742,18 +4742,14 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
   stroke-width: 2;
 }
 
-.base__glint {
-  fill: rgba(255, 255, 255, 0.55);
-  filter: blur(0.5px);
-}
-
 .base__bowl .base__rim-deep {
-  stroke: rgba(0, 0, 0, 0.3);
-  stroke-width: 1.6;
+  stroke: rgba(0, 0, 0, 0.18);
+  stroke-width: 1.4;
 }
 
+/* Края решётки динамика: отверстия мельче и бледнее ядра. */
 .base__hole--faint {
-  opacity: 0.4;
+  opacity: 0.5;
 }
 
 /* Круглые кнопки сидят в лунке: низкая тень и узкий выступ над краем. */
