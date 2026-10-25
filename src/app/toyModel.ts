@@ -1,5 +1,6 @@
 import { applyNativeModel } from './nativeModel';
 import { applyBrickGame } from './brickGameModel';
+import { applySeaBody } from './seaBody';
 import { h, svg } from './dom';
 import { t } from './i18n';
 import { keyLabel, type ToyModel } from './toys';
@@ -101,6 +102,7 @@ export function applyToyModel(model: ToyModel, refs: ToyModelRefs): void {
   // Доступные названия кнопок — как напечатано на корпусе и что они делают; подпись зависит от игрушки и языка, поэтому ставится отсюда, а не из словаря страницы.
   for (const button of base.querySelectorAll<HTMLElement>('.key[data-key]')) button.removeAttribute('data-i18n-attrs');
   relabelKeys(model, base);
+  if (model.menuStyle === 'sea') applySeaBody(base, model); // «Морской бой»: корпус по фото оригинала
 
   // ── Подбородок: наклейка вместо логотипа Crocodile Mario ───────────────
   for (const logo of base.querySelectorAll('.base__logo')) logo.remove();

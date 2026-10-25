@@ -7,7 +7,10 @@
 import type { NativeEntry } from '../devices/catalog';
 import nativeMenuFrames from '../devices/menu-frames.json';
 import { menuField } from './menuArt';
+import { SEA_GAME_A, SEA_START, SEA_START_LEAD_TICKS } from './seaAnimations';
+import { seaMenuField } from './seaMenu';
 import {
+  BRICK_CELLS,
   MAX_LEVEL,
   MAX_SPEED,
   MIN_LEVEL,
@@ -48,10 +51,15 @@ export interface BrickConsoleOptions {
   /** Начальный выбор в меню (с нуля): игра, вариант, скорость и уровень. */
   game?: number;
   nativeMenu?: 'e88' | 'apollo-b0202';
+  /** `sea` — «Морской бой» по фото и видео оригинала: заставка при включении, меню с буквой и анимацией «Ромео и Джульетта», анимация игры A перед партией. */
+  menuStyle?: 'sea';
   mode?: number;
   speed?: number;
   level?: number;
 }
+
+/** Экран до партии у консоли в стиле `sea`: заставка → меню → анимация игры (до первой нажатой кнопки). */
+type SeaStage = 'intro' | 'menu' | 'attract';
 
 const wrap = (value: number, count: number): number => ((value % count) + count) % count;
 const clampSetting = (value: number | undefined, max = MENU_SETTING_MAX): number => Math.min(max, Math.max(0, Math.trunc(value ?? 0) || 0));
@@ -66,6 +74,10 @@ export class BrickConsole implements BrickGame {
   private starts = 0;
   rotationDirection:1|-1=1;
   private readonly nativeMenu: BrickConsoleOptions['nativeMenu'];
+  private readonly menuStyle: BrickConsoleOptions['menuStyle'];
+  private stage: SeaStage = 'menu';
+  /** Такты в текущем экране до партии (заставка, меню, анимация игры): с него идут кадры анимаций. */
+  private stageTicks = 0;
   private gameIndex: number;
   private modeIndex: number;
   private menuSpeed: number;
@@ -75,6 +87,8 @@ export class BrickConsole implements BrickGame {
     if (options.catalog.length === 0) throw new Error('BrickConsole: пустой каталог игр');
     this.catalog = options.catalog;
     this.nativeMenu = options.nativeMenu;
+    this.menuStyle = options.menuStyle;
+    if (this.menuStyle === 'sea') this.stage = 'intro';
     this.seed = (options.seed ?? 1) >>> 0;
     this.hiOf = options.hiScore ?? (() => 0);
     this.gameIndex = wrap(Math.trunc(options.game ?? 0) || 0, this.catalog.length);
@@ -111,6 +125,8 @@ export class BrickConsole implements BrickGame {
   selectGame(id: string): boolean {
     const index = this.catalog.findIndex((entry) => (entry.entryId ?? entry.id) === id);
     if (this.current || index < 0) return false;
+    if (this.stage !== 'menu') this.enterMenu();
+    if (index !== this.gameIndex) this.stageTicks = 0;
     this.gameIndex = index;
     this.modeIndex = 0;
     return true;
@@ -170,6 +186,14 @@ export class BrickConsole implements BrickGame {
   menu(input: BrickInput): BrickEvent[] {
     if (this.current) return [];
     if (this.nativeMenu) return this.nativeInput(input);
+    this.stageTicks++;
+    if (this.stage === 'intro' && input.pressed.size > 0) {
+      this.enterMenu();
+      return [{ type: 'move' }];
+    }
+    if (this.stage === 'attract') return input.pressed.size > 0 ? this.begin() : [];
+    if (this.stage === 'intro') return [];
+    const shown = this.gameIndex;
     const events: BrickEvent[] = [];
     const moved = (): void => {
       events.push({ type: 'move' });
@@ -195,7 +219,37 @@ export class BrickConsole implements BrickGame {
       this.menuSpeed = wrap(this.menuSpeed + 1, MENU_SETTING_MAX + 1);
       moved();
     }
+    if (this.gameIndex !== shown) this.stageTicks = 0; // анимация меню начинается с первого кадра при выборе игры
     return events;
+  }
+
+  private enterMenu(): void {
+    this.stage = 'menu';
+    this.stageTicks = 0;
+  }
+
+  /** Экран консоли: заставка, меню, анимация игры A или партия (для проверок и `data-stage`). */
+  get screenStage(): SeaStage | 'game' {
+    return this.current ? 'game' : this.stage;
+  }
+
+  /** Заставка «Морского боя» идёт, пока не нажата кнопка (панель при этом пуста): `cells()` берёт кадры из записи. */
+  get intro(): boolean {
+    return !this.current && this.stage === 'intro';
+  }
+
+  /** У консолей в стиле `sea` нет проверки экрана при включении: сразу заставка. */
+  get bootCheck(): boolean {
+    return this.menuStyle !== 'sea';
+  }
+
+  /** Включение питания: у «Морского боя» — заставка (событие `intro` запускает её мелодию). */
+  powerOn(): BrickEvent[] {
+    if (this.menuStyle !== 'sea') return [];
+    this.current = null;
+    this.stage = 'intro';
+    this.stageTicks = 0;
+    return [{ type: 'intro' }];
   }
 
   private nativeInput(input: BrickInput): BrickEvent[] {
@@ -258,6 +312,21 @@ export class BrickConsole implements BrickGame {
   /** В меню запускает выбранную игру; после конца игры — ту же игру заново; в игре ничего не делает. */
   start(): BrickEvent[] {
     if (this.current) return this.current.start();
+    if (this.menuStyle === 'sea') {
+      if (this.stage === 'intro') {
+        this.enterMenu();
+        return [{ type: 'move' }];
+      }
+      if (this.stage === 'menu' && this.selected.id === 'sea-battle' && this.selected.def) {
+        this.stage = 'attract';
+        this.stageTicks = 0;
+        return [{ type: 'attract' }];
+      }
+    }
+    return this.begin();
+  }
+
+  private begin(): BrickEvent[] {
     const { def, id } = this.selected;
     if (!def) return [{ type: 'blocked' }];
     this.starts++;
@@ -287,6 +356,7 @@ export class BrickConsole implements BrickGame {
   /** Назад в меню (как RESET у настоящего устройства); выбор в меню сохраняется. */
   restart(): BrickEvent[] {
     this.current = null;
+    if (this.menuStyle === 'sea') this.enterMenu();
     return [];
   }
 
@@ -301,10 +371,19 @@ export class BrickConsole implements BrickGame {
       const frames = nativeMenuFrames[native.profileId] as Record<string, string[]>;
       return Uint8Array.from((frames[native.nativeCode] ?? []).join(''), Number);
     }
+    if (this.menuStyle === 'sea') {
+      if (this.stage === 'intro') {
+        const t = this.stageTicks - SEA_START_LEAD_TICKS;
+        return t < 0 ? new Uint8Array(BRICK_CELLS) : SEA_START.at(t).cells;
+      }
+      if (this.stage === 'attract') return SEA_GAME_A.at(this.stageTicks).cells;
+      return seaMenuField(this.selected.symbol, this.modeNumber, this.stageTicks);
+    }
     return menuField(this.selected.symbol, this.modeNumber, this.selected.id);
   }
 
   preview(): Uint8Array | null {
-    return this.current?.preview() ?? null;
+    if (this.current) return this.current.preview();
+    return this.menuStyle === 'sea' && this.stage === 'attract' ? SEA_GAME_A.at(this.stageTicks).preview : null;
   }
 }

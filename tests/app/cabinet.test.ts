@@ -10,6 +10,10 @@ import { makeFrame, NEUTRAL_FRAME, type Action } from '../../src/core';
 import type { GameId } from '../../src/games/catalog';
 
 const options = { seed: 7, loadHi: () => 0, defs: BRICK_GAMES };
+/** Запустить партию: у «Морского боя» перед ней заставка и анимация игры A (каждая уходит по нажатию кнопки или «старту»). */
+const play = (c: ReturnType<typeof createCabinet>): void => {
+  for (let i = 0; i < 4 && c.inMenu; i++) c.start();
+};
 const assign = (model: ToyModel, id: GameId): ToyModel => ({
   ...model,
   defaultGame: id,
@@ -22,11 +26,12 @@ for (const toy of ['clock99', 'tank168', 'seabattle'] as const)
     it('FIRE не листает меню; ROTATE листает, RESET возвращает к выбору', () => {
       const c = createCabinet(model, options),
         initial = c.activeGame;
+      if (model.menuStyle === 'sea') c.menu(makeFrame({ pressed: ['jump'] })); // заставка «Морского боя» уходит по первой кнопке
       expect(c.menu(makeFrame({ pressed: ['fire'] }))).toEqual([]);
       expect(c.activeGame).toBe(initial);
       c.menu(makeFrame({ pressed: ['jump'] }));
       expect(c.activeGame).not.toBe(initial);
-      c.start();
+      play(c);
       expect(c.inMenu).toBe(false);
       c.restart();
       expect(c.inMenu).toBe(true);
@@ -39,8 +44,8 @@ for (const toy of ['clock99', 'tank168', 'seabattle'] as const)
         const configured = assign(model, id as GameId);
         const reference = createCabinet(configured, options),
           extraFire = createCabinet(configured, options);
-        reference.start();
-        extraFire.start();
+        play(reference);
+        play(extraFire);
         // Оба источника ввода сходятся в InputFrame. Проверяем фронт, удержание, сочетания и отпускание.
         const controls: Action[] = ['left', 'right', 'up', 'down', 'jump'];
         for (let t = 0; t < 240; t++) {
@@ -65,7 +70,7 @@ for (const toy of ['clock99', 'tank168', 'seabattle'] as const)
 
     it('Sokoban проходится стрелками корпуса; ROTATE отменяет ход, пауза замораживает, RESET выходит в меню', () => {
       const c = createCabinet(assign(model, 'sokoban'), options);
-      c.start();
+      play(c);
       const start = c.scene({ sound: false, allOn: false }).cells.slice();
       c.step(makeFrame({ pressed: ['left'] }));
       c.step(makeFrame({ pressed: ['jump'] })); // отмена, не скрытый FIRE
@@ -104,8 +109,8 @@ describe('универсальный Brick Game: кнопка FIRE и челов
   it('там, где кнопка не нарисована, FIRE с клавиатуры не вводится; там, где нарисована, — работает', () => {
     const idle = universal('snake'),
       fired = universal('snake');
-    idle.start();
-    fired.start();
+    play(idle);
+    play(fired);
     for (let t = 0; t < 60; t++) {
       idle.step(NEUTRAL_FRAME);
       fired.step(makeFrame({ pressed: t % 2 ? [] : ['fire'], held: ['fire'] }));
@@ -114,8 +119,8 @@ describe('универсальный Brick Game: кнопка FIRE и челов
     // Tetris: быстрое падение по FIRE не вводится (кнопки нет), как и на Apollo.
     const tetris = universal('tetris'),
       calm = universal('tetris');
-    tetris.start();
-    calm.start();
+    play(tetris);
+    play(calm);
     for (let t = 0; t < 40; t++) {
       tetris.step(makeFrame({ pressed: t % 2 ? [] : ['fire'], held: ['fire'] }));
       calm.step(NEUTRAL_FRAME);
@@ -124,8 +129,8 @@ describe('универсальный Brick Game: кнопка FIRE и челов
     // Jig Saw: FIRE укладывает фигуру — игра без неё не проходится.
     const puzzle = universal('jigsaw'),
       still = universal('jigsaw');
-    puzzle.start();
-    still.start();
+    play(puzzle);
+    play(still);
     puzzle.step(makeFrame({ pressed: ['fire'] }));
     still.step(NEUTRAL_FRAME);
     expect(scene(puzzle).cells).not.toEqual(scene(still).cells);
@@ -134,7 +139,7 @@ describe('универсальный Brick Game: кнопка FIRE и челов
   it('человечек стоит; после победы радуется и через время снова стоит; в конце игры огорчён до новой партии', () => {
     const c = universal('sokoban');
     expect(scene(c).mood).toBe('idle');
-    c.start();
+    play(c);
     const dir = { l: 'left', r: 'right', u: 'up', d: 'down' } as const;
     for (const move of SOKOBAN_LEVELS[0]!.solution.toLowerCase()) {
       c.step(makeFrame({ pressed: [dir[move as keyof typeof dir]] }));
@@ -148,7 +153,7 @@ describe('универсальный Brick Game: кнопка FIRE и челов
     expect(scene(c).mood).toBe('idle');
 
     const over = universal('tetris');
-    over.start();
+    play(over);
     for (let t = 0; t < 6000 && over.phase !== 'over'; t++) over.step(makeFrame({ held: ['down'] }));
     expect(over.phase).toBe('over');
     expect(scene(over).mood).toBe('sad');
@@ -169,7 +174,7 @@ describe('универсальный Brick Game: кнопка FIRE и челов
 describe('ROM rules through the cabinet',()=>{
   for(const toy of ['clock99','seabattle','tank168','brickgame'] as const)it(`${toy}: Dice START/P changes the prediction; explicit pause freezes it`,()=>{
     const c=createCabinet(assign(TOYS[toy],'dice'),options);
-    c.start();const before=c.scene({sound:false,allOn:false}).preview;
+    play(c);const before=c.scene({sound:false,allOn:false}).preview;
     c.startButton?.();expect(c.phase).toBe('playing');
     expect(c.scene({sound:false,allOn:false}).preview).not.toEqual(before);
     c.step(makeFrame({pressed:['right']}));expect(c.score).toBe(990);
@@ -182,7 +187,7 @@ describe('ROM rules through the cabinet',()=>{
       const keys:string[]=[];
       const c=createCabinet(assign(TOYS.clock99,game),{...options,loadHi:key=>{keys.push(key);return 0;}});
       expect(c.hiKey()).toBe(`crocodile-mario:brick:clock99:${game}:0${game==='tetris'?':hi':':r2:hi'}`);
-      c.start();
+      play(c);
       expect(keys).toContain(c.hiKey());
     }
   });

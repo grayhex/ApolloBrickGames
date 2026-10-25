@@ -20,7 +20,7 @@ export type TetrisGlyph = 'star' | 'square';
  * (горит на паузе и при полной заливке). У обеих игрушек с чашкой (по фотографиям) NEXT — сегмент (горит, когда у игры есть превью), а старшая цифра счёта,
  * SPEED и LEVEL умеет показывать только «1».
  */
-export type TetrisPanel = 'clock' | 'sea' | 'tank' | 'classic';
+export type TetrisPanel = 'clock' | 'sea' | 'seabattle' | 'tank' | 'classic';
 
 export interface TetrisScreenOptions {
   glyph: TetrisGlyph;
@@ -57,6 +57,8 @@ export interface TetrisScene {
   blinkValue?: number;
   /** Игры консоли с меню: настроение человечка (панель «classic»); по умолчанию — стоит. */
   mood?: Mood;
+  /** Заставка «Морского боя»: все сегменты боковой панели погашены (на видео оригинала панель пуста, пока идёт анимация на матрице). */
+  panelOff?: boolean;
 }
 
 /** Мигающие клетки: полпериода в тактах. */
@@ -66,6 +68,19 @@ const BLINK_HALF_TICKS = 15;
 const DIGITS: readonly string[] = ['abcdef', 'bc', 'abdeg', 'abcdg', 'bcfg', 'acdfg', 'acdefg', 'abc', 'abcdefg', 'abcdfg'];
 
 const GHOST_ALPHA = 0.12;
+
+/**
+ * Панель «Морского боя» (размеры в единицах холста, сняты с фотографий и видео оригинала): подписи HI-SCORE, SPEED, LEVEL и NEXT — тоже сегменты
+ * (на пустой панели заставки их нет), семь полных цифр счёта, у SPEED и LEVEL одна цифра, нота и NEXT 4 × 4 разнесены по высоте панели.
+ */
+const SEA = {
+  label: { size: 13, spacing: 0.9 },
+  score: { hiX: 173, scoreX: 195, baseline: 12.6, digitsX: 174.4, digitsY: 27, w: 10.2, h: 22.3, step: 11.6 },
+  note: { x: 209, y: 69, scale: 1.2 },
+  next: { label: 98, x: PANEL_CX - 33, top: 108 },
+  speed: { label: 185.7, digitY: 194.8, level: 277, levelDigitY: 231.5, w: 15.5, h: 26, x: 209.2 },
+  cup: { y: 302 },
+} as const;
 
 /** Хэш для «рассыпания» экрана (детерминированный, без Math.random). */
 function hash(a: number, b: number): number {
@@ -155,7 +170,7 @@ export class TetrisScreen {
     const blinkOn = scene.blinkValue === undefined || Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 0;
     const hasPreview = scene.preview !== undefined && scene.preview !== null;
     const pose = this.options.panel === 'classic' ? (scene.mood ?? 'idle') : '';
-    const signature = `${pose}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}`;
+    const signature = `${pose}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}|${scene.panelOff === true}`;
     if (
       signature === this.signature &&
       scene.cells.length === this.previousCells.length &&
@@ -223,6 +238,10 @@ export class TetrisScreen {
 
   // ── Боковая панель ─────────────────────────────────────────────────────
   private drawPanel(scene: TetrisScene): void {
+    if (this.options.panel === 'seabattle') {
+      this.drawSeaPanel(scene);
+      return;
+    }
     const sea = this.options.panel !== 'clock'; // раскладка «Морского боя»: без значков сверху, внизу значок игры
     const tank = this.options.panel === 'tank'; // «168 в 1 танк»: чашка — значок паузы (по фотографиям оригинала)
     const lcd = sea && this.options.panel !== 'classic'; // «Морской бой» и «168 в 1 танк» — один LCD: старшие цифры только «1», NEXT — сегмент (по фотографиям обоих)
@@ -281,6 +300,56 @@ export class TetrisScreen {
       const on = tank ? all || scene.phase === 'paused' : all || scene.phase === 'ready';
       this.cup(PANEL_CX, 296, segmentAlpha(on));
     }
+  }
+
+  /** Панель «Морского боя» по фотографиям и видео оригинала: раскладка `SEA`, подписи-сегменты, одна цифра SPEED и LEVEL, чашка — значок паузы (допущение: как у «168 в 1 танк»). */
+  private drawSeaPanel(scene: TetrisScene): void {
+    const off = scene.panelOff === true;
+    const all = scene.allOn;
+    const segmentAlpha = (on: boolean): number => (on ? 1 : this.ghost ? GHOST_ALPHA : 0);
+    const printed = segmentAlpha(all || !off);
+    const showHi = scene.phase === 'over' && scene.overFill >= FIELD_ROWS && Math.floor(scene.tick / 90) % 2 === 1;
+    const value = showHi ? scene.hiScore : scene.score;
+
+    // Счёт: «HI-» горит, когда показан рекорд; семь полных цифр (при погашенной панели — ни одной).
+    this.text('HI-', SEA.score.hiX, SEA.score.baseline, 9.5, segmentAlpha(all || showHi), 'left');
+    this.label('SCORE', SEA.score.scoreX, SEA.score.baseline, 'left', printed);
+    const text = String(Math.min(value, 9_999_999)).padStart(7, '0');
+    const step = SEA.score.step;
+    for (let i = 0; i < 7; i++) {
+      this.digit(SEA.score.digitsX + i * step, SEA.score.digitsY, SEA.score.w, SEA.score.h, off ? null : Number(text[i]), all);
+    }
+    this.note(SEA.note.x, SEA.note.y, all || (!off && scene.sound), SEA.note.scale);
+
+    // NEXT 4 × 4: горит, когда у игры есть превью (следующая фигура, палки анимации игры A).
+    const previewOn = !off && scene.preview !== undefined && scene.preview !== null;
+    this.label('NEXT', PANEL_CX, SEA.next.label, 'center', segmentAlpha(all || previewOn));
+    const blinkHidden = scene.blinkValue !== undefined && Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 1;
+    const size = 15;
+    for (let gy = 0; gy < 4; gy++) {
+      for (let gx = 0; gx < 4; gx++) {
+        const cell = scene.preview?.[gy * 4 + gx] ?? 0;
+        this.cell(SEA.next.x + gx * size, SEA.next.top + gy * size, size, all || (!off && cell !== 0 && !(blinkHidden && cell === scene.blinkValue)));
+      }
+    }
+
+    // SPEED и LEVEL: подпись над цифрой и одна цифра 0–9 (скорость сверху, уровень снизу, подпись LEVEL под ней).
+    this.label('SPEED', SEA.speed.x + SEA.speed.w / 2 - 6, SEA.speed.label, 'center', printed);
+    this.digit(SEA.speed.x, SEA.speed.digitY, SEA.speed.w, SEA.speed.h, off ? null : scene.speed % 10, all);
+    this.digit(SEA.speed.x, SEA.speed.levelDigitY, SEA.speed.w, SEA.speed.h, off ? null : scene.level % 10, all);
+    this.label('LEVEL', SEA.speed.x + SEA.speed.w / 2 - 6, SEA.speed.level, 'center', printed);
+
+    this.cup(PANEL_CX, SEA.cup.y, segmentAlpha(all || (!off && scene.phase === 'paused')));
+  }
+
+  /** Печатная подпись панели «Морского боя»: чуть шире обычного шрифта, как у LCD оригинала. */
+  private label(text: string, x: number, baseline: number, align: CanvasTextAlign, alpha: number): void {
+    if (alpha <= 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.letterSpacing = `${SEA.label.spacing}px`;
+    this.text(text, x, baseline, SEA.label.size, alpha, align);
+    ctx.restore();
   }
 
   /**
@@ -473,10 +542,13 @@ export class TetrisScreen {
     ctx.globalAlpha = 1;
   }
 
-  private note(cx: number, cy: number, on: boolean): void {
+  private note(cx: number, cy: number, on: boolean, scale = 1): void {
     if (!on && !this.ghost) return;
     const ctx = this.ctx;
     ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
     ctx.globalAlpha = on ? 1 : GHOST_ALPHA;
     ctx.lineWidth = 1.7;
     ctx.beginPath();

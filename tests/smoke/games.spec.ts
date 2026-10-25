@@ -62,6 +62,13 @@ async function openConsole(page: Page, toy: string): Promise<void> {
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'boot').then((boot) => boot !== 'on')).toBe(true);
   await expect.poll(() => area(page, 'menu')).toBe('menu');
+  if (toy === 'seabattle') {
+    // После включения идёт заставка с мелодией (панель пуста): первая кнопка ведёт в меню на той же игре.
+    await expect.poll(() => area(page, 'stage')).toBe('intro');
+    await key(page, 'jump').click();
+    await expect.poll(() => area(page, 'stage')).toBe('menu');
+    expect(await area(page, 'symbol')).toBe('A');
+  }
 }
 
 /** Выбрать в меню игру с порядковым номером `index` (с 0): ROTATE листает по кругу. */
@@ -263,13 +270,16 @@ test.describe('«Морской бой»: режимы A–F', () => {
       await hold(page, 'ArrowDown', 1400);
       await page.waitForTimeout(150);
       expect(await cells(page)).not.toEqual(before);
-      await pauseAndReset(page, 'ready');
+      await pauseAndReset(page, 'pause');
     });
   }
 
   test('A и C запускаются: корабли и лестница; RESET возвращает в меню', async ({ page }) => {
     await openConsole(page, 'seabattle');
     await expect.poll(() => area(page, 'game')).toBe('sea-battle');
+    await key(page, 'sp').click();
+    await expect.poll(() => area(page, 'stage')).toBe('attract'); // анимация игры A, партия начнётся по следующей кнопке
+    expect(await area(page, 'phase')).toBe('ready');
     await key(page, 'sp').click();
     await expect.poll(() => area(page, 'phase')).toBe('playing');
     await page.keyboard.press('KeyZ');

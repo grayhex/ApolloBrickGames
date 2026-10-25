@@ -4718,3 +4718,50 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 .toy[data-model='brickgame'][data-compact] .classic__pcb { display:none; }
 
 .toy[data-model='brickgame'][data-shell='smoke'] .classic__pcb { filter:brightness(.48) saturate(.65); }
+
+/* «Морской бой»: корпус по фотографии оригинала — тёмно-красный пластик, серо-зелёные клавиши в глубоких лунках, розоватая печать, подписи дугами (`seaBody.ts`). */
+.toy[data-model='seabattle'] {
+  --key: #a3a597;
+  --key-hi: #c9cbbc;
+  --key-lo: #70726a;
+}
+
+.toy[data-model='seabattle'][data-shell='red'] {
+  --rim: #b3121f;
+  --rim-dark: #86101b;
+  --label: #f8dfe2;
+}
+
+.toy[data-model='seabattle'] .base__label {
+  font: 600 13.5px/1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.9px;
+}
+
+.base__rim-deep {
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 2;
+}
+
+.base__glint {
+  fill: rgba(255, 255, 255, 0.55);
+  filter: blur(0.5px);
+}
+
+.base__bowl .base__rim-deep {
+  stroke: rgba(0, 0, 0, 0.3);
+  stroke-width: 1.6;
+}
+
+.base__hole--faint {
+  opacity: 0.4;
+}
+
+/* Круглые кнопки сидят в лунке: низкая тень и узкий выступ над краем. */
+.toy[data-model='seabattle'] .key--round {
+  box-shadow: 0.15cqw 0.4cqw 0.5cqw rgba(0, 0, 0, 0.5), 0 0.2cqw 0 color-mix(in srgb, var(--key-lo) 80%, #000),
+    inset 0 0.2cqw 0.3cqw rgba(255, 255, 255, 0.5), inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.26);
+}
+
+.toy[data-model='seabattle'] .base__sticker {
+  top: 67.5%;
+}
