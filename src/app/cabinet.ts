@@ -48,6 +48,10 @@ export interface Cabinet {
   hiKey(): string;
   /** Выбрать игру в меню (кнопка в левой справке); `false`, если игра идёт или такой игры в меню нет. */
   selectGame(id: string): boolean;
+  /** Горят ли все сегменты при включении («проверка экрана»); у «Морского боя» её нет — сразу заставка. */
+  readonly bootCheck: boolean;
+  /** Включение питания: у «Морского боя» запускает заставку (событие `intro` — её мелодия). */
+  powerOn(): CabinetEvent[];
   start(): CabinetEvent[];
   pause(): CabinetEvent[];
   startButton?(): CabinetEvent[];
@@ -157,6 +161,10 @@ class TetrisCabinet implements Cabinet {
     return this.game.tick;
   }
   readonly inMenu = false;
+  readonly bootCheck = true;
+  powerOn(): CabinetEvent[] {
+    return [];
+  }
   readonly activeGame: GameId = 'tetris';
   readonly usesFire = false;
   selectGame(): boolean {
@@ -268,7 +276,7 @@ class ConsoleCabinet implements Cabinet {
     this.nativeDevice = !!model.nativeDevice;
     this.allowed = bodyActions(model);
     this.fireGames = new Set(entries.filter((entry) => entry.def?.usesFire).map((entry) => entry.id));
-    this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game, nativeMenu:model.nativeDevice });
+    this.console_ = new BrickConsole({ catalog: entries, seed, hiScore, game, nativeMenu:model.nativeDevice, ...(model.menuStyle ? { menuStyle: model.menuStyle } : {}) });
   }
 
   get phase(): BrickPhase {
@@ -293,6 +301,13 @@ class ConsoleCabinet implements Cabinet {
   get inMenu(): boolean {
     return this.console_.inMenu;
   }
+  get bootCheck(): boolean {
+    return this.console_.bootCheck;
+  }
+  powerOn(): CabinetEvent[] {
+    this.mood = 'idle';
+    return this.console_.powerOn();
+  }
   get activeGame(): GameId {
     return this.console_.gameId as GameId;
   }
@@ -311,6 +326,7 @@ class ConsoleCabinet implements Cabinet {
       playable: c.playable ? 'yes' : 'no',
       lives: c.lives ?? '',
       mood: this.currentMood(),
+      stage: c.screenStage,
     };
   }
   hiKey(): string {
@@ -384,6 +400,7 @@ class ConsoleCabinet implements Cabinet {
       tick: c.tick,
       allOn: extra.allOn,
       mood: this.currentMood(),
+      panelOff: c.intro,
     };
   }
   /** Человечек: после события радуется или огорчается на время, при конце игры остаётся огорчённым, на паузе, в меню и без событий стоит. */

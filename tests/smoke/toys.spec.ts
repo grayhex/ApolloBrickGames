@@ -230,6 +230,8 @@ test.describe('«Часы+99»', () => {
     await expect.poll(() => area(page, 'boot')).toBe('off');
     const hi = (): Promise<string> => area(page, 'hiscore');
     expect(await hi()).toBe('0'); // у «Морского боя» свой рекорд (игра A не играется)
+    await page.locator('[data-key="jump"]').click(); // первая кнопка уводит заставку в меню, игра не меняется
+    await expect.poll(() => area(page, 'stage')).toBe('menu');
     for (let i = 0; i < 4; i++) await page.locator('[data-key="jump"]').click(); // ROTATE: A → E
     await expect.poll(() => area(page, 'game')).toBe('tetris');
     await expect.poll(hi).toBe('777'); // рекорд игры E (обычный тетрис, вариант 01)
@@ -302,6 +304,10 @@ test.describe('«Морской бой»', () => {
     expect(await area(page, 'menu')).toBe('menu');
     expect(await area(page, 'symbol')).toBe('A');
     expect(await area(page, 'playable')).toBe('yes');
+    await key(page, 'sp').click(); // заставка → меню
+    await expect.poll(() => area(page, 'stage')).toBe('menu');
+    await key(page, 'sp').click(); // игра A: анимация перед партией
+    await expect.poll(() => area(page, 'stage')).toBe('attract');
     await key(page, 'sp').click();
     await expect.poll(phase(page)).toBe('playing');
     await key(page, 'fire').click();

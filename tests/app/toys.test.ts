@@ -57,7 +57,7 @@ describe('выбор игрушки', () => {
     expect(TOYS.mario).toMatchObject({ defaultGame: 'mario', menu: false, info: true, levels: true, leds: true });
     expect(TOYS.clock99).toMatchObject({ defaultGame: 'tetris', menu: true, info: true, levels: false, leds: true, glyph: 'star', panel: 'clock', deco: 'flourish' });
     // «Морской бой» и «168 в 1 танк» — консоли с меню игр: первая восстановленная игра — танки.
-    expect(TOYS.seabattle).toMatchObject({ defaultGame: 'sea-battle', menu: true, info: true, levels: false, leds: false, glyph: 'square', panel: 'sea', deco: 'frame' });
+    expect(TOYS.seabattle).toMatchObject({ defaultGame: 'sea-battle', menu: true, info: true, levels: false, leds: false, glyph: 'square', panel: 'seabattle', menuStyle: 'sea', deco: 'frame' });
     // «168 в 1 танк»: точка в прямоугольнике, как у «Морского боя», а рамка с завитками и светодиоды — как у «Часов+99»; в углу панели чашка паузы.
     expect(TOYS.tank168).toMatchObject({ defaultGame: 'tank', menu: true, info: true, levels: false, leds: true, glyph: 'square', panel: 'tank', deco: 'flourish', gamesCount: 168 });
     expect(engineOf(TOYS.mario)).toBe('mario');

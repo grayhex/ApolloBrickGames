@@ -5,6 +5,12 @@ import { MASTER_GAIN } from './beeper';
 
 const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker']);
 export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): BrickSound | null {
+  if (nativeProfile === 'sea') {
+    // «Морской бой»: мелодии сняты с видео оригинала (`seaTunes.ts`); остальное — общие сигналы Brick Game.
+    if (event.type === 'intro') return 'sea_intro';
+    if (event.type === 'attract') return 'sea_attract';
+    if (event.type === 'started' && game === 'romeo-juliet') return 'sea_romeo_music';
+  }
   if (nativeProfile === 'e88') {
     if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
     if (event.type === 'started') return TETRIS.has(game) ? 'e88_tetris_music' : 'e88_start';
@@ -63,6 +69,8 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
       return null; // lifeLost follows crash: do not play a second death cue
   }
 }
+/** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_attract', 'sea_romeo_music']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>
@@ -135,7 +143,7 @@ export class BrickAudio {
     )
       return;
     if (context.currentTime < this.until && priority < this.priority) return;
-    if(sound==='e88_tetris_music'){
+    if(sound&&BACKGROUND_MUSIC.has(sound)){
       this.music={notes,offset:0,since:context.currentTime,paused:false};
       this.schedule(notes,true);
       return;

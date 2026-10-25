@@ -70,6 +70,9 @@ export type BrickEvent =
   | { type: 'bonus' }
   | { type: 'win' }
   | { type: 'blocked' }
+  /** «Морской бой»: включение (заставка с мелодией) и анимация перед партией игры A. */
+  | { type: 'intro' }
+  | { type: 'attract' }
   /** Сигнал площадки (Simon, танцы): номер площадки 0–3 (вверх, вправо, вниз, влево) и длительность в тактах. Оболочка превращает его в тон площадки. */
   | { type: 'tone'; pad: number; ticks: number }
   | { type: 'lines'; count: number; rows?: number[] }

@@ -8,6 +8,12 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
     const area = page.locator('#game-area');
     await expect(area).toHaveAttribute('data-boot', 'off');
     await expect(area).toHaveAttribute('data-menu', 'menu');
+    if (toy === 'seabattle') {
+      // Заставка «Морского боя» уходит по первой кнопке; игра в меню остаётся прежней.
+      await expect(area).toHaveAttribute('data-stage', 'intro');
+      await page.keyboard.press('Space');
+      await expect(area).toHaveAttribute('data-stage', 'menu');
+    }
     await expect(page.locator('#keymap')).not.toContainText('Бросок');
     await expect(page.locator('#keymap kbd').filter({ hasText: /^X$/ })).toHaveCount(0);
     const initial = await area.getAttribute('data-game');
@@ -56,6 +62,18 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
     await page.goto(`./?toy=${toy}&power=on&debug&seed=7`);
     const area = page.locator('#game-area');
     await expect(area).toHaveAttribute('data-boot', 'off');
+    if (toy === 'seabattle') {
+      await pad([]);
+      await page.waitForTimeout(100);
+      await pad([2]); // первое нажатие только будит геймпад (как в остальном тесте), FIRE корпусу не нужна
+      await page.waitForTimeout(100);
+      await pad([]);
+      await page.waitForTimeout(100);
+      await pad([0]); // A: заставка уходит в меню, игра прежняя
+      await expect(area).toHaveAttribute('data-stage', 'menu');
+      await pad([]);
+      await page.waitForTimeout(100);
+    }
     const initial = await area.getAttribute('data-game');
     await pad([]);
     await page.waitForTimeout(100);

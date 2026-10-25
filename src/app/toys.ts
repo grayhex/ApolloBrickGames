@@ -77,7 +77,9 @@ export interface ToyModel {
   /** Рисунок ячейки матрицы: звёздочка или точка в прямоугольнике. */
   glyph: 'star' | 'square';
   /** Боковая панель экрана тетриса: у «Часов+99» значки режима, у «Морского боя» чашка, у «168 в 1 танк» танк. */
-  panel: 'clock' | 'sea' | 'tank' | 'classic';
+  panel: 'clock' | 'sea' | 'seabattle' | 'tank' | 'classic';
+  /** `sea` — меню, заставка и анимации «Морского боя» по фото и видео оригинала (`src/brick/seaMenu.ts`, `seaAnimations.ts`). */
+  menuStyle?: 'sea';
   /** Universal console has a separate FIRE button and no hinge. */
   universal?: boolean;
   /** Оформление рамки вокруг экрана: завитки и ромбик по бокам или цветная линия вплотную к экрану. */
@@ -225,7 +227,8 @@ export const TOYS: Record<ToyId, ToyModel> = {
     menu: true,
     gameKeys: 'letters',
     glyph: 'square',
-    panel: 'sea',
+    panel: 'seabattle',
+    menuStyle: 'sea',
     deco: 'frame',
     leds: false,
     info: true,

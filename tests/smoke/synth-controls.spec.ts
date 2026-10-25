@@ -1,6 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
 import { marioUrl } from './url';
+
+/** «Морской бой»: после включения заставка, на игре A перед партией — анимация; обе уходят по кнопке, партия начнётся следующим S./P. */
+async function skipSeaScreens(page: Page): Promise<void> {
+  const area = page.locator('#game-area');
+  await page.keyboard.press('Enter');
+  await expect(area).toHaveAttribute('data-stage', 'menu');
+  await page.keyboard.press('Enter');
+  await expect(area).toHaveAttribute('data-stage', 'attract');
+}
 
 for (const toy of ['clock99', 'seabattle', 'tank168']) {
   test(`${toy}: synthesized sound starts on input, without sample requests`, async ({ page }) => {
@@ -36,6 +45,7 @@ for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
     await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
     if (toy !== 'mario') await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
     await page.locator('#game-area').focus();
+    if (toy === 'seabattle') await skipSeaScreens(page);
     await page.keyboard.press('Enter');
     await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
     const pause = page.locator('button[data-device=pause]');
@@ -94,6 +104,7 @@ for (const toy of ['clock99', 'seabattle', 'tank168']) {
     const area = page.locator('#game-area');
     await expect(area).toHaveAttribute('data-boot', 'off');
     await area.focus();
+    if (toy === 'seabattle') await skipSeaScreens(page);
     for (const phase of ['playing', 'paused', 'playing']) {
       await page.keyboard.press('Enter');
       await expect(area).toHaveAttribute('data-phase', phase);

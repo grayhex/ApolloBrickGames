@@ -118,12 +118,13 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
   let view: View = carryIn?.view ?? parseView(params.get('view'), params.get('power') === 'on');
   let powered = carryIn ? carryIn.powered : params.get('power') === 'on';
   if ((powered || isMonoblock(model)) && view === 'closed') view = 'full';
-  let bootTicks = powered ? BOOT_TICKS : 0;
+  let bootTicks = 0; // выставляется ниже, когда есть кабинет
   let context: 'game' | 'menu' = 'game';
   let gamepadStatus: GamepadStatus = { kind: 'none' };
 
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || (Date.now() % 0x7fffffff) || DEFAULT_SEED;
   const cabinet = createCabinet(model, { seed, loadHi, defs: BRICK_GAMES });
+  if (powered && cabinet.bootCheck) bootTicks = BOOT_TICKS;
   let leaderboard: LeaderboardCard | null = null;
   let rankedPartyStarted = false;
   let rankedPhase = cabinet.phase;
@@ -292,7 +293,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     }
     rankedPhase=cabinet.phase;
     for (const event of events) {
-      if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu, model.nativeDevice);
+      if (model.menu) brickAudio.play(event, cabinet.activeGame, cabinet.inMenu, model.nativeDevice ?? (model.menuStyle === 'sea' ? 'sea' : undefined));
       else { const cue = cabinetCue(cabinet, event); if (cue) audio.play(cue); }
     }
     if (events.length > 0) persistHi();
@@ -409,6 +410,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     if (!cabinet.inMenu || cabinet.phase !== 'ready') restartGame();
     cabinet.selectGame(id);
     emit(cabinet.start());
+    if (model.menuStyle === 'sea' && cabinet.inMenu) emit(cabinet.start()); // «Морской бой»: «запуск» из справки пропускает анимацию игры и сразу начинает партию
     refocusGame();
   };
   const setPower = (on: boolean): void => {
@@ -428,7 +430,8 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     hub.tracker.reset();
     if (on) {
       cabinet.restart();
-      bootTicks = BOOT_TICKS;
+      bootTicks = cabinet.bootCheck ? BOOT_TICKS : 0;
+      emit(cabinet.powerOn());
       if (model.universal) { brickAudio.unlock(); brickAudio.play({type:'started'}, 'brickgame', true); }
     } else {
       suspend();

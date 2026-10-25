@@ -50,6 +50,27 @@ it('maps effects without duplicate death cues', () => {
   expect(brickSound({ type: 'started' }, 'tetris', false)).toBe('select');
   expect(brickSound({ type: 'lines', count: 4 }, 'tetris', false)).toBe('tetris');
 });
+it('Sea Battle: intro, game A animation and Romeo music are only mapped for the sea profile', () => {
+  expect(brickSound({ type: 'intro' }, 'sea-battle', true, 'sea')).toBe('sea_intro');
+  expect(brickSound({ type: 'attract' }, 'sea-battle', true, 'sea')).toBe('sea_attract');
+  expect(brickSound({ type: 'started' }, 'romeo-juliet', false, 'sea')).toBe('sea_romeo_music');
+  expect(brickSound({ type: 'started' }, 'romeo-juliet', false)).toBe('start');
+  expect(brickSound({ type: 'started' }, 'tank', false, 'sea')).toBe('start');
+  expect(brickSound({ type: 'intro' }, 'sea-battle', true)).toBeNull();
+});
+it('Sea Battle: background tunes use their own voices, so a key beep does not cut them, and the next menu event silences them', () => {
+  const { port, voices } = harness();
+  port.unlock();
+  port.play({ type: 'started' }, 'romeo-juliet', false, 'sea');
+  expect(voices).toHaveLength(1);
+  port.play({ type: 'move' }, 'romeo-juliet', false, 'sea'); // in-game beep layers over the music
+  expect(voices).toHaveLength(2);
+  expect(voices[0]!.stop).toHaveBeenCalledTimes(1); // only the scheduled end, not cut
+  port.play({ type: 'intro' }, 'sea-battle', true, 'sea');
+  expect(voices[0]!.stop).toHaveBeenCalledTimes(2); // menu events silence everything first
+  port.play({ type: 'move' }, 'sea-battle', true, 'sea');
+  expect(voices.length).toBeGreaterThan(2);
+});
 it('plays the first gesture immediately with no fetch or decoded recording', () => {
   const { port, voices } = harness();
   port.play({ type: 'shot' }, 'tank', false);
