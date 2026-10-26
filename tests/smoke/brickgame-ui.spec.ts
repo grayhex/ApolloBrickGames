@@ -116,16 +116,17 @@ test('FIRE нарисована только у игры, без которой 
   await expect.poll(() => area(page, 'boot')).toBe('off');
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'off');
   await expect(fire).toBeHidden();
+  // Меню идёт по возрастанию редкости (Snake и Tetris — Common, Jig Saw — Ultra Rare): Snake → Tetris → Jig Saw.
   await page.locator('[data-key=jump]').click(); // ROTATE в меню: следующая игра
-  await expect.poll(() => area(page, 'game')).toBe('jigsaw');
-  await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'on');
-  await expect(fire).toBeVisible();
-  await page.locator('[data-key=jump]').click();
   await expect.poll(() => area(page, 'game')).toBe('tetris');
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'off');
   await expect(fire).toBeHidden();
   // В левой справке у Tetris FIRE не упомянута.
   await expect(page.locator('#gpanel .gctl')).not.toContainText('FIRE');
+  await page.locator('[data-key=jump]').click();
+  await expect.poll(() => area(page, 'game')).toBe('jigsaw');
+  await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'on');
+  await expect(fire).toBeVisible();
 });
 
 test('человечек: стоит, после конца игры огорчён, после RESET снова стоит', async ({ page }) => {
