@@ -64,17 +64,18 @@ it('Sea Battle: intro, its flashes, Romeo music and the falling-figure tick are 
   expect(brickSound({ type: 'started' }, 'tank', false)).toBe('start');
   expect(brickSound({ type: 'intro' }, 'sea-battle', true)).toBeNull();
 });
-it('Sea Battle: game A plays the intro melody once and stops, other games loop the Romeo music', () => {
+it('Sea Battle: game A plays the intro melody once and stops, other games play the Romeo music once', () => {
   const total = (notes: readonly { ms: number; atMs?: number; track?: number }[]) => Math.max(...notes.map((n) => (n.atMs ?? 0) + n.ms));
   expect(total(BRICK_PHRASES.sea_intro_once)).toBeLessThan(11000); // one pass: 10.435 s, no pause in front
-  expect(total(BRICK_PHRASES.sea_romeo_music)).toBeGreaterThan(400000); // 24 passes
+  expect(total(BRICK_PHRASES.sea_romeo_music)).toBeLessThan(20000); // one pass
   expect(BRICK_PHRASES.sea_intro_once.every((tone) => tone.atMs === undefined || tone.atMs === 0)).toBe(true);
   const { port, voices } = harness();
   port.unlock();
   port.play({ type: 'started' }, 'tank', false, 'sea');
   expect(voices).toHaveLength(2);
   const first = voices[0]!;
-  expect(first.stop.mock.calls[0]![0]).toBeGreaterThan(400);
+  expect(first.stop.mock.calls[0]![0]).toBeGreaterThan(19);
+  expect(first.stop.mock.calls[0]![0]).toBeLessThan(20);
   port.play({ type: 'started' }, 'sea-battle', false, 'sea'); // a new game: the previous music is cut
   expect(first.stop).toHaveBeenCalledTimes(2);
   expect(voices.slice(2).map((voice) => voice.stop.mock.calls[0]![0] as number).every((end) => end < 11)).toBe(true);
@@ -100,7 +101,7 @@ it('Sea Battle: an intro flash plays over the intro melody without cutting it', 
   port.unlock();
   port.play({ type: 'intro' }, 'sea-battle', true, 'sea');
   expect(voices).toHaveLength(2); // two voices of the tune
-  expect(voices.map((voice) => voice.type)).toEqual(['sine', 'sine']);
+  expect(voices.map((voice) => voice.type)).toEqual(['square', 'square']);
   port.play({ type: 'introFx' }, 'sea-battle', true, 'sea');
   expect(voices).toHaveLength(3);
   expect(voices[0]!.stop).toHaveBeenCalledTimes(1); // the melody keeps going
@@ -306,4 +307,21 @@ it('terminal cues and explicit silence stop the E88 melody, with no delayed rest
  const {port,voices,gains}=harness();port.unlock();port.play({type:'started'},'tetris',false,'e88');
  port.play({type:'gameOver'},'tetris',false,'e88');expect(gains[1]!.disconnect).toHaveBeenCalled();
  port.silence();port.play({type:'resumed'},'tetris',false,'e88');expect(voices).toHaveLength(2);
+});
+
+it('Sea intro repeats after the last voice, but game melodies stop and disposed loops cannot restart', () => {
+  const { port, voices } = harness(); port.unlock();
+  port.play({type:'intro'}, 'sea-battle', true, 'sea');
+  voices[0]!.onended!(); expect(voices).toHaveLength(2);
+  voices[1]!.onended!(); expect(voices).toHaveLength(4);
+  port.silence(); voices[2]!.onended!(); voices[3]!.onended!(); expect(voices).toHaveLength(4);
+  port.play({type:'started'}, 'romeo-juliet', false, 'sea');
+  voices[4]!.onended!(); voices[5]!.onended!(); expect(voices).toHaveLength(6);
+});
+
+it('Sea falling-piece landings use the clean pitched cue instead of generic noise', () => {
+  for (const game of ['tetris','romeo-juliet']) {
+    expect(brickSound({type:'lock'}, game, false, 'sea')).toBe('sea_fall_tick');
+    expect(brickSound({type:'drop'}, game, false, 'sea')).toBe('sea_fall_tick');
+  }
 });

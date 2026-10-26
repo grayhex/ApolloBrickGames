@@ -98,29 +98,29 @@ describe('звук «Морского боя»', () => {
     return [...clocks.values()];
   };
 
-  it('мелодии — два голоса, 24 прохода: заставка 10,435 с + пауза 0,5 с (старт через 0,347 с), Ромео 19,115 с + 0,5 с', () => {
-    expect(ends(SEA_INTRO_TUNE)).toEqual([347 + 23 * 10935 + 10435, 347 + 23 * 10935 + 10435]);
-    expect(ends(SEA_ROMEO_TUNE)).toEqual([23 * 19615 + 19115, 23 * 19615 + 19115]);
+  it('мелодии — два голоса, один цикл: заставка 10,435 с + пауза 0,5 с (старт через 0,347 с), Ромео 19,115 с без повтора', () => {
+    expect(ends(SEA_INTRO_TUNE)).toEqual([347 + 10935, 347 + 10935]);
+    expect(ends(SEA_ROMEO_TUNE)).toEqual([19115, 19115]);
     expect(new Set(SEA_INTRO_TUNE.map((tone) => tone.track))).toEqual(new Set([0, 1]));
     expect(ends(SEA_INTRO_ONCE_TUNE)).toEqual([10435, 10435]); // музыка партии в игре A: мелодия заставки один раз, без паузы в начале и без повтора
   });
 
-  it('все ноты мелодий — ступени звукоряда устройства (синус, усиление по уровню ступени), без шума', () => {
+  it('все ноты мелодий — ступени звукоряда устройства (меандр, ровная громкость), без шума', () => {
     const scale = [664.8, 703.5, 745.8, 836.8, 885, 938.4, 994.5, 1116.2, 1253, 1327];
     for (const tone of [...SEA_INTRO_TUNE, ...SEA_ROMEO_TUNE]) {
       expect(tone.ms).toBeGreaterThan(0);
-      expect(tone.wave).toBe('sine');
+      expect(tone.wave).toBeUndefined();
       expect(tone.noise).toBeUndefined();
       expect(tone.hz === 0 || scale.includes(tone.hz)).toBe(true);
     }
     const level = (hz: number): number => SEA_INTRO_TUNE.find((tone) => tone.hz === hz)!.gain!;
-    expect(level(885)).toBeGreaterThan(level(745.8)); // слабые ноты на записи на 20 дБ тише
-    expect(level(745.8)).toBeGreaterThan(level(664.8));
+    expect(level(885)).toBe(level(745.8)); // microphone resonance is not part of the clean buzzer
+    expect(level(745.8)).toBe(level(664.8));
   });
 
-  it('эффекты — шум: вспышка заставки 0,5 с, щелчок падения фигуры 55 мс', () => {
+  it('эффекты — шум: вспышка заставки 0,5 с, тон падения фигуры 55 мс', () => {
     expect(SEA_BLAST_TONES).toEqual([expect.objectContaining({ ms: 500, noise: true })]);
-    expect(SEA_FALL_TICK_TONES).toEqual([expect.objectContaining({ ms: 55, noise: true })]);
+    expect(SEA_FALL_TICK_TONES).toEqual([expect.objectContaining({ ms: 55, to: 2000 })]);
   });
 
   it('вспышки заставки привязаны к кадрам: выстрел — труба появляется (состояние 24, кадр 211), взрыв — вспышка над парусником (состояние 31, кадр 317)', () => {

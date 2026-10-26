@@ -6,10 +6,10 @@ export const SEA_GUIDE: GameGuideData = {
   rules: [
     gt('Сверху — ваш флот. Снизу — скрытое поле противника; быстро мигает прицел.', 'Your fleet is above. The hidden enemy grid is below; the cursor pulses quickly.'),
     gt('Стрелками выберите клетку, ROTATE — выстрел. Затем стреляет соперник, даже после попадания.', 'Choose a cell with arrows, ROTATE fires. The opponent replies, even after a hit.'),
-    gt('Каждый выстрел показывается сценой: корабль, над ним мина-крест, крест падает на поле; результат — в конце сцены.', 'Each shot plays a scene: a ship, a cross-shaped mine above it, the mine falls onto the field; the result shows at its end.'),
+    gt('Торпеда-крест падает на воду при промахе, на корабль с разрушением — при попадании; результат отмечается после сцены.', 'The cross-shaped torpedo falls onto water on a miss, or breaks a ship on a hit; the result is marked after the scene.'),
     gt('Промах гасит клетку; попадание мигает медленно. В уже проверенную клетку стрелять нельзя.', 'A miss clears a cell; a hit blinks slowly. Previously tried cells cannot be fired at again.'),
     gt('Флоты расставляются автоматически: 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 клеток; корабли не соприкасаются.', 'Fleets are placed automatically: lengths 4, 3, 3, 2, 2, 2, 1, 1, 1, 1; ships never touch.'),
-    gt('NEXT показывает число ещё не потопленных кораблей противника.', 'NEXT shows the number of enemy ships not yet sunk.'),
+    gt('Два столбика справа приблизительно показывают остаток флотов: левый — противника, правый — ваш (шкалы 0–4).', 'Two rods on the right show approximate fleet strength: enemy on the left, yours on the right (0–4 segments).'),
   ],
   controls: [
     { button: 'left', text: gt('Прицел влево', 'Cursor left') },

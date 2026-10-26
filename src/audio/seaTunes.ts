@@ -1,29 +1,15 @@
 import type { BrickTone } from './brickPhrases';
 
-/**
- * Звук «Морского боя» по чистым записям владельца (`start.m4a`, `romeo.m4a`, 25 октября 2026): заставка и музыка «Ромео и Джульетты» — два голоса, плюс шумовые эффекты.
- * Ноты сняты с записи, а не с видео: спектр каждые 5 мс раскладывается по десяти ступеням звукоряда устройства (ми мажор +12 центов: 664,8 … 1327 Гц) методом неотрицательных наименьших квадратов,
- * проходы мелодии (заставка — 4, Ромео — 3) совмещены и сведены по минимуму уровня (щелчки и шум падающих фигур, не совпадающие по времени, отсекаются), короткие провалы суммарного уровня (40–50 мс) оставлены паузами между повторами нот.
- * Генератор: `scripts/research/sea_audio_tunes.py`. Формат шага: `[Гц, мс]`, `0` — пауза; голоса идут параллельно (дорожки 0 и 1).
- *
- * Пищалка почти синусоидальная (кроме основного тона в спектре только слабая 5-я гармоника), а громкость сильно зависит от высоты: ступени около 840–885 Гц на 20–25 дБ громче 665–745 Гц.
- * Поэтому звук — синус, а `LEVEL` — измеренный относительный уровень основного тона каждой ступени (сжатый корнем, чтобы слабые ноты оставались слышны).
+/** Notes transcribed from docs/research/start.m4a and romeo.m4a.
+ * Re-synthesized as clean square-wave buzzer voices. Recording/speaker response,
+ * room noise and frequency-dependent microphone gain are deliberately not reproduced.
  */
 type Step = readonly [number, number];
 
-/** Относительный уровень основного тона ступени на записи (в 1e-4 условных единиц) → усиление: корень от доли самого громкого, ×1,4 из-за синуса вместо меандра. */
-const MEASURED: readonly (readonly [number, number])[] = [
-  [664.8, 3], [703.5, 3], [745.8, 8], [836.8, 52], [885, 53], [938.4, 15], [994.5, 12], [1116.2, 34], [1253, 11], [1327, 6],
-];
-const LEVEL = new Map<number, number>(MEASURED.map(([hz, level]) => [hz, Math.round(Math.min(1.4, 1.4 * Math.sqrt(level / 53)) * 100) / 100]));
-
 const voice = (steps: readonly Step[], track: number): BrickTone[] =>
-  steps.map(([hz, ms]): BrickTone => (hz > 0 ? { hz, ms, gain: LEVEL.get(hz) ?? 1, track, wave: 'sine' } : { hz: 0, ms, track, wave: 'sine' }));
+  steps.map(([hz, ms]): BrickTone => ({ hz, ms, gain: 0.55, track }));
 
-/**
- * Петля из двух голосов, повторённая `passes` раз: начало каждого прохода — `atMs` первой ноты каждой дорожки. Нативного повтора у `BrickAudio` нет,
- * поэтому петля разворачивается в массив нужной длины. `loopMs` — длина прохода вместе с паузой до повтора (0,5 с: на записях пауза 0,08–0,88 с, зависит от того, что делало устройство).
- */
+/** Assemble two independent note tracks on one clock; BrickAudio owns intro repetition. */
 function loop(a: readonly Step[], b: readonly Step[], loopMs: number, passes: number, leadMs: number): BrickTone[] {
   const out: BrickTone[] = [];
   for (let pass = 0; pass < passes; pass++) {
@@ -74,12 +60,12 @@ const REPEAT_GAP_MS = 500;
 /** Мелодия заставки начинается через 0,347 с после включения (по видео). */
 const INTRO_LEAD_MS = 347;
 
-/** Заставка идёт, пока не нажата кнопка: 24 прохода (≈ 4,4 мин). */
-export const SEA_INTRO_TUNE: readonly BrickTone[] = loop(INTRO_A, INTRO_B, lengthOf(INTRO_A) + REPEAT_GAP_MS, 24, INTRO_LEAD_MS);
+/** Заставка идёт, пока не нажата кнопка: один цикл; BrickAudio повторяет его до выхода из заставки. */
+export const SEA_INTRO_TUNE: readonly BrickTone[] = loop([...INTRO_A, [0, REPEAT_GAP_MS]], [...INTRO_B, [0, REPEAT_GAP_MS]], lengthOf(INTRO_A) + REPEAT_GAP_MS, 1, INTRO_LEAD_MS);
 /** Мелодия заставки один раз, без повтора и без паузы в начале: музыка партии в игре A (владелец). */
 export const SEA_INTRO_ONCE_TUNE: readonly BrickTone[] = loop(INTRO_A, INTRO_B, lengthOf(INTRO_A), 1, 0);
-/** Музыка партии во всех остальных играх консоли (владелец: мелодия «Ромео» везде, кроме A): 24 прохода (≈ 7,8 мин). */
-export const SEA_ROMEO_TUNE: readonly BrickTone[] = loop(ROMEO_A, ROMEO_B, lengthOf(ROMEO_A) + REPEAT_GAP_MS, 24, 0);
+/** Музыка партии во всех остальных играх консоли (владелец: мелодия «Ромео» везде, кроме A): один проход без повторов. */
+export const SEA_ROMEO_TUNE: readonly BrickTone[] = loop(ROMEO_A, ROMEO_B, lengthOf(ROMEO_A), 1, 0);
 
 /**
  * Эффекты — шум в полосе вокруг 0,9 кГц (на записи — пятна 0,7–1,3 и 3,3–4,8 кГц), поверх мелодии: 0,5 с, в заставке дважды за 13,87 с цикла — «выстрел» (труба на насыпи, такт 425 цикла)
@@ -90,4 +76,4 @@ export const SEA_BLAST_TONES: readonly BrickTone[] = [{ hz: 904, ms: 500, noise:
 export const SEA_SPLASH_TONES: readonly BrickTone[] = [
   { hz: 770, ms: 50 }, { hz: 1257, ms: 47 }, { hz: 1542, ms: 42 }, { hz: 1908, ms: 50 }, { hz: 2191, ms: 43 }, { hz: 2557, ms: 47 },
 ];
-export const SEA_FALL_TICK_TONES: readonly BrickTone[] = [{ hz: 4000, ms: 55, noise: true, gain: 0.5 }];
+export const SEA_FALL_TICK_TONES: readonly BrickTone[] = [{ hz: 4000, ms: 55, to: 2000, gain: 0.35 }];

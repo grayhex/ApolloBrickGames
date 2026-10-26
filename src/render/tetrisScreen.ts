@@ -60,6 +60,8 @@ export interface TetrisScene {
   mood?: Mood;
   /** Заставка «Морского боя»: все сегменты боковой панели погашены (на видео оригинала панель пуста, пока идёт анимация на матрице). */
   panelOff?: boolean;
+  /** Game A uses preview rods, with NEXT and SPEED captions unlit. */
+  navalPanel?: boolean;
 }
 
 /** Мигающие клетки: полпериода в тактах. */
@@ -326,7 +328,7 @@ export class TetrisScreen {
 
     // NEXT 4 × 4: горит, когда у игры есть превью (следующая фигура, палки анимации игры A).
     const previewOn = !off && scene.preview !== undefined && scene.preview !== null;
-    this.label('NEXT', SEA.cx, SEA.next.label, 'center', segmentAlpha(all || previewOn));
+    this.label('NEXT', SEA.cx, SEA.next.label, 'center', segmentAlpha(all || (previewOn && !scene.navalPanel)));
     const blinkHidden = scene.blinkValue !== undefined && Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 1;
     const size = SEA.next.size;
     for (let gy = 0; gy < 4; gy++) {
@@ -339,7 +341,7 @@ export class TetrisScreen {
     // SPEED и LEVEL: подпись, две цифры (старшая показывает только «1») — скорость сверху, уровень снизу, подпись LEVEL под ними.
     const { speed } = SEA;
     const tensX = speed.x - speed.w - speed.tensGap;
-    this.label('SPEED', SEA.cx, speed.label, 'center', printed);
+    this.label('SPEED', SEA.cx, speed.label, 'center', segmentAlpha(all || (!off && !scene.navalPanel)));
     this.digit(tensX, speed.digitY, speed.w, speed.h, !off && scene.speed >= 10 ? 1 : null, all, true);
     this.digit(speed.x, speed.digitY, speed.w, speed.h, off ? null : scene.speed % 10, all);
     this.digit(tensX, speed.levelDigitY, speed.w, speed.h, !off && scene.level >= 10 ? 1 : null, all, true);
@@ -366,7 +368,7 @@ export class TetrisScreen {
     const ctx = this.ctx;
     ctx.save();
     ctx.letterSpacing = `${SEA.label.spacing}px`;
-    this.text(text, x, baseline, SEA.label.size, alpha, align, true); // подписи ЖК наклонены, как на фото
+    this.text(text, x, baseline, SEA.label.size, alpha, align, false); // upright lettering on the owner close-up
     ctx.restore();
   }
 
@@ -571,11 +573,20 @@ export class TetrisScreen {
     ctx.lineWidth = 1.7;
     ctx.beginPath();
     ctx.ellipse(cx - 3.5, cy + 5, 3.8, 2.7, -0.4, 0, Math.PI * 2);
-    ctx.fill();
+    if (this.options.panel === 'seabattle') ctx.stroke(); else ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(cx - 0.3, cy + 4.4);
-    ctx.lineTo(cx - 0.3, cy - 8);
-    ctx.bezierCurveTo(cx + 2, cy - 6, cx + 6, cy - 5, cx + 5, cy - 0.5);
+    if (this.options.panel === 'seabattle') {
+      // Paired, hollow note heads and two rising stems, like the original LCD.
+      ctx.moveTo(cx - 0.3, cy + 4.4); ctx.lineTo(cx - 0.3, cy - 8);
+      ctx.lineTo(cx + 10, cy - 12); ctx.lineTo(cx + 10, cy + 0.4);
+      ctx.moveTo(cx - 0.3, cy - 4); ctx.lineTo(cx + 10, cy - 8);
+      ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx + 6.5, cy + 1, 3.8, 2.7, -0.4, 0, Math.PI * 2);
+    } else {
+      ctx.moveTo(cx - 0.3, cy + 4.4);
+      ctx.lineTo(cx - 0.3, cy - 8);
+      ctx.bezierCurveTo(cx + 2, cy - 6, cx + 6, cy - 5, cx + 5, cy - 0.5);
+    }
     ctx.stroke();
     ctx.restore();
   }

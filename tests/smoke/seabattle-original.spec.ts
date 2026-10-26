@@ -72,6 +72,7 @@ test('S./P. на игре A сразу начинает партию; ход —
   expect(await area(page, 'stage')).toBe('game');
   const shots = (): Promise<number> => page.evaluate(`[...window.__brick.game.ownShots].filter(Boolean).length`) as Promise<number>;
   expect(await shots()).toBe(0);
+  await page.evaluate(() => { const b = (window as unknown as { __brick: { game: { enemy: Uint8Array; x: number; y: number } } }).__brick.game; const cell = b.enemy.findIndex(Boolean); b.x = cell % 10; b.y = Math.floor(cell / 10); });
   await key(page, 'jump').click(); // ROTATE — выстрел
   // Сцена по записи: корабль с мачтой в строках 11–12 и мина над ним; поле возвращается после сцены вместе с результатом выстрела.
   await expect.poll(async () => { const r = await rows(page); return r[11] === '....#.....' && r[12] === '...###....'; }, { timeout: 4000 }).toBe(true);
@@ -97,10 +98,10 @@ test('корпус по фото: кнопки меньше и в лунках, 
   // Круглые кнопки: уже, чем у «Часов+99» (ширина 39), с лунками глубже кнопки.
   const width = await page.locator('#base .key--round').first().evaluate((el) => (el as HTMLElement).style.getPropertyValue('--w'));
   expect(Number(width)).toBeLessThan(39);
-  expect(await page.locator('#base .base__dimples .base__rim-deep').count()).toBe(5);
+  expect(await page.locator('#base .base__dimples .base__rim-deep').count()).toBe(0);
   // Клавиши направлений — стрелки (пятиугольник острием по ходу), внутри круглая выемка без светлой обводки; объёма нет.
   const tips = await page.locator('#base .key--pad .key__shape').evaluateAll((items) => items.map((item) => item.getAttribute('d')?.slice(0, 8)));
-  expect(tips).toEqual(['M20 2.5 ', 'M2.5 20 ', 'M37.5 20', 'M20 37.5']); // вверх, влево, вправо, вниз
+  expect(tips).toEqual(Array(4).fill('M20 2.5 ')); // вверх, влево, вправо, вниз
   expect(await page.locator('#base .key--pad .key__dish').count()).toBe(4);
   expect(await page.locator('#base .key--pad .key__dish').first().evaluate((el) => getComputedStyle(el).stroke)).toBe('none');
   expect(await page.locator('#base .key--pad .key__wall').count()).toBe(0);

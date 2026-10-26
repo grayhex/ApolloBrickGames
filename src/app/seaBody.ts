@@ -3,7 +3,7 @@ import type { ToyModel } from './toys';
 
 /**
  * Нижняя половина «Морского боя» по фотографиям оригинала (владелец, 25 октября 2026), в единицах рисунка корпуса 400 × 620:
- * четыре круглые кнопки меньше обычных и сидят в глубоких лунках (без точек и бликов под ними — на оригинале их нет), подписи — пологие дуги по снимку анфас (над кнопками ровно, без наклона;
+ * четыре круглые кнопки меньше обычных и сидят в неглубоких лунках (без точек и бликов под ними — на оригинале их нет), подписи — пологие дуги по снимку анфас (над кнопками ровно, без наклона;
  * UP/MODE дугой над стрелкой, LEFT/LEVEL и RIGHT/SPEED выпуклостью наружу вдоль краёв крестовины, DOWN едва заметной «улыбкой», ROTATE дугой над большой кнопкой),
  * клавиши направлений — стрелки (пятиугольник острием в сторону хода) с круглой выемкой внутри (без светлой обводки: на оригинале это просто углубление), динамик — три ряда отверстий ромбом: тёмное ядро и бледные края.
  * Размеры сняты с фото в масштабе 0,2837 единицы на пиксель (ширина корпуса 1410 px); что на фото не видно (наклейка ниже шва), не менялось.
@@ -23,11 +23,11 @@ const PAD_DISH_R = 76;
  * Радиусы дуг на снимке: над кнопками ≈ 100 единиц, UP/MODE ≈ 56, LEFT/LEVEL ≈ 97 и RIGHT/SPEED ≈ 81 (оба — выпуклостью наружу), DOWN ≈ 72 («улыбка»), ROTATE ≈ 70.
  */
 const CAPTIONS = {
-  up: { x: 111, y: 134, length: 80, deg: 4, bulge: 11 },
-  down: { x: 106, y: 318, length: 80, deg: -3, bulge: -3 },
-  left: { x: 34.8, y: 217, length: 96, deg: -79, bulge: 12 },
-  right: { x: 178, y: 223.5, length: 101, deg: 93, bulge: 15 },
-  big: { x: 306, y: 158, length: 80, deg: 5, bulge: 10 },
+  up: { x: 111, y: 134, length: 80, deg: 0, bulge: 8 },
+  down: { x: 106, y: 318, length: 80, deg: 0, bulge: -3 },
+  left: { x: 34.8, y: 217, length: 96, deg: -76, bulge: 12 },
+  right: { x: 178, y: 223.5, length: 101, deg: 77, bulge: 15 },
+  big: { x: 306, y: 158, length: 80, deg: 0, bulge: 8 },
 } as const;
 const ROUND_CAPTION = { y: 45, length: 84, bulge: 8.5 } as const;
 
@@ -44,21 +44,20 @@ const SPEAKER_ROWS = [
 const SEAM = { edge: 377, control: 443 };
 
 /**
- * Клавиша-стрелка в её SVG 40 × 40: пятиугольник с острием в сторону хода (углы при острие — около 90°), остальные углы скруглены; посередине круглая выемка (диаметр 21, около 2/3 клавиши, как на фото).
+ * Клавиша-стрелка в её SVG 40 × 40: скруглённый хвост с острием в сторону хода (углы при острие — около 90°), остальные углы скруглены; посередине круглая выемка (диаметр 21, около 2/3 клавиши, как на фото).
  * Выемка — просто углубление: градиент `#concave`, без светлой обводки. Объёма нет: тень и градиент клавиши — общие для игрушек (`.key--pad` в styles.css).
  */
-const ARROWS: Record<'up' | 'down' | 'left' | 'right', { shape: string; dish: [number, number] }> = {
-  up: { shape: 'M20 2.5 37 19.5V31Q37 35 33 35H7Q3 35 3 31V19.5Z', dish: [20, 21] },
-  down: { shape: 'M20 37.5 37 20.5V9Q37 5 33 5H7Q3 5 3 9V20.5Z', dish: [20, 19] },
-  left: { shape: 'M2.5 20 19.5 3H31Q35 3 35 7V33Q35 37 31 37H19.5Z', dish: [21, 20] },
-  right: { shape: 'M37.5 20 20.5 3H9Q5 3 5 7V33Q5 37 9 37H20.5Z', dish: [19, 20] },
-};
+// One rounded tail and two small shoulders, rotated around the dished centre.
+const UP_ARROW = 'M20 2.5 Q21 2.5 23 5L37 19Q40 23 34 23H32C34 40 6 40 8 23H6Q0 23 3 19L17 5Q19 2.5 20 2.5Z';
+const ARROWS = {
+  up: { angle: 0 }, down: { angle: 180 }, left: { angle: -90 }, right: { angle: 90 },
+} as const;
 const DISH_R = 10.5;
 
 /** Содержимое SVG клавиши-стрелки: контур и круглая выемка. */
 function arrowKey(direction: 'up' | 'down' | 'left' | 'right'): SVGElement[] {
-  const { shape, dish } = ARROWS[direction];
-  return [svg('path', { class: 'key__shape', d: shape }), svg('circle', { class: 'key__dish', cx: String(dish[0]), cy: String(dish[1]), r: String(DISH_R) })];
+  const { angle } = ARROWS[direction];
+  return [svg('path', { class: 'key__shape', d: UP_ARROW, transform: `rotate(${angle} 20 20)` }), svg('circle', { class: 'key__dish', cx: '20', cy: '23', r: String(DISH_R), transform: `rotate(${angle} 20 20)` })];
 }
 
 const num = (value: number): string => String(Math.round(value * 100) / 100);
@@ -87,8 +86,8 @@ function labelOn(id: string, path: string, text: string): SVGElement[] {
 function dimple(cx: number, cy: number, r: number): SVGElement[] {
   return [
     svg('circle', { cx: num(cx), cy: num(cy), r: num(r), fill: 'url(#sea-dimple)' }),
-    svg('circle', { class: 'base__rim-lo base__rim-deep', cx: num(cx - 0.7), cy: num(cy - 1), r: num(r) }),
-    svg('circle', { class: 'base__rim-hi', cx: num(cx + 0.7), cy: num(cy + 1.1), r: num(r + 0.4) }),
+
+
   ];
 }
 
@@ -113,11 +112,16 @@ function drawArt(art: Element, model: ToyModel): void {
       'radialGradient',
       { id: 'sea-dimple', cx: '52%', cy: '60%', r: '58%' },
       svg('stop', { offset: '0', 'stop-color': '#000', 'stop-opacity': '0' }),
-      svg('stop', { offset: '0.55', 'stop-color': '#000', 'stop-opacity': '0.12' }),
-      svg('stop', { offset: '0.88', 'stop-color': '#000', 'stop-opacity': '0.36' }),
-      svg('stop', { offset: '1', 'stop-color': '#000', 'stop-opacity': '0.5' }),
+      svg('stop', { offset: '0.55', 'stop-color': '#000', 'stop-opacity': '0.03' }),
+      svg('stop', { offset: '0.88', 'stop-color': '#000', 'stop-opacity': '0.09' }),
+      svg('stop', { offset: '0.94', 'stop-color': '#000', 'stop-opacity': '0.06' }),
+      svg('stop', { offset: '1', 'stop-color': '#000', 'stop-opacity': '0' }),
     ),
   );
+  defs?.append(svg('radialGradient', { id: 'sea-key-dish', cx: '45%', cy: '24%', r: '78%' },
+    svg('stop', {offset:'0', 'stop-color':'var(--key-lo)'}),
+    svg('stop', {offset:'0.7', 'stop-color':'var(--key)'}),
+    svg('stop', {offset:'1', 'stop-color':'var(--key-hi)'})));
   const { labels } = model;
 
   // Подписи верхнего ряда: пологие симметричные дуги над кнопками, без наклона.

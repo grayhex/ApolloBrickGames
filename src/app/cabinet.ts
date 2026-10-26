@@ -401,6 +401,7 @@ class ConsoleCabinet implements Cabinet {
       allOn: extra.allOn,
       mood: this.currentMood(),
       panelOff: c.intro,
+      navalPanel: this.activeGame === 'sea-battle',
     };
   }
   /** Человечек: после события радуется или огорчается на время, при конце игры остаётся огорчённым, на паузе, в меню и без событий стоит. */
