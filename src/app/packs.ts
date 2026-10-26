@@ -81,7 +81,7 @@ export const PACKS: Record<PackId, PackModel> = {
     text: { open: 'pack.mario.open', short: 'pack.mario.short', title: 'pack.mario.title', aria: 'pack.mario.aria', credit: 'pack.mario.credit' },
   },
   /**
-   * Коробка TAKSUN TS-995 по восстановленной развёртке (`docs/research/TS995_packaging_assets.zip`): лицо и оборот — выпрямленные фотографии владельца с набранным текстом инструкции,
+   * Коробка TAKSUN TS-995 по восстановленной развёртке (архив `TS995_packaging_assets.zip` в истории Git): лицо и оборот — выпрямленные фотографии владельца с набранным текстом инструкции,
    * розовые бока, верх и низ. Размеры: лицо 1300 × 2160 → 565 × 939, глубина ≈ 140 (в развёртке бока 340 px, верх и низ 302 px — размеры иллюстративные, не проверены по оригиналу).
    */
   taksun: {

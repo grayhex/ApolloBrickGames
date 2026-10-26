@@ -16,8 +16,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # System package mirrors can consume 10+ minutes before browser tests start.
-    timeout-minutes: 40
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,9 +32,24 @@ jobs:
         run: npm run check:worker
         env:
           WRANGLER_SEND_METRICS: 'false'
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - name: Установка Chromium и системных зависимостей
         timeout-minutes: 15
         run: npx playwright install --with-deps --only-shell chromium
       - name: Браузерный smoke-тест
         timeout-minutes: 20
-        run: npm run test:smoke
+        run: npm run test:smoke -- --shard=${{ matrix.shard }}/2
