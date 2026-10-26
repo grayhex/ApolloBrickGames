@@ -352,6 +352,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
       up: '', left: 'LEFT', right: 'RIGHT', down: 'DOWN', big: 'ROTATE' },
     keyWhat: { onoff: 'alibaba.unavailable' },
   },
+  /** Играющая модель со своей консолью (`miniBrickApp.ts`, `brick/miniConsole.ts`): набора игр для админки нет, номера 00–96 заданы в `brick/games/mini.ts`; «96 IN 1» — надпись на наклейке. */
   minibrick: {
     id: 'minibrick', family: 'other', name: 'Mini Brick Game B-S96',
     shells: ['red'], defaultShell: 'red', games: [], defaultGame: null,
@@ -360,7 +361,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     lcd: { bg: '#c6cfab', ink: '#303a30' }, stageLabel: 'stage.label.minibrick',
     labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START',bottom:'PAUSE'},{key:'sound',top:'MUSIC',bottom:'VOICE'},{key:'fire',top:'RESET'}],
       up: '', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'ROTATE' },
-    keyWhat: { onoff: 'alibaba.unavailable' },
+    keyWhat: { onoff: 'help.row.onoff', sp: 'help.row.sp', sound: 'help.row.sound', fire: 'help.row.menu', left: 'help.m.left', right: 'help.m.right', down: 'help.mini.down', jump: 'help.mini.rotate' },
   },
 };
 

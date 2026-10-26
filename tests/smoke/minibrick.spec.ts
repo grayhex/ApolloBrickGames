@@ -1,54 +1,137 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { marioUrl } from './url';
 
-test('Mini Brick Game: выключенный LCD, собственное управление и уведомление вместо запуска игры', async ({ page }) => {
-  await page.goto('./?toy=minibrick&view=full&power=on&debug');
-  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
-  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
+/** Консоль игрушки (`?debug`): только простые значения, которые можно передать из страницы. */
+const debug = (page: Page): Promise<{ introDone: boolean; gameId: string; gameNumber: number }> =>
+  page.evaluate(() => {
+    const m = (window as unknown as { __minibrick: { introDone: boolean; gameId: string; gameNumber: number } }).__minibrick;
+    return { introDone: m.introDone, gameId: m.gameId, gameNumber: m.gameNumber };
+  });
+/** Клавиша держится дольше такта и отпускается до следующего нажатия: два нажатия подряд внутри одного кадра слились бы в одно. */
+const tap = async (page: Page, key: string): Promise<void> => {
+  await page.keyboard.press(key, { delay: 40 });
+  await page.waitForTimeout(40);
+};
+const litCells = (page: Page): Promise<number> => page.locator('#game-area .minibrick-lcd .lcd-cell[data-on]').count();
+
+test('Mini Brick Game: рамка стакана видна на выключенном экране, включение — заставка с рожицей, затем «96»', async ({ page }) => {
+  await page.goto('./?toy=minibrick&view=full&debug');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
+  await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'red');
   await expect(page.locator('#side-info')).toHaveAccessibleName('Mini Brick Game B-S96');
   await expect(page.locator('.minibrick-key')).toHaveCount(8);
-  await expect(page.locator('.minibrick-lcd')).toHaveCount(1);
+  await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(1);
+  // Выключено: рамка стакана чётко видна, сегменты — только слабый призрак, ни одна клетка не горит.
+  const frame = page.locator('#game-area .minibrick-lcd .lcd-frame');
+  await expect(frame).toBeVisible();
+  expect(await frame.evaluate((node) => Number(getComputedStyle(node).opacity))).toBe(1);
+  expect(await litCells(page)).toBe(0);
+  expect(await page.locator('#game-area .minibrick-lcd .lcd-cell').count()).toBe(200 + 16);
+  expect(await page.locator('#game-area .minibrick-lcd .lcd-icon').count()).toBe(13);
+  const ghost = await page.locator('#game-area .minibrick-lcd .lcd-icon').first().evaluate((node) => Number(getComputedStyle(node).opacity));
+  expect(ghost).toBeGreaterThan(0.03);
+  expect(ghost).toBeLessThan(0.15);
+
   const rotation = (await page.locator('.minibrick-key[data-key=jump]').boundingBox())!;
   expect(rotation.height / rotation.width).toBeGreaterThan(1.4);
+
   await page.locator('[data-key=onoff]').click();
-  await expect(page.locator('#minibrick-notice h2')).toHaveText('Игра пока в разработке');
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('o');
-  await expect(page.locator('#minibrick-notice')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await page.locator('#corner-lang').click();
-  await expect(page.locator('#corner-help')).toHaveAccessibleName('Game encyclopedia');
-  await page.locator('#corner-settings').click();
-  await expect(page.locator('#settings .shellpick')).toHaveCount(0);
-  await page.keyboard.press('Escape');
-  await page.locator('#view-screen').click();
-  await page.locator('#game-area').click();
-  await expect(page.locator('#minibrick-notice h2')).toHaveText('Game in development');
-  expect(await page.evaluate(() => '__brick' in window || '__tetris' in window)).toBe(false);
+  await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'intro');
+  await expect.poll(() => litCells(page), { timeout: 4000 }).toBeGreaterThan(10); // рожица
+  await expect.poll(async () => (await debug(page)).introDone, { timeout: 8000 }).toBe(true); // дальше неподвижное «96»
+  const intro = await litCells(page);
+  expect(intro).toBeGreaterThan(20);
+  await page.locator('[data-key=onoff]').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
+  await expect.poll(() => litCells(page)).toBe(0);
+  await expect(frame).toBeVisible();
+});
+
+test('Mini Brick Game: любая кнопка открывает меню, DOWN листает номера, LEFT/RIGHT — уровень и скорость, значки шкалы по уровню', async ({ page }) => {
+  await page.goto('./?toy=minibrick&view=full&power=on&debug');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'intro');
+  await page.locator('[data-key=down]').dispatchEvent('pointerdown', { pointerId: 1, button: 0, pointerType: 'mouse' });
+  await page.locator('[data-key=down]').dispatchEvent('pointerup', { pointerId: 1, button: 0, pointerType: 'mouse' });
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'menu');
+  expect((await debug(page)).gameNumber).toBe(0);
+  const lit = await litCells(page);
+  expect(lit).toBeGreaterThan(20); // крупное «00»
+  expect(await page.locator('#game-area .minibrick-lcd [data-lcd=hi][data-on]').count()).toBe(1);
+  expect(await page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]').count()).toBe(1); // уровень 0 — одна вишня снизу
+  await expect(page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]')).toHaveAttribute('data-icon', 'cherries');
+
+  await tap(page, 'ArrowDown');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-game', '1');
+  await tap(page, 'ArrowDown');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-game', '2');
+  await tap(page, 'ArrowUp'); // ↑ — то же, что ROTATE: номер назад
+  await expect(page.locator('#game-area')).toHaveAttribute('data-game', '1');
+  await tap(page, 'ArrowLeft');
+  await tap(page, 'ArrowLeft');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-level', '2');
+  expect(await page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]').count()).toBe(3);
+  await tap(page, 'ArrowRight');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-speed', '1');
+  // Ни названий игр, ни превью: на экране остаётся только число на матрице.
+  await expect(page.locator('#game-area')).not.toContainText(/racing|tetris|гонк|тетрис/i);
+});
+
+test('Mini Brick Game: 00 и 01 — гонки, 02 и дальше — тетрис; партия, пауза, RESET в меню и звук', async ({ page }) => {
+  await page.goto('./?toy=minibrick&view=full&power=on&debug&seed=5');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'intro');
+  await tap(page, 'ArrowDown'); // заставка → меню, номер 00
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'menu');
+  await tap(page, 'Enter');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
+  expect((await debug(page)).gameId).toBe('racing');
+  await expect(page.locator('#game-area .minibrick-lcd [data-lcd=score][data-on]')).toHaveCount(1);
+  await page.locator('[data-key=fire]').click(); // RESET
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'menu');
+  await tap(page, 'ArrowDown');
+  await tap(page, 'ArrowDown');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-game', '2');
+  await tap(page, 'Enter');
+  expect((await debug(page)).gameId).toBe('tetris');
+  await expect.poll(() => page.locator('#game-area .minibrick-lcd .lcd-cell[data-on]').count()).toBeGreaterThan(0);
+  await tap(page, 'ArrowLeft');
+  await tap(page, 'ArrowDown');
+  await tap(page, 'Space');
+  await tap(page, 'p');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'paused');
+  await expect(page.locator('#game-area .minibrick-lcd [data-lcd=cup][data-on]')).toHaveCount(1); // чашка паузы
+  await tap(page, 'p');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
+  await page.locator('[data-key=sound]').click();
+  await expect(page.locator('#game-area .minibrick-lcd [data-lcd=note][data-on]')).toHaveCount(0);
+  await page.locator('[data-key=sound]').click();
+  await expect(page.locator('#game-area .minibrick-lcd [data-lcd=note][data-on]')).toHaveCount(1);
+  await page.locator('[data-key=onoff]').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
 });
 
 test('переключение Mini → Alibaba → Apollo восстанавливает экран, кнопки и справку', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./?toy=minibrick&view=full');
-  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
+  await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(1);
   await page.locator('.toysw__item[data-toy=alibaba]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'alibaba');
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
-  await expect(page.locator('.minibrick-lcd')).toHaveCount(0);
+  await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(0);
   await expect(page.locator('.minibrick-key')).toHaveCount(0);
-  await expect(page.locator('#minibrick-notice')).toHaveCount(0);
+  await expect(page.locator('#alibaba-notice')).toHaveCount(1);
   await expect(page.locator('#side-info')).toHaveAccessibleName('Alibaba Dance 99 in 1');
   await page.goBack();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'minibrick');
-  await expect(page.locator('.minibrick-lcd')).toHaveCount(1);
-  await page.locator('.toysw__item[data-toy=seabattle]').click();
-  await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
-  await expect(page.locator('.minibrick-lcd')).toHaveCount(0);
-  await expect(page.locator('#lid-cover image')).toHaveCount(0);
+  await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(1);
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+  await page.locator('.toysw__item[data-toy=seabattle]').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
+  await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(0);
+  await expect(page.locator('#lid-cover image')).toHaveCount(0);
+  await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on'); // питание переходит на следующую игрушку
   expect(errors).toEqual([]);
 });
 
@@ -69,17 +152,27 @@ test('две модели в «Другие» доступны на телефо
     }
     const onoff = (await page.locator('[data-key=onoff]').boundingBox())!;
     expect(onoff.y + onoff.height).toBeLessThan(660);
-    const lcd = (await page.locator('.minibrick-lcd').boundingBox())!;
+    const lcd = (await page.locator('#game-area .minibrick-lcd').boundingBox())!;
     const window = (await page.locator('.lid__window').boundingBox())!;
     expect(lcd.x).toBeGreaterThanOrEqual(window.x - 1);
     expect(lcd.x + lcd.width).toBeLessThanOrEqual(window.x + window.width + 1);
+    expect(Math.abs(lcd.width / lcd.height - 219 / 304)).toBeLessThan(0.05); // ЖК вписан без полей: стекло по его пропорциям
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await page.locator('[data-key=onoff]').click();
-    await expect(page.locator('#minibrick-notice')).toBeVisible();
-    await page.keyboard.press('Escape');
+    await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+    await page.locator('[data-key=onoff]').click();
   }
 });
 
+test('Mini Brick Game: «только экран» — касание включает игрушку, открывает меню и запускает партию', async ({ page }) => {
+  await page.goto('./?toy=minibrick&view=screen&debug');
+  await page.locator('#game-area').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+  await page.locator('#game-area').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'menu');
+  await page.locator('#game-area').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
+});
 
 test('группа «Другие» не перекрывает системное меню запущенной Apollo', async ({ page }) => {
   for (const width of [900, 1024, 1200, 1440]) {

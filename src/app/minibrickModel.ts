@@ -1,3 +1,4 @@
+import { MiniLcd, miniLcdIdle } from '../render/miniScreen';
 import { h, svg } from './dom';
 import type { ToyKeyId } from './toy';
 import type { View } from './view';
@@ -75,6 +76,8 @@ export const MINI_BRICK_KEYS: readonly { key: ToyKeyId; label: string; x: number
   { key: 'sound', label: 'MUSIC/VOICE', x: 64, y: 310, w: 25, h: 25 },
   { key: 'fire', label: 'RESET', x: 91, y: 362, w: 22, h: 22 },
 ];
+/** Ось ложбины: через центры ON/OFF (64, 255), MUSIC/VOICE (64, 310) и RESET (91, 362). */
+const FUNCTION_GROOVE = 'M64 238V312C64 340 76 353 91 364';
 export function miniBrickBase(buttons = false): SVGSVGElement {
   const id = `mini-base-${++serial}`;
   const root = svg('svg', { viewBox: '0 0 400 650', class: 'base__art', 'aria-hidden': 'true', focusable: 'false' });
@@ -90,6 +93,10 @@ export function miniBrickBase(buttons = false): SVGSVGElement {
     svg('rect', { x: '17', y: '14', width: '366', height: '425', rx: '9', fill: `url(#${id}-blue)`, stroke: '#183f53', 'stroke-width': '4' }),
     svg('path', { d: 'M24 25H376V227Q200 213 24 227Z', fill: '#569ab5', 'fill-opacity': '.28', stroke: '#4c8ba6', 'stroke-width': '2' }),
     svg('circle', { cx: '220', cy: '300', r: '102', fill: `url(#${id}-blue)`, stroke: '#205774', 'stroke-width': '3' }),
+    // Три функциональные кнопки слева (ON/OFF, MUSIC/VOICE, RESET) сидят в одной выемке-ложбине, как на фото: светлая кромка снизу, тень сверху, дно темнее панели.
+    svg('path', { d: FUNCTION_GROOVE, transform: 'translate(0 1.8)', fill: 'none', stroke: '#6aa7c1', 'stroke-opacity': '.55', 'stroke-width': '28', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+    svg('path', { d: FUNCTION_GROOVE, fill: 'none', stroke: '#0b2c42', 'stroke-width': '28', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+    svg('path', { d: FUNCTION_GROOVE, transform: 'translate(0 1.2)', fill: 'none', stroke: '#154a68', 'stroke-width': '23', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
   );
   for (const [row, offsets] of [
     [0, [-21, 21]],
@@ -109,10 +116,10 @@ export function miniBrickBase(buttons = false): SVGSVGElement {
     ['SPEED', 187, 121],
     ['DOWN', 47, 169],
     ['GAME', 47, 179],
-    ['ON', 24, 254],
-    ['OFF', 24, 265],
-    ['MUSIC', 22, 308],
-    ['VOICE', 22, 319],
+    ['ON', 20, 254],
+    ['OFF', 20, 265],
+    ['MUSIC', 19, 308],
+    ['VOICE', 19, 319],
     ['RESET', 32, 366],
   ];
   for (const [label, x, y] of captions)
@@ -155,24 +162,8 @@ export function miniBrickBase(buttons = false): SVGSVGElement {
   );
   return root;
 }
-/** Unpowered LCD only: no invented game or animation. Layout is traced from the supplied photograph. */
-export function miniBrickLcd(): SVGSVGElement {
-  return svg(
-    'svg',
-    { viewBox: '0 0 240 340', class: 'minibrick-lcd', 'aria-hidden': 'true', focusable: 'false' },
-    svg(
-      'g',
-      { fill: '#354737', opacity: '.18', 'font-family': 'Arial,sans-serif', 'font-size': '10' },
-      svg('text', { x: '53', y: '15' }, 'SCORE'),
-      svg('rect', { x: '9', y: '33', width: '146', height: '295', fill: 'none', stroke: '#354737', 'stroke-width': '1.5' }),
-      svg('text', { x: '171', y: '63' }, 'NEXT'),
-      svg('text', { x: '168', y: '150' }, 'SPEED'),
-      svg('text', { x: '166', y: '296' }, 'PAUSE'),
-      svg('path', { d: 'M175 312H192V320Q184 329 175 320ZM192 314H197V319H192M171 329H198', fill: 'none', stroke: '#354737', 'stroke-width': '2' }),
-    ),
-  );
-}
-export function applyMiniBrickModel(): void {
+/** Корпус и ЖК-экран Mini Brick Game на странице; возвращает живой экран, которым управляет `miniBrickApp`. */
+export function applyMiniBrickModel(): MiniLcd {
   for (const id of ['toy', 'arena']) {
     const element = document.getElementById(id)!;
     element.dataset['model'] = 'minibrick';
@@ -183,7 +174,9 @@ export function applyMiniBrickModel(): void {
   const front = document.getElementById('lid-front')!;
   front.querySelector('.lid__shell')?.replaceWith(miniBrickLid());
   for (const node of front.querySelectorAll('.lid__screw,.lid__leds,.lid__art')) node.remove();
-  document.getElementById('game-area')!.append(miniBrickLcd());
+  const lcd = new MiniLcd();
+  lcd.element.classList.add('minibrick-lcd--live');
+  document.getElementById('game-area')!.append(lcd.element);
   document.getElementById('lid-cover')!.replaceChildren(miniBrickLid(true));
   const base = document.getElementById('base')!;
   base.replaceChildren(miniBrickBase());
@@ -192,6 +185,7 @@ export function applyMiniBrickModel(): void {
     button.style.cssText = `left:${(x - w / 2) / 4}%;top:${(y - height / 2) / 6.5}%;width:${w / 4}%;height:${height / 6.5}%`;
     base.append(button);
   }
+  return lcd;
 }
 export function miniBrickMini(view: View, white = false): SVGSVGElement {
   const root = svg('svg', {
@@ -215,10 +209,9 @@ export function miniBrickMini(view: View, white = false): SVGSVGElement {
   lid.setAttribute('height', '440');
   root.append(lid);
   if (view !== 'closed') {
-    root.append(svg('rect', { x: '72', y: '53', width: '256', height: '347', fill: '#bec9a6', stroke: '#124e6e', 'stroke-width': '10' }));
-    const lcd = miniBrickLcd();
-    lcd.removeAttribute('class');
-    for (const [key, value] of Object.entries({ x: '78', y: '59', width: '244', height: '335' })) lcd.setAttribute(key, value);
+    root.append(svg('rect', { x: '87', y: '68', width: '226', height: '310', fill: '#bec9a6', stroke: '#124e6e', 'stroke-width': '10' }));
+    const lcd = miniLcdIdle();
+    for (const [key, value] of Object.entries({ x: '92', y: '73', width: '216', height: '300' })) lcd.setAttribute(key, value);
     root.append(lcd);
   }
   if (view === 'full') {
