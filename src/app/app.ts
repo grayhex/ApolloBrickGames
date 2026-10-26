@@ -35,6 +35,7 @@ import { openEncyclopedia } from './help';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import { InfoPanel } from './infoPanel';
 import { InputHub } from './hub';
+import { onInputLock } from './inputLock';
 import { ledState, type LedState } from './leds';
 import { bundledLevels, originalPack, originalSlots, refAfterLevelStart, startingLevel, userPack, type LevelRef } from './levels';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
@@ -377,6 +378,7 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     else void refreshUserLevels(); // карты могли измениться в редакторе в другой вкладке
   }, { signal });
   window.addEventListener('blur', () => suspend('blur'), { signal });
+  onInputLock((locked) => { if (locked) suspend('picker'); }, signal); // открыт каталог устройств: партия на паузе
   window.addEventListener('gamepadconnected', () => hub.poll(), { signal });
   window.addEventListener('gamepaddisconnected', () => hub.poll(), { signal });
   hub.attach();

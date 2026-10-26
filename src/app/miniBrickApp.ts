@@ -12,6 +12,7 @@ import { CornerNav } from './cornerNav';
 import { h } from './dom';
 import { openEncyclopedia } from './help';
 import { InputHub } from './hub';
+import { onInputLock } from './inputLock';
 import { applyStatic, getLang, onLangChange, setLang, t } from './i18n';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { applyMiniBrickModel, miniBrickMark } from './minibrickModel';
@@ -452,6 +453,9 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
     },
     { signal },
   );
+  onInputLock((locked) => {
+    if (locked && powered) suspend(); // открыт каталог устройств: партия на паузе
+  }, signal);
   onLangChange(relabel, signal);
   life.onDispose(() => {
     settings.close();

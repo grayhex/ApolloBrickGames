@@ -58,7 +58,7 @@ export async function startAdmin(): Promise<void> {
     }
     const defaultLabel = el('label','Основной цвет'); const defaultSelect = el('select'); defaultSelect.setAttribute('aria-label','Основной цвет'); defaultSelect.append(...toy.shells.map((s) => option(s,colors[s]))); defaultSelect.value = toy.defaultShell;
     defaultSelect.addEventListener('change',() => { toy.defaultShell = defaultSelect.value as Shell; changed(); }); defaultLabel.append(defaultSelect); appearance.append(swatches,defaultLabel);
-    const thumbLabel = el('label','Цвет миниатюры в карусели'); const thumbSelect = el('select'); thumbSelect.setAttribute('aria-label','Цвет миниатюры в карусели'); thumbSelect.append(...thumbPalette(active).map((s) => option(s,colors[s]))); thumbSelect.value = toy.thumbShell;
+    const thumbLabel = el('label','Цвет миниатюры в каталоге устройств'); const thumbSelect = el('select'); thumbSelect.setAttribute('aria-label','Цвет миниатюры в каталоге устройств'); thumbSelect.append(...thumbPalette(active).map((s) => option(s,colors[s]))); thumbSelect.value = toy.thumbShell;
     thumbSelect.addEventListener('change',() => { toy.thumbShell = thumbSelect.value as Shell; changed(); }); thumbLabel.append(thumbSelect); appearance.append(thumbLabel);
     const music = el('div','','admin__music'); const musicButton = button('Загрузка однобитной мелодии — позже',() => {},true); music.append(el('h3','Мелодия'),el('p','Здесь появится импорт простой однобитной мелодии для этой приставки.'),musicButton); appearance.append(music); content.append(appearance);
     if (isNativeDevice(active)) { content.append(nativeMenuEditor(active,toy,changed)); save.disabled = busy || !connected; return; }

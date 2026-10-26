@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { marioUrl, mockReadOnlyLeaderboard } from './url';
+import { chooseToy } from './picker';
 
 /**
  * Левая панель игрушек: у «168 в 1 танк» (игры 1–9), «Морского боя» (режимы A–F) и «Часов+99» — вкладки с описанием игр консоли; у Mario логотип по центру;
@@ -158,12 +159,12 @@ test.describe('вкладки игр', () => {
   test('переключение игрушек на месте: вкладки соответствуют игрушке, выбор начинается с играющей игры', async ({ page }) => {
     await open(page, 'toy=tank168');
     await tabs(page).nth(0).click();
-    await page.locator('.toysw__item[data-toy="seabattle"]').click();
+    await chooseToy(page, 'seabattle');
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'seabattle');
     await expect(tabs(page)).toHaveText(['A', 'B', 'C', 'D', 'E', 'F']);
     await expect(selected(page)).toHaveText('A'); // открыта игра, выбранная в меню консоли
     await expect(page.locator('[data-box-open]')).toHaveCount(0);
-    await page.locator('.toysw__item[data-toy="tank168"]').click();
+    await chooseToy(page, 'tank168');
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'tank168');
     await expect(tabs(page)).toHaveCount(9);
     await expect(page.locator('[data-box-open]')).toBeVisible();

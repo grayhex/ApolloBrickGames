@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { marioUrl, mockReadOnlyLeaderboard } from './url';
+import { chooseToy, closePicker, openPicker, pickerTrigger } from './picker';
 
 /**
  * Три игрушки Apollo на одной странице: шапка с логотипом и переключателем, «Часы+99» и «Морской бой» (аппаратная часть, цвета, тетрис-заглушка).
@@ -35,18 +36,23 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
-  test('логотип Apollo внутри категории, слева управление; четыре белые миниатюры и текущая игрушка', async ({ page }) => {
+  test('логотип справа, слева управление; компактная панель выбора устройства над консолью и все модели в каталоге', async ({ page }) => {
     await page.goto(marioUrl(''));
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
     const logo = page.locator('.site-brand img');
     await expect(logo).toBeVisible();
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-    const items = page.locator('#real-models .toysw__item');
-    await expect(items).toHaveCount(8);
-    await expect(items.locator('.toysw__name')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'Alibaba Dance 99 in 1', 'Mini Brick Game B-S96', 'Brick Game E-88 · 8 in 1', 'Apollo B0202 · 126 in 1']);
-    await expect(items.locator('svg.toysw__icon')).toHaveCount(8);
-    await expect(items.locator('svg.toysw__icon image[href*="devices/"]')).toHaveCount(2); // моноблоки используют оригинальные векторы
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'mario');
+    await expect(pickerTrigger(page).locator('.devpick__maker')).toHaveText('Apollo');
+    await expect(pickerTrigger(page).locator('.devpick__model')).toHaveText('Crocodile Mario');
+    await openPicker(page);
+    const items = page.locator('.devpick__card');
+    await expect(items).toHaveCount(9);
+    await expect(items.locator('.devpick__model')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'B0202 · 126 in 1', 'Универсальный', 'E-88 · 8 in 1', 'Alibaba Dance 99 in 1', 'Mini Brick Game B\u2011S96']);
+    await expect(items.locator('svg.devpick__icon')).toHaveCount(9);
+    await expect(items.locator('svg.devpick__icon image[href*="devices/"]')).toHaveCount(2); // моноблоки используют оригинальные векторы
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
+    await closePicker(page);
     // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён), логотип правее них.
     const dots = page.locator('#devices .dev:visible');
     await expect(dots).toHaveCount(2);
@@ -58,7 +64,7 @@ test.describe('шапка и переключатель', () => {
     const toy = await page.locator('#toy').boundingBox();
     if (!devicesBox || !logoBox || !switchBox || !toy) throw new Error('нет размеров');
     expect(devicesBox.x + devicesBox.width).toBeLessThanOrEqual(logoBox.x + 1);
-    expect(logoBox.x).toBeGreaterThan(switchBox.x); // логотип внутри категории Apollo
+    expect(logoBox.x).toBeGreaterThanOrEqual(switchBox.x + switchBox.width - 1); // логотип правее панели выбора, не под ней
     // Переключатель по центру игрушки и над ней.
     expect(Math.abs(switchBox.x + switchBox.width / 2 - (toy.x + toy.width / 2))).toBeLessThan(2);
     expect(switchBox.y + switchBox.height).toBeLessThanOrEqual(toy.y + 1);
@@ -71,43 +77,44 @@ test.describe('шапка и переключатель', () => {
     const loaded = (): Promise<void> => expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
     await page.goto(marioUrl(''));
     await loaded();
-    await page.locator('.toysw__item[data-toy="clock99"]').click();
+    await chooseToy(page, 'clock99');
     await expect(page).toHaveURL(/\?toy=clock99$/);
     await loaded();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'clock99');
     await expect(page).toHaveTitle('Часы+99 — Brick Game Online');
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
-    await page.locator('.toysw__item[data-toy="seabattle"]').click();
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
+    await chooseToy(page, 'seabattle');
     await expect(page).toHaveURL(/\?toy=seabattle$/);
     await loaded();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'seabattle');
-    await page.locator('.toysw__item[data-toy="mario"]').click();
+    await chooseToy(page, 'mario');
     await expect(page).toHaveURL(/\?toy=mario$/);
     await loaded();
     await expect(page.locator('body')).not.toHaveAttribute('data-toy', /.+/);
     await expect(page).toHaveTitle('Crocodile Mario');
-    await page.locator('.toysw__universal').click();
+    await chooseToy(page, 'brickgame');
     await expect(page).not.toHaveURL(/toy=/);
     await loaded();
     await expect(page.locator('body')).toHaveAttribute('data-toy', 'brickgame');
     // Неизвестное значение — универсальный Brick Game.
     await page.goto('./?toy=nope');
     await loaded();
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'brickgame');
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'brickgame');
   });
 
   for (const toy of ['mario', 'tank168']) {
     test(`${toy}: на телефоне (320–390 px) шапка не даёт горизонтальной прокрутки даже с широким запасным шрифтом`, async ({ page }) => {
       await page.goto(`./?toy=${toy}`);
-      await page.waitForSelector('.toysw__item');
+      await page.waitForSelector('.devpick__trigger');
       // Шрифт CI-раннера (DejaVu Sans) шире локального: проверяем «худший» случай независимо от машины.
       await page.addStyleTag({ content: "*{font-family:'DejaVu Sans', sans-serif !important}" });
       for (const width of [320, 360, 390]) {
         await page.setViewportSize({ width, height: 740 });
         expect(await page.evaluate(() => document.documentElement.scrollWidth), `${toy} @${width}`).toBeLessThanOrEqual(width);
-        const sw = await page.locator('.toysw').boundingBox();
+        const sw = await page.locator('.devpick').boundingBox();
+        expect(sw!.x, `${toy} @${width}: переключатель в окне`).toBeGreaterThanOrEqual(0);
         expect(sw!.x + sw!.width, `${toy} @${width}: переключатель в окне`).toBeLessThanOrEqual(width);
-        await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('aria-label', /.+/); // имя текущей остаётся доступным и без подписи
+        await expect(pickerTrigger(page)).toHaveAttribute('aria-label', /.+/); // имя текущей модели остаётся доступным
       }
     });
   }
@@ -366,8 +373,8 @@ for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
     await page.locator('#corner-lang').click();
     await expect(page.locator('#side-info #keys-title')).toHaveText('Controls');
     if (toy !== 'mario') await expect(page.locator('#side-info .grules li')).toHaveCount(3);
-    // Both docks (toy switcher and service menu) use the same surface, and the left indicators do not overlap the right menu.
-    const docks = await page.locator('.chrome-dock').evaluateAll(nodes => nodes.map(n => {
+    // Both docks (device picker bar and service menu) use the same surface, and the left indicators do not overlap the right menu.
+    const docks = await page.locator('.chrome-dock, .devpick__trigger').evaluateAll(nodes => nodes.map(n => {
       const rect = n.getBoundingClientRect();
       return { id: n.id, left: rect.left, right: rect.right, radius: getComputedStyle(n).borderRadius, animation: getComputedStyle(n).animationName };
     }));

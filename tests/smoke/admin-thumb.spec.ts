@@ -13,12 +13,12 @@ test('admin: цвет миниатюры в карусели выбираетс�
     await route.fulfill({ json: { revision, config } });
   });
   await page.goto('./admin');
-  const thumb = page.getByLabel('Цвет миниатюры в карусели', { exact: true });
+  const thumb = page.getByLabel('Цвет миниатюры в каталоге устройств', { exact: true });
   await expect(thumb).toHaveValue('white');
   expect(await thumb.locator('option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value))).toEqual(['blue', 'red', 'yellow', 'white']);
   await thumb.selectOption('red');
   await page.getByRole('button', { name: 'Brick Game', exact: true }).click();
-  const universal = page.getByLabel('Цвет миниатюры в карусели', { exact: true });
+  const universal = page.getByLabel('Цвет миниатюры в каталоге устройств', { exact: true });
   expect(await universal.locator('option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value))).toEqual(['white', 'gray', 'black', 'clear', 'smoke']);
   await universal.selectOption('black');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key');
@@ -27,8 +27,8 @@ test('admin: цвет миниатюры в карусели выбираетс�
   expect([config.toys.mario.thumbShell, config.toys.brickgame.thumbShell]).toEqual(['red', 'black']);
   const game = await context.newPage();
   await game.goto('./?toy=clock99');
-  await expect(game.locator('.toysw__item[data-toy=mario]')).toHaveAttribute('data-shell', 'red');
-  await expect(game.locator('.toysw__universal')).toHaveAttribute('data-shell', 'black');
-  await expect(game.locator('.toysw__item[data-toy=clock99]')).toHaveAttribute('data-shell', 'white');
+  await expect(game.locator('.devpick__card[data-toy=mario]')).toHaveAttribute('data-shell', 'red');
+  await expect(game.locator('.devpick__card[data-toy=brickgame]')).toHaveAttribute('data-shell', 'black');
+  await expect(game.locator('.devpick__card[data-toy=clock99]')).toHaveAttribute('data-shell', 'white');
   await game.close();
 });

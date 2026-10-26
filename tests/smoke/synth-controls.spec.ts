@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
 import { marioUrl } from './url';
+import { closePicker, openPicker } from './picker';
 
 /** «Морской бой»: после включения заставка уходит по кнопке в меню; следующий S./P. начинает партию (заставки игры A нет). */
 async function skipSeaScreens(page: Page): Promise<void> {
@@ -84,16 +85,13 @@ for (const width of [360, 900, 1440]) {
     await page.goto(marioUrl('?view=full'));
     await expect(page.locator('.site-brand img')).toBeVisible();
     await expect(page.locator('#topleft img')).toHaveCount(0);
-    await expect(page.locator('.toysw__item[data-shell=white]')).toHaveCount(7);
-    for (const direction of ['Следующие модели','Предыдущие модели']) {
-      await page.getByRole('button',{name:direction}).click();
-      for (const label of await page.locator('.toysw__carousel .toysw__name').all()) await expect(label).toBeVisible();
-      const fits = await page
-        .locator('.toysw__carousel .toysw__name')
-        .evaluateAll((nodes) => nodes.every((n) => n.scrollWidth <= n.clientWidth + 1));
-      expect(fits).toBe(true);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    }
+    await expect(page.locator('.devpick__card[data-shell=white]')).toHaveCount(7);
+    await openPicker(page);
+    for (const label of await page.locator('.devpick__model').all()) await expect(label).toBeVisible();
+    const fits = await page.locator('.devpick__model').evaluateAll((nodes) => nodes.every((n) => n.scrollWidth <= n.clientWidth + 1));
+    expect(fits).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await closePicker(page);
   });
 }
 

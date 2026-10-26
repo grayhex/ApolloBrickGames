@@ -3,7 +3,7 @@ import { describeSource, type Bindings } from '../input/bindings';
 import type { GamepadStatus } from '../input/gamepad';
 
 /** Почему игра на паузе (для подсказки в оверлее). */
-export type SuspendReason = 'hidden' | 'blur' | 'gamepad' | 'settings' | null;
+export type SuspendReason = 'hidden' | 'blur' | 'gamepad' | 'settings' | 'picker' | null;
 
 export interface OverlayView {
   title: string;
@@ -46,7 +46,9 @@ export function overlayView(state: GameState, reason: SuspendReason): OverlayVie
             ? 'Геймпад отключён — игра поставлена на паузу. '
             : reason === 'settings'
               ? 'Открыты настройки. '
-              : '';
+              : reason === 'picker'
+                ? 'Открыта коллекция устройств. '
+                : '';
       return { title: 'Пауза', hint: cause + RESUME_HINT, action: 'Продолжить' };
     }
     case 'dead':

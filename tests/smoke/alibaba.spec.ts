@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { chooseToy, closePicker, openPicker, pickerCard, pickerPanel, pickerTrigger } from './picker';
 
 async function exhibit(page: Page, query = '&view=full'): Promise<void> {
   await page.goto(`./?toy=alibaba${query}`);
@@ -6,34 +7,39 @@ async function exhibit(page: Page, query = '&view=full'): Promise<void> {
   await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
 }
 
-test('прокрутка карусели сохраняет игру, ссылки переключают корпус и работают с историей браузера', async ({ page }) => {
+test('открытый каталог устройств сохраняет игру, ссылки переключают корпус и работают с историей браузера', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./?toy=clock99&power=on');
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
-  await expect(page.locator('#real-models .toysw__item')).toHaveCount(8);
-  await page.getByRole('button',{name:'Следующие модели'}).click();
+  await expect(page.locator('.devpick__card')).toHaveCount(9);
+  await openPicker(page);
+  await closePicker(page);
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
-  await expect(page.locator('#real-models .toysw__item')).toHaveCount(8);
-  await page.locator('.toysw__item[data-toy=alibaba]').click();
+  await expect(page.locator('.devpick__card')).toHaveCount(9);
+  await chooseToy(page, 'alibaba');
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
   await expect(page.locator('.alibaba-key')).toHaveCount(8);
   await page.goBack();
-  await expect(page.locator('.toysw__item[data-toy=clock99]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.devpick__card[data-toy=clock99]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('.alibaba-key')).toHaveCount(0);
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
   await page.goForward();
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'alibaba');
-  await expect(page.locator('.toysw__item[data-toy=alibaba]')).toHaveAttribute('aria-current', 'page');
-  await page.locator('.toysw__item[data-toy=alibaba]').focus();
+  await expect(page.locator('.devpick__card[data-toy=alibaba]')).toHaveAttribute('aria-current', 'page');
+  await pickerTrigger(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(pickerCard(page, 'alibaba')).toBeFocused();
   await page.keyboard.press('ArrowRight');
-  await expect(page.locator('.toysw__item[data-toy=minibrick]')).toBeFocused();
+  await expect(pickerCard(page, 'minibrick')).toBeFocused();
   await page.keyboard.press('Home');
-  await page.locator('.toysw__item[data-toy=mario]').click();
+  await expect(pickerCard(page, 'mario')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(pickerPanel(page)).toBeHidden();
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'ready');
   await expect(page.locator('#lid-cover .lid__logo--red')).toHaveAttribute('src', /apollo-logo/);
   await expect(page.locator('#lid-cover image')).toHaveCount(0);
@@ -85,12 +91,14 @@ test('на узких экранах оба семейства помещают�
     await page.setViewportSize({ width, height: 740 });
     await exhibit(page);
     await page.addStyleTag({ content: "*{font-family:'DejaVu Sans',sans-serif !important}" });
-    for (const direction of ['Следующие модели', 'Предыдущие модели']) {
-      await page.getByRole('button',{name:direction}).click();
-      const menu = (await page.locator('#toy-switch').boundingBox())!;
-      expect(menu.x).toBeGreaterThanOrEqual(0);
-      expect(menu.x + menu.width).toBeLessThanOrEqual(width + 1);
-    }
+    const menu = (await page.locator('#toy-switch').boundingBox())!;
+    expect(menu.x).toBeGreaterThanOrEqual(0);
+    expect(menu.x + menu.width).toBeLessThanOrEqual(width + 1);
+    await openPicker(page);
+    const panel = (await pickerPanel(page).boundingBox())!;
+    expect(panel.x).toBeGreaterThanOrEqual(0);
+    expect(panel.x + panel.width).toBeLessThanOrEqual(width + 1);
+    await closePicker(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     const keys = await page.locator('.alibaba-key').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().bottom));
     expect(Math.max(...keys)).toBeLessThan(740 - 80);
