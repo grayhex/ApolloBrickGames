@@ -4762,7 +4762,7 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
   --devpick-w: 760px; --devpick-left: 0px; --devpick-max: 560px;
   position: absolute; top: calc(100% + 8px); left: var(--devpick-left); z-index: 31;
   display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; width: var(--devpick-w); max-width: calc(100vw - 24px); max-height: var(--devpick-max); padding: 14px 14px 10px;
-  color: var(--text); background: color-mix(in srgb, var(--panel) 98%, transparent); border: 1px solid var(--corner-line); border-radius: 14px;
+  color: var(--text); background: var(--panel); border: 1px solid var(--corner-line); border-radius: 14px;
   box-shadow: 0 18px 48px rgb(0 0 0 / 38%), inset 0 1px rgb(255 255 255 / 5%);
   animation: devpick-in 150ms cubic-bezier(.2, .8, .2, 1) both; touch-action: none; /* жест на шапке и поиске не прокручивает страницу под каталогом */
 }
