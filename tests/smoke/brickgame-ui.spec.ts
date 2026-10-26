@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
 import { universalGames, validateConfig } from '../../src/config/schema';
+import { chooseToy, closePicker, openPicker, pickerCard } from './picker';
 
 const area = (page: Page, name: string) => page.locator('#game-area').getAttribute(`data-${name}`);
 
@@ -25,14 +26,14 @@ async function open(page: Page, query: string, edit?: (config: ReturnType<typeof
 test('сайт без параметра открывает универсальный Brick Game, Crocodile Mario — по ?toy=mario', async ({ page }) => {
   await open(page, '');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'brickgame');
-  await expect(page.locator('.toysw__universal')).toHaveAttribute('aria-current', 'page');
+  await expect(pickerCard(page, 'brickgame')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('h1')).toHaveText('Brick Game'); // заголовок страницы следует за открытой игрушкой
-  await page.locator('.toysw__item[data-toy=mario]').click();
+  await chooseToy(page, 'mario');
   await expect(page.locator('h1')).toHaveText('Crocodile Mario');
   await expect(page).toHaveURL(/\?toy=mario$/);
-  await expect(page.locator('.toysw__item[data-toy=mario]')).toHaveAttribute('aria-current', 'page');
+  await expect(pickerCard(page, 'mario')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#toy')).not.toHaveAttribute('data-model', 'brickgame');
-  await page.locator('.toysw__universal').click();
+  await chooseToy(page, 'brickgame');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'brickgame');
   expect(new URL(page.url()).search).toBe('');
 });
@@ -177,18 +178,19 @@ test('пульт Mario: дубль ON/OFF и START / PAUSE (RESET у Mario не�
   await expect(remote).toBeHidden();
 });
 
-test('карусель: «Alibaba Dance 99 in 1» в одну строку; цвет миниатюр берётся из настройки', async ({ page }) => {
+test('каталог: «Alibaba Dance 99 in 1» помещается в карточку; цвет миниатюр берётся из настройки', async ({ page }) => {
   await open(page, '?toy=brickgame', (config) => {
     config.toys.tank168.thumbShell = 'red';
     config.toys.clock99.thumbShell = 'yellow';
   });
-  const name = page.locator('.toysw__item[data-toy=alibaba] .toysw__name');
+  await openPicker(page);
+  const name = pickerCard(page, 'alibaba').locator('.devpick__model');
   await expect(name).toHaveText('Alibaba Dance 99 in 1');
-  expect(await name.evaluate((node) => getComputedStyle(node).whiteSpace)).toBe('nowrap');
-  expect(await name.evaluate((node) => node.getBoundingClientRect().height)).toBeLessThan(18);
-  await expect(page.locator('.toysw__item[data-toy=tank168]')).toHaveAttribute('data-shell', 'red');
-  await expect(page.locator('.toysw__item[data-toy=clock99]')).toHaveAttribute('data-shell', 'yellow');
-  await expect(page.locator('.toysw__item[data-toy=mario]')).toHaveAttribute('data-shell', 'white');
+  expect(await name.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true); // название не обрезается
+  await expect(pickerCard(page, 'tank168')).toHaveAttribute('data-shell', 'red');
+  await expect(pickerCard(page, 'clock99')).toHaveAttribute('data-shell', 'yellow');
+  await expect(pickerCard(page, 'mario')).toHaveAttribute('data-shell', 'white');
+  await closePicker(page);
 });
 
 test('«Сегменты экрана»: на кнопке «Вкл» яркие светящиеся сегменты, на «Выкл» — тусклые', async ({ page }) => {
@@ -213,13 +215,13 @@ test('пульт: дубли кнопок подсвечиваются при н
 });
 
 for(const [width,height] of [[1280,720],[1440,900],[1920,1080],[2560,1440],[900,900],[390,844]])
-  test(`Brick Game: enlarged screen stays below the carousel at ${width}×${height}`,async({page})=>{
+  test(`Brick Game: enlarged screen stays below the device picker at ${width}×${height}`,async({page})=>{
     await page.setViewportSize({width:width!,height:height!});
     await open(page,'?toy=brickgame&view=screen');await page.locator('body:not([data-booting])').waitFor();
     const [navigation,toy]=await page.locator('#toy-switch,#toy').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
     expect(toy!.top).toBeGreaterThanOrEqual(navigation!.bottom+4);
     if(width!>=1200)expect(toy!.bottom).toBeLessThanOrEqual(height!+1);
-    await page.locator('.toysw__universal').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','brickgame');
+    await chooseToy(page,'brickgame');await expect(page.locator('#toy')).toHaveAttribute('data-model','brickgame');
   });
 
 test('левая справка оставляет одну статичную иллюстрацию и не запускает демонстрацию', async ({ page }) => {
@@ -374,7 +376,7 @@ test('universal Brick Game descriptions separate ROM/AI provenance from alpha/be
   await select.selectOption('maze');await page.locator('#corner-lang').click();await expect(badge).toHaveText('βBeta');
   await page.locator('#corner-theme').click();await expect(badge).toBeVisible();
   await expect(badge).toHaveAttribute('aria-label',/complete game loop/);
-  await page.locator('.toysw__item[data-toy=tank168]').click();await expect(page.locator('#gpanel .game-origin')).toBeVisible();
+  await chooseToy(page,'tank168');await expect(page.locator('#gpanel .game-origin')).toBeVisible();
 });
 
 test('clear and smoke shells reveal decorative electronics, without covering controls',async({page})=>{
@@ -392,10 +394,10 @@ test('clear and smoke shells reveal decorative electronics, without covering con
  await page.locator('#view-screen').click();await expect(page.locator('.classic__pcb')).toBeHidden();
  await expect(page.locator('.classic__count')).toBeHidden();
  for(let cycle=0;cycle<3;cycle++){
-  await page.locator('.toysw__item[data-toy=mario]').click();
-  await expect(page.locator('.toysw__item[data-toy=mario]')).toHaveAttribute('aria-current','page');
+  await chooseToy(page, 'mario');
+  await expect(pickerCard(page, 'mario')).toHaveAttribute('aria-current','page');
   await expect(page.locator('.classic__pcb,.classic__glass')).toHaveCount(0);
-  await page.locator('.toysw__universal').click();
+  await chooseToy(page, 'brickgame');
   await expect(page.locator('#toy')).toHaveAttribute('data-model','brickgame');
   await expect(page.locator('.classic__pcb')).toHaveCount(1);
   await expect(page.locator('.classic__glass')).toHaveCount(1);

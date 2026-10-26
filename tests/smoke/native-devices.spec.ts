@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {validateConfig} from '../../src/config/schema';
 import defaults from '../../src/config/default.json' with {type:'json'};
+import { chooseToy, closePicker, openPicker, pickerCard } from './picker';
 
 for(const toy of ['e88','apollo-b0202'] as const){
   test(`${toy}: native LCD, real controls, profiles and clean lifecycle`,async({page})=>{
@@ -33,7 +34,7 @@ for(const toy of ['e88','apollo-b0202'] as const){
     await expect(page.locator('#lower')).toBeHidden();
     const lcd=await page.locator('.native__lcd').boundingBox(),window=await page.locator('.lid__window').boundingBox();
     expect(lcd!.width).toBeCloseTo(window!.width,0);expect(lcd!.height).toBeCloseTo(window!.height,0);
-    await page.locator('.toysw__item[data-toy=clock99]').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','clock99');
+    await chooseToy(page,'clock99');await expect(page.locator('#toy')).toHaveAttribute('data-model','clock99');
     await expect(page.locator('.native__lcd')).toHaveCount(0);await expect(page.locator('#screen')).toBeVisible();
     expect(errors).toEqual([]);expect(external).toEqual([]);
   });
@@ -49,17 +50,19 @@ for(const toy of ['e88','apollo-b0202'] as const){
     await page.locator('.gnav__btn--launch').click();await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
     await page.screenshot({path:testInfo.outputPath(`${toy}-${width}-play.png`),fullPage:true});
     await page.locator('#view-screen').click();await page.screenshot({path:testInfo.outputPath(`${toy}-${width}-screen.png`),fullPage:true});
-    const bounds=await page.locator('.native__lcd').boundingBox(),carousel=await page.locator('.toysw').boundingBox();
-    expect(bounds!.y).toBeGreaterThanOrEqual(carousel!.y+carousel!.height-1);
+    const bounds=await page.locator('.native__lcd').boundingBox(),bar=await page.locator('.devpick').boundingBox();
+    expect(bounds!.y).toBeGreaterThanOrEqual(bar!.y+bar!.height-1);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    // Resizing must reveal the whole selected card, including a long native model name.
+    // Resizing must keep the whole selected card, including a long native model name, inside the catalog list.
     if(width===1440){
       await page.setViewportSize({width:320,height:1000});
+      await openPicker(page);
       await expect.poll(async()=>{
-        const card=await page.locator(`#real-models [data-toy="${toy}"]`).boundingBox();
-        const shelf=await page.locator('#real-models').boundingBox();
-        return !!card&&!!shelf&&card.x>=shelf.x-1&&card.x+card.width<=shelf.x+shelf.width+1;
+        const card=await pickerCard(page,toy).boundingBox();
+        const list=await page.locator('.devpick__scroll').boundingBox();
+        return !!card&&!!list&&card.x>=list.x-1&&card.x+card.width<=list.x+list.width+1;
       }).toBe(true);
+      await closePicker(page);
     }
   });
 }
@@ -97,20 +100,13 @@ for(const entry of ['6','7','8'])test(`E88 ${entry}: labelled library adaptation
  await page.locator('.gnav__btn--launch').click();await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
  await page.locator('#base [data-key=jump]').click();
 });
-test('carousel shows Apollo brands and mouse wheel/drag scroll without selecting a toy',async({page})=>{
+test('catalog shows confirmed Apollo makers and a normal click selects a native model',async({page})=>{
  await page.setViewportSize({width:1280,height:900});await page.goto('./?toy=mario');
- await expect(page.locator('#real-models .toysw__maker')).toHaveText(['Apollo','Apollo','Apollo','Apollo']);
- const shelf=page.locator('#real-models');await shelf.hover();
- const start=await shelf.evaluate(e=>e.scrollLeft);await page.mouse.wheel(0,160);
- await expect.poll(()=>shelf.evaluate(e=>e.scrollLeft)).toBeGreaterThan(start+30);
- await expect(page.locator('.toysw__item[aria-current=page]')).toHaveAttribute('data-toy','mario');
- const box=(await shelf.boundingBox())!,before=await shelf.evaluate(e=>e.scrollLeft);
- await page.mouse.move(box.x+box.width*.7,box.y+box.height/2);await page.mouse.down();
- await page.mouse.move(box.x+box.width*.2,box.y+box.height/2,{steps:10});await page.mouse.up();
- await expect.poll(()=>shelf.evaluate(e=>e.scrollLeft)).toBeGreaterThan(before+30);
- await expect(page.locator('.toysw__item[aria-current=page]')).toHaveAttribute('data-toy','mario');
- // A normal click after dragging remains functional.
- await page.locator('#real-models [data-toy=e88]').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','e88');
+ await openPicker(page);
+ for(const id of ['mario','clock99','seabattle','tank168','apollo-b0202'])await expect(pickerCard(page,id).locator('.devpick__maker')).toHaveText('Apollo');
+ await expect(pickerCard(page,'e88').locator('.devpick__maker')).toHaveText('Brick Game');
+ await expect(page.locator('.devpick__card[aria-current=page]')).toHaveAttribute('data-toy','mario');
+ await pickerCard(page,'e88').click();await expect(page.locator('#toy')).toHaveAttribute('data-model','e88');
 });
 
 test('B0202 starts each restored base game and keeps Dice 02 behind MODE',async({page})=>{

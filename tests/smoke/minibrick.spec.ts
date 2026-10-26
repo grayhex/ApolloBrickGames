@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { marioUrl } from './url';
+import { chooseToy, closePicker, openPicker, pickerCard, pickerPanel, pickerTrigger } from './picker';
 
 /** Консоль игрушки (`?debug`): только простые значения, которые можно передать из страницы. */
 const debug = (page: Page): Promise<{ introDone: boolean; gameId: string; gameNumber: number }> =>
@@ -116,7 +117,7 @@ test('переключение Mini → Alibaba → Apollo восстанавл�
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./?toy=minibrick&view=full');
   await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(1);
-  await page.locator('.toysw__item[data-toy=alibaba]').click();
+  await chooseToy(page, 'alibaba');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'alibaba');
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'white');
   await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(0);
@@ -128,7 +129,7 @@ test('переключение Mini → Alibaba → Apollo восстанавл�
   await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(1);
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
-  await page.locator('.toysw__item[data-toy=seabattle]').click();
+  await chooseToy(page, 'seabattle');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'seabattle');
   await expect(page.locator('#game-area .minibrick-lcd')).toHaveCount(0);
   await expect(page.locator('#lid-cover image')).toHaveCount(0);
@@ -136,21 +137,25 @@ test('переключение Mini → Alibaba → Apollo восстанавл�
   expect(errors).toEqual([]);
 });
 
-test('две модели в «Другие» доступны на телефоне, LCD и кнопка питания остаются в границах', async ({ page }) => {
+test('модели без производителя доступны в каталоге на телефоне, LCD и кнопка питания остаются в границах', async ({ page }) => {
   for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 740 });
     await page.goto('./?toy=minibrick&view=full');
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
     await page.addStyleTag({ content: "*{font-family:'DejaVu Sans',sans-serif !important}" });
-    const links = page.locator('#real-models .toysw__item[data-toy=alibaba], #real-models .toysw__item[data-toy=minibrick]');
-    await expect(links).toHaveCount(2);
-    for (const link of await links.all()) {
+    const bar = (await pickerTrigger(page).boundingBox())!;
+    expect(bar.x).toBeGreaterThanOrEqual(0);
+    expect(bar.x + bar.width).toBeLessThanOrEqual(width);
+    await openPicker(page);
+    for (const id of ['alibaba', 'minibrick']) {
+      const link = pickerCard(page, id);
       await link.scrollIntoViewIfNeeded();
       const box = (await link.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
       expect(box.width).toBeGreaterThan(50);
     }
+    await closePicker(page);
     const onoff = (await page.locator('[data-key=onoff]').boundingBox())!;
     expect(onoff.y + onoff.height).toBeLessThan(660);
     const lcd = (await page.locator('#game-area .minibrick-lcd').boundingBox())!;
@@ -175,15 +180,18 @@ test('Mini Brick Game: «только экран» — касание включ
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'playing');
 });
 
-test('группа «Другие» не перекрывает системное меню запущенной Apollo', async ({ page }) => {
+test('каталог устройств открывается над запущенной Apollo, помещается в окно и не выключает её', async ({ page }) => {
   for (const width of [900, 1024, 1200, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(marioUrl('?power=on'));
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
-    await page.getByRole('button',{name:'Следующие модели'}).click();
-    const menu = (await page.locator('#toy-switch').boundingBox())!;
-    const corner = (await page.locator('.corner').boundingBox())!;
-    expect(menu.y >= corner.y + corner.height || menu.x >= corner.x + corner.width).toBe(true);
+    await openPicker(page);
+    const panel = (await pickerPanel(page).boundingBox())!;
+    expect(panel.x).toBeGreaterThanOrEqual(0);
+    expect(panel.x + panel.width).toBeLessThanOrEqual(width);
+    expect(panel.y + panel.height).toBeLessThanOrEqual(900);
+    await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+    await closePicker(page);
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
   }
 });

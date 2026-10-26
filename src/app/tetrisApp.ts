@@ -18,6 +18,7 @@ import { CornerNav } from './cornerNav';
 import { InfoPanel } from './infoPanel';
 import { openEncyclopedia } from './help';
 import { InputHub } from './hub';
+import { onInputLock } from './inputLock';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { applyStatic, getLang, setLang, t } from './i18n';
 import type { LedState } from './leds';
@@ -384,6 +385,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     if (document.hidden) suspend();
   }, { signal });
   window.addEventListener('blur', suspend, { signal });
+  onInputLock((locked) => { if (locked) suspend(); }, signal); // открыт каталог устройств: партия на паузе
   window.addEventListener('gamepadconnected', () => hub.poll(), { signal });
   window.addEventListener('gamepaddisconnected', () => hub.poll(), { signal });
   hub.attach();

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import defaults from '../../src/config/default.json' with { type: 'json' };
 import { validateConfig } from '../../src/config/schema';
+import { chooseToy, closePicker, openPicker, pickerCard, pickerPanel } from './picker';
 
 test('universal console boots, synthesizes a greeting, supports FIRE and returns to menu with RESET', async ({ page }) => {
   const config = validateConfig(defaults);
@@ -27,7 +28,7 @@ test('universal console boots, synthesizes a greeting, supports FIRE and returns
   await page.locator('#shell-picker [data-shell=black]').click();
   await expect(page.locator('#toy')).toHaveAttribute('data-shell', 'black');
   expect(await page.locator('#toy').evaluate((node) => getComputedStyle(node).backgroundImage)).not.toBe(gray);
-  await expect(page.locator('.toysw__universal')).toHaveAttribute('data-shell', 'white');
+  await expect(page.locator('.devpick__card[data-toy=brickgame]')).toHaveAttribute('data-shell', 'white');
   await page.locator('#shell-picker [data-shell=gray]').click();
   await page.locator('[data-key=onoff]').click();
   await expect(page.locator('html')).toHaveAttribute('data-oscillators', /[1-9]/);
@@ -46,17 +47,17 @@ test('universal console boots, synthesizes a greeting, supports FIRE and returns
   await expect(page.locator('#lower')).toBeHidden();
   await page.locator('#view-full').click();
   await expect(page.locator('[data-action=reset]')).toBeVisible();
-  await page.locator('.toysw__item[data-toy=clock99]').click();
+  await chooseToy(page, 'clock99');
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('.toy__hinge')).toBeVisible();
   await expect(page.locator('.classic__key')).toHaveCount(0);
-  await page.locator('.toysw__item[data-toy=brickgame]').click();
+  await chooseToy(page, 'brickgame');
   await expect(page.locator('.classic__key')).toHaveCount(6);
   expect(errors).toEqual([]);
 });
 
 for (const width of [320, 360, 900, 1440])
-  test(`brand and carousel at ${width}px on both themes`, async ({ page }) => {
+  test(`brand and device picker at ${width}px on both themes`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('./?toy=brickgame');
     // Include the additional controller indicator in the narrowest layout.
@@ -83,12 +84,16 @@ for (const width of [320, 360, 900, 1440])
           expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top).toBe(true);
         }
       const scrollBefore = await page.evaluate(() => scrollY);
-      await page.getByRole('button', { name: 'Следующие модели' }).click();
+      await openPicker(page);
       expect(await page.evaluate(() => scrollY)).toBe(scrollBefore);
-      await expect(page.locator('.toysw__universal')).toHaveAttribute('aria-current', 'page');
-      await page.locator('.toysw__item[data-toy=minibrick]').focus();
+      await expect(pickerCard(page, 'brickgame')).toHaveAttribute('aria-current', 'page');
+      const panel = (await pickerPanel(page).boundingBox())!;
+      expect(panel.x).toBeGreaterThanOrEqual(0);
+      expect(panel.x + panel.width).toBeLessThanOrEqual(width + 1);
+      await pickerCard(page, 'minibrick').focus();
       await page.keyboard.press('Home');
-      await expect(page.locator('.toysw__item[data-toy=mario]')).toBeFocused();
+      await expect(pickerCard(page, 'mario')).toBeFocused();
+      await closePicker(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       await page.locator('#corner-theme').click();
     }

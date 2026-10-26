@@ -16,6 +16,7 @@ import {
   type StorageLike,
 } from '../input/settings';
 import { ActionTracker } from '../input/tracker';
+import { isInputLocked, onInputLock } from './inputLock';
 
 export interface InputHubOptions {
   /** Куда подписывать клавиатуру (window). */
@@ -45,6 +46,7 @@ export class InputHub {
   private readonly provider: GamepadProvider;
   private boundKeys: Set<SourceId>;
   private saved = true;
+  private readonly offLock: () => void;
 
   constructor(options: InputHubOptions) {
     this.storage = options.storage;
@@ -53,7 +55,7 @@ export class InputHub {
     this.boundKeys = boundSources(this.settings.keyboard);
 
     this.keyboard = new KeyboardInput(options.keyboardTarget, {
-      isActive: options.isKeyboardActive,
+      isActive: () => !isInputLocked() && options.isKeyboardActive(),
       isBound: (source) => this.boundKeys.has(source),
       onSources: (down) => {
         const mask = maskOfSources(down, compileBindings(this.settings.keyboard));
@@ -76,6 +78,12 @@ export class InputHub {
         options.onGamepadStatus?.(status);
       },
       ...(options.onGamepadDisconnect ? { onDisconnect: options.onGamepadDisconnect } : {}),
+    });
+    // Пока открыт каталог устройств, ввод в игру не идёт; при блокировке то, что было зажато, отпускается, а при разблокировке геймпад заново берёт нейтральное состояние.
+    this.offLock = onInputLock((locked) => {
+      this.resetDevices();
+      this.tracker.reset();
+      if (!locked) this.gamepad.sync();
     });
   }
 
@@ -101,12 +109,14 @@ export class InputHub {
 
   /** Снять клавиатуру со страницы (игрушка на странице меняется на другую). */
   detach(): void {
+    this.offLock();
     this.keyboard.detach();
     this.screen.releaseAll();
   }
 
   /** Опрос устройств; вызывается каждый кадр отрисовки, в том числе на паузе. */
   poll(): void {
+    if (isInputLocked()) return;
     this.gamepad.poll();
   }
 

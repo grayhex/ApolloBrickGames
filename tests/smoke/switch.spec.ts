@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { marioUrl, mockReadOnlyLeaderboard } from './url';
+import { chooseToy } from './picker';
 
 /**
  * Четвёртая игрушка «168 в 1 танк», переключение игрушек на месте (без перезагрузки страницы: цвет, вид и питание сохраняются, шапка и каркас
@@ -32,10 +33,10 @@ async function ready(page: Page, query: string): Promise<void> {
 
 /** Переход на игрушку через переключатель в шапке и ожидание, пока она запустилась. */
 async function switchTo(page: Page, toy: string): Promise<void> {
-  await page.locator(`.toysw__item[data-toy="${toy}"]`).click();
+  await chooseToy(page, toy);
   if (toy === 'mario') await expect(page.locator('body')).not.toHaveAttribute('data-toy', /.+/);
   else await expect(page.locator('body')).toHaveAttribute('data-toy', toy);
-  await expect(page.locator(`.toysw__item[data-toy="${toy}"]`)).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator(`.devpick__card[data-toy="${toy}"]`)).toHaveAttribute('aria-current', 'page');
   await expect.poll(phase(page)).toBe('ready');
   await expect.poll(() => area(page, 'boot').then((boot) => boot !== 'on')).toBe(true);
   if (toy !== 'mario') await expect(page.locator('#toy')).toHaveAttribute('data-model', toy);
@@ -201,12 +202,12 @@ test.describe('переключение игрушек на месте', () => {
     expect(await alive()).toEqual({ alive: 'да', brand: 'тот же', lid: 'тот же', loads: 1 });
     // История: «назад» — к «168 в 1 танк», ещё раз — к «Часам+99», «вперёд» — снова к «168 в 1 танк»; всё без перезагрузки.
     await page.goBack();
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'tank168');
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'tank168');
     await expect.poll(phase(page)).toBe('ready');
     await page.goBack();
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
     await page.goForward();
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'tank168');
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'tank168');
     await expect(page.locator('#toy')).toHaveAttribute('data-model', 'tank168');
     expect((await alive()).alive).toBe('да');
   });
@@ -308,21 +309,21 @@ test.describe('переключение игрушек на месте', () => {
     page,
   }) => {
     await ready(page, '?power=on');
-    const hrefs = await page.locator('.toysw__item').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+    const hrefs = await page.locator('.devpick__card').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
     expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual([
-      '', // универсальный Brick Game — страница без параметра
-      '?toy=mario',
+      '?toy=mario', // порядок каталога: Apollo, затем Brick Game, затем модели без категории
       '?toy=clock99',
       '?toy=seabattle',
       '?toy=tank168',
+      '?toy=apollo-b0202',
+      '', // универсальный Brick Game — страница без параметра
+      '?toy=e88',
       '?toy=alibaba',
       '?toy=minibrick',
-      '?toy=e88',
-      '?toy=apollo-b0202',
     ]);
     // Щелчок посылается событием: после обработчика переключателя фиксируем, отменено ли действие по умолчанию (и отменяем сами, чтобы страница не ушла).
     const prevented = await page.evaluate(() => {
-      const link = document.querySelector<HTMLAnchorElement>('.toysw__item[data-toy="tank168"]');
+      const link = document.querySelector<HTMLAnchorElement>('.devpick__card[data-toy="tank168"]');
       if (!link) throw new Error('нет ссылки');
       const result: Record<string, boolean> = {};
       const probe = (event: Event): void => {
@@ -343,7 +344,7 @@ test.describe('переключение игрушек на месте', () => {
       return result;
     });
     expect(prevented).toEqual({ ctrl: false, shift: false, meta: false, middle: false });
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'mario'); // ничего не переключилось
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'mario'); // ничего не переключилось
     await expect(page).toHaveURL(/toy=mario/);
     // Обычный щелчок переключатель перехватывает: игрушка меняется на месте.
     await switchTo(page, 'tank168');
@@ -351,8 +352,8 @@ test.describe('переключение игрушек на месте', () => {
 
   test('быстрые переключения подряд не ломают страницу: побеждает последний выбор', async ({ page }) => {
     await ready(page, '?power=on&view=full');
-    for (const toy of ['clock99', 'seabattle', 'tank168', 'mario', 'clock99']) await page.locator(`.toysw__item[data-toy="${toy}"]`).click();
-    await expect(page.locator('.toysw__item[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
+    for (const toy of ['clock99', 'seabattle', 'tank168', 'mario', 'clock99']) await chooseToy(page, toy);
+    await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'clock99');
     await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
     await expect.poll(phase(page)).toBe('ready');
     await expect(page).toHaveURL(/\?toy=clock99$/);
