@@ -336,6 +336,7 @@ export class BrickConsole implements BrickGame {
       speed: this.menuSpeed + 1,
       level: this.menuLevel + 1,
       mode: this.selectedMode,
+      ...(this.menuStyle === 'sea' ? { seaLayout: true } : {}),
       ...(this.nativeMenu==='e88' ? {rotationDirection:this.rotationDirection} : {}),
     });
     return this.current.start();

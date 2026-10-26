@@ -116,3 +116,31 @@ test('корпус по фото: кнопки меньше и в лунках, 
   for (const xs of rowsOfHoles) expect(xs[0]! + xs[xs.length - 1]!).toBeCloseTo(400, 1);
   expect(await page.locator('#base .base__hole--faint').count()).toBe(4 + 4 + 2);
 });
+
+test('F01 uses the photographed brick wall and left serve; paused cup is clean vector art', async ({page}) => {
+  const errors: string[]=[]; page.on('pageerror',e=>errors.push(e.message));
+  await key(page,'jump').click(); // intro -> A
+  for(let i=0;i<5;i++) await key(page,'jump').click();
+  await expect.poll(()=>area(page,'symbol')).toBe('F');
+  await key(page,'sp').click();
+  await page.waitForFunction('window.__brick.game !== null');
+  await page.evaluate('window.__brick.game.pause()');
+  expect((await rows(page)).slice(4,9)).toEqual(['.########.','..######..','.########.','..######..','.########.']);
+  expect((await rows(page))[19]).toBe('.####.....');
+  expect(await brick(page,b=>[...b.preview()!])).toEqual([1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]);
+  await page.waitForTimeout(100); expect(errors).toEqual([]);
+});
+
+test('construction divider stays visible with power off while matrix pixels clear', async ({page}) => {
+  await key(page,'onoff').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-power','off');
+  await expect(page.locator('#screen')).toBeVisible();
+  const pixels=await page.locator('#screen').evaluate((el)=>{
+    const c=el as HTMLCanvasElement,ctx=c.getContext('2d')!;
+    const scale=Math.min(c.width/264,c.height/320),left=(c.width-264*scale)/2;
+    const alpha=(x:number)=>ctx.getImageData(Math.floor(left+x*scale),Math.floor(c.height/2),1,1).data[3];
+    return {divider:alpha(162.5),matrix:alpha(40),panel:alpha(210)};
+  });
+  expect(pixels.divider).toBeGreaterThan(100); // subpixel antialiasing at non-integer LCD scale
+  expect(pixels.matrix).toBe(0); expect(pixels.panel).toBe(0);
+});

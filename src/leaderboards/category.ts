@@ -8,6 +8,9 @@ import { rulesetFor } from '../games/rulesets';
 /** Default revision for unchanged games; use rulesetFor(gameId,Number(mode)) for selections. */
 export const RULESET_VERSION = '1';
 export const STANDARD_START = 'standard-v1';
+export const SEA_ARKANOID_START = 'sea-arkanoid-photo-v1';
+export const startProfileFor = (gameId: string, toyId: string, mode = 0): string =>
+  gameId === 'arkanoid' && toyId === 'seabattle' && mode === 0 ? SEA_ARKANOID_START : STANDARD_START;
 export interface RankingSpec {
   profileId?: string;
   variantId?: string;
@@ -65,8 +68,8 @@ export function selection(value: unknown): RunSelection {
   )
     throw new Error('Invalid canonical mode or controls');
   const revision = rulesetFor(gameId,Number(mode));
-  if (v['rulesetVersion'] !== revision || v['startProfile'] !== STANDARD_START) throw new Error('Unsupported rules/start profile');
-  return { gameId, mode: Number(mode), toyId, rulesetVersion: revision, startProfile: STANDARD_START };
+  if (v['rulesetVersion'] !== revision || v['startProfile'] !== startProfileFor(gameId, toyId, Number(mode))) throw new Error('Unsupported rules/start profile');
+  return { gameId, mode: Number(mode), toyId, rulesetVersion: revision, startProfile: startProfileFor(gameId, toyId, Number(mode)) };
 }
 export function specFor(value: unknown): RankingSpec {
   const s = selection(value);
@@ -89,7 +92,7 @@ export function validateCategory(value: unknown): string {
   }
   if (parts.length !== 5) throw new Error('Invalid category');
   const [gameId, mode, rules, startProfile, controls] = parts;
-  const toyId = controls === 'mario' ? 'mario' : controls === 'matrix-fire' ? 'brickgame' : 'clock99';
+  const toyId = controls === 'mario' ? 'mario' : controls === 'matrix-fire' ? 'brickgame' : startProfile === SEA_ARKANOID_START ? 'seabattle' : 'clock99';
   if (
     !/^(0|[1-9]\d*)$/.test(mode ?? '') ||
     rules !== `r${rulesetFor(gameId ?? '',Number(mode))}` ||

@@ -67,6 +67,13 @@ export class BricksWall {
     return wall;
   }
 
+  /** Sea Battle F01, owner's photograph: five alternating rows, 36 bricks. */
+  static seaPhoto(): BricksWall {
+    const wall = new BricksWall(5);
+    for (let y = 0; y < 5; y++) for (let x = y % 2 === 0 ? 1 : 2; x < (y % 2 === 0 ? 9 : 8); x++) wall.setBrick(x, y);
+    return wall;
+  }
+
   /**
    * Случайная стена (`generateBricks`): левая половина ряда случайна (кирпич с вероятностью 2/3), правая — её зеркало;
    * с вероятностью 1/3 стена ещё и симметрична сверху вниз (верхние ряды копируют нижние).

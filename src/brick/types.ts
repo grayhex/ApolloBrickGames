@@ -90,6 +90,8 @@ export interface BrickGameOptions {
   rotationDirection?: 1 | -1;
   /** Native E88 exposes thirteen levels; other profiles retain ten. Internal profile option. */
   levelLimit?: 10 | 13;
+  /** Owner-confirmed Sea Battle Arkanoid opening, isolated from donor presets. */
+  seaLayout?: boolean;
   seed?: number;
   hiScore?: number;
   /** Начальная скорость 1..10 (по умолчанию 1). */

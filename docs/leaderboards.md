@@ -87,3 +87,8 @@ Cookie `__Host-brick_guest`: HttpOnly, Secure, SameSite=Strict, Path=/, без D
 ### Ревизия баланса авторских игр
 
 `rulesetFor(gameId, mode)` учитывает канонический вариант: «Пчёлки» 01 сохраняют ROM-ревизию 2, авторские 02–08 переходят на 3. Остальные изменения баланса и новые таблицы перечислены в [отчёте](brick/balance-review.md#рекорды-и-e88). Локальные ключи, публичное API, клиент и модерация используют одну функцию. Native-профили и неизменённые игры сохраняют свои рекорды.
+
+Sea Battle Arkanoid F01 uses `sea-arkanoid-photo-v1` as its standard start profile, with the owner's
+photographed wall and left serve. Other consoles and modes keep `standard-v1`; neither client nor
+server accepts exchanging these starts. The local Sea F01 record also has its own key. Historical
+shared categories remain available to the unchanged donor starts.

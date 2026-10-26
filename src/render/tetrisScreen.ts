@@ -62,6 +62,8 @@ export interface TetrisScene {
   panelOff?: boolean;
   /** Game A uses preview rods, with NEXT and SPEED captions unlit. */
   navalPanel?: boolean;
+  /** Life rods are not a next-piece preview. */
+  nextLabelOff?: boolean;
 }
 
 /** Мигающие клетки: полпериода в тактах. */
@@ -80,11 +82,11 @@ const SEA = {
   /** Середина панели: на ней стоят подписи NEXT, SPEED, LEVEL, сетка NEXT, цифры SPEED/LEVEL и чашка. */
   cx: 209.7,
   label: { size: 13.5, spacing: 1.1 },
-  score: { hiX: 173, scoreX: 195, baseline: 12.6, digitsX: 174.4, digitsY: 27, w: 10.2, h: 22.3, step: 11.6 },
-  note: { x: 209, y: 69, scale: 1.2 },
+  score: { hiX: 173, scoreX: 195, baseline: 12.6, digitsX: 174.4, digitsY: 27, w: 8.8, h: 22.3, step: 11.6 },
+  note: { x: 209, y: 69, scale: 0.92 },
   next: { label: 97, x: 182, top: 105.5, size: 14 },
   /** Цифры SPEED и LEVEL: старшая (умеет показывать только «1») стоит левее единиц на ширину цифры и просвет. */
-  speed: { label: 182, digitY: 190.5, level: 278, levelDigitY: 231.5, w: 16.4, h: 27.5, x: 207, tensGap: 4 },
+  speed: { label: 182, digitY: 190.5, level: 278, levelDigitY: 231.5, w: 13.5, h: 27.5, x: 207, tensGap: 4 },
 } as const;
 
 /** Хэш для «рассыпания» экрана (детерминированный, без Math.random). */
@@ -147,6 +149,14 @@ export class TetrisScreen {
     this.blank = true;
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (this.options.panel === 'seabattle') {
+      // This separator is part of the LCD construction, not an addressable segment.
+      this.ctx.save();
+      this.ctx.setTransform(this.scale, 0, 0, this.scale, this.offsetX, this.offsetY);
+      this.ctx.globalAlpha = 1; this.ctx.fillStyle = this.options.ink;
+      this.ctx.fillRect(DIVIDER_X, 0, 1.4, SCREEN_HEIGHT);
+      this.ctx.restore();
+    }
   }
 
   /** Шутка со шлейфом: куски экрана гаснут (`level` 0…1); зерно меняется — куски мерцают. */
@@ -175,7 +185,7 @@ export class TetrisScreen {
     const blinkOn = scene.blinkValue === undefined || Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 0;
     const hasPreview = scene.preview !== undefined && scene.preview !== null;
     const pose = this.options.panel === 'classic' ? (scene.mood ?? 'idle') : '';
-    const signature = `${pose}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}|${scene.panelOff === true}`;
+    const signature = `${pose}|${blink}|${scene.clearRows.join(',')}|${scene.overFill}|${scene.next}|${scene.score}|${scene.hiScore}|${scene.speed}|${scene.level}|${scene.sound}|${scene.phase}|${scene.allOn}|${hi}|${blinkOn}|${hasPreview}|${scene.preview?.join('') ?? ''}|${scene.panelOff === true}|${scene.navalPanel === true}|${scene.nextLabelOff === true}`;
     if (
       signature === this.signature &&
       scene.cells.length === this.previousCells.length &&
@@ -233,6 +243,12 @@ export class TetrisScreen {
         ctx.fill();
       }
     } else {
+      // Original Sea LCD has an asymmetric lower/right bevel inside the frame.
+      if (this.options.panel === 'seabattle') {
+        const p = (a: number, b: number): void => ctx.lineTo(x + a * size, y + b * size);
+        ctx.beginPath(); ctx.moveTo(x + .2 * size, y + .8 * size);
+        p(.34,.66); p(.66,.66); p(.66,.34); p(.8,.2); p(.8,.8); ctx.closePath(); ctx.fill();
+      }
       // Прямоугольник и точка в нём.
       ctx.lineWidth = size * 0.11;
       ctx.strokeRect(x + size * 0.1, y + size * 0.1, size * 0.8, size * 0.8);
@@ -328,7 +344,7 @@ export class TetrisScreen {
 
     // NEXT 4 × 4: горит, когда у игры есть превью (следующая фигура, палки анимации игры A).
     const previewOn = !off && scene.preview !== undefined && scene.preview !== null;
-    this.label('NEXT', SEA.cx, SEA.next.label, 'center', segmentAlpha(all || (previewOn && !scene.navalPanel)));
+    this.label('NEXT', SEA.cx, SEA.next.label, 'center', segmentAlpha(all || (previewOn && !scene.navalPanel && !scene.nextLabelOff)));
     const blinkHidden = scene.blinkValue !== undefined && Math.floor(scene.tick / BLINK_HALF_TICKS) % 2 === 1;
     const size = SEA.next.size;
     for (let gy = 0; gy < 4; gy++) {
@@ -341,7 +357,7 @@ export class TetrisScreen {
     // SPEED и LEVEL: подпись, две цифры (старшая показывает только «1») — скорость сверху, уровень снизу, подпись LEVEL под ними.
     const { speed } = SEA;
     const tensX = speed.x - speed.w - speed.tensGap;
-    this.label('SPEED', SEA.cx, speed.label, 'center', segmentAlpha(all || (!off && !scene.navalPanel)));
+    this.label('SPEED', SEA.cx, speed.label, 'center', segmentAlpha(all || (!off && !scene.navalPanel && !scene.nextLabelOff)));
     this.digit(tensX, speed.digitY, speed.w, speed.h, !off && scene.speed >= 10 ? 1 : null, all, true);
     this.digit(speed.x, speed.digitY, speed.w, speed.h, off ? null : scene.speed % 10, all);
     this.digit(tensX, speed.levelDigitY, speed.w, speed.h, !off && scene.level >= 10 ? 1 : null, all, true);
@@ -368,7 +384,7 @@ export class TetrisScreen {
     const ctx = this.ctx;
     ctx.save();
     ctx.letterSpacing = `${SEA.label.spacing}px`;
-    this.text(text, x, baseline, SEA.label.size, alpha, align, false); // upright lettering on the owner close-up
+    this.text(text, x, baseline, text === 'SPEED' || text === 'LEVEL' ? 15.2 : SEA.label.size, alpha, align, false); // upright lettering on the owner close-up
     ctx.restore();
   }
 
@@ -513,7 +529,9 @@ export class TetrisScreen {
     if (alpha <= 0) return;
     const ctx = this.ctx;
     ctx.globalAlpha = alpha;
-    ctx.font = `${italic ? 'italic ' : ''}${italic ? 600 : 700} ${size}px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
+    ctx.font = this.options.panel === 'seabattle'
+      ? `400 ${size}px Arial, sans-serif`
+      : `${italic ? 'italic ' : ''}${italic ? 600 : 700} ${size}px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
     ctx.textAlign = align;
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(text, x, baseline);
@@ -537,7 +555,7 @@ export class TetrisScreen {
     const ctx = this.ctx;
     const existing = onesOnly ? 'bc' : 'abcdefg'; // сегменты, которые у цифры есть физически
     const lit = all ? existing : value === null ? '' : (DIGITS[value] ?? '');
-    const t = Math.max(1.6, w * 0.19);
+    const t = this.options.panel === 'seabattle' ? w * 0.17 : Math.max(1.6, w * 0.19);
     const half = h / 2;
     const seg: Record<string, [number, number, number, number]> = {
       a: [x + t * 0.6, y, w - t * 1.2, t],
@@ -570,7 +588,7 @@ export class TetrisScreen {
     ctx.scale(scale, scale);
     ctx.translate(-cx, -cy);
     ctx.globalAlpha = on ? 1 : GHOST_ALPHA;
-    ctx.lineWidth = 1.7;
+    ctx.lineWidth = this.options.panel === 'seabattle' ? 1.05 : 1.7;
     ctx.beginPath();
     ctx.ellipse(cx - 3.5, cy + 5, 3.8, 2.7, -0.4, 0, Math.PI * 2);
     if (this.options.panel === 'seabattle') ctx.stroke(); else ctx.fill();
