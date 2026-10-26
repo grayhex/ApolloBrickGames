@@ -80,6 +80,11 @@ export interface ToyModel {
   panel: 'clock' | 'sea' | 'seabattle' | 'tank' | 'classic';
   /** `sea` — меню, заставка и анимации «Морского боя» по фото и видео оригинала (`src/brick/seaMenu.ts`, `seaAnimations.ts`). */
   menuStyle?: 'sea';
+  /**
+   * Отливка нижней половины: `sea` — корпус, кнопки (круглые в лунках, стрелки), крестовина и отверстия динамика «Морского боя» (`seaBody.ts`). Владелец: у «Морского боя», «168 в 1 танк» и «Часов+99»
+   * она идентична, различаются только печать (надписи кнопок), экран и цвета. Без поля — общий корпус Crocodile Mario.
+   */
+  cast?: 'sea';
   /** Universal console has a separate FIRE button and no hinge. */
   universal?: boolean;
   /** Оформление рамки вокруг экрана: завитки и ромбик по бокам или цветная линия вплотную к экрану. */
@@ -171,6 +176,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     gameKeys: 'digits',
     glyph: 'star',
     panel: 'clock',
+    cast: 'sea',
     deco: 'flourish',
     leds: true,
     info: true,
@@ -229,6 +235,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     glyph: 'square',
     panel: 'seabattle',
     menuStyle: 'sea',
+    cast: 'sea',
     deco: 'frame',
     leds: false,
     info: true,
@@ -288,6 +295,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     gameKeys: 'digits',
     glyph: 'square',
     panel: 'tank',
+    cast: 'sea',
     deco: 'flourish',
     leds: true,
     info: true,

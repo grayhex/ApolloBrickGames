@@ -85,7 +85,7 @@ export function applyToyModel(model: ToyModel, refs: ToyModelRefs): void {
     const arc = ROUND_ARCS[index];
     if (!arc) return;
     labelText(base.querySelector(`textPath[href="#${arc}"]`), button.top);
-    if (button.bottom) art?.append(extraLabel(ROUND_X[index] ?? 0, 116, button.bottom));
+    if (button.bottom && model.cast !== 'sea') art?.append(extraLabel(ROUND_X[index] ?? 0, 116, button.bottom));
   });
   // Круглые кнопки лежат в разметке в порядке Crocodile Mario; у этой игрушки порядок свой — `data-key` переставляется по месту.
   const rounds = ROUND_DEFAULT.map((key) => base.querySelector<HTMLElement>(`.key--round[data-key="${key}"]`));
@@ -98,11 +98,11 @@ export function applyToyModel(model: ToyModel, refs: ToyModelRefs): void {
   labelText(base.querySelector('[data-lbl="right"]'), labels.right);
   labelText(base.querySelector('[data-lbl="down"]'), labels.down);
   labelText(base.querySelector('[data-lbl="big"]'), labels.big);
-  if (labels.bigBottom) art?.append(extraLabel(292, 268, labels.bigBottom));
+  if (labels.bigBottom && model.cast !== 'sea') art?.append(extraLabel(292, 268, labels.bigBottom));
   // Доступные названия кнопок — как напечатано на корпусе и что они делают; подпись зависит от игрушки и языка, поэтому ставится отсюда, а не из словаря страницы.
   for (const button of base.querySelectorAll<HTMLElement>('.key[data-key]')) button.removeAttribute('data-i18n-attrs');
   relabelKeys(model, base);
-  if (model.menuStyle === 'sea') applySeaBody(base, model); // «Морской бой»: корпус по фото оригинала
+  if (model.cast === 'sea') applySeaBody(base, model); // отливка «Морского боя» (по фото оригинала): у него же, у «168 в 1 танк» и у «Часов+99»
 
   // ── Подбородок: наклейка вместо логотипа Crocodile Mario ───────────────
   for (const logo of base.querySelectorAll('.base__logo')) logo.remove();
