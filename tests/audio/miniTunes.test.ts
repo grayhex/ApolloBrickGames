@@ -4,13 +4,13 @@ import { BRICK_PHRASES } from '../../src/audio/brickPhrases';
 import { MINI_KOROBEINIKI, MINI_KOROBEINIKI_MS } from '../../src/audio/miniTunes';
 
 describe('Mini Brick Game: звук', () => {
-  it('«Коробейники» — один голос, шестнадцать тактов 4/4 (64 доли), равномерная темперация', () => {
+  it('«Коробейники» — один голос, один куплет: восемь тактов 4/4 (32 доли), равномерная темперация', () => {
     expect(MINI_KOROBEINIKI.every((note) => (note.track ?? 0) === 0 && note.wave === undefined && !note.noise)).toBe(true);
-    expect(MINI_KOROBEINIKI_MS).toBe(64 * 400);
+    expect(MINI_KOROBEINIKI_MS).toBe(32 * 400);
     const pitches = MINI_KOROBEINIKI.filter((note) => note.hz > 0).map((note) => Math.round(note.hz));
     expect(pitches[0]).toBe(659); // E5
     expect(Math.max(...pitches)).toBe(880); // A5 в конце
-    expect(Math.min(...pitches)).toBe(415); // G#4
+    expect(Math.min(...pitches)).toBe(440); // A4; the second verse is absent
     expect(BRICK_PHRASES.mini_korobeiniki).toBe(MINI_KOROBEINIKI);
   });
 

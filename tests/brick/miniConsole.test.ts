@@ -40,7 +40,7 @@ describe('Mini Brick Game B-S96: заставка и меню', () => {
     const mini = new MiniConsole();
     expect(mini.powerOn()).toEqual([{ type: 'intro' }]);
     expect(mini.screenStage).toBe('intro');
-    expect(lit(mini.cells())).toBe(0); // сначала пусто
+    expect(lit(mini.cells())).toBeGreaterThan(100); // full portrait from the owner photo
     for (let i = 0; i < 40; i++) mini.menu(makeBrickInput());
     const face = mini.cells();
     expect(lit(face)).toBeGreaterThan(20);
@@ -65,10 +65,10 @@ describe('Mini Brick Game B-S96: заставка и меню', () => {
     expect(viaStart.screenStage).toBe('menu');
   });
 
-  it('кадры заставки: рожица моргает и меняется, затем «96» неподвижно', () => {
+  it('портрет держится три секунды, затем «96» неподвижно', () => {
     const frames = new Set<string>();
     for (let t = 0; t < MINI_FACE_TICKS; t++) frames.add(Array.from(miniIntroField(t)).join(''));
-    expect(frames.size).toBe(5); // пусто, глаза открыты, моргнула, подмигнула, улыбка
+    expect(frames.size).toBe(1); // static owner-reference portrait
     expect(Array.from(miniIntroField(MINI_FACE_TICKS + 500))).toEqual(Array.from(miniNumberField(96)));
     for (const field of [miniIntroField(0), miniIntroField(MINI_FACE_TICKS)]) expect(field).toHaveLength(BRICK_CELLS);
   });
@@ -103,7 +103,7 @@ describe('Mini Brick Game B-S96: заставка и меню', () => {
 });
 
 describe('Mini Brick Game B-S96: партии', () => {
-  it('00 и 01 запускают гонки (две и три полосы), 02 — тетрис; настройки меню попадают в игру', () => {
+  it('00 и 01 запускают гонки с разной формой машины, 02 — тетрис; настройки меню попадают в игру', () => {
     const racing = menu({ game: 0 });
     for (let i = 0; i < 3; i++) racing.menu(press('left'));
     for (let i = 0; i < 4; i++) racing.menu(press('right'));
@@ -111,11 +111,11 @@ describe('Mini Brick Game B-S96: партии', () => {
     expect(racing.screenStage).toBe('game');
     expect(racing.game?.id).toBe('racing');
     expect(racing.displayLevel).toBe(3);
-    expect(racing.displaySpeed).toBe(4);
+    expect(racing.displaySpeed).toBe(0); // flag scene; racing acceleration starts at 1 afterward
     const three = menu({ game: 1 });
     three.start();
     expect(three.game?.id).toBe('racing');
-    expect(three.game!.cells()).not.toEqual(racing.game!.cells());
+    expect(three.game!.cells()).toEqual(racing.game!.cells()); // identical start flag for both variants
     const blocks = menu({ game: 2 });
     blocks.start();
     expect(blocks.game?.id).toBe('tetris');
@@ -166,4 +166,14 @@ describe('Mini Brick Game B-S96: партии', () => {
     mini.start();
     expect(mini.hiScore).toBe(300);
   });
+});
+
+it('idle fruit meter fills bottom-up, drains top-down and alternates point/line records every half-second from power-on',()=>{
+ const mini=new MiniConsole();mini.powerOn();expect(mini.idleDisplay).toEqual({scale:1,lines:false});
+ const step=(n:number)=>{for(let i=0;i<n;i++)mini.menu(makeBrickInput());};
+ step(30);expect(mini.idleDisplay).toEqual({scale:2,lines:true});
+ step(330);expect(mini.idleDisplay).toEqual({scale:13,lines:false});
+ step(30);expect(mini.idleDisplay).toEqual({scale:12,lines:true});
+ step(360);expect(mini.idleDisplay).toEqual({scale:0,lines:true});
+ step(30);expect(mini.idleDisplay).toEqual({scale:1,lines:false});
 });
