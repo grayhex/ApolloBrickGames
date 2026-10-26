@@ -4,12 +4,14 @@ import { validateConfig, universalGames, CONFIG_TOY_IDS, type SiteConfig } from 
 import { GAMES } from '../games/catalog';
 import { TOYS } from '../app/toys';
 import { setDefaultLang } from '../input/lang';
+import { setDeviceOverrides } from '../app/deviceCatalog';
 export const defaultConfig = (): SiteConfig => validateConfig(raw);
 let currentConfig: SiteConfig | undefined;
 export const getConfig = (): SiteConfig => currentConfig ?? defaultConfig();
 export function applyConfig(config: SiteConfig): void {
   currentConfig = config;
   setDefaultLang(config.language);
+  setDeviceOverrides(config.catalog);
   for (const id of CONFIG_TOY_IDS) {
     const model = TOYS[id],
       settings = config.toys[id];

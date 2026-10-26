@@ -311,15 +311,16 @@ test.describe('переключение игрушек на месте', () => {
     await ready(page, '?power=on');
     const hrefs = await page.locator('.devpick__card').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
     expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual([
-      '?toy=mario', // порядок каталога: Apollo, затем Brick Game, затем модели без категории
+      '?toy=mario', // порядок каталога: Apollo, TAKSUN, затем Brick Game (в порядке регистрации)
       '?toy=clock99',
       '?toy=seabattle',
       '?toy=tank168',
       '?toy=apollo-b0202',
-      '', // универсальный Brick Game — страница без параметра
-      '?toy=e88',
+      '?toy=taksun',
       '?toy=alibaba',
       '?toy=minibrick',
+      '', // универсальный Brick Game — страница без параметра
+      '?toy=e88',
     ]);
     // Щелчок посылается событием: после обработчика переключателя фиксируем, отменено ли действие по умолчанию (и отменяем сами, чтобы страница не ушла).
     const prevented = await page.evaluate(() => {

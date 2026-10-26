@@ -2,7 +2,8 @@ import { isNativeDevice, NATIVE_DEVICE_IDS, NATIVE_MENUS, nativeEntry, nativeFam
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
-import { APOLLO_IDS, TOYS, type ApolloId } from '../app/toys';
+import { APOLLO_IDS, TOYS, TOY_IDS, type ApolloId, type ToyId } from '../app/toys';
+import { DEVICE_DEFAULTS, isBrand, isReadiness, type DeviceOverride } from '../app/deviceCatalog';
 import { missingButtons } from '../app/bodyButtons';
 import { DEFAULT_LANG, isLang, type Lang } from '../input/lang';
 export interface ConfigGame {
@@ -32,6 +33,8 @@ export interface SiteConfig {
   /** Язык интерфейса по умолчанию, пока игрок не выбрал свой (RU / EN); в старых документах нет — русский. */
   language: Lang;
   toys: Record<ConfigToyId, ConfigToy>;
+  /** Бренд и готовность моделей в каталоге устройств, отличающиеся от значений по умолчанию (`deviceCatalog.ts`); нет записи — модель по умолчанию. */
+  catalog?: Partial<Record<ToyId, DeviceOverride>>;
   /** Original game illustrations, published with the collection configuration. */
   encyclopedia?: Partial<Record<GameId, { imageUrl: string }>>;
 }
@@ -112,6 +115,25 @@ export function validateConfig(value: unknown): SiteConfig {
       throw new Error(`${id}: стартовая игра должна входить в меню.`);
     toys[id] = { ...(id==='brickgame'?{shellPaletteVersion:2 as const}:{}), games, shells: [...shells] as Shell[], defaultShell: source['defaultShell'] as Shell, thumbShell: thumbShell as Shell, defaultGame: source['defaultGame'] as GameId };
   }
+  const catalog: NonNullable<SiteConfig['catalog']> = {};
+  if (value['catalog'] !== undefined) {
+    if (!record(value['catalog'])) throw new Error('Некорректный каталог устройств.');
+    for (const [key, entry] of Object.entries(value['catalog'])) {
+      const toy = TOY_IDS.find((id) => id === key);
+      if (!toy || !record(entry) || Object.keys(entry).some((field) => field !== 'brand' && field !== 'readiness')) throw new Error(`Каталог устройств: неизвестная модель или поле (${key}).`);
+      const own: DeviceOverride = {};
+      const { brand, readiness } = entry;
+      if (brand !== undefined) {
+        if (!isBrand(brand)) throw new Error(`${toy}: неизвестный бренд.`);
+        if (brand !== DEVICE_DEFAULTS[toy].brand) own.brand = brand; // хранятся только отличия от значений по умолчанию
+      }
+      if (readiness !== undefined) {
+        if (!isReadiness(readiness)) throw new Error(`${toy}: неизвестный статус готовности.`);
+        if (readiness !== DEVICE_DEFAULTS[toy].readiness) own.readiness = readiness;
+      }
+      if (own.brand !== undefined || own.readiness !== undefined) catalog[toy] = own;
+    }
+  }
   const encyclopedia: NonNullable<SiteConfig['encyclopedia']> = {};
   if (value['encyclopedia'] !== undefined) {
     if (!record(value['encyclopedia'])) throw new Error('Некорректный каталог иллюстраций.');
@@ -120,7 +142,7 @@ export function validateConfig(value: unknown): SiteConfig {
       encyclopedia[id] = { imageUrl: illustrationUrl(entry['imageUrl']) };
     }
   }
-  return { version: 1, language, toys, ...(Object.keys(encyclopedia).length ? { encyclopedia } : {}) };
+  return { version: 1, language, toys, ...(Object.keys(catalog).length ? { catalog } : {}), ...(Object.keys(encyclopedia).length ? { encyclopedia } : {}) };
 }
 
 /** Additive v1 migration: only missing device documents are populated; existing values are validated intact. */

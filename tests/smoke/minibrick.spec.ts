@@ -197,20 +197,20 @@ test('каталог устройств открывается над запущ
 });
 
 
-test('Mini menu cycles fruit rods and alternates HI-SCORE/LINES on a single eight-digit display',async({page})=>{
+test('Mini menu cycles fruit rods and alternates HI-SCORE/LINES (every two seconds) on a single eight-digit display',async({page})=>{
  await page.goto('./?toy=minibrick&power=on&view=full&debug');
  await expect(page.locator('#game-area')).toHaveAttribute('data-stage','intro');
  const root=page.locator('#game-area .minibrick-lcd');
  const at=async(tick:number)=>{await page.evaluate(t=>{(window as unknown as {__minibrick:{powerTicks:number}}).__minibrick.powerTicks=t;},tick);};
  await at(0);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(1);
  await expect(root.locator('[data-lcd=hi][data-on]')).toHaveCount(1);
- await at(30);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(2);
+ await at(120);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(2); // шаг 2 секунды (120 тактов)
  await expect(root.locator('[data-lcd=lines][data-on]')).toHaveCount(1);
  await expect(root.locator('[data-lcd=hi][data-on]')).toHaveCount(0);
- await at(360);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(13);
- await at(390);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(12);
+ await at(1440);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(13);
+ await at(1560);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(12);
  await expect(root.locator('[data-icon=crown][data-on]')).toHaveCount(0);
- await at(750);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(0);
+ await at(3000);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(0);
  expect(await root.locator('text').allTextContents()).not.toContain('HI-SCORE'); // one shared HI- / SCORE legend, not duplicate SCORE text
  expect(await root.locator('text').allTextContents()).toContain('HI-');
  expect(await root.locator('text:text-is("SCORE")').count()).toBe(1);
@@ -238,7 +238,7 @@ test('Mini Tetris game over shows final points even if the display clock stopped
  for(let i=0;i<3;i++)await tap(page,'ArrowDown');
  await expect(page.locator('#game-area')).toHaveAttribute('data-game','2');await tap(page,'Enter');
  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
- await page.evaluate('window.__minibrick.powerTicks=30;window.__minibrick.game.score=700;window.__minibrick.game.phase="over"');
+ await page.evaluate('window.__minibrick.powerTicks=120;window.__minibrick.game.score=700;window.__minibrick.game.phase="over"');
  const root=page.locator('#game-area .minibrick-lcd');
  await expect(root.locator('[data-lcd=score][data-on]')).toHaveCount(1);
  await expect(root.locator('[data-lcd=lines][data-on]')).toHaveCount(0);
@@ -246,4 +246,51 @@ test('Mini Tetris game over shows final points even if the display clock stopped
   const last=items.slice(-21);return Array.from({length:3},(_,i)=>last.slice(i*7,i*7+7).filter(n=>n.hasAttribute('data-on')).map(n=>n.getAttribute('data-seg')).sort().join(''));
  });
  expect(digits).toEqual(['abc','abcdef','abcdef']);
+});
+
+
+test('Mini: очки и шкала фруктов меняются раз в 2 секунды, а не раз в 0,5 с', async ({ page }) => {
+  await page.goto('./?toy=minibrick&power=on&view=full&debug');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'intro');
+  const root = page.locator('#game-area .minibrick-lcd');
+  const idle = (): Promise<{ scale: number; lines: boolean }> => page.evaluate(() => (window as unknown as { __minibrick: { idleDisplay: { scale: number; lines: boolean } } }).__minibrick.idleDisplay);
+  const started = Date.now();
+  expect(await idle()).toEqual({ scale: 1, lines: false });
+  await page.waitForTimeout(1300); // за полторы секунды прежних 0,5 с сменилось бы три шага
+  expect(Date.now() - started).toBeLessThan(1900);
+  expect(await idle()).toEqual({ scale: 1, lines: false });
+  await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(1);
+  await expect(root.locator('[data-lcd=hi][data-on]')).toHaveCount(1);
+  await expect.poll(async () => (await idle()).scale, { timeout: 3000 }).toBe(2);
+  await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(2);
+  await expect(root.locator('[data-lcd=lines][data-on]')).toHaveCount(1);
+});
+
+test('Mini: левая панель — как у остальных игрушек: наклейка, управление и две игры с общим описанием, старого текста нет', async ({ page }) => {
+  await page.goto('./?toy=minibrick&view=full&debug');
+  const info = page.locator('#side-info');
+  await expect(info.locator('.about__sticker svg')).toBeVisible();
+  await expect(info.locator('summary')).toHaveText('Управление');
+  await expect(info.locator('.gtab')).toHaveText(['00–01', '02–96']);
+  await expect(info.locator('.gtab[aria-selected=true]')).toHaveText('00–01');
+  await expect(info.locator('.gpanel__name')).toHaveText('Гонки');
+  await expect(info.locator('.gpanel')).toContainText('крестообразным носом');
+  await expect(info.locator('.gpanel .gscheme')).toHaveCount(1);
+  // Вкладка «Тетрис»: общее описание без перечня вариаций; курсор меню переходит к 02.
+  await page.locator('[data-key=onoff]').click();
+  await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+  await page.locator('[data-key=down]').click(); // заставка → меню
+  await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'menu');
+  await info.locator('.gtab[data-game=tetris]').click();
+  await expect(info.locator('.gpanel__name')).toHaveText('Тетрис');
+  await expect(info.locator('.gpanel')).toContainText('вариаций одной игры');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-game', '2');
+  await expect(info.locator('.gtab[data-game=tetris]')).toHaveAttribute('data-playing', '');
+  // Старого справочного текста нет; английский язык.
+  await expect(info).not.toContainText('Красно-синий складной корпус');
+  await expect(info).not.toContainText('97 номеров');
+  await page.locator('#corner-lang').click();
+  await expect(info.locator('summary')).toHaveText('Controls');
+  await expect(info.locator('.gpanel__name')).toHaveText('Tetris');
+  await expect(info.locator('.gtab')).toHaveText(['00–01', '02–96']);
 });

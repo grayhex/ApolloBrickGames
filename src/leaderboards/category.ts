@@ -50,7 +50,7 @@ export function selection(value: unknown): RunSelection {
   const gameId = v['gameId'];
   if (typeof v['toyId'] !== 'string' || !Object.hasOwn(TOYS, v['toyId'])) throw new Error('Invalid toy');
   const toyId = v['toyId'] as ToyId;
-  if (toyId === 'alibaba' || toyId === 'minibrick') throw new Error('Exhibition model');
+  if (toyId === 'alibaba' || toyId === 'minibrick' || toyId === 'taksun') throw new Error('Exhibition model');
   const mode = v['mode'];
   if (isNativeDevice(toyId)) {
     const entry = typeof v['profileId'] === 'string' && typeof v['variantId'] === 'string' ? nativeVariant(v['profileId'], v['variantId']) : undefined;

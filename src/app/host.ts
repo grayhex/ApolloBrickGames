@@ -63,7 +63,7 @@ export async function startHost(initial: ToyId): Promise<void> {
   const mount = (id: ToyId, carry?: Carry): Promise<AppHandle> => {
     if (heading) heading.textContent = TOYS[id].name;
     if (id === 'minibrick') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry));
-    if (id === 'alibaba') return import('./exhibitApp').then(({startExhibitApp}) => startExhibitApp(id, carry));
+    if (id === 'alibaba' || id === 'taksun') return import('./exhibitApp').then(({startExhibitApp}) => startExhibitApp(id, carry));
     return engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry);
   };
 
@@ -88,7 +88,7 @@ export async function startHost(initial: ToyId): Promise<void> {
       await preloadRoom();
     } else {
       const image = new Image();
-      image.src = TOYS[id].nativeDevice ? `${import.meta.env.BASE_URL}devices/${id}-body.svg` : `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
+      image.src = TOYS[id].nativeDevice ? `${import.meta.env.BASE_URL}devices/${id}-body.svg` : `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : id === 'taksun' ? 'taksun-upper-logo-stencil.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
       await image.decode().catch(() => undefined); // не загрузилась — игрушка всё равно запустится, наклейка появится позже
     }
   }

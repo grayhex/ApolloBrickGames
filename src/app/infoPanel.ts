@@ -5,7 +5,8 @@ import { guideForBody } from './bodyButtons';
 import { BRICK_GAMES } from '../brick/games';
 import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
-import { BoxDialog, BoxViewer } from './boxViewer';
+import { BoxDialog } from './boxViewer';
+import { packButton } from './packButton';
 import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
 import { compactGuide } from './guidePanel';
@@ -80,7 +81,7 @@ const FIGURES: readonly { name: MsgKey; picture: Picture }[] = [
 const cap = (label: string): HTMLElement => h('kbd', { class: 'kbd' }, label);
 
 /** Строка схемы управления: что делает и какие клавиши (по текущим привязкам; одно действие — одна или несколько клавиш). */
-function keyRow(label: string, ...groups: string[][]): HTMLElement {
+export function keyRow(label: string, ...groups: string[][]): HTMLElement {
   const caps = groups.flatMap((group, index) => [...(index > 0 ? [h('span', { class: 'keys__sep' }, '·')] : []), ...group.map(cap)]);
   return h(
     'li',
@@ -134,7 +135,7 @@ export class InfoPanel {
   private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
   /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
-  private thumb: BoxViewer | null = null;
+  private thumb: { dispose(): void } | null = null;
   /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
   private selected: string;
   /** Игра, которая выбрана в меню консоли или играет сейчас (вкладка с точкой); у консоли с меню вкладка следует за выбором в меню. */
@@ -311,27 +312,12 @@ export class InfoPanel {
 
   /** Миниатюра 3D-упаковки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) упаковка медленно поворачивается. */
   private boxButton(): HTMLElement | null {
-    const dialog = this.boxDialog;
-    const pack = this.pack;
     this.thumb?.dispose();
     this.thumb = null;
-    if (!dialog || !pack) return null;
-    const thumb = new BoxViewer({ model: pack, interactive: false, signal: this.signal });
-    this.thumb = thumb;
-    const button = h(
-      'button',
-      { type: 'button', class: 'boxbtn', 'data-box-open': pack.id, 'aria-label': t(pack.text.open), title: t(pack.text.open) },
-      thumb.element,
-      h('span', { class: 'boxbtn__cap', 'aria-hidden': 'true' }, t('box.cap')),
-      h('span', { class: 'boxbtn__label', 'aria-hidden': 'true' }, t(pack.text.short)),
-    );
-    const options = { signal: this.signal };
-    button.addEventListener('click', () => dialog.open(), options);
-    button.addEventListener('pointerenter', () => thumb.setSpin(true), options);
-    button.addEventListener('pointerleave', () => thumb.setSpin(false), options);
-    button.addEventListener('focus', () => thumb.setSpin(true), options);
-    button.addEventListener('blur', () => thumb.setSpin(false), options);
-    return button;
+    if (!this.boxDialog || !this.pack) return null;
+    const button = packButton(this.pack, this.boxDialog, this.signal);
+    this.thumb = button;
+    return button.element;
   }
 
   /** Раздел «Игры на устройстве»: вкладки игр консоли (цифры или буквы, как в меню устройства) и описание открытой игры. */

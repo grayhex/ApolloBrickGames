@@ -1,4 +1,4 @@
-import { CATEGORY_LABEL, DEVICE_CATALOG, DEVICE_CATEGORIES, catalogOrder, categoryCounts, deviceLabel, filterDevices, modelsCount, type DeviceCategory, type DeviceReadiness } from './deviceCatalog';
+import { BRAND_LABEL, DEVICE_BRANDS, brandCounts, catalogOrder, deviceEntry, deviceLabel, filterDevices, modelsCount, type DeviceBrand, type DeviceReadiness } from './deviceCatalog';
 import { h, svg } from './dom';
 import { getLang, onLangChange, t, type MsgKey } from './i18n';
 import { lockInput } from './inputLock';
@@ -12,7 +12,7 @@ export interface ToySwitch {
   readonly isOpen: boolean;
 }
 
-type CategoryFilter = DeviceCategory | 'all';
+type CategoryFilter = DeviceBrand | 'all';
 
 /** Ширина каталога на десктопе и отступ от края окна, px. */
 const MAX_WIDTH = 760;
@@ -92,7 +92,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   const close = h('button', { type: 'button', class: 'devpick__close' }, svg('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' }, svg('path', { d: 'M4 4l8 8M12 4l-8 8', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linecap': 'round' })));
   const search = h('input', { type: 'search', class: 'devpick__search', autocomplete: 'off', spellcheck: 'false', enterkeyhint: 'search' });
   const tabs = h('div', { class: 'devpick__tabs', role: 'tablist' });
-  const categories: CategoryFilter[] = ['all', ...DEVICE_CATEGORIES];
+  const categories: CategoryFilter[] = ['all', ...DEVICE_BRANDS];
   const tabButtons = new Map<CategoryFilter, HTMLButtonElement>();
   for (const value of categories) {
     const tab = h('button', { type: 'button', class: 'devpick__tab', role: 'tab', id: `devpick-tab-${value}`, 'aria-controls': 'devpick-results', 'data-category': value });
@@ -104,11 +104,11 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   for (const id of order) {
     const maker = h('span', { class: 'devpick__maker' });
     const model = h('span', { class: 'devpick__model' });
-    const ready = readyIcon(DEVICE_CATALOG[id].readiness);
+    const ready = readyIcon(deviceEntry(id).readiness);
     const readyText = h('span', { class: 'visually-hidden' });
     const link = h(
       'a',
-      { class: 'devpick__card', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': TOYS[id].thumbShell ?? 'white', 'data-ready': DEVICE_CATALOG[id].readiness, tabindex: '-1' },
+      { class: 'devpick__card', href: toyHref(id, window.location.search), 'data-toy': id, 'data-shell': TOYS[id].thumbShell ?? 'white', 'data-ready': deviceEntry(id).readiness, tabindex: '-1' },
       thumb(id, 'devpick__icon'),
       h('span', { class: 'devpick__label' }, maker, model),
       ready,
@@ -144,7 +144,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
 
   const paintTrigger = (): void => {
     const label = deviceLabel(active, t);
-    const ready = DEVICE_CATALOG[active].readiness;
+    const ready = deviceEntry(active).readiness;
     const status = readyIcon(ready);
     const statusLabel = setReadyText(status, ready);
     trigger.replaceChildren(thumb(active, 'devpick__thumb'), h('span', { class: 'devpick__text' }, h('span', { class: 'devpick__maker' }, label.maker), h('span', { class: 'devpick__model' }, label.title)), status, chevron());
@@ -153,9 +153,9 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   };
 
   const paintTabs = (): void => {
-    const counts = categoryCounts(order);
+    const counts = brandCounts(order);
     for (const [value, tab] of tabButtons) {
-      tab.textContent = value === 'all' ? t('picker.cat.all') : CATEGORY_LABEL[value];
+      tab.textContent = value === 'all' ? t('picker.cat.all') : BRAND_LABEL[value];
       tab.title = `${tab.textContent} · ${counts[value]}`;
       tab.setAttribute('aria-selected', String(value === category));
       tab.tabIndex = value === category ? 0 : -1;
@@ -166,7 +166,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   const paintCards = (): void => {
     for (const [id, card] of cards) {
       const label = deviceLabel(id, t);
-      const ready = DEVICE_CATALOG[id].readiness;
+      const ready = deviceEntry(id).readiness;
       card.maker.textContent = label.maker;
       card.model.textContent = label.title;
       card.readyText.textContent = setReadyText(card.ready, ready);

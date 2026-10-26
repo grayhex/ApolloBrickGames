@@ -7,13 +7,13 @@ import type { ToyKeyId } from './toy';
 
 /**
  * Коллекция: четыре складные игрушки Apollo на одном корпусе-раскладушке, но с разной «аппаратной» частью — экраном, рамкой, кнопками, наклейкой.
- * Alibaba и Mini Brick Game — отдельные корпуса без игрового движка. Универсальный Brick Game — нескладная приставка для всей матричной библиотеки.
+ * Alibaba, Mini Brick Game и TAKSUN TS-995 — отдельные корпуса (у Mini Brick играющий, у Alibaba и TAKSUN пока только корпус). Универсальный Brick Game — нескладная приставка для всей матричной библиотеки.
  * Crocodile Mario — оригинальный движок; «Часы+99», «Морской бой» и «168 в 1 танк» используют общий BrickConsole с меню игр. Игрушка выбирается адресом `?toy=clock99|seabattle|tank168` (без параметра — Crocodile Mario); при переключении на странице
  * цвет и вид (свёрнута / полная / только экран) сохраняются, страница не перезагружается (см. `host.ts`).
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'taksun'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -362,6 +362,17 @@ export const TOYS: Record<ToyId, ToyModel> = {
     labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START',bottom:'PAUSE'},{key:'sound',top:'MUSIC',bottom:'VOICE'},{key:'fire',top:'RESET'}],
       up: '', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'ROTATE' },
     keyWhat: { onoff: 'help.row.onoff', sp: 'help.row.sp', sound: 'help.row.sound', fire: 'help.row.menu', left: 'help.m.left', right: 'help.m.right', down: 'help.mini.down', jump: 'help.mini.rotate' },
+  },
+  /** Корпус по фото владельца (`taksunModel.ts`, `docs/taksun.md`): складной, синий, розовые кнопки; игры появятся позже. */
+  taksun: {
+    id: 'taksun', family: 'other', name: 'TAKSUN TS-995 · 9999 in 1',
+    shells: ['blue'], defaultShell: 'blue', games: [], defaultGame: null,
+    gamesCount: 9999, menu: false, gameKeys: 'digits', glyph: 'square', panel: 'sea',
+    deco: 'frame', leds: false, info: true, pack: 'taksun', levels: false,
+    lcd: { bg: '#9aa07a', ink: '#2c3226' }, stageLabel: 'stage.label.taksun',
+    labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'PAUSE',bottom:'START'},{key:'sound',top:'VOLUME'},{key:'fire',top:'RESET'}],
+      up: 'UP', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'DIR/ROTATE' },
+    keyWhat: { onoff: 'alibaba.unavailable' },
   },
 };
 

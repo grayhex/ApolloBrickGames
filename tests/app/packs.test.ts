@@ -14,8 +14,8 @@ describe('модели упаковок', () => {
       const pack = TOYS[toy].pack;
       if (pack) expect(PACKS[pack], toy).toBeDefined();
     }
-    expect(TOY_IDS.filter((toy) => TOYS[toy].pack)).toEqual(['tank168']);
-    expect(ids.sort()).toEqual(['mario', 'tank168']); // модель Mario остаётся в коде и в `public/brand/pack-mario` до включения
+    expect(TOY_IDS.filter((toy) => TOYS[toy].pack)).toEqual(['tank168', 'taksun']);
+    expect(ids.sort()).toEqual(['mario', 'taksun', 'tank168']); // модель Mario остаётся в коде и в `public/brand/pack-mario` до включения
     expect(TOYS.mario.pack).toBeNull();
   });
 

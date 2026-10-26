@@ -3,7 +3,8 @@ import { isNativeDevice } from '../devices/catalog';
 import { adminLeaderboards } from './leaderboards';
 import { adminEncyclopedia } from './encyclopedia';
 import './admin.css';
-import { TOYS } from '../app/toys';
+import { TOYS, TOY_IDS, type ToyId } from '../app/toys';
+import { BRAND_LABEL, DEVICE_BRANDS, DEVICE_DEFAULTS, READINESS_ORDER, type DeviceBrand, type DeviceReadiness } from '../app/deviceCatalog';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { canAssign } from '../app/bodyButtons';
@@ -14,6 +15,7 @@ import { BRICK_GUIDES } from '../brick/guides';
 import type { Lang } from '../input/lang';
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] { const e = document.createElement(tag); e.textContent = text; e.className = className; return e; }
 function button(text: string, fn: () => void, disabled = false): HTMLButtonElement { const b = el('button',text); b.type = 'button'; b.disabled = disabled; b.addEventListener('click',fn); return b; }
+const readinessNames: Record<DeviceReadiness,string> = { playable:'✓ Можно играть',reconstructing:'◐ Восстанавливается',shell:'○ Только корпус' };
 const colors: Record<Shell,string> = { blue:'Синий',red:'Красный',yellow:'Жёлтый',white:'Белый',gray:'Серый',black:'Чёрный',clear:'Светлый прозрачный',smoke:'Тёмный прозрачный' };
 export async function startAdmin(): Promise<void> {
   document.title = 'Apollo · Настройки коллекции'; document.body.dataset['chrome'] = 'tech'; delete document.body.dataset['booting'];
@@ -23,6 +25,7 @@ export async function startAdmin(): Promise<void> {
   const back = el('a','Открыть коллекцию ↗'); back.href = import.meta.env.BASE_URL; header.append(back); root.append(header);
   const status = el('p','Загрузка конфигурации…','admin__status'); status.setAttribute('role','status'); root.append(status);
   const general = el('section','','admin__card admin__general'); root.append(general);
+  const catalog = el('section','','admin__card admin__catalog'); root.append(catalog);
   const tabs = el('nav','','admin__tabs'); tabs.setAttribute('aria-label','Приставки'); root.append(tabs);
   const content = el('section','','admin__content'); root.append(content);
   const footer = el('section','','admin__publish');
@@ -42,12 +45,31 @@ export async function startAdmin(): Promise<void> {
   function setBusy(value: boolean): void { busy = value; content.inert = value; tabs.inert = value; footer.inert = value; const illustrations = root.querySelector<HTMLElement>('#admin-encyclopedia'); if (illustrations) illustrations.inert = value; save.disabled = value || !connected; }
   function message(text: string, error = false): void { status.textContent = text; status.dataset['error'] = String(error); }
   function changed(): void { dirty = true; message('Есть неопубликованные изменения.'); }
+  /** Бренд и готовность модели в каталоге устройств: в конфигурации хранятся только отличия от значений по умолчанию (`deviceCatalog.ts`). */
+  function setCatalog(id: ToyId, patch: { brand?: DeviceBrand; readiness?: DeviceReadiness }): void {
+    const next = { ...(config.catalog?.[id] ?? {}), ...patch };
+    if (next.brand === DEVICE_DEFAULTS[id].brand) delete next.brand;
+    if (next.readiness === DEVICE_DEFAULTS[id].readiness) delete next.readiness;
+    const all = { ...(config.catalog ?? {}) };
+    if (next.brand !== undefined || next.readiness !== undefined) all[id] = next; else delete all[id];
+    if (Object.keys(all).length) config.catalog = all; else delete config.catalog;
+    changed();
+  }
   function option(value: string, text: string): HTMLOptionElement { const o = el('option',text); o.value = value; return o; }
   function render(): void {
     encyclopedia.refresh();
     const languageLabel = el('label','Язык по умолчанию'); const languageSelect = el('select'); languageSelect.setAttribute('aria-label','Язык по умолчанию'); languageSelect.append(option('ru','Русский'),option('en','English')); languageSelect.value = config.language;
     languageSelect.addEventListener('change',() => { config.language = languageSelect.value as Lang; changed(); }); languageLabel.append(languageSelect);
     general.replaceChildren(el('h2','Общие настройки'),el('p','Язык интерфейса для тех, кто ещё не выбирал его кнопкой RU / EN. Выбор игрока важнее.','admin__eyebrow'),languageLabel);
+    const rows = TOY_IDS.map((id) => {
+      const base = DEVICE_DEFAULTS[id], own = config.catalog?.[id]; const row = el('div','','admin__catalog-row'); row.dataset['toy'] = id;
+      const brandLabel = el('label','Бренд'); const brand = el('select'); brand.setAttribute('aria-label',`${TOYS[id].name}: бренд`); brand.append(...DEVICE_BRANDS.map((b) => option(b,BRAND_LABEL[b]))); brand.value = own?.brand ?? base.brand;
+      brand.addEventListener('change',() => setCatalog(id,{ brand:brand.value as DeviceBrand })); brandLabel.append(brand);
+      const readyLabel = el('label','Готовность'); const ready = el('select'); ready.setAttribute('aria-label',`${TOYS[id].name}: готовность`); ready.append(...READINESS_ORDER.map((r) => option(r,readinessNames[r]))); ready.value = own?.readiness ?? base.readiness;
+      ready.addEventListener('change',() => setCatalog(id,{ readiness:ready.value as DeviceReadiness })); readyLabel.append(ready);
+      row.append(el('strong',TOYS[id].name),brandLabel,readyLabel); return row;
+    });
+    catalog.replaceChildren(el('h2','Каталог устройств'),el('p','Бренд задаёт категорию и подпись производителя в каталоге («Apollo», «TAKSUN», «Brick Game»); если другой бренд не указан, модель считается Brick Game. Готовность — значок ✓ / ◐ / ○ на карточке: выбирается вручную, по числу готовых игр не вычисляется.','admin__eyebrow'),...rows);
     tabs.replaceChildren(...CONFIG_TOY_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
     content.replaceChildren(); const toy = config.toys[active];
     const appearance = el('section','','admin__card'); appearance.append(el('h2',TOYS[active].name),el('p','Цвета корпуса','admin__eyebrow'));

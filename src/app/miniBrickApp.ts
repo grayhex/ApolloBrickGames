@@ -9,13 +9,13 @@ import { browserStorage, musicVolumeOf } from '../input/settings';
 import { MINI_LCD_OFF, type MiniLcd, type MiniLcdState } from '../render/miniScreen';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
-import { h } from './dom';
 import { openEncyclopedia } from './help';
 import { InputHub } from './hub';
 import { onInputLock } from './inputLock';
 import { applyStatic, getLang, onLangChange, setLang, t } from './i18n';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
-import { applyMiniBrickModel, miniBrickMark } from './minibrickModel';
+import { applyMiniBrickModel } from './minibrickModel';
+import { MiniInfoPanel } from './miniInfo';
 import { SettingsDialog } from './settingsUi';
 import { FixedStepper } from './stepper';
 import { applyTheme } from './theme';
@@ -373,6 +373,14 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
     });
   }
 
+  // Левая панель — как у остальных игрушек: наклейка, управление и описание игр (гонки и тетрис); сама следит за языком и привязками клавиш.
+  const info = new MiniInfoPanel(byId('side-info'), hub, {
+    onChoose: (id) => {
+      if (powered) mini.selectGame(id);
+    },
+    onPointerUse: refocus,
+    signal,
+  });
   function relabel(): void {
     document.documentElement.lang = getLang();
     applyStatic();
@@ -380,26 +388,6 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
     lang.dataset['lang'] = getLang();
     lang.setAttribute('aria-label', t('corner.lang'));
     lang.title = t('corner.langTitle');
-    const info = byId('side-info');
-    info.dataset['toy'] = 'minibrick';
-    info.replaceChildren(
-      h('div', { class: 'alibaba-info__mark' }, miniBrickMark('label')),
-      h(
-        'section',
-        { class: 'side__sec' },
-        h('h2', { class: 'side__h', id: 'info-title' }, model.name),
-        h('p', { class: 'gtext' }, t('minibrick.description')),
-      ),
-      h('section', { class: 'side__sec' }, h('h3', { class: 'side__h' }, t('minibrick.gamesTitle')), h('p', { class: 'gtext' }, t('minibrick.games'))),
-      h('section', { class: 'side__sec' }, h('h3', { class: 'side__h' }, t('minibrick.controlsTitle')), h('p', { class: 'gtext' }, t('minibrick.controls'))),
-      h(
-        'section',
-        { class: 'side__sec' },
-        h('h3', { class: 'side__h' }, t('alibaba.reference')),
-        h('p', { class: 'gtext' }, t('minibrick.details')),
-        h('p', { class: 'gtext' }, t('minibrick.tip')),
-      ),
-    );
     base.querySelector('[data-key="onoff"]')?.setAttribute('aria-label', 'ON/OFF');
   }
   byId('corner-lang').addEventListener(
@@ -510,6 +498,7 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
   };
   let lastStatus = '';
   const updateUi = (): void => {
+    info.setActive(mini.gameId as 'racing' | 'tetris');
     setData('power', powered ? 'on' : 'off');
     setData('phase', powered ? (mini.inMenu ? 'ready' : mini.phase) : 'ready');
     setData('stage', powered ? mini.screenStage : 'off');

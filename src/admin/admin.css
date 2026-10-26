@@ -43,3 +43,10 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 .admin__games li > small { display:block; margin-top:4px; color:#9caeba; }
 .admin__swatches [data-color=clear]::after { background:linear-gradient(135deg,#eaf0df,#73a38d); }
 .admin__swatches [data-color=smoke]::after { background:linear-gradient(135deg,#667063,#20382b); }
+
+.admin__catalog { display:grid; gap:10px; margin-bottom:18px; }
+.admin__catalog h2 { margin:0; }
+.admin__catalog-row { display:grid; grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr)); gap:6px 14px; align-items:end; padding:10px 0; border-top:1px solid #2b3742; }
+.admin__catalog-row label { margin:0; }
+.admin__catalog-row select { width:100%; }
+@media(max-width:720px) { .admin__catalog-row { grid-template-columns:1fr 1fr; }.admin__catalog-row strong { grid-column:1 / -1; } }
