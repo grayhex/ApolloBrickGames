@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { chooseToy, closePicker, openPicker, pickerCard, pickerPanel, pickerTrigger } from './picker';
+import defaults from '../../src/config/default.json' with { type: 'json' };
+import type { SiteConfig } from '../../src/config/schema';
+import { validateConfig } from '../../src/config/schema';
 import { marioUrl } from './url';
 
 test.afterEach(async ({ page }) => {
@@ -17,6 +20,12 @@ async function visit(page: Page, url: string): Promise<void> {
   await page.goto(url);
   await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
   await expect(pickerTrigger(page)).toBeVisible();
+}
+
+/** Опубликованная конфигурация с настройками каталога из админки (`config.catalog`) вместо сетевого запроса. */
+async function withCatalog(page: Page, catalog: NonNullable<SiteConfig['catalog']>): Promise<void> {
+  const config = validateConfig({ ...(defaults as object), catalog });
+  await page.route('**/api/config', (route) => route.fulfill({ json: { config, revision: 1 } }));
 }
 
 const rect = (page: Page, selector: string): Promise<{ x: number; y: number; width: number; height: number }> =>
@@ -47,8 +56,8 @@ test.describe('каталог устройств: закрытая панель'
     await openPicker(page);
     await expect(pickerCard(page, 'brickgame')).toHaveAttribute('aria-current', 'page');
     // Нет закреплённого блока, разделителей и отдельной «универсальной» кнопки: все модели — карточки одной сетки.
-    await expect(page.locator('.devpick__list > li')).toHaveCount(9);
-    await expect(page.locator('.devpick__card')).toHaveCount(9);
+    await expect(page.locator('.devpick__list > li')).toHaveCount(10);
+    await expect(page.locator('.devpick__card')).toHaveCount(10);
   });
 
   test('панель стоит на месте карусели: центр над консолью, консоль не сдвигается и страница не прокручивается при открытии', async ({ page }) => {
@@ -82,13 +91,13 @@ test.describe('каталог устройств: содержимое', () => {
     await openPicker(page);
     const panel = pickerPanel(page);
     await expect(panel.getByRole('heading', { name: 'Коллекция устройств' })).toBeVisible();
-    await expect(panel.locator('.devpick__count')).toHaveText('9 моделей');
+    await expect(panel.locator('.devpick__count')).toHaveText('10 моделей');
     await expect(panel.locator('.devpick__close')).toBeVisible();
     await expect(panel.getByRole('searchbox')).toHaveCount(1);
     await expect(panel.getByRole('tab')).toHaveText(['Все', 'Apollo', 'TAKSUN', 'Brick Game']);
     await expect(panel.getByRole('tab', { name: 'Все' })).toHaveAttribute('aria-selected', 'true');
     await expect(panel).not.toContainText(/Играбельные|В разработке|Экспонаты/);
-    await expect(page.locator('.devpick__card')).toHaveCount(9);
+    await expect(page.locator('.devpick__card')).toHaveCount(10);
   });
 
   test('каждое устройство показывает производителя, модель, значок готовности и настоящую миниатюру', async ({ page }) => {
@@ -100,10 +109,12 @@ test.describe('каталог устройств: содержимое', () => {
       seabattle: ['Apollo', 'Морской бой', 'playable'],
       tank168: ['Apollo', '168 в 1 танк', 'playable'],
       'apollo-b0202': ['Apollo', 'B0202 · 126 in 1', 'reconstructing'],
+      taksun: ['TAKSUN', 'TS-995 · 9999 in 1', 'shell'],
       brickgame: ['Brick Game', 'Универсальный', 'playable'],
       e88: ['Brick Game', 'E-88 · 8 in 1', 'reconstructing'],
-      alibaba: ['Бренд не подтверждён', 'Alibaba Dance 99 in 1', 'shell'],
-      minibrick: ['Бренд не подтверждён', 'Mini Brick Game B‑S96', 'reconstructing'],
+      // Если другой бренд не установлен, модель считается Brick Game: пометки «бренд не подтверждён» нет.
+      alibaba: ['Brick Game', 'Alibaba Dance 99 in 1', 'shell'],
+      minibrick: ['Brick Game', 'Mini Brick Game B‑S96', 'reconstructing'],
     };
     const label = { playable: 'Можно играть', reconstructing: 'Восстанавливается', shell: 'Только корпус' } as const;
     for (const [id, [maker, model, ready]] of Object.entries(expected)) {
@@ -137,35 +148,55 @@ test.describe('каталог устройств: содержимое', () => {
     await expect(shown).toHaveCount(0);
     await expect(page.locator('.devpick__empty')).toHaveText('Ничего не найдено');
     await search.fill('');
-    await expect(shown).toHaveCount(9);
+    await expect(shown).toHaveCount(10);
     await expect(page.locator('.devpick__empty')).toBeHidden();
   });
 
-  test('категории: «Все» по умолчанию, Apollo — 5, Brick Game — 2, TAKSUN — пустое состояние; открытие всегда сбрасывает фильтр', async ({ page }) => {
+  test('категории: «Все» по умолчанию, Apollo — 5, TAKSUN — 1, Brick Game — 4; открытие всегда сбрасывает фильтр', async ({ page }) => {
     await visit(page, marioUrl(''));
     await openPicker(page);
     const shown = page.locator('.devpick__item:not([hidden]) .devpick__card');
+    const ids = () => shown.evaluateAll((nodes) => nodes.map((node) => (node as HTMLElement).dataset['toy']));
     const tab = (name: string) => pickerPanel(page).getByRole('tab', { name, exact: true });
     await tab('Apollo').click();
     await expect(tab('Apollo')).toHaveAttribute('aria-selected', 'true');
     await expect(shown).toHaveCount(5);
-    await tab('Brick Game').click();
-    await expect(shown).toHaveCount(2);
-    await expect(shown.evaluateAll((nodes) => nodes.map((node) => (node as HTMLElement).dataset['toy']))).resolves.toEqual(['brickgame', 'e88']);
     await tab('TAKSUN').click();
-    await expect(shown).toHaveCount(0);
-    await expect(page.locator('.devpick__empty')).toHaveText('В этой категории пока нет моделей');
+    await expect(shown).toHaveCount(1);
+    expect(await ids()).toEqual(['taksun']);
+    await tab('Brick Game').click();
+    await expect(shown).toHaveCount(4);
+    expect(await ids()).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88']);
     await tab('Все').click();
-    await expect(shown).toHaveCount(9);
-    // Категория и поиск работают вместе.
+    await expect(shown).toHaveCount(10);
+    // Категория и поиск работают вместе; пустой поиск в категории — «Ничего не найдено».
     await tab('Apollo').click();
     await pickerPanel(page).getByRole('searchbox').fill('b0202');
     await expect(shown).toHaveCount(1);
+    await pickerPanel(page).getByRole('searchbox').fill('taksun');
+    await expect(shown).toHaveCount(0);
+    await expect(page.locator('.devpick__empty')).toHaveText('Ничего не найдено');
     await closePicker(page);
     await openPicker(page);
     await expect(tab('Все')).toHaveAttribute('aria-selected', 'true');
     await expect(pickerPanel(page).getByRole('searchbox')).toHaveValue('');
-    await expect(shown).toHaveCount(9);
+    await expect(shown).toHaveCount(10);
+  });
+
+  test('бренд и готовность из админки применяются: пустая категория показывает пояснение, значок и порядок следуют настройкам', async ({ page }) => {
+    await withCatalog(page, { taksun: { brand: 'brickgame' }, minibrick: { readiness: 'playable' }, alibaba: { brand: 'apollo' } });
+    await visit(page, marioUrl(''));
+    await openPicker(page);
+    const shown = page.locator('.devpick__item:not([hidden]) .devpick__card');
+    await pickerPanel(page).getByRole('tab', { name: 'TAKSUN', exact: true }).click();
+    await expect(shown).toHaveCount(0);
+    await expect(page.locator('.devpick__empty')).toHaveText('В этой категории пока нет моделей');
+    await pickerPanel(page).getByRole('tab', { name: 'Apollo', exact: true }).click();
+    await expect(shown).toHaveCount(6);
+    await expect(pickerCard(page, 'alibaba').locator('.devpick__maker')).toHaveText('Apollo');
+    await expect(pickerCard(page, 'taksun').locator('.devpick__maker')).toHaveText('Brick Game');
+    await expect(pickerCard(page, 'minibrick')).toHaveAttribute('data-ready', 'playable');
+    await expect(pickerCard(page, 'minibrick').locator('.devpick__ready')).toHaveAttribute('aria-label', 'Можно играть');
   });
 });
 
@@ -233,7 +264,7 @@ test.describe('каталог устройств: открытие, закрыт
     expect(await page.evaluate(() => (window as unknown as { __alive?: number }).__alive)).toBe(1); // страница не перезагружалась
     await chooseToy(page, 'minibrick');
     await expect(pickerTrigger(page).locator('.devpick__model')).toHaveText('Mini Brick Game B‑S96');
-    await expect(pickerTrigger(page).locator('.devpick__maker')).toHaveText('Бренд не подтверждён');
+    await expect(pickerTrigger(page).locator('.devpick__maker')).toHaveText('Brick Game');
     await expect(pickerTrigger(page).locator('.devpick__ready')).toHaveAttribute('aria-label', 'Восстанавливается');
     // «Назад» и «вперёд» возвращают модели и панель.
     await page.goBack();
@@ -318,7 +349,7 @@ test.describe('каталог устройств: ввод', () => {
     await page.keyboard.press('ArrowRight');
     await expect.poll(focusedToy).toBe('clock99');
     await page.keyboard.press('End');
-    await expect.poll(focusedToy).toBe('minibrick');
+    await expect.poll(focusedToy).toBe('e88');
     await page.keyboard.press('Home');
     await expect.poll(focusedToy).toBe('mario');
     await page.keyboard.press('ArrowUp'); // из первой строки — в поле поиска
@@ -350,7 +381,7 @@ test.describe('каталог устройств: ввод', () => {
     await page.keyboard.press('Home');
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
     const search = pickerPanel(page).getByRole('searchbox');
-    await search.fill('brick');
+    await search.fill('универс');
     await page.keyboard.press('Enter');
     await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['toy'])).toBe('brickgame');
   });
@@ -359,7 +390,7 @@ test.describe('каталог устройств: ввод', () => {
     await visit(page, marioUrl('?view=full'));
     await openPicker(page);
     await page.keyboard.press('End');
-    await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['toy'])).toBe('minibrick');
+    await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['toy'])).toBe('e88');
     await page.keyboard.press('Tab');
     await expect(pickerPanel(page)).toBeHidden();
     await expect(page.locator('.devpick__scrim')).toBeHidden();
@@ -368,6 +399,7 @@ test.describe('каталог устройств: ввод', () => {
 
 test.describe('каталог устройств: язык и движение', () => {
   test('английский интерфейс: подписи, категории, счётчик и значки; названия брендов не переводятся', async ({ page }) => {
+    await withCatalog(page, { taksun: { brand: 'brickgame' } }); // TAKSUN без моделей: показывается пояснение пустой категории
     await visit(page, './?toy=brickgame');
     await page.locator('#corner-lang').click();
     await expect(pickerTrigger(page).locator('.devpick__model')).toHaveText('Universal');
@@ -375,9 +407,9 @@ test.describe('каталог устройств: язык и движение',
     await openPicker(page);
     const panel = pickerPanel(page);
     await expect(panel.getByRole('heading')).toHaveText('Device collection');
-    await expect(panel.locator('.devpick__count')).toHaveText('9 models');
+    await expect(panel.locator('.devpick__count')).toHaveText('10 models');
     await expect(panel.getByRole('tab')).toHaveText(['All', 'Apollo', 'TAKSUN', 'Brick Game']);
-    await expect(pickerCard(page, 'alibaba').locator('.devpick__maker')).toHaveText('Brand unconfirmed');
+    await expect(pickerCard(page, 'alibaba').locator('.devpick__maker')).toHaveText('Brick Game');
     await expect(pickerCard(page, 'mario').locator('.devpick__ready')).toHaveAttribute('aria-label', 'Playable');
     await panel.getByRole('tab', { name: 'TAKSUN' }).click();
     await expect(page.locator('.devpick__empty')).toHaveText('No models in this category yet');

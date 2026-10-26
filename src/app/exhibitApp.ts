@@ -1,28 +1,34 @@
 import { openEncyclopedia } from './help';
 import './exhibit.css';
+import './taksun.css';
 import { browserGamepadProvider } from '../input/gamepad';
 import { browserStorage, musicVolumeOf } from '../input/settings';
 import { alibabaMark, applyAlibabaModel } from './alibabaModel';
+import { BoxDialog } from './boxViewer';
 import { ControlPanel } from './controlPanel';
 import { CornerNav } from './cornerNav';
 import { h } from './dom';
 import { InputHub } from './hub';
+import { packButton } from './packButton';
+import { PACKS } from './packs';
 import { applyStatic, getLang, onLangChange, setLang, t } from './i18n';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
 import { SettingsDialog } from './settingsUi';
+import { applyTaksunModel } from './taksunModel';
 import { applyTheme } from './theme';
 import { TOYS } from './toys';
 import { parseView, type View } from './view';
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
-/** An exhibit only: no BrickConsole, audio, simulated game, boot sequence or animation-frame loop. */
-export async function startExhibitApp(id: 'alibaba', carry?: Carry): Promise<AppHandle> {
+/** An exhibit only (Alibaba, TAKSUN): no BrickConsole, audio, simulated game, boot sequence or animation-frame loop. */
+export async function startExhibitApp(id: 'alibaba' | 'taksun', carry?: Carry): Promise<AppHandle> {
   const life = new Lifecycle(),
     { signal } = life,
     model = TOYS[id];
   document.body.dataset['chrome'] = 'toy';
   document.body.dataset['motion'] = 'off';
-  applyAlibabaModel();
+  if (id === 'taksun') applyTaksunModel();
+  else applyAlibabaModel();
   const toy = byId('toy'),
     arena = byId('arena'),
     area = byId('game-area'),
@@ -48,6 +54,10 @@ export async function startExhibitApp(id: 'alibaba', carry?: Carry): Promise<App
   };
   const notice = h('dialog', { class: 'settings alibaba-notice', id: `${id}-notice`, 'aria-labelledby': `${id}-notice-title` });
   document.body.append(notice);
+  // TAKSUN: 3D-коробка (пока заглушка) открывается из левой панели; пока диалог открыт, клавиши модели не работают.
+  const box = id === 'taksun' ? new BoxDialog(byId<HTMLDialogElement>('box-dialog'), PACKS.taksun, { onOpen: () => {}, onClose: focus }, signal) : null;
+  let boxThumb: { dispose(): void } | null = null;
+  life.onDispose(() => boxThumb?.dispose());
   const closeDialog = (dialog: HTMLDialogElement): void => {
     dialog.close();
     focus(); // Native close events are queued; keyboard input must work immediately after Escape.
@@ -160,23 +170,52 @@ export async function startExhibitApp(id: 'alibaba', carry?: Carry): Promise<App
     lang.title = t('corner.langTitle');
     const info = byId('side-info');
     info.dataset['toy'] = id;
-    info.replaceChildren(
-      h('div', { class: 'alibaba-info__mark' }, alibabaMark('dance')),
-      h(
-        'section',
-        { class: 'side__sec' },
-        h('h2', { class: 'side__h', id: 'info-title' }, model.name),
-        h('p', { class: 'alibaba-status' }, t('alibaba.unavailable')),
-        h('p', { class: 'gtext' }, t(`${id}.description`)),
-      ),
-      h(
-        'section',
-        { class: 'side__sec' },
-        h('h3', { class: 'side__h' }, t('alibaba.reference')),
-        h('p', { class: 'gtext' }, t(`${id}.details`)),
-        h('p', { class: 'gtext' }, t('alibaba.tip')),
-      ),
-    );
+    boxThumb?.dispose();
+    boxThumb = null;
+    if (id === 'taksun') {
+      const pack = box ? packButton(PACKS.taksun, box, signal) : null;
+      boxThumb = pack;
+      info.replaceChildren(
+        h(
+          'header',
+          { class: `side__top side__top--logo${pack ? ' side__top--box' : ''}` },
+          h('h2', { class: 'visually-hidden', id: 'info-title' }, model.name),
+          h('div', { class: 'about__sticker' }, h('img', { class: 'about__logo', src: `${import.meta.env.BASE_URL}brand/taksun-wordmark.svg`, width: '465', height: '125', alt: model.name })),
+          ...(pack ? [pack.element] : []),
+        ),
+        h(
+          'section',
+          { class: 'side__sec' },
+          h('p', { class: 'alibaba-status' }, t('alibaba.unavailable')),
+          h('p', { class: 'gtext' }, t('taksun.description')),
+        ),
+        h(
+          'section',
+          { class: 'side__sec' },
+          h('h3', { class: 'side__h' }, t('alibaba.reference')),
+          h('p', { class: 'gtext' }, t('taksun.details')),
+          h('p', { class: 'gtext' }, t('taksun.tip')),
+        ),
+      );
+    } else {
+      info.replaceChildren(
+        h('div', { class: 'alibaba-info__mark' }, alibabaMark('dance')),
+        h(
+          'section',
+          { class: 'side__sec' },
+          h('h2', { class: 'side__h', id: 'info-title' }, model.name),
+          h('p', { class: 'alibaba-status' }, t('alibaba.unavailable')),
+          h('p', { class: 'gtext' }, t(`${id}.description`)),
+        ),
+        h(
+          'section',
+          { class: 'side__sec' },
+          h('h3', { class: 'side__h' }, t('alibaba.reference')),
+          h('p', { class: 'gtext' }, t(`${id}.details`)),
+          h('p', { class: 'gtext' }, t('alibaba.tip')),
+        ),
+      );
+    }
     byId('sr-status').textContent = t('alibaba.unavailable');
     byId<HTMLButtonElement>('base')
       .querySelector('[data-key="onoff"]')
@@ -214,7 +253,7 @@ export async function startExhibitApp(id: 'alibaba', carry?: Carry): Promise<App
   window.addEventListener(
     'keydown',
     (event) => {
-      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || notice.open || settings.isOpen) return;
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || notice.open || settings.isOpen || box?.isOpen) return;
       if ((event.target as Element | null)?.closest('button,a,input,select,textarea,[contenteditable=true]')) return;
       if (event.code === 'KeyO') {
         event.preventDefault();

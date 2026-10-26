@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BRICK_CELLS, makeBrickInput, type BrickAction } from '../../src/brick';
 import { MINI_GAME_COUNT, MINI_RACING_COUNT, MINI_TETRIS_COUNT, MINI_TETRIS_VARIANTS, miniEntry } from '../../src/brick/games/mini';
 import { MINI_FACE_TICKS, MiniConsole, miniIntroField, miniNumberField } from '../../src/brick/miniConsole';
+import { MINI_IDLE_STEP_SECONDS, MINI_IDLE_STEP_TICKS } from '../../src/brick/miniTiming';
 
 const press = (...actions: BrickAction[]) => makeBrickInput(actions);
 const lit = (cells: Uint8Array): number => cells.reduce((sum, cell) => sum + (cell ? 1 : 0), 0);
@@ -168,12 +169,16 @@ describe('Mini Brick Game B-S96: партии', () => {
   });
 });
 
-it('idle fruit meter fills bottom-up, drains top-down and alternates point/line records every half-second from power-on',()=>{
+it('idle fruit meter fills bottom-up, drains top-down and alternates point/line records every two seconds from power-on',()=>{
  const mini=new MiniConsole();mini.powerOn();expect(mini.idleDisplay).toEqual({scale:1,lines:false});
  const step=(n:number)=>{for(let i=0;i<n;i++)mini.menu(makeBrickInput());};
- step(30);expect(mini.idleDisplay).toEqual({scale:2,lines:true});
- step(330);expect(mini.idleDisplay).toEqual({scale:13,lines:false});
- step(30);expect(mini.idleDisplay).toEqual({scale:12,lines:true});
- step(360);expect(mini.idleDisplay).toEqual({scale:0,lines:true});
- step(30);expect(mini.idleDisplay).toEqual({scale:1,lines:false});
+ const second=MINI_IDLE_STEP_TICKS/MINI_IDLE_STEP_SECONDS;
+ expect(MINI_IDLE_STEP_SECONDS).toBe(2); // owner: one second was too fast, two seconds per step
+ step(MINI_IDLE_STEP_TICKS-1);expect(mini.idleDisplay).toEqual({scale:1,lines:false}); // nothing changes during the first two seconds
+ step(1);expect(mini.idleDisplay).toEqual({scale:2,lines:true});
+ step(second);expect(mini.idleDisplay).toEqual({scale:2,lines:true}); // still the same after one more second
+ step(11*MINI_IDLE_STEP_TICKS-second);expect(mini.idleDisplay).toEqual({scale:13,lines:false});
+ step(MINI_IDLE_STEP_TICKS);expect(mini.idleDisplay).toEqual({scale:12,lines:true});
+ step(12*MINI_IDLE_STEP_TICKS);expect(mini.idleDisplay).toEqual({scale:0,lines:true});
+ step(MINI_IDLE_STEP_TICKS);expect(mini.idleDisplay).toEqual({scale:1,lines:false});
 });

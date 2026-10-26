@@ -1,29 +1,29 @@
 /* Shared exhibit surfaces; each model supplies its own artwork and physical controls. */
-body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick']) {
+body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) {
   --stage-w: clamp(210px, calc((100dvh - 30px - var(--head-h, 0px)) / 2.82), 600px);
 }
-body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-closed] {
+body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun'])[data-closed] {
   --stage-w: clamp(230px, calc((100dvh - 30px - var(--head-h, 0px)) / 1.76), 600px);
 }
-body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-compact] {
+body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun'])[data-compact] {
   --stage-w: clamp(250px, calc((100dvh - 30px - var(--head-h, 0px)) / 1.14), 950px);
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) {
   --rim: #eeede1;
   --rim-dark: #d1d1c2;
   --lcd-dim: saturate(0.7) brightness(0.85);
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__front {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .lid__front {
   padding: 0;
   aspect-ratio: 400 / 440;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__face {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .lid__face {
   position: absolute;
   inset: 0;
   padding: 0;
   display: block;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__bezel {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .lid__bezel {
   position: absolute;
   left: 16.5%;
   top: 14%;
@@ -38,7 +38,7 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
     inset 0.5cqw 0.5cqw 1cqw #edead0,
     inset -0.6cqw -0.6cqw 0.8cqw #62685b;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__window {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .lid__window {
   width: 100%;
   height: 100%;
   aspect-ratio: auto;
@@ -48,19 +48,19 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
     inset 1cqw 1cqw 1.5cqw #3c4a35,
     inset -0.3cqw -0.3cqw 0.8cqw #697461;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) #game-area {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) #game-area {
   height: 100%;
   aspect-ratio: auto;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) #screen {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) #screen {
   visibility: hidden;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .base {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .base {
   aspect-ratio: 400 / 660;
   border-radius: 5cqw;
   background: #e5e4d6;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .base__art {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .base__art {
   position: absolute;
   display: block;
   width: 100%;
@@ -68,22 +68,22 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
   inset: 0;
   pointer-events: none;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .lid__cover {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .lid__cover {
   border-radius: 5cqw;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__hinge {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .toy__hinge {
   margin-left: 10%;
   margin-right: 10%;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__knuckle {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .toy__knuckle {
   flex-basis: 25%;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__band {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .toy__band {
   cursor: default;
   background: #20231e;
   height: 10cqw;
 }
-.toy:is([data-model='alibaba'], [data-model='minibrick']) .toy__band::before {
+.toy:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) .toy__band::before {
   inset: 22% 7% 8%;
   opacity: 1;
   mask: none;
@@ -91,7 +91,7 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
   border-radius: 0 0 40% 40%;
   box-shadow: inset 0 -0.9cqw 0.8cqw #3c4035;
 }
-:is(.alibaba-key, .minibrick-key) {
+:is(.alibaba-key, .minibrick-key, .taksun-key) {
   position: absolute;
   padding: 0;
   border: 0.4cqw solid #747968;
@@ -104,25 +104,25 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
   cursor: pointer;
   touch-action: manipulation;
 }
-:is(.alibaba-key, .minibrick-key):active {
+:is(.alibaba-key, .minibrick-key, .taksun-key):active {
   transform: translateY(0.35cqw);
   filter: brightness(0.92);
   box-shadow: inset 0 0 0.8cqw #6c725f;
 }
-:is(.alibaba-key, .minibrick-key):focus-visible {
+:is(.alibaba-key, .minibrick-key, .taksun-key):focus-visible {
   outline: 0.7cqw solid #b65e52;
   outline-offset: 1cqw;
 }
-#side-ctl:is([data-toy='alibaba'], [data-toy='minibrick']) #blk-levels,
-#side-ctl[data-toy='alibaba'] #blk-sound {
+#side-ctl:is([data-toy='alibaba'], [data-toy='minibrick'], [data-toy='taksun']) #blk-levels,
+#side-ctl:is([data-toy='alibaba'], [data-toy='taksun']) #blk-sound {
   display: none;
 }
-.side--info:is([data-toy='alibaba'], [data-toy='minibrick']) {
+.side--info:is([data-toy='alibaba'], [data-toy='minibrick'], [data-toy='taksun']) {
   height: auto;
   grid-template-rows: none;
   align-content: start;
 }
-.side--info:is([data-toy='alibaba'], [data-toy='minibrick']) .side__sec {
+.side--info:is([data-toy='alibaba'], [data-toy='minibrick'], [data-toy='taksun']) .side__sec {
   align-content: start;
 }
 .alibaba-info__mark {
@@ -151,13 +151,13 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
   color: var(--muted);
 }
 @media (max-width: 899px) {
-  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick']) {
+  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun']) {
     --stage-w: clamp(200px, calc((100dvh - 90px - var(--head-h, 0px)) / 2.82), 460px);
   }
-  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-closed] {
+  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun'])[data-closed] {
     --stage-w: clamp(220px, calc((100dvh - 90px - var(--head-h, 0px)) / 1.76), 460px);
   }
-  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'])[data-compact] {
+  body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick'], [data-model='taksun'])[data-compact] {
     --stage-w: clamp(240px, calc((100dvh - 90px - var(--head-h, 0px)) / 1.14), 700px);
   }
 }

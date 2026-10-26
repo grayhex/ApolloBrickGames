@@ -6,7 +6,7 @@ import type { MsgKey } from './i18n';
  * по которому в `styles.css` задано положение грани в пространстве. У «168 в 1 танк» все шесть граней — картинки развёртки; у Crocodile Mario известны только
  * лицо (фото карточки с игрушкой) и оборот (инструкция), боковые грани — картон без рисунка (их цвет и толщина коробки — допущение, на фото боков нет).
  */
-export type PackId = 'tank168' | 'mario';
+export type PackId = 'tank168' | 'mario' | 'taksun';
 
 export interface PackFace {
   id: string;
@@ -79,5 +79,25 @@ export const PACKS: Record<PackId, PackModel> = {
     home: HOME_VIEW,
     presets: PRESETS,
     text: { open: 'pack.mario.open', short: 'pack.mario.short', title: 'pack.mario.title', aria: 'pack.mario.aria', credit: 'pack.mario.credit' },
+  },
+  /**
+   * Коробка TAKSUN TS-995 по восстановленной развёртке (`docs/research/TS995_packaging_assets.zip`): лицо и оборот — выпрямленные фотографии владельца с набранным текстом инструкции,
+   * розовые бока, верх и низ. Размеры: лицо 1300 × 2160 → 565 × 939, глубина ≈ 140 (в развёртке бока 340 px, верх и низ 302 px — размеры иллюстративные, не проверены по оригиналу).
+   */
+  taksun: {
+    id: 'taksun',
+    dir: 'box-taksun',
+    size: { w: 565, h: 939 },
+    faces: [
+      { id: 'front', normal: FRONT, image: 'front.webp' },
+      { id: 'back', normal: BACK, image: 'back.webp' },
+      { id: 'left', normal: LEFT, image: 'left.webp' },
+      { id: 'right', normal: RIGHT, image: 'right.webp' },
+      { id: 'top', normal: TOP, image: 'top.webp' },
+      { id: 'bottom', normal: BOTTOM, image: 'bottom.webp' },
+    ],
+    home: HOME_VIEW,
+    presets: PRESETS,
+    text: { open: 'pack.taksun.open', short: 'pack.taksun.short', title: 'pack.taksun.title', aria: 'pack.taksun.aria', credit: 'pack.taksun.credit' },
   },
 };

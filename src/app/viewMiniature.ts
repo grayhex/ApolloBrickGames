@@ -3,6 +3,7 @@ import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
 import { miniBrickMini } from './minibrickModel';
 import { alibabaMini } from './alibabaModel';
+import { taksunMini } from './taksunModel';
 import { svg } from './dom';
 import { TOYS, type ToyId } from './toys';
 import type { View } from './view';
@@ -100,6 +101,7 @@ export function miniView(view: View, toy: ToyId = 'mario'): SVGSVGElement {
   if (isNativeDevice(toy)) return nativeMini(toy,view);
   if (toy === 'brickgame') return brickGameMini(view);
   if (toy === 'alibaba') return alibabaMini(view);
+  if (toy === 'taksun') return taksunMini(view);
   if (toy === 'minibrick') return miniBrickMini(view);
   const model = TOYS[toy];
   const height = view === 'full' ? 1056 : view === 'closed' ? 660 : 431;

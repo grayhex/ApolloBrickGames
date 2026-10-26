@@ -3,6 +3,7 @@ import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
 import { miniBrickMini } from './minibrickModel';
 import { alibabaMini } from './alibabaModel';
+import { taksunMini } from './taksunModel';
 import { APOLLO_SHELLS, type Shell } from '../input/settings';
 import { h, svg } from './dom';
 import { t } from './i18n';
@@ -25,8 +26,8 @@ export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'):
     icon.classList.add('mini');
     return icon;
   }
-  if (toy === 'alibaba' || toy === 'minibrick') {
-    const icon = toy === 'alibaba' ? alibabaMini('closed') : miniBrickMini('closed', shell === 'white');
+  if (toy === 'alibaba' || toy === 'minibrick' || toy === 'taksun') {
+    const icon = toy === 'alibaba' ? alibabaMini('closed') : toy === 'taksun' ? taksunMini('closed') : miniBrickMini('closed', shell === 'white');
     icon.classList.remove('view-mini');
     icon.classList.add('mini');
     return icon;

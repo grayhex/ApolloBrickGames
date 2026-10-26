@@ -1,0 +1,92 @@
+/* TAKSUN TS-995 · 9999 in 1: тот же складной механизм, что у экспонатов (exhibit.css), синий корпус, розовые кнопки, обводка стакана с пунктиром внизу.
+   Селекторы усилены префиксом body: общие стили экспонатов (кремовые втулки, белёсый шлейф и основание) иначе перебивают эти правила. */
+body .toy[data-model='taksun'] {
+  --rim-hi: #3aa0dc;
+  --rim: #0d6ba8;
+  --rim-dark: #07508a;
+  --rim-lo: #04375f;
+  --lcd-dim: none;
+}
+body .toy[data-model='taksun'] .base {
+  aspect-ratio: 400 / 650;
+  background: #075b97;
+}
+/* Окно экрана по снимку: стекло 228 × 324 единицы крышки, тёмная кайма вокруг, светлая печатная рамка нарисована на крышке (taksunModel.ts). */
+.toy[data-model='taksun'] .lid__face .lid__bezel {
+  left: 20.5%;
+  top: 15.2%;
+  width: 59%;
+  height: 76%;
+  padding: 1.4cqw;
+  border: 0.6cqw solid #043a60;
+  background: #06395e;
+  box-shadow:
+    inset 0.5cqw 0.6cqw 0.8cqw #021f35,
+    inset -0.3cqw -0.3cqw 0.4cqw #3b83b0;
+}
+.toy[data-model='taksun'] .lid__window {
+  background: linear-gradient(110deg, #9ba186, #b9bea2 85%);
+  box-shadow: inset 0.7cqw 0.8cqw 1cqw #626b54;
+}
+/* Обводка стакана напечатана на стекле и видна всегда, независимо от питания. */
+.taksun-lcd {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: #2c3226;
+  pointer-events: none;
+}
+.taksun-lcd .lcd-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linejoin: miter;
+}
+.taksun-lcd .lcd-line--dash {
+  stroke-dasharray: 17 8.4;
+}
+body .toy[data-model='taksun'] .toy__band {
+  background: #050606;
+}
+body .toy[data-model='taksun'] .toy__band::before {
+  background: repeating-linear-gradient(90deg, #08090a 0 0.55cqw, #1c201f 0.8cqw 1.65cqw, #0c0e0d 1.9cqw 2.3cqw);
+  border-radius: 0 0 40% 40%;
+  box-shadow: inset 0 -0.9cqw 0.8cqw #000;
+}
+/* Розовые кнопки. Селекторы усилены: общий стиль экспонатов в exhibit.css иначе перебивает их серым. */
+.toy[data-model='taksun'] .taksun-key {
+  border-color: #a73f66;
+  background: radial-gradient(circle at 38% 26%, #ffd8e2, #f392ae 56%, #d96a90 86%, #ffc3d3);
+  box-shadow:
+    inset 0.2cqw 0.3cqw 0.5cqw #ffe6ec,
+    inset -0.2cqw -0.2cqw 0.5cqw #b5476d,
+    0 0.45cqw 0.6cqw #04304f;
+}
+.toy[data-model='taksun'] .taksun-key[data-key='jump'] {
+  border-radius: 9cqw;
+  transform: rotate(-24deg);
+}
+.toy[data-model='taksun'] .taksun-key:is(:active, [data-pressed]) {
+  transform: translateY(0.35cqw);
+  filter: brightness(0.92);
+  box-shadow: inset 0 0 0.8cqw #93345a;
+}
+.toy[data-model='taksun'] .taksun-key[data-key='jump']:is(:active, [data-pressed]) {
+  transform: rotate(-24deg) translateY(0.35cqw);
+}
+.taksun-key:focus-visible {
+  outline-color: #ffd6e1;
+}
+.toy[data-model='taksun'] #game-area {
+  width: 100%;
+  min-width: 0;
+}
+.toy[data-model='taksun'] #screen {
+  display: none;
+}
+@media (max-width: 899px) {
+  body[data-chrome='toy'] .arena[data-model='taksun'] {
+    --toy-essential: 2.12;
+  }
+}

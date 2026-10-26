@@ -6,7 +6,8 @@
  * Игра идёт как обычный `BrickGame`; после её конца START начинает ту же игру заново, `restart()` (RESET) возвращает в меню.
  */
 import { BIG_DIGITS } from './menuArt';
-import { MINI_GAME_COUNT, miniEntry } from './games/mini';
+import { MINI_IDLE_STEP_TICKS } from './miniTiming';
+import { MINI_GAME_COUNT, MINI_RACING_COUNT, miniEntry } from './games/mini';
 import { blit, emptyField, pictureField, type Sprite } from './grid';
 import {
   MAX_SPEED,
@@ -119,7 +120,7 @@ export class MiniConsole implements BrickGame {
 
   /** Idle animation clock starts at power-on and survives menu selection/settings changes. */
   get idleDisplay(): {scale:number;lines:boolean} {
-    const pulse=Math.floor(this.powerTicks/30),phase=pulse%26;
+    const pulse=Math.floor(this.powerTicks/MINI_IDLE_STEP_TICKS),phase=pulse%26;
     return {scale:phase<13?phase+1:25-phase,lines:pulse%2===1};
   }
 
@@ -247,6 +248,12 @@ export class MiniConsole implements BrickGame {
 
   resume(): BrickEvent[] {
     return this.current?.resume() ?? [];
+  }
+
+  /** Курсор меню на первый номер игры (вкладка левой панели); только в меню, номер другой игры заменяется, номер той же игры остаётся. */
+  selectGame(id: 'racing' | 'tetris'): void {
+    if (this.current || this.stage !== 'menu' || this.gameId === id) return;
+    this.number = id === 'racing' ? 0 : MINI_RACING_COUNT;
   }
 
   /** Назад в меню (RESET корпуса); выбор в меню сохраняется. */

@@ -1,9 +1,16 @@
 .game-badges { display:inline-flex; flex-wrap:wrap; align-items:center; gap:5px; vertical-align:middle; }
-.game-origin,.game-badges .gpanel__stage { display:inline-flex; align-items:center; gap:4px; padding:3px 6px; border:1px solid currentColor; border-radius:6px; font:600 9px/1.2 system-ui,sans-serif; white-space:nowrap; letter-spacing:.03em; }
+.game-origin,.game-rarity,.game-badges .gpanel__stage { display:inline-flex; align-items:center; gap:4px; padding:3px 6px; border:1px solid currentColor; border-radius:6px; font:600 9px/1.2 system-ui,sans-serif; white-space:nowrap; letter-spacing:.03em; }
 .game-origin { color:var(--ink, currentColor); opacity:.72; }
 .game-origin span { font-size:12px; }
 .game-badges .gpanel__stage[data-stage="alpha"] { color:light-dark(#875017,#e7b578); }
 .game-badges .gpanel__stage[data-stage="beta"] { color:light-dark(#326052,#8fc9ae); }
+.game-rarity { color:var(--rarity, currentColor); }
+.game-rarity i { width:6px; height:6px; border-radius:50%; background:currentColor; }
+.game-rarity[data-rarity="common"] { --rarity:light-dark(#4f5b66,#a7b2bd); }
+.game-rarity[data-rarity="uncommon"] { --rarity:light-dark(#2f7a4a,#79c995); }
+.game-rarity[data-rarity="rare"] { --rarity:light-dark(#2a63b8,#7fb0f2); }
+.game-rarity[data-rarity="ultra-rare"] { --rarity:light-dark(#8a3fb5,#cf9af0); }
+.game-rarity[data-rarity="mobile"] { --rarity:light-dark(#b34d3a,#f0a08e); }
 .enc-item .game-badges { margin-top:5px; }
 .enc-article__head .game-badges { margin-block:8px; }
 .enc-modes .game-badges { margin-left:auto; }

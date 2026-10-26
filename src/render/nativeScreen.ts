@@ -11,12 +11,13 @@ const LEVEL=['204_3','206_3','208_3','210_3','208_2','204_2','206_2'];
 export class NativeScreen {
   readonly hasGhostLayer=true;
   private ghost=false;
-  private readonly root:SVGSVGElement;
+  /** Сегменты; обводка стакана (`#frame`) лежит вне этой группы и видна всегда, даже при выключенной игрушке. */
+  private readonly display:SVGElement|null;
   private readonly segments:Map<string,SVGElement>;
   private readonly device:NativeDeviceId;
   private previous=new Set<string>();
   private constructor(root:SVGSVGElement,device:NativeDeviceId) {
-    this.root=root;this.device=device;
+    this.device=device;this.display=root.querySelector<SVGElement>('#display');
     this.segments=new Map([...root.querySelectorAll<SVGElement>('[id]')].filter(e=>/^\d+_\d+$/.test(e.id)).map(e=>[e.id,e]));
     for(const e of this.segments.values())e.style.opacity='0';
   }
@@ -37,9 +38,9 @@ export class NativeScreen {
     if(this.ghost===value)return;this.ghost=value;
     for(const [id,e]of this.segments)e.style.opacity=this.previous.has(id)?'1':value?'.09':'0';
   }
-  clear():void {this.root.style.visibility='hidden';this.previous.clear();}
+  clear():void {if(this.display)this.display.style.visibility='hidden';this.previous.clear();}
   render(scene:TetrisScene):void {
-    this.root.style.visibility='visible';
+    if(this.display)this.display.style.visibility='visible';
     const map=mapping[this.device],active=new Set<string>();
     const segment=(id:string):void=>{const target=(map.segments as Record<string,string>)[id];if(target)active.add(target);};
     const digit=(value:number,ids:readonly string[]):void=>{for(const char of DIGITS[Math.max(0,Math.min(9,value))]!)segment(ids['abcdefg'.indexOf(char)]!);};

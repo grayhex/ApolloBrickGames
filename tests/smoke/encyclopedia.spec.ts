@@ -138,10 +138,16 @@ test('admin saves image URLs in the common configuration, rejects executable URL
 });
 
 
-test('catalog accuracy stays descending after filtering and changing language',async({page})=>{
+test('catalog stays ordered by rarity, then by descending accuracy, after filtering and changing language',async({page})=>{
   await page.goto('./encyclopedia');
-  const scores=()=>page.locator('.enc-item__accuracy').allTextContents();
-  const sorted=async()=>{const values=(await scores()).map(s=>Number(s.replace('%',''))||0);expect(values.length).toBeGreaterThan(0);expect(values).toEqual([...values].sort((a,b)=>b-a));};
+  const order=['common','uncommon','rare','ultra-rare','mobile'];
+  const rows=()=>page.locator('.enc-item').evaluateAll(nodes=>nodes.map(node=>({rarity:node.querySelector<HTMLElement>('.game-rarity')?.dataset['rarity']??'',score:Number(node.querySelector('.enc-item__accuracy')?.textContent?.replace('%',''))||0})));
+  const sorted=async()=>{
+    const values=await rows();expect(values.length).toBeGreaterThan(0);
+    const rank=(rarity:string)=>rarity===''?order.length:order.indexOf(rarity);
+    const expected=[...values].sort((a,b)=>rank(a.rarity)-rank(b.rarity)||b.score-a.score);
+    expect(values).toEqual(expected);
+  };
   await expect(page.locator('.enc-item')).toHaveCount(57);await sorted();
   await page.locator('.enc-filters button').nth(2).click();await sorted();
   await page.locator('#enc-lang').click();await sorted();

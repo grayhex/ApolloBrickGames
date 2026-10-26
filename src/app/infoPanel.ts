@@ -5,7 +5,9 @@ import { guideForBody } from './bodyButtons';
 import { BRICK_GAMES } from '../brick/games';
 import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
-import { BoxDialog, BoxViewer } from './boxViewer';
+import { rarityOf, RARITY_LABEL } from '../games/rarity';
+import { BoxDialog } from './boxViewer';
+import { packButton } from './packButton';
 import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
 import { compactGuide } from './guidePanel';
@@ -80,7 +82,7 @@ const FIGURES: readonly { name: MsgKey; picture: Picture }[] = [
 const cap = (label: string): HTMLElement => h('kbd', { class: 'kbd' }, label);
 
 /** Строка схемы управления: что делает и какие клавиши (по текущим привязкам; одно действие — одна или несколько клавиш). */
-function keyRow(label: string, ...groups: string[][]): HTMLElement {
+export function keyRow(label: string, ...groups: string[][]): HTMLElement {
   const caps = groups.flatMap((group, index) => [...(index > 0 ? [h('span', { class: 'keys__sep' }, '·')] : []), ...group.map(cap)]);
   return h(
     'li',
@@ -134,7 +136,7 @@ export class InfoPanel {
   private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
   /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
-  private thumb: BoxViewer | null = null;
+  private thumb: { dispose(): void } | null = null;
   /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
   private selected: string;
   /** Игра, которая выбрана в меню консоли или играет сейчас (вкладка с точкой); у консоли с меню вкладка следует за выбором в меню. */
@@ -311,27 +313,12 @@ export class InfoPanel {
 
   /** Миниатюра 3D-упаковки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) упаковка медленно поворачивается. */
   private boxButton(): HTMLElement | null {
-    const dialog = this.boxDialog;
-    const pack = this.pack;
     this.thumb?.dispose();
     this.thumb = null;
-    if (!dialog || !pack) return null;
-    const thumb = new BoxViewer({ model: pack, interactive: false, signal: this.signal });
-    this.thumb = thumb;
-    const button = h(
-      'button',
-      { type: 'button', class: 'boxbtn', 'data-box-open': pack.id, 'aria-label': t(pack.text.open), title: t(pack.text.open) },
-      thumb.element,
-      h('span', { class: 'boxbtn__cap', 'aria-hidden': 'true' }, t('box.cap')),
-      h('span', { class: 'boxbtn__label', 'aria-hidden': 'true' }, t(pack.text.short)),
-    );
-    const options = { signal: this.signal };
-    button.addEventListener('click', () => dialog.open(), options);
-    button.addEventListener('pointerenter', () => thumb.setSpin(true), options);
-    button.addEventListener('pointerleave', () => thumb.setSpin(false), options);
-    button.addEventListener('focus', () => thumb.setSpin(true), options);
-    button.addEventListener('blur', () => thumb.setSpin(false), options);
-    return button;
+    if (!this.boxDialog || !this.pack) return null;
+    const button = packButton(this.pack, this.boxDialog, this.signal);
+    this.thumb = button;
+    return button.element;
   }
 
   /** Раздел «Игры на устройстве»: вкладки игр консоли (цифры или буквы, как в меню устройства) и описание открытой игры. */
@@ -362,12 +349,22 @@ export class InfoPanel {
       panel.replaceChildren(...this.gamePanel(model, id));
       if (focus) tabs.get(id)?.focus();
     };
+    let group: HTMLOptGroupElement | undefined;
     games.forEach((game, index) => {
       const id = game.entryId ?? game.id;
       const native = model.nativeDevice && game.entryId ? nativeEntry(model.nativeDevice,game.entryId) : undefined;
       const key = native ? model.nativeDevice === 'apollo-b0202' ? native.group : native.nativeCode : gameKey(model,index);
       const name = native ? `${native.approximate ? native.stage==='beta'?'β · ':'α · ' : ''}${native.name[lang]}${native.available ? '' : lang==='ru' ? ' · исследуется' : ' · under study'}` : GAMES[game.id].names[lang];
-      chooser.append(h('option',{value:id},`${key}: ${name}`));
+      const option = h('option',{value:id},`${key}: ${name}`);
+      const tier = model.universal && !model.nativeDevice ? rarityOf(game.id) : null;
+      if (tier) { // универсальная консоль: игры идут по возрастанию редкости, список разбит на группы ступеней
+        if (tier !== group?.dataset['rarity']) {
+          group = h('optgroup',{label:lang==='ru'?RARITY_LABEL[tier].ru:RARITY_LABEL[tier].en});
+          group.dataset['rarity'] = tier;
+          chooser.append(group);
+        }
+        group!.append(option);
+      } else chooser.append(option);
       const tab = h(
         'button',
         { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${id}`, 'data-game': id, 'data-key': key, 'aria-controls': 'gpanel', title: name, 'aria-label': `${key}: ${name}` },
@@ -437,7 +434,7 @@ export class InfoPanel {
     if (entry) {
       const lang = getLang(), ru = lang === 'ru';
       const head = h('header',{class:'gpanel__head'},h('span',{class:'gkey'},entry.nativeCode),h('h4',{class:'gpanel__name'},entry.name[lang]));
-      head.append(gameBadges(entry.gameId,lang,{stage:entry.stage}));
+      head.append(gameBadges(entry.gameId,lang,{stage:entry.stage,rarity:false}));
       const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
       const menu = h('p',{class:'side__text'},(originalPlayableMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
       const guide = nativeGuide(entry);
@@ -446,7 +443,7 @@ export class InfoPanel {
     const id = selectedId as GameId;
     const lang = getLang();
     const head = h('header', { class: 'gpanel__head' }, h('span', { class: 'gkey', 'aria-hidden': 'true' }, gameKey(model, model.games.findIndex((g) => g.id === id))), h('h4', { class: 'gpanel__name' }, GAMES[id].names[lang]));
-    head.append(gameBadges(id,lang));
+    head.append(gameBadges(id,lang,{rarity:!!model.universal}));
     const data = BRICK_GUIDES[id];
     return [head, ...(data ? compactGuide(guideForBody(data, model, BRICK_GAMES[id]), lang) : [])];
   }

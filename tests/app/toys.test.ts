@@ -13,7 +13,7 @@ import { APOLLO_SHELLS } from '../../src/input/settings';
 describe('выбор игрушки', () => {
   it('четыре Apollo и два экспоната: универсальный Brick Game по умолчанию, остальные — по адресу ?toy=', () => {
     expect([...APOLLO_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
-    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202']);
+    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'taksun']);
     expect(parseToy('?toy=alibaba')).toBe('alibaba');
     expect(DEFAULT_TOY).toBe('brickgame');
     expect(parseToy('')).toBe('brickgame');
@@ -179,8 +179,9 @@ describe('набор игр у консоли', () => {
     }
   });
 
-  it('3D-коробка выводится только у «168 в 1 танк»; у Crocodile Mario модель есть, но вывод выключен, у остальных упаковки нет', () => {
-    expect(TOY_IDS.filter((id) => TOYS[id].pack)).toEqual(['tank168']);
+  it('3D-коробка выводится у «168 в 1 танк» и у TAKSUN TS-995 (заглушка до развёртки); у Crocodile Mario модель есть, но вывод выключен, у остальных упаковки нет', () => {
+    expect(TOY_IDS.filter((id) => TOYS[id].pack)).toEqual(['tank168', 'taksun']);
+    expect(TOYS.taksun.pack).toBe('taksun');
     expect(TOYS.mario.pack).toBeNull();
     expect(TOYS.tank168.pack).toBe('tank168');
   });

@@ -1,5 +1,6 @@
 import { LIBRARY_IDS } from '../games/library';
 import { GAMES, type GameId } from '../games/catalog';
+import { rarityRank } from '../games/rarity';
 import { BRICK_GUIDES } from '../brick/guides';
 import { gt, type GameGuideData, type GuideText } from '../brick/guide';
 
@@ -75,7 +76,7 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
   }
   if(LIBRARY_IDS.some(gameId=>gameId===id)&&!['snake','dice','tetris-flicker'].includes(id))sources.push(research('docs/brick/balance-review.md',gt('Проверка проходимости, баланса, столкновений и условий окончания. Авторские решения обозначены отдельно от сведений об оригинале.','Playability, balance, collisions and end-condition audit. Project design choices are distinguished from original-device evidence.')));
   return {id,family:familyFor(id),accuracy,sources,scope};
-}).sort((a,b)=>b.accuracy-a.accuracy);
+}).sort((a,b)=>rarityRank(a.id)-rarityRank(b.id)||b.accuracy-a.accuracy); // редкость по возрастанию (Common → Ultra Rare → Mobile → без редкости), внутри ступени — достоверность по убыванию
 
 export { previewStage } from '../games/quality';
 

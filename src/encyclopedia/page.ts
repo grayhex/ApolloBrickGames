@@ -102,7 +102,7 @@ export function startEncyclopedia(): void {
     else rules.append(h('p',{},entry.scope[language]));
     const modes=h('section',{class:'enc-section',id:'modes'},h('h3',{},c.modes));
     const def=BRICK_GAMES[selected];
-    if(def)modes.append(h('ol',{class:'enc-modes'},...modeLabels(def,undefined,language).map((m,i)=>h('li',{},h('span',{},m.number),m.name,gameBadges(selected,language,{mode:i})))));
+    if(def)modes.append(h('ol',{class:'enc-modes'},...modeLabels(def,undefined,language).map((m,i)=>h('li',{},h('span',{},m.number),m.name,gameBadges(selected,language,{mode:i,rarity:false})))));
     else modes.append(h('p',{},selected==='mario'?(language==='ru'?'Девять уровней приключения Mario на оригинальном сегментном экране.':'Nine Mario adventure levels on the original segmented screen.'):entry.scope[language]));
     const sources=h('section',{class:'enc-section',id:'sources'},h('h3',{},c.aboutSources),h('p',{class:'enc-scope'},entry.scope[language]),h('div',{class:'enc-sources'},...entry.sources.map(s=>h('a',{href:s.url,target:'_blank',rel:'noopener noreferrer'},h('span',{class:'enc-source__kind'},c[s.kind as SourceKind]),h('strong',{},s.title+' ↗'),h('p',{},s.note[language])))),h('details',{class:'enc-scale'},h('summary',{},c.accuracy),h('p',{},c.scale)));
     if(guide?.assumptions.length)sources.append(h('h4',{},c.notes),h('ul',{},...guide.assumptions.map(a=>h('li',{},a[language]))));
