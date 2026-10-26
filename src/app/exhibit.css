@@ -113,7 +113,8 @@ body[data-chrome='toy'] .arena:is([data-model='alibaba'], [data-model='minibrick
   outline: 0.7cqw solid #b65e52;
   outline-offset: 1cqw;
 }
-#side-ctl:is([data-toy='alibaba'], [data-toy='minibrick']) :is(#blk-sound, #blk-levels) {
+#side-ctl:is([data-toy='alibaba'], [data-toy='minibrick']) #blk-levels,
+#side-ctl[data-toy='alibaba'] #blk-sound {
   display: none;
 }
 .side--info:is([data-toy='alibaba'], [data-toy='minibrick']) {

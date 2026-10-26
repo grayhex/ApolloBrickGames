@@ -1,0 +1,545 @@
+import './exhibit.css';
+import './minibrick.css';
+import { BrickAudio } from '../audio/brick';
+import { MiniConsole } from '../brick/miniConsole';
+import { makeBrickInput, BRICK_TICK_HZ, MAX_SCORE, type BrickAction, type BrickEvent } from '../brick/types';
+import { actionBit, maskOf, type InputFrame } from '../core';
+import { browserGamepadProvider } from '../input/gamepad';
+import { browserStorage, musicVolumeOf } from '../input/settings';
+import { MINI_LCD_OFF, type MiniLcd, type MiniLcdState } from '../render/miniScreen';
+import { ControlPanel, type ControlPanelActions } from './controlPanel';
+import { CornerNav } from './cornerNav';
+import { h } from './dom';
+import { openEncyclopedia } from './help';
+import { InputHub } from './hub';
+import { applyStatic, getLang, onLangChange, setLang, t } from './i18n';
+import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
+import { applyMiniBrickModel, miniBrickMark } from './minibrickModel';
+import { SettingsDialog } from './settingsUi';
+import { FixedStepper } from './stepper';
+import { applyTheme } from './theme';
+import { ToyPanel, type ToyKeyId } from './toy';
+import { TOYS } from './toys';
+import { parseView, type View } from './view';
+
+const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
+
+const START = actionBit('start');
+const PAUSE = actionBit('pause');
+const LEFT = actionBit('left');
+const RIGHT = actionBit('right');
+const DOWN = actionBit('down');
+/** На корпусе нет отдельной «вверх»: клавиша ↑ и большая ROTATE — одна кнопка. */
+const ROTATE = actionBit('jump') | actionBit('up');
+/** Кнопки корпуса и их игровые действия; RESET (`fire`) возвращает в меню, ON/OFF, MUSIC/VOICE и START/PAUSE — отдельно. */
+const KEY_ACTIONS: Partial<Record<ToyKeyId, number>> = {
+  left: maskOf('left'),
+  right: maskOf('right'),
+  down: maskOf('down'),
+  jump: maskOf('jump'),
+};
+/** Период мигания клеток и сегментов, мс (полпериода — «горит», полпериода — «погашена»). */
+const BLINK_MS = 500;
+/** Шкала значков на заставке горит целиком. */
+const MINI_SCALE = 13;
+
+/** Рекорд каждого номера игры хранится отдельно; недоступное хранилище не мешает игре. */
+const hiKey = (number: number): string => `crocodile-mario:minibrick:${String(number).padStart(2, '0')}:hi`;
+function loadHi(number: number): number {
+  try {
+    const value = Number.parseInt(browserStorage()?.getItem(hiKey(number)) ?? '', 10);
+    return Number.isFinite(value) ? Math.min(Math.max(value, 0), MAX_SCORE) : 0;
+  } catch {
+    return 0;
+  }
+}
+function saveHi(number: number, value: number): void {
+  try {
+    browserStorage()?.setItem(hiKey(number), String(value));
+  } catch {
+    // рекорд не сохранится — игре это не мешает
+  }
+}
+
+/** Кадр ввода такта в действия движка: направления, ROTATE (она же ↑); «вверх» как отдельного действия у игр нет. */
+function brickInput(frame: InputFrame): ReturnType<typeof makeBrickInput> {
+  const actions = (mask: number): BrickAction[] => {
+    const out: BrickAction[] = [];
+    if (mask & LEFT) out.push('left');
+    if (mask & RIGHT) out.push('right');
+    if (mask & DOWN) out.push('down');
+    if (mask & ROTATE) out.push('rotate');
+    return out;
+  };
+  return makeBrickInput(actions(frame.pressed), actions(frame.held));
+}
+
+/**
+ * Mini Brick Game B-S96: играющая игрушка. Своя «аппаратура» (синяя крышка, жёлтые кнопки, ЖК с рамкой стакана и шкалой значков) и своя консоль
+ * (`MiniConsole`: заставка рожица → «96», меню номеров 00–96, партия), но та же оболочка страницы: вид, питание, звук, пульт, справка.
+ * Движок общий с остальными игрушками (`BrickGame`), без кабинета, рейтингов и админки: у модели нет набора игр для настройки.
+ */
+export function startMiniBrickApp(carry?: Carry): AppHandle {
+  const life = new Lifecycle();
+  const { signal } = life;
+  const model = TOYS.minibrick;
+  document.body.dataset['chrome'] = 'toy';
+  document.body.dataset['motion'] = 'off';
+  const lcd: MiniLcd = applyMiniBrickModel();
+  const toy = byId('toy');
+  const arena = byId('arena');
+  const area = byId('game-area');
+  const front = byId('lid-front');
+  const lower = byId('lower');
+  const cover = byId<HTMLButtonElement>('lid-cover');
+  const base = byId('base');
+  const params = new URLSearchParams(location.search);
+  let view: View = carry?.view ?? parseView(params.get('view'), params.get('power') === 'on');
+  let powered = carry ? carry.powered : params.get('power') === 'on';
+  if (powered && view === 'closed') view = 'full';
+  const lid = byId('lid');
+  lid.style.setProperty('--lcd-bg', model.lcd.bg);
+  lid.style.setProperty('--lcd-aspect', '254 / 314');
+  byId('stage').dataset['i18nAttrs'] = `aria-label=${model.stageLabel}`;
+  area.dataset['boot'] = 'off';
+  area.dataset['menu'] = 'none';
+  area.dataset['music'] = 'none';
+
+  const seed = Number.parseInt(params.get('seed') ?? '', 10) || Date.now() % 0x7fffffff || 1;
+  const mini = new MiniConsole({ seed, hiScore: loadHi });
+  if (params.has('debug')) Object.defineProperty(window, '__minibrick', { configurable: true, get: () => mini });
+
+  /** Диалог создаётся после ввода (ему нужен `hub`), а ввод спрашивает, не открыт ли он: держатель ссылки разрывает круг. */
+  const ui: { settings: SettingsDialog | null } = { settings: null };
+  const isKeyboardActive = (): boolean => {
+    if (ui.settings?.isOpen || view === 'closed') return false;
+    const active = document.activeElement;
+    return active === null || active === document.body || area.contains(active);
+  };
+  const hub = new InputHub({ keyboardTarget: window, provider: browserGamepadProvider(), storage: browserStorage(), isKeyboardActive, onGamepadDisconnect: () => suspend() });
+  setLang(hub.settings.display.lang);
+  const stepper = new FixedStepper(1000 / BRICK_TICK_HZ);
+  const brickAudio = new BrickAudio();
+  life.onDispose(() => brickAudio.dispose());
+  const unlockAudio = (): void => brickAudio.unlock();
+  window.addEventListener('keydown', unlockAudio, { signal });
+  window.addEventListener('pointerdown', unlockAudio, { signal });
+
+  const refocus = (): void => {
+    if (view !== 'closed') area.focus({ preventScroll: true });
+  };
+
+  // ── Игра ────────────────────────────────────────────────────────────
+  const savedHi = new Map<number, number>();
+  const persistHi = (): void => {
+    if (mini.inMenu) return;
+    const stored = savedHi.get(mini.gameNumber) ?? loadHi(mini.gameNumber);
+    savedHi.set(mini.gameNumber, stored);
+    if (mini.hiScore > stored) {
+      savedHi.set(mini.gameNumber, mini.hiScore);
+      saveHi(mini.gameNumber, mini.hiScore);
+    }
+  };
+  /** Число снятых рядов партии (две последние цифры верхней строки): набирается по событиям `lines`, с новой партией обнуляется. */
+  let lines = 0;
+  const emit = (events: readonly BrickEvent[]): void => {
+    for (const event of events) {
+      if (event.type === 'started') lines = 0;
+      else if (event.type === 'lines') lines += event.count;
+      brickAudio.play(event, mini.game?.id ?? mini.id, mini.inMenu, 'mini');
+    }
+    if (events.length > 0) persistHi();
+  };
+  function suspend(): void {
+    emit(mini.pause());
+    hub.resetDevices();
+    hub.tracker.reset();
+    stepper.reset();
+  }
+  const restartGame = (): void => {
+    persistHi();
+    brickAudio.silence();
+    mini.restart();
+    hub.tracker.reset();
+    stepper.reset();
+    refocus();
+  };
+  const setSound = (on: boolean): void => {
+    hub.updateSettings((s) => {
+      s.display.sound = on;
+    });
+    applyDisplay();
+  };
+
+  function tick(): void {
+    const raw = hub.tracker.consume();
+    const start = (raw.pressed & START) !== 0;
+    const pause = (raw.pressed & PAUSE) !== 0;
+    if (mini.inMenu) {
+      if (start) emit(mini.start());
+      else emit(mini.menu(brickInput(raw)));
+      return;
+    }
+    switch (mini.phase) {
+      case 'ready':
+      case 'over':
+        if (start) emit(mini.start());
+        break;
+      case 'paused':
+        if (start || pause) emit(mini.resume());
+        break;
+      case 'playing':
+        if (pause) emit(mini.pause());
+        else if (start) emit(mini.startButton());
+        else emit(mini.step(brickInput(raw)));
+        break;
+    }
+  }
+
+  const setPower = (on: boolean): void => {
+    if (on === powered) return;
+    powered = on;
+    if (on && view === 'closed') {
+      view = 'full';
+      applyView();
+    }
+    toy.dataset['power'] = on ? 'on' : 'off';
+    area.dataset['power'] = on ? 'on' : 'off';
+    brickAudio.silence();
+    hub.tracker.reset();
+    stepper.reset();
+    applyDisplay();
+    if (on) {
+      unlockAudio(); // кнопка ON/OFF срабатывает раньше слушателя окна: без этого сигнал заставки не успевал бы прозвучать
+      emit(mini.powerOn());
+    } else {
+      suspend();
+      mini.restart();
+    }
+  };
+
+  // ── Кнопки корпуса ────────────────────────────────────────────────
+  const toyPanel = new ToyPanel(toy, hub, {
+    startPauseAction: () => START,
+    phase: () => (mini.phase === 'playing' ? 'playing' : mini.phase === 'paused' ? 'paused' : 'ready'),
+    powered: () => powered,
+    onPower: () => setPower(!powered),
+    onSound: () => setSound(!hub.settings.display.sound),
+    keyActions: KEY_ACTIONS,
+    // RESET возвращает в меню; игрового действия у него нет.
+    onPress: (id) => {
+      if (id !== 'fire') return false;
+      if (powered) restartGame();
+      return true;
+    },
+    onReset: () => {
+      if (powered) restartGame();
+    },
+  });
+  const hotkeys: Record<string, 'onoff' | 'sound'> = { KeyO: 'onoff', KeyM: 'sound' };
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      const id = hotkeys[event.code];
+      if (!id || event.repeat || event.ctrlKey || event.altKey || event.metaKey || !isKeyboardActive()) return;
+      event.preventDefault();
+      toyPanel.hotkey(id, true);
+    },
+    { signal },
+  );
+  window.addEventListener(
+    'keyup',
+    (event) => {
+      const id = hotkeys[event.code];
+      if (id) toyPanel.hotkey(id, false);
+    },
+    { signal },
+  );
+
+  // ── Вид, пульт, угловое меню ────────────────────────────────────────
+  const applyView = (): void => {
+    const closed = view === 'closed';
+    for (const element of [toy, arena]) {
+      element.dataset['view'] = view;
+      element.toggleAttribute('data-closed', closed);
+      element.toggleAttribute('data-compact', view === 'screen');
+    }
+    front.inert = closed;
+    lower.inert = closed;
+    cover.inert = !closed;
+    cover.tabIndex = closed ? 0 : -1;
+  };
+  const setView = (next: View): void => {
+    if (next === view) return;
+    if (next === 'closed' && powered) return; // включённую игрушку не закрыть: сначала ON/OFF
+    view = next;
+    applyView();
+    applyDisplay();
+    refocus();
+  };
+  const none = (): void => {};
+  const panelActions: ControlPanelActions = {
+    pickShell: none,
+    toggleSound: () => setSound(!hub.settings.display.sound),
+    setVolume: (volume, commit) => {
+      if (commit) {
+        hub.updateSettings((s) => {
+          s.display.volume = volume;
+        });
+      }
+      brickAudio.setVolume(volume);
+    },
+    setMusicVolume: none,
+    setMusic: none,
+    toggleGhost: none,
+    setView,
+    pickOriginal: none,
+    pickBundled: none,
+    pickUser: none,
+  };
+  const controls = new ControlPanel(byId('side-ctl'), {
+    toy: 'minibrick',
+    shells: model.shells,
+    slots: [],
+    bundled: [],
+    levels: false,
+    music: false,
+    speedrun: false,
+    remote: ['onoff', 'sp', 'reset'],
+    tickRateHz: BRICK_TICK_HZ,
+    onPointerUse: refocus,
+    signal,
+    actions: panelActions,
+  });
+  toyPanel.bindRemote(byId('side-ctl'));
+  const corner = new CornerNav(
+    { devices: byId('devices'), theme: byId<HTMLButtonElement>('corner-theme') },
+    {
+      toggleTheme: () => {
+        hub.updateSettings((s) => {
+          s.display.theme = s.display.theme === 'dark' ? 'light' : 'dark';
+        });
+        applyDisplay();
+      },
+      toggleGhost: none,
+      togglePause: () => {
+        if (powered && !mini.inMenu) emit(mini.phase === 'paused' ? mini.resume() : mini.pause());
+      },
+      onPointerUse: refocus,
+    },
+    signal,
+  );
+  const settings = (ui.settings = new SettingsDialog(byId<HTMLDialogElement>('settings'), hub, {
+    onOpen: () => {
+      if (powered && mini.phase === 'playing') emit(mini.pause());
+      hub.resetDevices();
+    },
+    onClose: () => {
+      applyDisplay();
+      refocus();
+    },
+    signal,
+  }));
+
+  function applyDisplay(): void {
+    const display = hub.settings.display;
+    applyTheme(display.theme);
+    corner.setTheme(display.theme);
+    corner.setGhost(null);
+    brickAudio.setMuted(!display.sound);
+    brickAudio.setVolume(display.volume);
+    controls.update({
+      shell: model.defaultShell,
+      sound: display.sound,
+      volume: display.volume,
+      musicVolume: musicVolumeOf(display),
+      music: display.music,
+      view,
+      powered,
+      level: null,
+    });
+  }
+
+  function relabel(): void {
+    document.documentElement.lang = getLang();
+    applyStatic();
+    const lang = byId('corner-lang');
+    lang.dataset['lang'] = getLang();
+    lang.setAttribute('aria-label', t('corner.lang'));
+    lang.title = t('corner.langTitle');
+    const info = byId('side-info');
+    info.dataset['toy'] = 'minibrick';
+    info.replaceChildren(
+      h('div', { class: 'alibaba-info__mark' }, miniBrickMark('label')),
+      h(
+        'section',
+        { class: 'side__sec' },
+        h('h2', { class: 'side__h', id: 'info-title' }, model.name),
+        h('p', { class: 'gtext' }, t('minibrick.description')),
+      ),
+      h('section', { class: 'side__sec' }, h('h3', { class: 'side__h' }, t('minibrick.gamesTitle')), h('p', { class: 'gtext' }, t('minibrick.games'))),
+      h('section', { class: 'side__sec' }, h('h3', { class: 'side__h' }, t('minibrick.controlsTitle')), h('p', { class: 'gtext' }, t('minibrick.controls'))),
+      h(
+        'section',
+        { class: 'side__sec' },
+        h('h3', { class: 'side__h' }, t('alibaba.reference')),
+        h('p', { class: 'gtext' }, t('minibrick.details')),
+        h('p', { class: 'gtext' }, t('minibrick.tip')),
+      ),
+    );
+    base.querySelector('[data-key="onoff"]')?.setAttribute('aria-label', 'ON/OFF');
+  }
+  byId('corner-lang').addEventListener(
+    'click',
+    () => {
+      hub.updateSettings((s) => {
+        s.display.lang = getLang() === 'ru' ? 'en' : 'ru';
+        s.display.langSet = true;
+      });
+      setLang(hub.settings.display.lang);
+    },
+    { signal },
+  );
+  byId('corner-settings').addEventListener('click', () => settings.open(), { signal });
+  byId('corner-help').addEventListener('click', () => openEncyclopedia('minibrick'), { signal });
+  cover.addEventListener('click', () => setView('full'), { signal });
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (view !== 'closed' || event.repeat || event.ctrlKey || event.altKey || event.metaKey || ui.settings?.isOpen) return;
+      if (event.code !== 'Enter' && event.code !== 'Space') return;
+      const active = document.activeElement;
+      if (active !== null && active !== document.body && active !== cover) return;
+      event.preventDefault();
+      setView('full');
+    },
+    { signal },
+  );
+  // «Только экран»: кнопок корпуса нет, касание экрана включает игрушку, открывает меню и запускает или продолжает партию.
+  area.addEventListener(
+    'pointerdown',
+    () => {
+      if (view !== 'screen') return;
+      if (!powered) setPower(true);
+      else if (mini.screenStage === 'intro' || (mini.inMenu && mini.screenStage === 'menu') || mini.phase === 'over') emit(mini.start());
+      else if (mini.phase === 'paused') emit(mini.resume());
+    },
+    { signal },
+  );
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden && powered) suspend();
+    },
+    { signal },
+  );
+  window.addEventListener(
+    'blur',
+    () => {
+      if (powered) suspend();
+    },
+    { signal },
+  );
+  onLangChange(relabel, signal);
+  life.onDispose(() => {
+    settings.close();
+    hub.detach();
+  });
+
+  // ── Кадр ────────────────────────────────────────────────────────────
+  const setData = (name: string, value: string | number): void => {
+    const text = String(value);
+    if (area.dataset[name] !== text) area.dataset[name] = text;
+  };
+  const stateOf = (now: number): MiniLcdState => {
+    const stage = mini.screenStage;
+    const base = { powered: true, cells: mini.cells(), blink: Math.floor(now / BLINK_MS) % 2 === 0, note: hub.settings.display.sound } as const;
+    // Заставка по фото владельца: горят HI-SCORE с нулём, LINES, NEXT, GAME OVER, SPEED с нулём и вся шкала значков.
+    if (stage === 'intro') {
+      return { ...base, preview: null, score: mini.hiScore, lines: null, label: 'hi', linesLabel: true, next: true, speed: mini.displaySpeed, level: null, scale: MINI_SCALE, pause: false, gameOver: true };
+    }
+    if (stage === 'menu') {
+      return {
+        ...base,
+        preview: null,
+        score: mini.hiScore,
+        lines: null,
+        label: 'hi',
+        linesLabel: false,
+        next: false,
+        speed: mini.displaySpeed,
+        level: mini.displayLevel,
+        scale: mini.displayLevel + 1,
+        pause: false,
+        gameOver: false,
+      };
+    }
+    const blocks = mini.gameId === 'tetris';
+    return {
+      ...base,
+      preview: mini.preview(),
+      score: mini.score,
+      lines: blocks ? lines : null,
+      label: 'score',
+      linesLabel: blocks,
+      next: blocks,
+      speed: mini.displaySpeed,
+      level: mini.displayLevel,
+      scale: mini.displayLevel + 1,
+      pause: mini.phase === 'paused',
+      gameOver: mini.phase === 'over',
+    };
+  };
+  let lastStatus = '';
+  const updateUi = (): void => {
+    setData('power', powered ? 'on' : 'off');
+    setData('phase', powered ? (mini.inMenu ? 'ready' : mini.phase) : 'ready');
+    setData('stage', powered ? mini.screenStage : 'off');
+    setData('game', mini.gameNumber);
+    setData('score', powered ? mini.score : 0);
+    setData('speed', powered ? mini.displaySpeed : 0);
+    setData('level', powered ? mini.displayLevel : 0);
+    corner.setPaused(powered && mini.phase === 'paused');
+    const status = !powered ? t('status.off') : mini.phase === 'playing' ? '' : t(mini.phase === 'paused' ? 'status.paused' : 'status.ready');
+    if (status !== lastStatus) {
+      lastStatus = status;
+      byId('sr-status').textContent = status;
+    }
+  };
+  function frame(now: number): void {
+    hub.poll();
+    if (powered) stepper.advance(now, tick);
+    toyPanel.sync(hub.tracker.down);
+    lcd.render(powered ? stateOf(now) : MINI_LCD_OFF);
+    updateUi();
+  }
+
+  toy.dataset['power'] = powered ? 'on' : 'off';
+  area.dataset['power'] = powered ? 'on' : 'off';
+  applyView();
+  applyDisplay();
+  relabel();
+  if (powered) emit(mini.powerOn());
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      if (life.disposed) return;
+      delete document.body.dataset['booting'];
+      delete document.body.dataset['motion'];
+      refocus();
+    }),
+  );
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+  window.addEventListener(
+    'resize',
+    () => {
+      document.body.dataset['motion'] = 'off';
+      clearTimeout(resizeTimer);
+      resizeTimer = life.timeout(() => delete document.body.dataset['motion'], 200);
+    },
+    { signal },
+  );
+  hub.attach();
+  refocus();
+  life.loop(frame);
+  return { dispose: () => life.dispose(), carry: () => ({ view, shell: model.defaultShell, powered }) };
+}

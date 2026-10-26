@@ -1,7 +1,5 @@
 import { openEncyclopedia } from './help';
 import './exhibit.css';
-import './minibrick.css';
-import { applyMiniBrickModel, miniBrickMark } from './minibrickModel';
 import { browserGamepadProvider } from '../input/gamepad';
 import { browserStorage, musicVolumeOf } from '../input/settings';
 import { alibabaMark, applyAlibabaModel } from './alibabaModel';
@@ -18,14 +16,13 @@ import { parseView, type View } from './view';
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 /** An exhibit only: no BrickConsole, audio, simulated game, boot sequence or animation-frame loop. */
-export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry): Promise<AppHandle> {
+export async function startExhibitApp(id: 'alibaba', carry?: Carry): Promise<AppHandle> {
   const life = new Lifecycle(),
     { signal } = life,
     model = TOYS[id];
   document.body.dataset['chrome'] = 'toy';
   document.body.dataset['motion'] = 'off';
-  if (id === 'alibaba') applyAlibabaModel();
-  else applyMiniBrickModel();
+  applyAlibabaModel();
   const toy = byId('toy'),
     arena = byId('arena'),
     area = byId('game-area'),
@@ -164,7 +161,7 @@ export async function startExhibitApp(id: 'alibaba' | 'minibrick', carry?: Carry
     const info = byId('side-info');
     info.dataset['toy'] = id;
     info.replaceChildren(
-      h('div', { class: 'alibaba-info__mark' }, id === 'alibaba' ? alibabaMark('dance') : miniBrickMark('label')),
+      h('div', { class: 'alibaba-info__mark' }, alibabaMark('dance')),
       h(
         'section',
         { class: 'side__sec' },

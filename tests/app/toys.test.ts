@@ -218,7 +218,7 @@ it('Alibaba — экспонат без игр и движка, отдельно
   for (const id of APOLLO_IDS) expect(TOYS[id].family).toBe('apollo');
 });
 
-it('Mini Brick Game — отдельный красно-синий экспонат без игр', () => {
+it('Mini Brick Game — отдельная красно-синяя модель со своей консолью (не из набора админки)', () => {
   expect(parseToy('?toy=minibrick')).toBe('minibrick');
   expect(TOYS.minibrick).toMatchObject({family:'other', games:[], defaultGame:null, menu:false, shells:['red']});
   expect(engineOf(TOYS.minibrick)).toBe('exhibit');

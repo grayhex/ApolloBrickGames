@@ -19,6 +19,24 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
       if (event.type === 'hit' || event.type === 'shot') return 'sea_splash';
     }
   }
+  if (nativeProfile === 'mini') {
+    // Mini Brick Game B-S96: монофоническая музыка один раз на партию («Коробейники»), остальное — короткие сигналы (`miniTunes.ts`).
+    if (event.type === 'intro') return 'mini_intro';
+    if (inMenu) return event.type === 'move' ? 'mini_select' : null;
+    switch (event.type) {
+      case 'started': return 'mini_korobeiniki';
+      case 'move': return 'mini_move';
+      case 'rotate': return 'mini_turn';
+      case 'lock': case 'drop': return 'mini_lock';
+      case 'lines': return event.count >= 4 ? 'tetris' : 'remove_line';
+      case 'hit': case 'explode': return 'hit_cell';
+      case 'crash': return 'kaboom';
+      case 'bonus': return 'bonus';
+      case 'win': return 'win';
+      case 'gameOver': return 'game_over';
+      default: return null;
+    }
+  }
   if (nativeProfile === 'e88') {
     if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
     if (event.type === 'started') return TETRIS.has(game) ? 'e88_tetris_music' : 'e88_start';
@@ -93,11 +111,11 @@ export function seekTones(notes:readonly BrickTone[],offsetMs:number):BrickTone[
   return out;
 }
 /** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
-const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music']);
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>
-  sound.startsWith('e88_') ? 0 : MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' || sound === 'sea_fall_tick' ? 0 : sound === 'turn' || sound === 'b0202_turn' ? 1 : 2;
+  sound.startsWith('e88_') ? 0 : MUSIC.has(sound) ? 3 : sound === 'move' || sound === 'b0202_move' || sound === 'sea_fall_tick' || sound === 'mini_move' ? 0 : sound === 'turn' || sound === 'b0202_turn' || sound === 'mini_turn' ? 1 : 2;
 
 /** Synthesized tones with priority; B0202 effects may overlay its separate noise channel. */
 export class BrickAudio {

@@ -2,7 +2,7 @@ import { svg } from './dom';
 import type { ToyModel } from './toys';
 
 /**
- * Нижняя половина «Морского боя» по фотографиям оригинала (владелец, 25 октября 2026), в единицах рисунка корпуса 400 × 620:
+ * Отливка нижней половины «Морского боя», «168 в 1 танк» и «Часов+99» (владелец: она у них идентична) — снято с фотографий «Морского боя» (владелец, 25 октября 2026), в единицах рисунка корпуса 400 × 620:
  * четыре круглые кнопки меньше обычных и сидят в неглубоких лунках (без точек и бликов под ними — на оригинале их нет), подписи — пологие дуги по снимку анфас (над кнопками ровно, без наклона;
  * UP/MODE дугой над стрелкой, LEFT/LEVEL и RIGHT/SPEED выпуклостью наружу вдоль краёв крестовины, DOWN едва заметной «улыбкой», ROTATE дугой над большой кнопкой),
  * клавиши направлений — стрелки (пятиугольник острием в сторону хода) с круглой выемкой внутри (без светлой обводки: на оригинале это просто углубление), динамик — три ряда отверстий ромбом: тёмное ядро и бледные края.
@@ -30,6 +30,8 @@ const CAPTIONS = {
   big: { x: 306, y: 158, length: 80, deg: 0, bulge: 8 },
 } as const;
 const ROUND_CAPTION = { y: 45, length: 84, bulge: 8.5 } as const;
+/** Базовая линия второй подписи под лункой круглой кнопки (лунка кончается на `ROUND_Y + DIMPLE.dy + DIMPLE.r` = 117). */
+const EXTRA_Y = 129;
 
 const BIG = { x: 302, y: 224, w: 85, bowl: 62 } as const;
 
@@ -140,6 +142,12 @@ function drawArt(art: Element, model: ToyModel): void {
     ...labelOn('sea-arc-big', caption(CAPTIONS.big), labels.big),
   );
 
+  // Вторые подписи («GAME», «PAUSE») — под лункой своей кнопки, у ROTATE (`bigBottom`) — под чашей; у «Морского боя» их нет.
+  labels.round.forEach((button, index) => {
+    if (button.bottom) art.append(svg('text', { class: 'base__label', 'data-extra': '', x: String(ROUND[index]?.x ?? 0), y: String(EXTRA_Y), 'text-anchor': 'middle' }, button.bottom));
+  });
+  if (labels.bigBottom) art.append(svg('text', { class: 'base__label', 'data-extra': '', x: String(BIG.x + 2), y: String(BIG.y + BIG.bowl + 18), 'text-anchor': 'middle' }, labels.bigBottom));
+
   // Лунки: четыре под круглыми кнопками, большая чаша под ROTATE и блюдце крестовины.
   const dimples = svg('g', { class: 'base__dimples' });
   for (const { x } of ROUND) {
@@ -171,7 +179,7 @@ function place(button: Element, x: number, y: number, w: number): void {
   (button as HTMLElement).style.cssText = `--x:${num(x)};--y:${num(y)};--w:${w}`;
 }
 
-/** Применить корпус «Морского боя» к нижней половине (`#base`): рисунок, положение и форма клавиш. */
+/** Применить отливку «Морского боя» к нижней половине (`#base`): рисунок, положение и форма клавиш; подписи и цвета берутся у модели (`model.labels`, цвета корпуса и клавиш). */
 export function applySeaBody(base: HTMLElement, model: ToyModel): void {
   const art = base.querySelector('.base__art');
   if (!art) return;

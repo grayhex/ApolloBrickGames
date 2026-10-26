@@ -62,7 +62,8 @@ export async function startHost(initial: ToyId): Promise<void> {
   const heading = document.querySelector('h1');
   const mount = (id: ToyId, carry?: Carry): Promise<AppHandle> => {
     if (heading) heading.textContent = TOYS[id].name;
-    if (id === 'alibaba' || id === 'minibrick') return import('./exhibitApp').then(({startExhibitApp}) => startExhibitApp(id, carry));
+    if (id === 'minibrick') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry));
+    if (id === 'alibaba') return import('./exhibitApp').then(({startExhibitApp}) => startExhibitApp(id, carry));
     return engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry);
   };
 
@@ -81,7 +82,8 @@ export async function startHost(initial: ToyId): Promise<void> {
 
   /** Подготовка новой игрушки до того, как прежняя будет снята: данные и картинки уже на месте, поэтому замена пройдёт за один кадр. */
   async function prepare(id: ToyId): Promise<void> {
-    if (engineOf(TOYS[id]) === 'exhibit') await import('./exhibitApp');
+    if (id === 'minibrick') await import('./miniBrickApp');
+    else if (engineOf(TOYS[id]) === 'exhibit') await import('./exhibitApp');
     if (engineOf(TOYS[id]) === 'mario') {
       await preloadRoom();
     } else {

@@ -4719,7 +4719,8 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 
 .toy[data-model='brickgame'][data-shell='smoke'] .classic__pcb { filter:brightness(.48) saturate(.65); }
 
-/* «Морской бой»: корпус по фотографии оригинала — тёмно-красный пластик, серо-зелёные клавиши в глубоких лунках, розоватая печать, подписи дугами (`seaBody.ts`). */
+/* «Морской бой»: цвета — тёмно-красный пластик, серо-зелёные клавиши, розоватая печать, шрифт подписей. Отливка (лунки, стрелки, динамик, шов) общая с «168 в 1 танк» и «Часов+99»
+   и привязана к `.base[data-body='sea']` (`seaBody.ts`); цвета и печать у каждой модели свои. */
 .toy[data-model='seabattle'] {
   --key: #a3a597;
   --key-hi: #c9cbbc;
@@ -4753,26 +4754,26 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 }
 
 /* Круглые кнопки сидят в лунке: низкая тень и узкий выступ над краем. */
-.toy[data-model='seabattle'] .key--round {
+.base[data-body='sea'] .key--round {
   box-shadow: 0.15cqw 0.4cqw 0.5cqw rgba(0, 0, 0, 0.5), 0 0.2cqw 0 color-mix(in srgb, var(--key-lo) 80%, #000),
     inset 0 0.2cqw 0.3cqw rgba(255, 255, 255, 0.5), inset 0 -0.4cqw 0.7cqw rgba(0, 0, 0, 0.26);
 }
 
-/* Клавиши-стрелки «Морского боя»: острие остаётся острым (тонкая обводка вместо мягкой), выемка внутри (и у большой кнопки ROTATE) — просто углубление, без светлого кружка-обводки (рисунок — `seaBody.ts`). */
-.toy[data-model='seabattle'] .key--pad .key__shape {
+/* Клавиши-стрелки: острие остаётся острым (тонкая обводка вместо мягкой), выемка внутри (и у большой кнопки ROTATE) — просто углубление, без светлого кружка-обводки (рисунок — `seaBody.ts`). */
+.base[data-body='sea'] .key--pad .key__shape {
   stroke-width: 1.6;
 }
 
-.toy[data-model='seabattle'] .key--pad .key__dish,
-.toy[data-model='seabattle'] .key--jump .key__dish {
+.base[data-body='sea'] .key--pad .key__dish,
+.base[data-body='sea'] .key--jump .key__dish {
   stroke: none;
 }
 
-.toy[data-model='seabattle'] .base__sticker {
+.base[data-body='sea'] .base__sticker {
   top: 67.5%;
 }
 
-/* Sea Battle moulded recesses blend into the shell; the keys have a round finger dish. */
-.toy[data-model='seabattle'] .base__rim-hi,
-.toy[data-model='seabattle'] .base__rim-lo { opacity: .16; }
-.toy[data-model='seabattle'] .key__dish { fill: url(#sea-key-dish); }
+/* The moulded recesses blend into the shell; the keys have a round finger dish. */
+.base[data-body='sea'] .base__rim-hi,
+.base[data-body='sea'] .base__rim-lo { opacity: .16; }
+.base[data-body='sea'] .key__dish { fill: url(#sea-key-dish); }

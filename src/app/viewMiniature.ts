@@ -68,10 +68,19 @@ function base(toy: ToyId, closed: boolean): SVGGElement {
     svg('path', { d: BASE_SHAPE, fill: 'url(#mini-body)', stroke: 'var(--rim-lo)', 'stroke-width': '4' }));
   if (!closed) {
     group.append(copyArt('#toy .base__art', { x: '0', y: '0', width: '400', height: '620', 'clip-path': 'url(#mini-base-clip)' }));
-    for (const x of [68, 152, 240, 324]) {
-      group.append(svg('circle', { cx: String(x), cy: '74', r: '19.5', fill: 'url(#keyg)', stroke: 'var(--key-lo)', 'stroke-width': '2' }));
+    // Положение и размер клавиш берутся у настоящего корпуса (`--x/--y/--w` в единицах рисунка 400 × 620): у каждой отливки они свои.
+    const slot = (key: Element): [number, number, number] => {
+      const css = getComputedStyle(key);
+      return [Number.parseFloat(css.getPropertyValue('--x')), Number.parseFloat(css.getPropertyValue('--y')), Number.parseFloat(css.getPropertyValue('--w'))];
+    };
+    for (const key of document.querySelectorAll('#toy .key--round')) {
+      const [x, y, w] = slot(key);
+      group.append(svg('circle', { cx: String(x), cy: String(y), r: String(w / 2), fill: 'url(#keyg)', stroke: 'var(--key-lo)', 'stroke-width': '2' }));
     }
-    for (const [key, x, y, size] of [['up', 110, 170, 48], ['left', 62, 218, 48], ['right', 158, 218, 48], ['down', 110, 266, 48], ['jump', 292, 198, 86]] as const) {
+    for (const key of ['up', 'left', 'right', 'down', 'jump'] as const) {
+      const live = document.querySelector(`#toy [data-key="${key}"]`);
+      if (!live) continue;
+      const [x, y, size] = slot(live);
       const cap = copyArt(`#toy [data-key="${key}"] svg`, { x: String(x - size / 2), y: String(y - size / 2), width: String(size), height: String(size) });
       // Эти заливки большого корпуса заданы в CSS. Переносим ссылки внутрь копии перед сменой ID.
       for (const node of cap.querySelectorAll<SVGElement>('.key__shape, .key__cap')) {
