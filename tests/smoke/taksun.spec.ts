@@ -23,6 +23,8 @@ test('TAKSUN TS-995: синий складной корпус, девять ро
   await expect(page).toHaveTitle(/TAKSUN TS-995/);
   await expect(page.locator('h1')).toHaveText('TAKSUN TS-995 · 9999 in 1');
   await expect(page.locator('#side-info')).toHaveAccessibleName('TAKSUN TS-995 · 9999 in 1');
+  // Наклейка слева — рисунок-надпись TAKSUN: при отсутствии файла preview отдаёт index.html и ошибки в консоли нет, поэтому проверяем, что картинка действительно декодирована.
+  await expect.poll(() => page.locator('.about__logo').evaluate((img) => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0)).toBe(true);
   const keys = page.locator('.taksun-key');
   await expect(keys).toHaveCount(9);
   expect(await keys.evaluateAll((nodes) => nodes.map((node) => (node.getAttribute('aria-label') ?? '').replace(/ — .*/, '')).sort())).toEqual(

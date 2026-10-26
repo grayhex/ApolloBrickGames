@@ -180,7 +180,7 @@ export async function startExhibitApp(id: 'alibaba' | 'taksun', carry?: Carry): 
           'header',
           { class: `side__top side__top--logo${pack ? ' side__top--box' : ''}` },
           h('h2', { class: 'visually-hidden', id: 'info-title' }, model.name),
-          h('div', { class: 'about__sticker' }, h('img', { class: 'about__logo', src: `${import.meta.env.BASE_URL}brand/taksun-wordmark-plaque.svg`, width: '630', height: '200', alt: model.name })),
+          h('div', { class: 'about__sticker' }, h('img', { class: 'about__logo', src: `${import.meta.env.BASE_URL}brand/taksun-wordmark.svg`, width: '465', height: '125', alt: model.name })),
           ...(pack ? [pack.element] : []),
         ),
         h(

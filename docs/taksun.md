@@ -54,3 +54,6 @@
 | `src/app/exhibitApp.ts` | приложение-экспонат: виды, пульт, диалог статуса, левая панель с 3D-коробкой |
 | `src/app/packs.ts`, `public/brand/box-taksun/` | модель 3D-коробки `taksun` и шесть граней (`front`, `back`, `left`, `right`, `top`, `bottom`; нарезаны из панелей архива, webp) |
 | `tests/smoke/taksun.spec.ts` | корпус, кнопки, обводка стакана, подложка, 3D-коробка, переключение, телефон |
+
+![TAKSUN TS-995: корпус и левая панель](screenshots/toys-taksun.png)
+![3D-коробка TAKSUN TS-995 по присланной развёртке](screenshots/toys-taksun-box.png)
