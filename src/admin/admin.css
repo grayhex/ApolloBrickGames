@@ -50,3 +50,4 @@ body:has(.admin) { display:block; margin:0; overflow:auto; background:#10151b; c
 .admin__catalog-row label { margin:0; }
 .admin__catalog-row select { width:100%; }
 @media(max-width:720px) { .admin__catalog-row { grid-template-columns:1fr 1fr; }.admin__catalog-row strong { grid-column:1 / -1; } }
+.admin__rarity { margin-left: .6em; padding: 1px 6px; border: 1px solid currentColor; border-radius: 6px; font-size: 11px; opacity: .75; }

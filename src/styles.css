@@ -3972,11 +3972,10 @@ body.route-editor .shell > :not(#fatal) {
   background-image: linear-gradient(180deg, #a98f77, #c4a98f 45%, #b39980);
 }
 
-/* Коробка TAKSUN TS-995 — заглушка до файла развёртки. Размеры по присланной развёртке: лицо 565 × 940, глубина ≈ 140; бока, верх и низ — розовый картон
-   (печатный цвет коробки), оборот — светлая инструкция. Лицо пока с логотипом на синем: настоящее жёлтое лицо с фото будет вырезано из развёртки. */
+/* Коробка TAKSUN TS-995 по развёртке из docs/research/TS995_packaging_assets.zip: лицо 565 × 939, глубина ≈ 140; цвет под картинками — печатный розовый на случай, если рисунок не загрузился. */
 .box3d[data-pack='taksun'] {
   --bw: 565px;
-  --bh: 940px;
+  --bh: 939px;
   --bd: 140px;
 }
 
@@ -3985,7 +3984,7 @@ body.route-editor .shell > :not(#fatal) {
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.3);
 }
 
-.box3d[data-pack='taksun'] .box3d__face--front { background-color: #0d5d95; }
+.box3d[data-pack='taksun'] .box3d__face--front { background-color: #e8d84a; }
 .box3d[data-pack='taksun'] .box3d__face--back { background-color: #e9e7de; }
 
 .box3d--live {

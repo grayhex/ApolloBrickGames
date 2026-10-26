@@ -91,7 +91,7 @@ test('TAKSUN: подложка надписи внизу едва заметна
   expect(Number(await recess.getAttribute('fill-opacity'))).toBeLessThan(0.25);
 });
 
-test('TAKSUN: 3D-коробка (заглушка до развёртки) рядом с наклейкой открывается, лицо с логотипом, остальные грани — картон', async ({ page }) => {
+test('TAKSUN: 3D-коробка TS-995 по развёртке открывается: шесть граней с рисунками, все файлы отдаются; бока, верх и низ розовые, оборот — инструкция', async ({ page }) => {
   await open(page);
   const button = page.locator('#side-info [data-box-open=taksun]');
   await expect(button).toBeVisible();
@@ -101,8 +101,16 @@ test('TAKSUN: 3D-коробка (заглушка до развёртки) ря�
   await expect(dialog).toHaveAttribute('open', '');
   await expect(dialog.locator('h2')).toHaveText('Коробка TAKSUN TS-995');
   await expect(dialog.locator('.box3d__face')).toHaveCount(6);
-  await expect(dialog.locator('.box3d__face--front')).toHaveCSS('background-image', /box-taksun\/front\.webp/);
-  await expect(dialog.locator('.box3d__face--back')).toHaveCSS('background-image', 'none');
+  const urls = await dialog.locator('.box3d__face').evaluateAll((faces) =>
+    faces.map((face) => /url\("?([^")]+)"?\)/.exec((face as HTMLElement).style.backgroundImage)?.[1] ?? ''),
+  );
+  expect(urls.every((url) => /box-taksun\/(front|back|left|right|top|bottom)\.webp$/.test(url))).toBe(true);
+  expect(new Set(urls).size).toBe(6);
+  const statuses = await page.evaluate(async (list) => Promise.all(list.map(async (url) => (await fetch(url)).status)), urls);
+  expect(statuses).toEqual([200, 200, 200, 200, 200, 200]);
+  // Пропорции лица по развёртке (1300 × 2160) и глубина около четверти ширины.
+  const front = (await dialog.locator('.box3d__face--front').evaluate((node) => ({ w: (node as HTMLElement).offsetWidth, h: (node as HTMLElement).offsetHeight })));
+  expect(Math.abs(front.h / front.w - 2160 / 1300)).toBeLessThan(0.02);
   await page.keyboard.press('Escape');
   await expect(dialog).not.toHaveAttribute('open', '');
 });

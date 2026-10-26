@@ -81,20 +81,20 @@ export const PACKS: Record<PackId, PackModel> = {
     text: { open: 'pack.mario.open', short: 'pack.mario.short', title: 'pack.mario.title', aria: 'pack.mario.aria', credit: 'pack.mario.credit' },
   },
   /**
-   * Коробка TAKSUN TS-995 (розовые бока, верх и низ, жёлтое лицо с фото, светлый оборот с инструкцией — по присланной развёртке). Файла развёртки в репозитории
-   * пока нет: лицо — заглушка (логотип на синем), остальные грани — картон нужного цвета; размеры уже по развёртке (565 × 940, глубина ≈ 140).
+   * Коробка TAKSUN TS-995 по восстановленной развёртке (`docs/research/TS995_packaging_assets.zip`): лицо и оборот — выпрямленные фотографии владельца с набранным текстом инструкции,
+   * розовые бока, верх и низ. Размеры: лицо 1300 × 2160 → 565 × 939, глубина ≈ 140 (в развёртке бока 340 px, верх и низ 302 px — размеры иллюстративные, не проверены по оригиналу).
    */
   taksun: {
     id: 'taksun',
     dir: 'box-taksun',
-    size: { w: 565, h: 940 },
+    size: { w: 565, h: 939 },
     faces: [
       { id: 'front', normal: FRONT, image: 'front.webp' },
-      { id: 'back', normal: BACK },
-      { id: 'left', normal: LEFT },
-      { id: 'right', normal: RIGHT },
-      { id: 'top', normal: TOP },
-      { id: 'bottom', normal: BOTTOM },
+      { id: 'back', normal: BACK, image: 'back.webp' },
+      { id: 'left', normal: LEFT, image: 'left.webp' },
+      { id: 'right', normal: RIGHT, image: 'right.webp' },
+      { id: 'top', normal: TOP, image: 'top.webp' },
+      { id: 'bottom', normal: BOTTOM, image: 'bottom.webp' },
     ],
     home: HOME_VIEW,
     presets: PRESETS,

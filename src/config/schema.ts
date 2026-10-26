@@ -1,6 +1,7 @@
 import { isNativeDevice, NATIVE_DEVICE_IDS, NATIVE_MENUS, nativeEntry, nativeFamilies, nativeBase, type NativeDeviceId } from '../devices/catalog';
 import { GAMES, isGameId, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
+import { sortByRarity } from '../games/rarity';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { APOLLO_IDS, TOYS, TOY_IDS, type ApolloId, type ToyId } from '../app/toys';
 import { DEVICE_DEFAULTS, isBrand, isReadiness, type DeviceOverride } from '../app/deviceCatalog';
@@ -46,17 +47,24 @@ export function illustrationUrl(value: unknown): string {
   return url.href;
 }
 const UNIVERSAL_DEFAULT: ConfigToy = { games: [{ id: 'tetris' }], defaultGame: 'tetris', shells: [...MONOBLOCK_SHELLS], shellPaletteVersion:2, defaultShell: 'gray', thumbShell: DEFAULT_THUMB_SHELL };
-/** Computed at load time: published four-toy documents remain valid, and orphan games never disappear. */
+/**
+ * Computed at load time: published four-toy documents remain valid, and orphan games never disappear.
+ * Games go from the most common to the rarest (`games/rarity.ts`, the Retro Consoles Wiki tiers); within one tier the admin order is kept, so the console menu,
+ * its numbers and the left-hand list always agree.
+ */
 export function universalGames(config: SiteConfig): ConfigGame[] {
   const assigned = new Set(APOLLO_IDS.flatMap((id) => config.toys[id].games.map((g) => g.id)));
   const explicit = config.toys.brickgame.games;
   const pinned = new Set(explicit.map((g) => g.id));
-  return [
-    ...explicit,
-    ...Object.values(GAMES)
-      .filter((g) => g.engine === 'brick' && BRICK_GAMES[g.id] && !assigned.has(g.id) && !pinned.has(g.id))
-      .map((g) => ({ id: g.id })),
-  ];
+  return sortByRarity(
+    [
+      ...explicit,
+      ...Object.values(GAMES)
+        .filter((g) => g.engine === 'brick' && BRICK_GAMES[g.id] && !assigned.has(g.id) && !pinned.has(g.id))
+        .map((g) => ({ id: g.id })),
+    ],
+    (g) => g.id,
+  );
 }
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 /** Reject the whole document; never partly apply an invalid menu. Return a clean value without extra fields. */

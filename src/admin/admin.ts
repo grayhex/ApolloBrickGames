@@ -10,6 +10,7 @@ import { BRICK_GAMES } from '../brick/games';
 import { canAssign } from '../app/bodyButtons';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { defaultConfig } from '../config/runtime';
+import { rarityOf, RARITY_LABEL } from '../games/rarity';
 import { validateConfig, universalGames, thumbPalette, CONFIG_TOY_IDS, type ConfigToyId } from '../config/schema';
 import { BRICK_GUIDES } from '../brick/guides';
 import type { Lang } from '../input/lang';
@@ -87,6 +88,7 @@ export async function startAdmin(): Promise<void> {
     const menu = el('section','','admin__card'); menu.append(el('h2',`Меню · ${toy.games.length}`));
     if (active === 'mario') menu.append(el('p','У Mario собственный сегментный экран. Сейчас доступен Mario; оригинальные Tetris и Shooting подключим позже. Игры матрицы 10×20 назначаются матричным приставкам.'));
     if (active === 'brickgame') {
+      menu.append(el('p','В консоли и в списке слева игры идут по возрастанию редкости (Common → Uncommon → Rare → Ultra Rare → Mobile, по Retro Consoles Wiki). Порядок ↑ ↓ действует внутри одной ступени.','admin__hint'));
       const automatic = universalGames(config).filter(g => !toy.games.some(p => p.id === g.id));
       const extra = el('details'); extra.append(el('summary',`Автоматически · ${automatic.length}`), el('p','Игры, не назначенные другим приставкам, появляются здесь автоматически. Закрепите игру в меню ниже, чтобы оставить её независимо от остальных назначений.'),el('p',automatic.map(g => GAMES[g.id].names.ru).join(' · '))); menu.append(extra);
     }
@@ -94,6 +96,7 @@ export async function startAdmin(): Promise<void> {
     const list = el('ol','','admin__games');
     toy.games.forEach((game,index) => {
       const row = el('li'); row.dataset['game'] = game.id; const heading = el('strong',GAMES[game.id].names.ru); row.append(heading);
+      const rarity = rarityOf(game.id); if (active === 'brickgame' && rarity) { const tier = el('small',RARITY_LABEL[rarity].en,'admin__rarity'); tier.dataset['rarity'] = rarity; row.append(tier); }
       const up = button('↑',() => { [toy.games[index-1],toy.games[index]] = [game,toy.games[index-1]!]; changed(); render(); },index === 0); up.setAttribute('aria-label',`Выше: ${heading.textContent}`);
       const down = button('↓',() => { [toy.games[index+1],toy.games[index]] = [game,toy.games[index+1]!]; changed(); render(); },index === toy.games.length-1); down.setAttribute('aria-label',`Ниже: ${heading.textContent}`);
       const remove = button('Удалить',() => { toy.games.splice(index,1); if (toy.defaultGame === game.id) toy.defaultGame = toy.games[0]!.id; changed(); render(); },toy.games.length === 1);

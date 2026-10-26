@@ -3,6 +3,7 @@ import { ENTRIES, guideFor, previewStage } from '../../src/encyclopedia/catalog'
 import { nativeEntry } from '../../src/devices/catalog';
 import { logicOrigin } from '../../src/games/quality';
 import { GAMES } from '../../src/games/catalog';
+import { rarityRank } from '../../src/games/rarity';
 import { defaultConfig } from '../../src/config/runtime';
 import { illustrationUrl, validateConfig } from '../../src/config/schema';
 
@@ -21,8 +22,11 @@ describe('encyclopedia evidence and published illustrations', () => {
     expect(ENTRIES.find(e=>e.id==='snake')?.accuracy).toBe(90);
   });
   it('orders evidence separately from readiness and implemented provenance',()=>{
-    const scores=ENTRIES.map(entry=>entry.accuracy);
-    expect(scores).toEqual([...scores].sort((a,b)=>b-a));
+    // редкость по возрастанию (tests/app/rarity.test.ts), внутри ступени — достоверность по убыванию
+    for(const rank of new Set(ENTRIES.map(entry=>rarityRank(entry.id)))){
+      const scores=ENTRIES.filter(entry=>rarityRank(entry.id)===rank).map(entry=>entry.accuracy);
+      expect(scores).toEqual([...scores].sort((a,b)=>b-a));
+    }
     expect(previewStage('maze')).toBe('beta');expect(previewStage('tank')).toBe('beta');
     for(const id of ['tetris','mario'] as const)expect(previewStage(id)).toBeNull();
     expect(nativeEntry('apollo-b0202','apollo-b0202.H01')!.stage).toBe('alpha');
