@@ -9,7 +9,7 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
     // «Морской бой»: мелодии и эффекты сняты с записей оригинала (`seaTunes.ts`); остальное — общие сигналы Brick Game.
     if (event.type === 'intro') return 'sea_intro';
     if (event.type === 'introFx') return 'sea_blast';
-    // Музыка партии (владелец): у всех игр, кроме A, играет мелодия «Ромео» по кругу; в игре A один раз, без повтора, играет мелодия заставки.
+    // Музыка партии (владелец): у всех игр, кроме A, один раз играет мелодия «Ромео»; в игре A один раз, без повтора, играет мелодия заставки.
     if (event.type === 'started') return game === 'sea-battle' ? 'sea_intro_once' : 'sea_romeo_music';
     if (event.type === 'step') return game === 'romeo-juliet' ? 'sea_fall_tick' : null;
     if (game === 'sea-battle') {
@@ -104,7 +104,7 @@ export class BrickAudio {
   private gain: GainNode | null = null;
   private voices = new Set<{ oscillator: OscillatorNode; envelope: GainNode }>();
   private musicVoices = new Set<{ oscillator: OscillatorNode; envelope: GainNode }>();
-  private music: {notes:readonly BrickTone[];offset:number;since:number;paused:boolean} | null = null;
+  private music: {notes:readonly BrickTone[];offset:number;since:number;paused:boolean;loop:boolean} | null = null;
   private until = 0;
   private priority = 0;
   private volume = 0.25;
@@ -167,7 +167,7 @@ export class BrickAudio {
       return;
     if (context.currentTime < this.until && priority < this.priority) return;
     if(sound&&BACKGROUND_MUSIC.has(sound)){
-      this.music={notes,offset:0,since:context.currentTime,paused:false};
+      this.music={notes,offset:0,since:context.currentTime,paused:false,loop:sound==='sea_intro'};
       this.schedule(notes,true);
       return;
     }
@@ -186,11 +186,17 @@ export class BrickAudio {
       envelope.connect(this.gain!);
       const voice = { oscillator, envelope };
       voices.add(voice);
+      const playingMusic = this.music;
       oscillator.onended = () => {
         oscillator.disconnect();
         envelope.disconnect();
-        voices.delete(voice);
-        if(music&&!voices.size&&!this.music?.paused)this.music=null;
+        if (!voices.delete(voice)) return;
+        if (music && !voices.size && this.music === playingMusic && !this.music?.paused) {
+          if (this.music?.loop) {
+            this.music.offset = 0; this.music.since = context.currentTime;
+            this.schedule(this.music.notes, true);
+          } else this.music = null;
+        }
       };
       envelope.gain.setValueAtTime(0, start);
       let at = start;

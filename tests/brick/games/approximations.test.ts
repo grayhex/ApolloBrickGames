@@ -49,20 +49,24 @@ describe('Sea Battle', () => {
     expect(game.step(makeBrickInput(['rotate']))).toContainEqual({ type: 'blocked' });
     run(game, SCENE + 20); expect(game['enemyShots'].filter(Boolean)).toHaveLength(1);
   });
-  it('the turn scene is the recording: ship with a mine above it, then the mine falls over the targeted column onto the live lower field', () => {
+  it('hit and miss have different scenery, falling hollow crosses and destruction only on impact', () => {
     const game = new SeaBattleGame({ seed: 5 }); game.start();
-    game['x'] = 7;
-    game.step(makeBrickInput(['rotate']));
-    const scene = (): string => Array.from(game.cells().slice(0, 140)).join('');
-    const cross = (): { x: number; y: number }[] => Array.from(game.cells().slice(0, 140)).flatMap((v, i) => (v ? [{ x: i % 10, y: Math.floor(i / 10) }] : []));
-    listen(game, SHOT_LEAD_TICKS + 4);
-    const first = cross();
-    expect(first.some(({ x, y }) => y >= 2 && y <= 4 && x >= 6 && x <= 8)).toBe(true); // mine moved from column 5 to column 7
-    listen(game, SEA_SHOT.total - 20);
-    expect(scene()).not.toBe('');
-    // lower field rows are the live board while the mine falls
-    const board = game['draw']();
-    expect(Array.from(game.cells().slice(150))).toEqual(Array.from(board.slice(150)));
+    const at = (tick: number, hit: boolean) => game['sceneFrame'](SHOT_LEAD_TICKS + tick, 5, hit);
+    const miss = at(0, false), hit = at(0, true);
+    expect(miss.slice(140).every(Boolean)).toBe(true);
+    expect(hit.slice(140).some(v => !v)).toBe(true);
+    expect(miss[3 * 10 + 5]).toBe(0); // hollow centre
+    expect(miss[2 * 10 + 5]).toBe(1);
+    expect(at(60, false)[2 * 10 + 5]).toBe(0); // falls, not teleports to the bottom
+    expect(at(74, true)).not.toEqual(hit); // impact breaks the ship
+    expect(at(100, true).slice(0, 180).filter(Boolean).length).toBeLessThan(hit.filter(Boolean).length);
+    expect(at(100, false).slice(140).every(Boolean)).toBe(true);
+  });
+  it('shows two separate vertical fleet gauges without lighting the intervening columns', () => {
+    const game = new SeaBattleGame({seed:5}); game.start();
+    expect([...game.preview()!]).toEqual([1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0]);
+    game['ownShots'].fill(1);
+    expect([...game.preview()!]).toEqual([0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0]);
   });
   it('the opponent chooses coordinates without looking at the fleet', () => {
     const a = new SeaBattleGame({ seed: 7 }), b = new SeaBattleGame({ seed: 7 });

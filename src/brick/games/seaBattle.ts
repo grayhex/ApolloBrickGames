@@ -1,14 +1,14 @@
 /**
  * Classic blind fleet battle. Two 10×10 boards match the owner's photo; timing/scoring are project choices.
  * Every shot (yours and the opponent's) plays the turn scene recorded from the original (`game-a.MOV`, owner: the video is gameplay, not a title screen):
- * a ship with a mine above it, then the ship vanishes and the cross-shaped mine falls onto the field. The result is applied when the scene ends.
+ * a hollow torpedo cross falls onto water on a miss, or onto a breaking ship on a hit. The result is applied when the scene ends.
  */
 import { BrickBase } from '../base';
 import { emptyField } from '../grid';
 import { Repeater } from '../timing';
 import { Rng } from '../rng';
-import { SEA_SHOT, SEA_SHOT_CROSS_COLUMN, SEA_SHOT_LAND_TICK, SEA_SHOT_SHIP_TICKS } from '../seaAnimations';
-import { BRICK_COLS, type BrickGameDef, type BrickGameOptions, type BrickInput } from '../types';
+import { SEA_SHOT, SEA_SHOT_LAND_TICK } from '../seaAnimations';
+import { type BrickGameDef, type BrickGameOptions, type BrickInput } from '../types';
 
 /** Ticks of the playing field shown before the scene (the sound of the shot starts here: on the video the burst is ≈ 0.35 s ahead of the picture changing). */
 export const SHOT_LEAD_TICKS = 20;
@@ -71,20 +71,33 @@ export class SeaBattleGame extends BrickBase {
   private defeated(board: Uint8Array, shots: Uint8Array): boolean {
     return board.every((value, i) => !value || shots[i] !== 0);
   }
-  /** The recorded scene over the live field: rows above the field's lower part come from the video with the mine moved over column `column`, the lower rows are the live board. */
-  private sceneFrame(elapsed: number, column: number): Uint8Array {
-    const board = this.draw();
+  /** Owner references: a hollow cross falls onto water on a miss, onto a breaking ship on a hit. */
+  private sceneFrame(elapsed: number, column: number, hit: boolean): Uint8Array {
     const t = elapsed - SHOT_LEAD_TICKS;
-    if (t < 0) return board;
-    const clip = SEA_SHOT.at(Math.min(t, SEA_SHOT.total - 1)).cells;
-    const falling = t >= SEA_SHOT_SHIP_TICKS;
-    const moved = Math.min(BRICK_COLS - 2, Math.max(1, column)) - SEA_SHOT_CROSS_COLUMN;
-    const out = clip.slice();
-    // The mine is the only thing above row 8 while the ship is shown and above row 14 while it falls: shift just those rows.
-    const shifted = falling ? 14 : 8;
-    for (let y = 0; y < shifted; y++)
-      for (let x = 0; x < BRICK_COLS; x++) out[y * BRICK_COLS + x] = clip[y * BRICK_COLS + x - moved] && x - moved >= 0 && x - moved < BRICK_COLS ? 1 : 0;
-    if (falling) out.set(board.subarray(14 * BRICK_COLS), 14 * BRICK_COLS);
+    if (t < 0) return this.draw();
+    const out = emptyField();
+    const cx = Math.min(7, Math.max(2, column));
+    const put = (x: number, y: number): void => {
+      if (x >= 0 && x < 10 && y >= 0 && y < 20) out[y * 10 + x] = 1;
+    };
+    if (!hit) out.fill(1, 140); // six solid water rows, as in the owner's miss frame
+    const landed = t >= SEA_SHOT_LAND_TICK;
+    if (hit) {
+      const ship = ['....#.....', '...###....', '##..#...##', '.#..#..##.', '.########.', '...####...'];
+      const fall = landed ? Math.floor((t - SEA_SHOT_LAND_TICK) / 6) : 0;
+      ship.forEach((row, y) => [...row].forEach((cell, x) => {
+        if (cell === '#' && (!landed || (x + y) % 3 !== Math.floor((t - SEA_SHOT_LAND_TICK) / 4) % 3))
+          put(x, 11 + y + fall);
+      }));
+    }
+    if (!landed) {
+      const cy = 3 + Math.floor(Math.max(0, t - 30) * 10 / (SEA_SHOT_LAND_TICK - 30));
+      for (const [dx, dy] of [[0,-1],[-1,0],[1,0],[0,1]]) put(cx + dx!, cy + dy!);
+    } else if (t < SEA_SHOT_LAND_TICK + 12) {
+      // Small splash / fragments around the contact point; the torpedo disappears.
+      const spread = 1 + Math.floor((t - SEA_SHOT_LAND_TICK) / 4);
+      put(cx - spread, 12); put(cx + spread, 12);
+    }
     return out;
   }
 
@@ -100,7 +113,7 @@ export class SeaBattleGame extends BrickBase {
           // On the recording a ship that goes down is a noise burst instead of the rising "drop" heard for every other result.
           this.emit({ type: sunk ? 'explode' : hit ? 'hit' : 'shot' });
         }
-        this.overlay = this.sceneFrame(elapsed, column);
+        this.overlay = this.sceneFrame(elapsed, column, hit);
       },
       () => { this.animating = false; resolve(); },
     );
@@ -154,9 +167,14 @@ export class SeaBattleGame extends BrickBase {
   }
   protected override drawPreview(): Uint8Array {
     const out = new Uint8Array(16);
-    let remaining = 0;
-    for (let id = 1; id <= FLEET.length; id++) if (!this.sunk(this.enemy, this.ownShots, id)) remaining++;
-    out.fill(1, 0, remaining);
+    // Two four-cell rods, not a row-major block. Each rod is a coarse fleet gauge;
+    // scaling the remaining ships to four segments is a project assumption.
+    for (const [column, board, shots] of [[0, this.enemy, this.ownShots], [2, this.own, this.enemyShots]] as const) {
+      let remaining = 0;
+      for (let id = 1; id <= FLEET.length; id++) if (!this.sunk(board, shots, id)) remaining++;
+      const height = Math.ceil(remaining * 4 / FLEET.length);
+      for (let row = 4 - height; row < 4; row++) out[row * 4 + column] = 1;
+    }
     return out;
   }
 }

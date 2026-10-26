@@ -4771,3 +4771,8 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 .toy[data-model='seabattle'] .base__sticker {
   top: 67.5%;
 }
+
+/* Sea Battle moulded recesses blend into the shell; the keys have a round finger dish. */
+.toy[data-model='seabattle'] .base__rim-hi,
+.toy[data-model='seabattle'] .base__rim-lo { opacity: .16; }
+.toy[data-model='seabattle'] .key__dish { fill: url(#sea-key-dish); }
