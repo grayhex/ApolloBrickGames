@@ -43,7 +43,7 @@ def extract(path,cfg):
  # Drop <65ms spectral flutter; don't turn isolated noise into a new melody note.
  seg=old.drop_flickers(seg,weak=tuple(old.SCALE),shorter=.065)
  return old.voices(seg,cfg['end']),seg
-# Decode docs/research/romeo.m4a as mono 44.1 kHz WAV before running.
+# Download the archived romeo.m4a into docs/research and decode it as mono 44.1 kHz WAV before running.
 tracks,seg=extract(sys.argv[1],old.TUNES['romeo'])
 for item in seg:
  if 664.8 in item[2] and 1327 in item[2]: item[2] = tuple(p for p in item[2] if p != 1327)
