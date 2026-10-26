@@ -71,3 +71,13 @@ describe('stable leaderboard categories', () => {
     for (const name of ['<img src=x>', 'a\nb', 'ab\u200B', 'x', 'x'.repeat(21)]) expect(() => nickname(name)).toThrow();
   });
 });
+
+it('isolates the photographed Sea Arkanoid start without changing the donor categories', () => {
+  const photo = {...s('seabattle','arkanoid'), startProfile:'sea-arkanoid-photo-v1'};
+  expect(categoryFor(photo)).not.toBe(categoryFor(s('clock99','arkanoid')));
+  expect(validateCategory(categoryFor(photo))).toBe(categoryFor(photo));
+  expect(()=>selection(s('seabattle','arkanoid'))).toThrow();
+  expect(()=>selection({...photo,toyId:'brickgame'})).toThrow();
+  expect(localHiSuffix('arkanoid',0,'seabattle')).toBe(':sea-photo-v1:hi');
+  expect(localHiSuffix('arkanoid')).toBe(':hi');
+});

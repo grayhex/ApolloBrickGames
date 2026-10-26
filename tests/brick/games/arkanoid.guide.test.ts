@@ -625,11 +625,9 @@ describe('арканоид: схемы — это то, что игра рису
     expect(ARKANOID_GUIDE.schemes[0]?.cells).toEqual(rows(make(0)));
   });
 
-  it('схема 2 — нижние ряды стены и мяч сразу после удара снизу (строки 5–8 экрана)', () => {
-    const game = still(0);
-    place(game, 5, 11, 1, 1);
-    ballStep(game);
-    expect(ARKANOID_GUIDE.schemes[1]?.cells).toEqual(rows(game).slice(5, 9));
+  it('схема 2 — старт «Морского боя» F01 по фотографии', () => {
+    const game = new ArkanoidGame({seaLayout:true}); game.start();
+    expect(ARKANOID_GUIDE.schemes[1]?.cells).toEqual(rows(game));
   });
 
   it('схема 3 — целое поле двухстороннего варианта 09 в начале уровня 1', () => {

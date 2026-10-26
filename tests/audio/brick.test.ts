@@ -325,3 +325,9 @@ it('Sea falling-piece landings use the clean pitched cue instead of generic nois
     expect(brickSound({type:'drop'}, game, false, 'sea')).toBe('sea_fall_tick');
   }
 });
+
+it('Romeo harmonic correction removes the spurious low note and duplicated octave', () => {
+  const sounding = (at: number) => seekTones(BRICK_PHRASES.sea_romeo_music,at).filter(t=>t.atMs===0 && t.hz>0).map(t=>t.hz).sort((a,b)=>a-b);
+  expect(sounding(1600)).toEqual([836.8]); // weak 664.8 line was formerly promoted to an equal-volume note
+  expect(sounding(7300)).toEqual([664.8]); // 1327 Hz is the overlapping harmonic, not an extra voice
+});

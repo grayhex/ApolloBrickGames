@@ -935,3 +935,14 @@ describe('арканоид: бот', () => {
     expect(game.phase).toBe('playing');
   });
 });
+
+it('Sea Battle F01 opens like the owner photo, while donor presets stay unchanged', () => {
+  const game = new ArkanoidGame({seaLayout:true}); game.start();
+  const rows = Array.from({length:20},(_,y)=>[...game.cells().slice(y*10,y*10+10)].map(v=>v?'#':'.').join(''));
+  expect(rows.slice(0,4)).toEqual(Array(4).fill('..........'));
+  expect(rows.slice(4,9)).toEqual(['.########.','..######..','.########.','..######..','.########.']);
+  expect(rows[18]).toBe('.#........');
+  expect(rows[19]).toBe('.####.....');
+  expect([...game.preview()!]).toEqual([1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]);
+  const donor = new ArkanoidGame(); donor.start(); expect(donor.cells()).not.toEqual(game.cells());
+});

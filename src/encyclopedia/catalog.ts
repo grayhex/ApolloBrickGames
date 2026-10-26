@@ -55,6 +55,7 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
   if(['racing','racing-shooting','shooting-array','shooting-figures','tetris-pentix','dice'].includes(id)){
     sources.push(research('docs/devices/e88-b0202.md',gt('Базовые игры B0202 B/C/E/F/G/I подключены из библиотеки по решению владельца. Для конкретных профилей B/C/F/G/I действует α; E01 — β на ядре E02, без неподтверждённого счётчика раундов. Общая оценка игры не переносится на эти профили.', 'B0202 base games B/C/E/F/G/I are owner-approved library adaptations. B/C/F/G/I are alpha; E01 is beta using E02 rules without its unverified round counter. The general game rating does not certify these profiles.')));
   }
+  if(id==='arkanoid') sources.push(research('docs/brick/sea-battle-originals.md',gt('Старт «Морского боя» F01 уточнён по фото владельца; другие модели сохраняют донорские стены.', 'Sea Battle F01 opening follows the owner photo; other models retain donor walls.')));
   if(id==='romeo-juliet'||id==='sea-battle'){
     accuracy=60;
     sources.push({kind:'owner',title:'Apollo · наблюдения владельца / owner observations',url:repo+'docs/brick/completion.md',note:gt('Фото оригинального экрана и уточнения владельца: автоматический подъём Ромео; поочерёдная стрельба вслепую в Морском бое.', 'Original LCD photos and owner clarifications: automatic Romeo movement; alternating blind shots in Sea Battle.')});

@@ -330,7 +330,7 @@ class ConsoleCabinet implements Cabinet {
     };
   }
   hiKey(): string {
-    return `crocodile-mario:brick:${this.toy}:${this.console_.entryId}:${this.console_.mode}${this.console_.native ? `:native-r${this.console_.native.rulesetVersion}` : localHiSuffix(this.console_.gameId,this.console_.mode)}`;
+    return `crocodile-mario:brick:${this.toy}:${this.console_.entryId}:${this.console_.mode}${this.console_.native ? `:native-r${this.console_.native.rulesetVersion}` : localHiSuffix(this.console_.gameId,this.console_.mode,this.toy)}`;
   }
   /** Звук движения: в меню и в тетрисах — да; в остальных играх шаг каждый такт слушался бы как трещотка. */
   get moveSound(): boolean {
@@ -402,6 +402,7 @@ class ConsoleCabinet implements Cabinet {
       mood: this.currentMood(),
       panelOff: c.intro,
       navalPanel: this.activeGame === 'sea-battle',
+      nextLabelOff: this.activeGame === 'arkanoid',
     };
   }
   /** Человечек: после события радуется или огорчается на время, при конце игры остаётся огорчённым, на паузе, в меню и без событий стоит. */
@@ -426,7 +427,7 @@ export interface CabinetOptions {
 export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet {
   if (model.defaultGame === null) throw new Error('This console has no game engine yet.');
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
-  const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}${model.nativeDevice ? `:native-r${nativeEntry(model.nativeDevice,gameId)?.rulesetVersion ?? '1'}` : localHiSuffix(gameId,mode)}`;
+  const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}${model.nativeDevice ? `:native-r${nativeEntry(model.nativeDevice,gameId)?.rulesetVersion ?? '1'}` : localHiSuffix(gameId,mode,model.id)}`;
   return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => model.defaultEntry ? g.entryId === model.defaultEntry : g.id === model.defaultGame)));
 }
 

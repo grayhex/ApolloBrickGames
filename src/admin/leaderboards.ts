@@ -3,7 +3,7 @@ import { h } from '../app/dom';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { TOYS, type ToyId } from '../app/toys';
-import { categoryFor, STANDARD_START } from '../leaderboards/category';
+import { categoryFor, startProfileFor } from '../leaderboards/category';
 interface AdminEntry {
   entryId: string;
   nickname: string;
@@ -24,7 +24,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
   const revision = h('p'), status = h('p', { role: 'status' }),
     rows = h('div', { class: 'admin__record-list' });
   const category = (): string =>
-    categoryFor({ gameId: game.value, mode: Number(mode.value), toyId: toy.value, rulesetVersion: rulesetFor(game.value,Number(mode.value)), startProfile: STANDARD_START });
+    categoryFor({ gameId: game.value, mode: Number(mode.value), toyId: toy.value, rulesetVersion: rulesetFor(game.value,Number(mode.value)), startProfile: startProfileFor(game.value,toy.value,Number(mode.value)) });
   const message = (text: string): void => {
     status.textContent = text;
   };
@@ -50,7 +50,7 @@ export function adminLeaderboards(parent: HTMLElement, key: HTMLInputElement): v
     toy.replaceChildren();
     for (const id of ['mario', 'clock99', 'seabattle', 'tank168', 'brickgame'] as const) {
       try {
-        categoryFor({ gameId: game.value, mode: 0, toyId: id, rulesetVersion: rulesetFor(game.value), startProfile: STANDARD_START });
+        categoryFor({ gameId: game.value, mode: 0, toyId: id, rulesetVersion: rulesetFor(game.value), startProfile: startProfileFor(game.value,id) });
         toy.append(h('option', { value: id }, TOYS[id].name));
       } catch {
         /* incompatible hardware */

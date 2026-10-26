@@ -73,9 +73,6 @@ const DOUBLE_FIELD: readonly string[] = [
   PADDLE_4,
 ];
 
-/** Нижние ряды стены уровня 1 после удара снизу в колонке 5 и мяч под выбитым кирпичом (строки 5–8 экрана). */
-const HIT_FRAGMENT: readonly string[] = ['.########.', '..######..', '...##.#...', '.....#....'];
-
 export const ARKANOID_GUIDE: GameGuideData = {
   summary: gt(
     `Мяч летит по диагонали и выбивает кирпичи стены, платформа внизу его отбивает. ${MODE_COUNT} варианта: платформа 1–4 клетки, готовая или случайная стена, едущая стена, вторая платформа сверху.`,
@@ -148,10 +145,12 @@ export const ARKANOID_GUIDE: GameGuideData = {
   ),
   schemes: [
     { cells: START_FIELD, caption: gt('Вариант 01, уровень 1: стена, мяч над платформой из 4 клеток', 'Variant 01, level 1: the wall and the ball on a 4-cell paddle') },
-    { cells: HIT_FRAGMENT, caption: gt('Мяч выбил кирпич снизу и отскакивает вниз', 'The ball broke a brick from below and bounces down') },
+    {cells:[...blanks(4),'.########.','..######..','.########.','..######..','.########.',...blanks(9),'.#........','.####.....'], caption:gt('«Морской бой» F01: старт по фото оригинала','Sea Battle F01: opening from the original photo')},
     { cells: DOUBLE_FIELD, caption: gt('Вариант 09: платформы внизу и вверху, стена по центру', 'Variant 09: paddles at the bottom and the top, wall mid-field') },
   ],
   assumptions: [
+    gt('В «Морском бое» F01 на первом уровне: пять рядов 8/6/8/6/8 кирпичей ниже верхней границы, мяч и платформа слева — по фото оригинала.', 'Sea Battle F01, level one: five rows of 8/6/8/6/8 bricks below the top edge, with ball and paddle on the left, matching the original photo.'),
+
     gt(
       'Правила и числа — донора n0Live/BrickGame, а не прошивки Apollo: у настоящей игры они не измерены.',
       'Rules and numbers come from the n0Live/BrickGame donor, not from Apollo firmware: they are not measured on the real game.',

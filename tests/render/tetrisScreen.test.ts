@@ -312,3 +312,12 @@ describe('экран «168 в 1 танк»: сегменты по фотогра
     expect(calls.length).toBeGreaterThan(0);
   });
 });
+
+it('Sea LCD construction divider survives power-off clear and ghost-layer changes', () => {
+  const {canvas,calls}=stubCanvas(); const screen=new TetrisScreen(canvas,{glyph:'square',panel:'seabattle',ink:'#182015'});
+  screen.resize(264,320,1); screen.setGhost(false); screen.clear();
+  expect(calls.filter(c=>c.name==='fillRect')).toHaveLength(1);
+  screen.setGhost(true);screen.clear(); // already blank: no cells or text are lit
+  expect(calls.filter(c=>c.name==='fillRect')).toHaveLength(1);
+  expect(calls.some(c=>c.name==='fillText')).toBe(false);
+});

@@ -138,6 +138,7 @@ export class ArkanoidGame extends BrickBase {
   private readonly kickRepeater = new Repeater(KICK_TICKS, KICK_TICKS);
 
   /** Поле как у донора: индекс `y * COLS + x`, `y` = 0 — нижний ряд. Платформа, мяч и стена лежат в одном буфере. */
+  private readonly seaLayout: boolean;
   private board = new Uint8Array(BRICK_CELLS);
   private wall: BricksWall = BricksWall.preloaded(1);
   /** Нижний ряд стены на поле (в системе донора). */
@@ -158,6 +159,7 @@ export class ArkanoidGame extends BrickBase {
 
   constructor(options: BrickGameOptions = {}) {
     super(options, MODE_COUNT);
+    this.seaLayout = options.seaLayout === true;
     this.variant = arkanoidVariant(this.mode);
     const span = PLATFORM_SPAN[this.variant.platformType] ?? { min: 0, max: 0 };
     this.platformMin = span.min;
@@ -218,20 +220,26 @@ export class ArkanoidGame extends BrickBase {
     return out;
   }
 
+  protected override drawPreview(): Uint8Array | null {
+    if (!this.seaLayout) return super.drawPreview();
+    const out = new Uint8Array(16); out.fill(1, 0, (this.lives ?? 0) * 2); return out;
+  }
+
   // ---------------------------------------------------------------- уровень
 
   /** Загрузка или перезагрузка уровня (`loadLevel`): платформа и мяч в центре, мяч летит вверх-вправо; стена новая только при `newWall`. */
   private loadLevel(newWall: boolean): void {
     this.board.fill(0);
-    this.curX = START_X;
-    this.ballX = this.curX;
+    const seaOpening = this.seaLayout && this.mode === 0 && this.level === 1;
+    this.curX = seaOpening ? 2 : START_X;
+    this.ballX = seaOpening ? 1 : this.curX;
     this.ballY = 1;
     this.dirY = 1;
     // допущение: вращение по часовой стрелке (настройка донора по умолчанию; у донора его меняют в паузе кнопкой поворота)
     this.dirX = 1;
     if (newWall) {
-      this.wall = this.variant.preloaded ? BricksWall.preloaded(this.level) : BricksWall.generated(this.level, this.rng);
-      this.bricksY = this.variant.doubleSided ? Math.floor((ROWS - this.wall.height) / 2) : ROWS - this.wall.height;
+      this.wall = seaOpening ? BricksWall.seaPhoto() : this.variant.preloaded ? BricksWall.preloaded(this.level) : BricksWall.generated(this.level, this.rng);
+      this.bricksY = seaOpening ? ROWS - this.wall.height - 4 : this.variant.doubleSided ? Math.floor((ROWS - this.wall.height) / 2) : ROWS - this.wall.height;
     }
     this.insertWall();
     this.drawBall(this.ballX, this.ballY);

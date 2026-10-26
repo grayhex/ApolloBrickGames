@@ -10,4 +10,4 @@ const REVISIONS: Readonly<Record<string, string>> = {
   'helicopter-bomber':'2', 'flappy-bird':'2', basket:'2',
 };
 export const rulesetFor = (gameId: string, mode=0): string => gameId==='honeybee' && mode!==0 ? '3' : REVISIONS[gameId] ?? '1';
-export const localHiSuffix = (gameId: string, mode=0): string => rulesetFor(gameId,mode) === '1' ? ':hi' : `:r${rulesetFor(gameId,mode)}:hi`;
+export const localHiSuffix = (gameId: string, mode=0, toyId=''): string => gameId === 'arkanoid' && mode === 0 && toyId === 'seabattle' ? ':sea-photo-v1:hi' : rulesetFor(gameId,mode) === '1' ? ':hi' : `:r${rulesetFor(gameId,mode)}:hi`;
