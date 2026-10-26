@@ -64,7 +64,7 @@ export class MiniRacingGame extends BrickBase {
     if(this.repeat.fire('right',input))this.x=Math.min(7,this.x+1);
     this.collide();if(this.busy)return;
     this.driveTicks++;if(this.driveTicks%60===0)this.addScore(10);this.setSpeed(Math.min(10,2+Math.floor(this.driveTicks/MINI_RACE_ACCEL_TICKS)));
-    if(++this.clock<Math.max(6,20-(this.speed-1)*1.5))return;
+    if(++this.clock<Math.max(6,20-(this.speed-2)*1.75))return;
     this.clock=0;this.scroll++;
     for(const o of this.objects)o.y++;
     this.objects=this.objects.filter(o=>o.y<20);

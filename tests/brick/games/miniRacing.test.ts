@@ -18,6 +18,7 @@ describe('Mini 96 racing reference',()=>{
  });
  it('accelerates automatically from displayed speed 1 to 9, awards 10 per driving second, and pause awards nothing',()=>{
   const g=ready();g['spawn']=()=>{};run(g,8*60);expect(g.speed-1).toBe(9);expect(g.score).toBe(80);
+  const scroll=g['scroll'];run(g,6);expect(g['scroll']-scroll).toBe(1);
   g.pause();run(g,600);expect(g.score).toBe(80);g.resume();run(g,60);expect(g.score).toBe(90);
  });
  it.each([2,3,4])('collects a %i-cell rod once for 10 points per cell',height=>{
