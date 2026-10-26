@@ -250,7 +250,7 @@ test.describe('«Часы+99»', () => {
     expect(await hi()).toBe('0'); // у «168 в 1 танк» — свой
   });
 
-  test('экран рисует матрицу: включённая игрушка — чернила на холсте, выключенная — пустой холст; звёздочка не пропадает при слое сегментов', async ({ page }) => {
+  test('экран рисует матрицу: включённая игрушка — чернила на холсте, выключенная — только обводка стакана; звёздочка не пропадает при слое сегментов', async ({ page }) => {
     await open(page, 'clock99');
     const painted = () =>
       page.evaluate(() => {
@@ -261,10 +261,11 @@ test.describe('«Часы+99»', () => {
         for (let i = 3; i < data.length; i += 4) if ((data[i] ?? 0) > 0) count++;
         return count;
       });
-    expect(await painted()).toBeGreaterThan(1000);
+    const on = await painted();
+    expect(on).toBeGreaterThan(1000);
     await key(page, 'onoff').click(); // выключить
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
-    await expect.poll(painted).toBe(0);
+    await expect.poll(async () => { const off = await painted(); return off > 0 && off < on / 2; }).toBe(true); // остаётся только обводка стакана
     await key(page, 'onoff').click();
     await expect.poll(painted).toBeGreaterThan(1000);
   });
