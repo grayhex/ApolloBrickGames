@@ -4,8 +4,9 @@
  * Это допущение: как именно листается меню на настоящем устройстве, неизвестно (по подписям клавиш: UP/MODE — вариант, LEFT/LEVEL — уровень,
  * RIGHT/SPEED — скорость, а игру листает большая кнопка ROTATE). Набор игр, их знаки и число вариантов — у каждой консоли свои (`BrickConsoleEntry`). Настройки меню — число 0..9 (на экране у настоящего устройства в меню SPEED 0 и LEVEL 0).
  */
-import type { NativeEntry } from '../devices/catalog';
+import type { NativeDeviceId, NativeEntry } from '../devices/catalog';
 import nativeMenuFrames from '../devices/menu-frames.json';
+import extendedMenuFrames from '../devices/extended-menu-frames.json';
 import { menuField } from './menuArt';
 import { SEA_START, SEA_START_FX_TICKS, SEA_START_LEAD_TICKS } from './seaAnimations';
 import { seaMenuField } from './seaMenu';
@@ -50,7 +51,7 @@ export interface BrickConsoleOptions {
   hiScore?: (gameId: string, mode: number) => number;
   /** Начальный выбор в меню (с нуля): игра, вариант, скорость и уровень. */
   game?: number;
-  nativeMenu?: 'e88' | 'apollo-b0202';
+  nativeMenu?: NativeDeviceId;
   /** `sea` — «Морской бой» по фото и видео оригинала: заставка при включении, меню с буквой и анимацией «Ромео и Джульетта», анимация игры A перед партией. */
   menuStyle?: 'sea';
   mode?: number;
@@ -274,7 +275,7 @@ export class BrickConsole implements BrickGame {
       const group = this.catalog.map((e, i) => ({e,i})).filter(({e}) => e.native!.group === this.selected.native!.group);
       this.gameIndex = group[wrap(group.findIndex(({i}) => i === this.gameIndex) - 1, group.length)]!.i;
     }
-    if (input.pressed.has('left')) this.menuLevel = wrap(this.menuLevel + 1, apollo ? 10 : 13);
+    if (input.pressed.has('left')) this.menuLevel = wrap(this.menuLevel + 1, this.nativeMenu === 'e88' ? 13 : 10);
     if (input.pressed.has('right')) this.menuSpeed = wrap(this.menuSpeed + 1, 10);
     return before === `${this.gameIndex}:${this.menuSpeed}:${this.menuLevel}:${this.rotationDirection}` ? [] : [{ type:'move' }];
   }
@@ -337,7 +338,7 @@ export class BrickConsole implements BrickGame {
       level: this.menuLevel + 1,
       mode: this.selectedMode,
       ...(this.menuStyle === 'sea' ? { seaLayout: true } : {}),
-      ...(this.nativeMenu==='e88' ? {rotationDirection:this.rotationDirection} : {}),
+      ...(this.nativeMenu && this.nativeMenu!=='apollo-b0202' ? {rotationDirection:this.rotationDirection} : {}),
     });
     return this.current.start();
   }
@@ -369,8 +370,11 @@ export class BrickConsole implements BrickGame {
     if (this.current) return this.current.cells();
     const native = this.selected.native;
     if (native) {
-      const frames = nativeMenuFrames[native.profileId] as Record<string, string[]>;
-      return Uint8Array.from((frames[native.nativeCode] ?? []).join(''), Number);
+      const frames: Record<string,string[]> = native.profileId === 'e23' || native.profileId === 'apollo-b0302'
+        ? extendedMenuFrames[native.profileId] : nativeMenuFrames[native.profileId];
+      const out = new Uint8Array(BRICK_CELLS);
+      out.set(Uint8Array.from((frames[native.nativeCode] ?? []).join(''), Number));
+      return out;
     }
     if (this.menuStyle === 'sea') {
       if (this.stage === 'intro') {

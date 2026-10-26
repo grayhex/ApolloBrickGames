@@ -2,7 +2,7 @@
  * Codes/counts and matrix menu artwork were observed in pinned BrickEmuPy.
  */
 import type { GameId } from '../games/catalog';
-export const NATIVE_DEVICE_IDS = ['e88', 'apollo-b0202'] as const;
+export const NATIVE_DEVICE_IDS = ['e88', 'apollo-b0202', 'e23', 'apollo-b0302'] as const;
 export type NativeDeviceId = (typeof NATIVE_DEVICE_IDS)[number];
 export interface NativeEntry {
   entryId: string;
@@ -21,7 +21,7 @@ export interface NativeEntry {
   name: { ru: string; en: string };
 }
 const entry = (profileId: NativeDeviceId, nativeCode: string, gameId: GameId, available: boolean, ru: string, en: string): NativeEntry => ({
-  entryId: `${profileId}.${nativeCode}`, nativeCode, group: profileId === 'e88' ? nativeCode : nativeCode[0]!, gameId,
+  entryId: `${profileId}.${nativeCode}`, nativeCode, group: profileId === 'apollo-b0202' ? nativeCode[0]! : nativeCode, gameId,
   profileId, variantId: nativeCode.toLowerCase(), rulesetVersion: '1', available, stage:available?'beta':'alpha', name: { ru, en },
 });
 export const E88_ENTRIES: readonly NativeEntry[] = [
@@ -47,7 +47,19 @@ export const B0202_ENTRIES: readonly NativeEntry[] = GROUPS.flatMap(([group, cou
     const approximate = ['B01','C01','E01','F01','G01','I01'].includes(code);
     return {...entry('apollo-b0202', code, game, approximate || ['A01', 'D01', 'E02', 'H01', 'H02'].includes(code), ru, en), ...(approximate ? {approximate:true,stage:code==='E01'?'beta' as const:'alpha' as const,accuracy:code==='E01'?60 as const:30 as const} : {}), ...(['A01','H01','H02'].includes(code)?{stage:'alpha' as const}:{})};
   }));
-export const NATIVE_MENUS: Readonly<Record<NativeDeviceId, readonly NativeEntry[]>> = { e88: E88_ENTRIES, 'apollo-b0202': B0202_ENTRIES };
+/** Numbered physical menus: adaptations remain labelled alpha until checked against each ROM variant. */
+export const E23_ENTRIES: readonly NativeEntry[] = Array.from({length:99}, (_, i) => {
+  const n = i + 1;
+  const group = i % 8;
+  const id: GameId = group < 4 ? 'tetris' : group === 4 ? 'snake' : group === 5 ? 'shooting-array' : group === 6 ? 'shooting-figures' : 'construction';
+  const label = {tetris:['Тетрис','Tetris'],snake:['Змейка','Snake'],'shooting-array':['Стрельба по массиву','Array shooting'],'shooting-figures':['Разрушение клеток','Cell destruction'],construction:['Строительство','Construction']}[id]!;
+  return {...entry('e23',String(n).padStart(2,'0'),id,true,label[0]!,label[1]!), approximate:true,stage:'alpha',accuracy:30};
+});
+export const B0302_ENTRIES: readonly NativeEntry[] = Array.from({length:18}, (_, i) => {
+  const n=i+1, racing=n<=2, id:GameId=racing?'racing':'tetris';
+  return {...entry('apollo-b0302',String(n).padStart(2,'0'),id,true,racing?'Гонки':'Тетрис',racing?'Racing':'Tetris'),approximate:true,stage:'alpha',accuracy:30};
+});
+export const NATIVE_MENUS: Readonly<Record<NativeDeviceId, readonly NativeEntry[]>> = { e88: E88_ENTRIES, 'apollo-b0202': B0202_ENTRIES, e23:E23_ENTRIES, 'apollo-b0302':B0302_ENTRIES };
 export function isNativeDevice(id: string): id is NativeDeviceId { return NATIVE_DEVICE_IDS.some(value => value === id); }
 export function nativeEntry(device: NativeDeviceId, entryId: string): NativeEntry | undefined { return NATIVE_MENUS[device].find(e => e.entryId === entryId); }
 export function nativeVariant(profileId: string, variantId: string): NativeEntry | undefined {
@@ -78,7 +90,7 @@ export function playableEntries(device: NativeDeviceId, entries: readonly {id: G
 
 /** B0202 assigns families; E88 deliberately exposes all eight physical entries. */
 export function nativeFamilies(device: NativeDeviceId): {base: NativeEntry; variants: NativeEntry[]}[] {
-  if(device==='e88')return NATIVE_MENUS.e88.filter(e=>e.available).map(base=>({base,variants:[]}));
+  if(device!=='apollo-b0202')return NATIVE_MENUS[device].filter(e=>e.available).map(base=>({base,variants:[]}));
   return NATIVE_MENUS[device].filter((entry,index,all)=>all.findIndex(e=>e.gameId===entry.gameId)===index)
     .map(base=>({base,variants:NATIVE_MENUS[device].filter(e=>e.gameId===base.gameId&&e.available&&e.entryId!==base.entryId)}));
 }

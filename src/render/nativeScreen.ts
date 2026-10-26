@@ -1,4 +1,5 @@
 import mapping from '../devices/lcd-mapping.json';
+import measured from '../../scripts/research/device-lcd.json';
 import type { NativeDeviceId } from '../devices/catalog';
 import { nativeGeometry } from '../app/nativeModel';
 import type { TetrisScene } from './tetrisScreen';
@@ -39,15 +40,36 @@ export class NativeScreen {
     for(const [id,e]of this.segments)e.style.opacity=this.previous.has(id)?'1':value?'.09':'0';
   }
   clear():void {if(this.display)this.display.style.visibility='hidden';this.previous.clear();}
+  private b0302Segments(scene:TetrisScene):Set<string> {
+    const active=new Set<string>(), matrix=measured.Apollo18in1B0302;
+    const blink=Math.floor(scene.tick/15)%2===0;
+    scene.cells.forEach((v,i)=>{const row=Math.floor(i/10),id=matrix[row]?.[i%10];if(id&&((scene.overFill>0&&row>=matrix.length-scene.overFill)||(v&&(v!==2||blink))))active.add(id);});
+    const digit=(value:number,ids:readonly string[]):void=>{for(const c of DIGITS[Math.max(0,Math.min(9,value))]!)active.add(ids['abcdefg'.indexOf(c)]!);};
+    const scores=[['44_3','38_3','32_3','26_2','32_2','44_2','38_2'],['44_5','38_5','32_5','26_4','32_4','44_4','38_4'],['44_7','38_7','32_7','26_6','32_6','44_6','38_6'],['45_1','39_1','33_1','27_0','33_0','45_0','39_0']];
+    const value=scene.phase==='ready'?scene.hiScore:scene.score;
+    const score=String(Math.floor(value)).padStart(4,' ').slice(-4);
+    scores.forEach((ids,i)=>{if(score[i]!==' ')digit(Number(score[i]),ids);});
+    if(value>=10000)active.add('38_1');
+    if(scene.sound)active.add('44_1');
+    if(scene.preview)scene.preview.forEach((v,i)=>{if(v&&(v!==2||blink))active.add(`${[39,33,27,21][Math.floor(i/4)]}_${5-i%4}`);});
+    active.add('15_5'); active.add('26_1');
+    digit(scene.speed%10,['14_5','15_0','21_0','26_5','20_6','14_6','20_5']);
+    digit(scene.level%10,['14_3','14_4','20_4','26_3','20_2','14_2','20_3']);
+    if(scene.phase==='paused')active.add('32_1');
+    return active;
+  }
   render(scene:TetrisScene):void {
     if(this.display)this.display.style.visibility='visible';
-    const map=mapping[this.device],active=new Set<string>();
+    const map=this.device === 'e23' ? mapping.e88 : this.device === 'apollo-b0302'
+      ? {matrix:measured.Apollo18in1B0302,segments:{}} : mapping[this.device],active=new Set<string>();
     const segment=(id:string):void=>{const target=(map.segments as Record<string,string>)[id];if(target)active.add(target);};
     const digit=(value:number,ids:readonly string[]):void=>{for(const char of DIGITS[Math.max(0,Math.min(9,value))]!)segment(ids['abcdefg'.indexOf(char)]!);};
     if(scene.allOn)for(const id of this.segments.keys())active.add(id);
-    else {
+    else if(this.device==='apollo-b0302') {
+      for(const id of this.b0302Segments(scene))active.add(id);
+    } else {
       const blink=Math.floor(scene.tick/15)%2===0;
-      scene.cells.forEach((v,i)=>{if(v && (v!==2||blink))active.add(map.matrix[Math.floor(i/10)]![i%10]!);});
+      scene.cells.forEach((v,i)=>{const y=Math.floor(i/10),row=map.matrix[y];if(row&&((scene.overFill>0&&y>=map.matrix.length-scene.overFill)||(v&&(v!==2||blink))))active.add(row[i%10]!);});
       if(scene.preview)scene.preview.forEach((v,i)=>{if(v && (v!==2||blink))segment(`${[190,188,186,184][i%4]}_${[3,0,2,1][Math.floor(i/4)]}`);});
       const value=scene.phase==='ready'?scene.hiScore:scene.score;
       const score=String(Math.floor(value)).padStart(4,' ').slice(-4);

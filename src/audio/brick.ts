@@ -37,7 +37,7 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
       default: return null;
     }
   }
-  if (nativeProfile === 'e88') {
+  if (nativeProfile === 'e88' || nativeProfile === 'e23') {
     if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
     if (event.type === 'started') return TETRIS.has(game) ? 'e88_tetris_music' : 'e88_start';
     if (event.type === 'gameOver') return 'e88_over';

@@ -19,7 +19,7 @@ body[data-chrome='toy'] .arena[data-chassis='native']:not([data-compact]) { --st
 .arena .toy[data-chassis='native'][data-model][data-compact] .toy__lower {height:0;visibility:hidden;}
 .native__lcd {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 body[data-chrome='toy'] .arena[data-chassis='native'][data-compact] {--stage-w:clamp(280px,calc((100dvh - 30px - var(--head-h)) / .92),950px);}
-body[data-toy='e88'] #view-state,body[data-toy='apollo-b0202'] #view-state {grid-template-columns:repeat(2,minmax(0,1fr));}
+body[data-toy='e88'] #view-state,body[data-toy='apollo-b0202'] #view-state,body[data-toy='e23'] #view-state,body[data-toy='apollo-b0302'] #view-state {grid-template-columns:repeat(2,minmax(0,1fr));}
 @media(max-width:899px) {body[data-chrome='toy'] .arena[data-chassis='native']:not([data-compact]) {--stage-w:clamp(280px,calc((100dvh - var(--toy-top) - 20px) / 2.44),390px);}}
 .arena .toy[data-chassis='native'][data-model] .lid__window::before,.arena .toy[data-chassis='native'][data-model] .lid__window::after {display:none;}
 

@@ -23,7 +23,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog'], default='all')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-racing', 'b0302-variants', 'e23-variants'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -82,6 +82,114 @@ def main():
                         'romSha256': hashlib.sha256(Path(config['mask_options']['rom_path']).read_bytes()).hexdigest(),
                         'faceSha256': hashlib.sha256(Path(config['face_path']).read_bytes()).hexdigest()})
     result = {'reference': {'repository': 'https://github.com/azya52/BrickEmuPy', 'revision': REVISION, 'devices': devices}}
+
+    if args.section == 'b0302-variants':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['variants'] = []
+        for slot in range(1, 19):
+            probe = copy.deepcopy(base)
+            probe.key('Mute')
+            probe.key('StartP', .2, .3)
+            probe.run(4)
+            sample = {'slot':slot, 'cells':probe.cells(), 'ram':list(probe.cpu._RAM),
+                      'cycle':probe.cycles, 'inputs':probe.inputs, 'timeline':[]}
+            if slot in (3,9,10,13,14,15,16,17,18):
+                for _ in range(80):
+                    probe.run(.1)
+                    sample['timeline'].append({'cycle':probe.cycles,'cells':probe.cells()})
+            result['variants'].append(sample)
+            base.key('Down')
+
+    if args.section == 'b0302-racing':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['race'] = []
+        for slot in (1, 2):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP', .2, .3)
+            machine.run(4)
+            observations = [{'action': 'none', 'cells': machine.cells(), 'cycles': machine.cycles}]
+            for action in ('Left', 'Left', 'Right', 'Right', 'Rotate', 'Down'):
+                machine.key(action, .2, .3)
+                observations.append({'action': action, 'cells': machine.cells(), 'cycles': machine.cycles})
+            result['race'].append({'slot': slot, 'frames': observations, 'inputs': machine.inputs})
+            base.key('Down')
+
+    if args.section == 'e23-variants':
+        base = Machine('E23PlusMarkII96in1')
+        base.run(3)
+        base.key('Mute')
+        result['variants'] = []
+        for slot in range(1, 100):
+            probe = copy.deepcopy(base)
+            probe.key('Start', .08, .12)
+            probe.run(2)
+            result['variants'].append({'slot': slot, 'cells': probe.cells(),
+                                       'ram': list(probe.cpu._RAM), 'cycle': probe.cycles})
+            base.key('Down')
+
+    if args.section == 'b0302-gravity':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        for _ in range(2):
+            base.key('Down')
+        observations = []
+        for speed in range(10):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            for _ in range(speed):
+                machine.key('Right')
+            menu_cells = machine.cells()
+            machine.key('StartP', .2, .3)
+            after_start = machine.cells()
+            previous, full_previous, full_cycle, deltas, changes = None, None, None, [], []
+            for _ in range(1600):
+                machine.run(.005)
+                cells = machine.cells()
+                if cells == previous:
+                    continue
+                if len(changes) < 24:
+                    changes.append({'cycle': machine.cycles, 'cells': cells})
+                if len(cells) == 4 and cells != full_previous:
+                    if full_previous is not None and cells == [[x, y + 1] for x, y in full_previous]:
+                        deltas.append(machine.cycles - full_cycle)
+                    full_previous, full_cycle = cells, machine.cycles
+                previous = cells
+            observations.append({'speed': speed, 'intervalCycles': deltas, 'menu': menu_cells,
+                                 'afterStart': after_start, 'changes': changes, 'inputs': machine.inputs})
+        result['gravity'] = observations
+
+    if args.section == 'native-menus':
+        result['menus'] = {}
+        for name, count in [('E23PlusMarkII96in1', 96), ('Apollo18in1B0302', 18)]:
+            machine = Machine(name)
+            machine.run(8)
+            machine.key('Mute')
+            # On B0302 the first DOWN dismisses the startup screen instead of
+            # advancing the selected game. Begin observation in the menu.
+            if name == 'Apollo18in1B0302':
+                machine.key('Down')
+            frames = []
+            for slot in range(1, count + 1):
+                frames.append({'slot': slot, 'cells': machine.cells(), 'cycles': machine.cycles})
+                machine.key('Down')
+            following = []
+            extra_games = []
+            for _ in range(4):
+                following.append(machine.cells())
+                if name == 'E23PlusMarkII96in1' and len(following) <= 3:
+                    probe = copy.deepcopy(machine)
+                    probe.key('Start', .2, .3)
+                    probe.run(4)
+                    before = probe.cells()
+                    probe.key('Rotate', .2, .3)
+                    extra_games.append({'slot': 96 + len(following), 'beforeRotate': before,
+                                        'afterRotate': probe.cells(), 'inputs': probe.inputs})
+                machine.key('Down')
+            result['menus'][name] = {'frames': frames, 'following': following,
+                                      'extraGames': extra_games, 'inputs': machine.inputs}
 
     if args.section == 'inventory':
         starts = dict(zip(NAMES, ['StartP', 'StartP', 'Start', 'Start', 'Start', 'Rotate', 'StartRotate', 'OnPause', 'StartPause', 'OnOff']))

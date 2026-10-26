@@ -195,7 +195,7 @@ export class InfoPanel {
       class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}${model.nativeDevice ? ` about__logo--${model.nativeDevice}` : ''}`,
       src: `${import.meta.env.BASE_URL}brand/${model.nativeDevice ? `${model.nativeDevice}-wordmark.svg` : this.toy === 'brickgame' ? 'brick-game-wordmark.svg' : this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
       width:'1000', height:'443', alt:model.name,
-    }), ...(model.nativeDevice ? [h('p',{class:'about__model'}, model.nativeDevice==='e88' ? 'E‑88 · 8 in 1' : 'B0202 · 126 in 1')] : []));
+    }), ...(model.nativeDevice ? [h('p',{class:'about__model'}, ({e88:'E‑88 · 8 in 1','apollo-b0202':'B0202 · 126 in 1',e23:'E‑23 · 96 in 1','apollo-b0302':'B0302 · 18 in 1'} as const)[model.nativeDevice])] : []));
     const boxButton = this.boxButton();
     const head = h(
       'header',
@@ -436,7 +436,7 @@ export class InfoPanel {
       const head = h('header',{class:'gpanel__head'},h('span',{class:'gkey'},entry.nativeCode),h('h4',{class:'gpanel__name'},entry.name[lang]));
       head.append(gameBadges(entry.gameId,lang,{stage:entry.stage,rarity:false}));
       const state = h('p',{class:'side__text'},entry.available ? (ru ? 'Игровой профиль доступен. Подтверждённые особенности и ограничения — в документации модели.' : 'Playable profile. Verified features and limitations are documented per model.') : (ru ? 'Этот оригинальный режим ещё исследуется. Запуск появится после восстановления его правил.' : 'This original mode is under study. It will become playable after its rules are reconstructed.'));
-      const menu = h('p',{class:'side__text'},(originalPlayableMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice==='e88' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
+      const menu = h('p',{class:'side__text'},(originalPlayableMenu(model.nativeDevice!,model.games) ? (ru ? 'Оригинальный набор. ' : 'Original menu. ') : (ru ? 'Изменённый набор. ' : 'Custom menu. ')) + (model.nativeDevice!=='apollo-b0202' ? (ru ? 'DOWN — следующая игра; LEFT — уровень; RIGHT — скорость; ROTATE — направление поворота; START — запуск.' : 'DOWN: next game; LEFT: level; RIGHT: speed; ROTATE: rotation direction; START: play.') : (ru ? 'RIGHT + DOWN — группа; DOWN / ROTATE — вариант вперёд / назад; LEFT — уровень; RIGHT — скорость; START — запуск. Речь пока не воспроизводится.' : 'RIGHT + DOWN: group; DOWN / ROTATE: next / previous variant; LEFT: level; RIGHT: speed; START: play. Speech is not reproduced yet.')));
       const guide = nativeGuide(entry);
       return [head, ...(entry.approximate ? [h('p',{class:'gpanel__approx'},ru ? '≈ Приближённый вариант из общей библиотеки. Точные правила этой модели ещё уточняются.' : '≈ Adapted library game. Exact rules for this model are still being researched.')] : []), ...(guide ? compactGuide(guide, lang) : [state]), menu];
     }

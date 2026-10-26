@@ -73,6 +73,8 @@ interface Cutscene {
 
 export abstract class BrickBase implements BrickGame {
   abstract readonly id: string;
+  /** Logical matrix height, independent of the shared 200-cell output buffer. */
+  protected get fieldRows(): number { return BRICK_ROWS; }
 
   phase: BrickPhase = 'ready';
   score = 0;
@@ -264,11 +266,11 @@ export abstract class BrickBase implements BrickGame {
         const half = total / 2;
         const out = emptyField();
         if (elapsed < half) {
-          const rows = Math.min(BRICK_ROWS, Math.ceil(((elapsed + 1) / half) * BRICK_ROWS));
-          out.fill(CELL_ON, (BRICK_ROWS - rows) * BRICK_COLS);
+          const rows = Math.min(this.fieldRows, Math.ceil(((elapsed + 1) / half) * this.fieldRows));
+          out.fill(CELL_ON, (this.fieldRows - rows) * BRICK_COLS, this.fieldRows * BRICK_COLS);
         } else {
-          const cleared = Math.min(BRICK_ROWS, Math.ceil(((elapsed + 1 - half) / half) * BRICK_ROWS));
-          out.fill(CELL_ON, cleared * BRICK_COLS);
+          const cleared = Math.min(this.fieldRows, Math.ceil(((elapsed + 1 - half) / half) * this.fieldRows));
+          out.fill(CELL_ON, cleared * BRICK_COLS, this.fieldRows * BRICK_COLS);
         }
         this.overlay = out;
       },
@@ -280,7 +282,7 @@ export abstract class BrickBase implements BrickGame {
   protected animateKaboom(x: number, y: number, done: () => void): void {
     const half = (KABOOM_SIZE - 1) / 2;
     const cx = Math.min(BRICK_COLS - 1 - half, Math.max(half, Math.trunc(x)));
-    const cy = Math.min(BRICK_ROWS - 1 - half, Math.max(half, Math.trunc(y)));
+    const cy = Math.min(this.fieldRows - 1 - half, Math.max(half, Math.trunc(y)));
     const base = this.draw().slice();
     const total = KABOOM_PASSES * KABOOM_WAVES.length * KABOOM_WAVE_TICKS;
     this.cutscene(
@@ -336,8 +338,8 @@ export abstract class BrickBase implements BrickGame {
 
   private stepDying(): void {
     this.overTimer++;
-    this.overFill = Math.min(BRICK_ROWS, Math.floor(this.overTimer / GAME_OVER_TICKS_PER_ROW));
-    if (this.overTimer >= BRICK_ROWS * GAME_OVER_TICKS_PER_ROW + GAME_OVER_HOLD_TICKS) {
+    this.overFill = Math.min(this.fieldRows, Math.floor(this.overTimer / GAME_OVER_TICKS_PER_ROW));
+    if (this.overTimer >= this.fieldRows * GAME_OVER_TICKS_PER_ROW + GAME_OVER_HOLD_TICKS) {
       this.dying = false;
       this.phase = 'over';
     }

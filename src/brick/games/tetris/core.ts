@@ -16,7 +16,6 @@ import { Countdown, Repeater, msToTicks } from '../../timing';
 import {
   BRICK_CELLS,
   BRICK_COLS,
-  BRICK_ROWS,
   BRICK_TICK_HZ,
   CELL_BLINK,
   CELL_ON,
@@ -119,7 +118,7 @@ export abstract class TetrisCore extends BrickBase {
 
   /** Строка экрана для высоты y: обычное поле — сверху вниз, перевёрнутое — наоборот. */
   protected rowOf(y: number): number {
-    return this.variant.inverted ? y : BRICK_ROWS - 1 - y;
+    return this.variant.inverted ? y : this.fieldRows - 1 - y;
   }
 
   /** Время падения на одну клетку в тактах на текущей скорости. */
@@ -129,14 +128,14 @@ export abstract class TetrisCore extends BrickBase {
   }
 
   protected cellAt(x: number, y: number): number {
-    if (x < 0 || x >= BRICK_COLS || y < 0 || y >= BRICK_ROWS) return 0;
+    if (x < 0 || x >= BRICK_COLS || y < 0 || y >= this.fieldRows) return 0;
     return this.board[idx(x, y)] ?? 0;
   }
 
   /** Экранная матрица: осевшие клетки (и накладка кадра `board`) плюс, если нужно, падающая фигура. */
   private render(board: Uint8Array, withPiece: boolean): Uint8Array {
     const out = new Uint8Array(BRICK_CELLS);
-    for (let y = 0; y < BRICK_ROWS; y++) {
+    for (let y = 0; y < this.fieldRows; y++) {
       const row = this.rowOf(y);
       for (let x = 0; x < BRICK_COLS; x++) {
         const value = board[idx(x, y)] ?? 0;
@@ -148,7 +147,7 @@ export abstract class TetrisCore extends BrickBase {
       for (const [cx, cy] of piece.cells) {
         const x = this.pieceX + cx;
         const y = this.pieceY + cy;
-        if (x < 0 || x >= BRICK_COLS || y < 0 || y >= BRICK_ROWS) continue;
+        if (x < 0 || x >= BRICK_COLS || y < 0 || y >= this.fieldRows) continue;
         out[idx(x, this.rowOf(y))] = piece.blink ? CELL_BLINK : CELL_ON;
       }
     }
@@ -246,7 +245,7 @@ export abstract class TetrisCore extends BrickBase {
         this.throughNow = false;
       }
     }
-    if (!this.tryMove(next, MIDDLE_X, BRICK_ROWS - 1 - next.minY)) {
+    if (!this.tryMove(next, MIDDLE_X, this.fieldRows - 1 - next.minY)) {
       this.over = true;
       this.gameOver();
       return;
@@ -368,7 +367,7 @@ export abstract class TetrisCore extends BrickBase {
     const piece = this.piece;
     if (!piece) return false;
     for (let y = this.pieceY + piece.minY; y <= this.pieceY + piece.maxY; y++) {
-      if (y >= BRICK_ROWS) break;
+      if (y >= this.fieldRows) break;
       if (y < 0) continue;
       let full = true;
       for (let x = 0; x < BRICK_COLS && full; x++) {
@@ -446,7 +445,7 @@ export abstract class TetrisCore extends BrickBase {
     const afterPlacing = (): void => {
       this.clearLines(x, () => {
         // фигура торчит выше поля — конец игры (проверка после рядов, как у донора)
-        if (y + piece.maxY >= BRICK_ROWS) {
+        if (y + piece.maxY >= this.fieldRows) {
           this.over = true;
           this.gameOver();
           return;
@@ -467,7 +466,7 @@ export abstract class TetrisCore extends BrickBase {
   private finishDrop(): void {
     if (this.over || !this.variant.shift) return;
     const out = new Uint8Array(BRICK_CELLS);
-    for (let y = 0; y < BRICK_ROWS; y++) {
+    for (let y = 0; y < this.fieldRows; y++) {
       for (let x = 0; x < BRICK_COLS; x++) out[idx((x + 1) % BRICK_COLS, y)] = this.board[idx(x, y)] ?? 0;
     }
     this.board = out;
@@ -478,14 +477,14 @@ export abstract class TetrisCore extends BrickBase {
     for (const [cx, cy] of piece.cells) {
       const bx = x + cx;
       const by = y + cy;
-      if (bx >= 0 && bx < BRICK_COLS && by >= 0 && by < BRICK_ROWS) this.board[idx(bx, by)] = CELL_ON;
+      if (bx >= 0 && bx < BRICK_COLS && by >= 0 && by < this.fieldRows) this.board[idx(bx, by)] = CELL_ON;
     }
   }
 
   /** Взрыв стирает квадрат `BLAST_SIZE` × `BLAST_SIZE` (5 × 5; эпицентр сдвигается внутрь поля, как в `Game.kaboom`). */
   private blast(cx: number, cy: number): void {
     const x = clamp(cx, BLAST_RADIUS, BRICK_COLS - 1 - BLAST_RADIUS);
-    const y = clamp(cy, BLAST_RADIUS, BRICK_ROWS - 1 - BLAST_RADIUS);
+    const y = clamp(cy, BLAST_RADIUS, this.fieldRows - 1 - BLAST_RADIUS);
     for (let dy = -BLAST_RADIUS; dy <= BLAST_RADIUS; dy++) {
       for (let dx = -BLAST_RADIUS; dx <= BLAST_RADIUS; dx++) this.board[idx(x + dx, y + dy)] = 0;
     }
@@ -501,7 +500,7 @@ export abstract class TetrisCore extends BrickBase {
     const frames: Uint8Array[] = [];
     const cells = piece.cells
       .map(([cx, cy]) => [x + cx, y + cy] as const)
-      .filter(([bx, by]) => bx >= 0 && bx < BRICK_COLS && by >= 0 && by < BRICK_ROWS)
+      .filter(([bx, by]) => bx >= 0 && bx < BRICK_COLS && by >= 0 && by < this.fieldRows)
       .sort((a, b) => a[1] - b[1] || a[0] - b[0]);
     for (const [bx, by] of cells) work[idx(bx, by)] = CELL_BLINK;
     const snapshot = (): void => {
@@ -553,7 +552,7 @@ export abstract class TetrisCore extends BrickBase {
   /** Полные ряды (y снизу вверх); верхняя строка не проверяется — как в `removeFullLines` (`y < boardHeight - 1`). */
   protected fullRows(): number[] {
     const rows: number[] = [];
-    for (let y = 0; y < BRICK_ROWS - 1; y++) if (this.rowFullAt(y)) rows.push(y);
+    for (let y = 0; y < this.fieldRows - 1; y++) if (this.rowFullAt(y)) rows.push(y);
     return rows;
   }
 
@@ -604,8 +603,8 @@ export abstract class TetrisCore extends BrickBase {
 
   /** Убрать ряд y: всё выше опускается на клетку, сверху появляется пустой ряд. */
   private dropRowsAbove(y: number): void {
-    this.board.copyWithin(idx(0, y), idx(0, y + 1), BRICK_CELLS);
-    this.board.fill(0, idx(0, BRICK_ROWS - 1), BRICK_CELLS);
+    this.board.copyWithin(idx(0, y), idx(0, y + 1), idx(0, this.fieldRows));
+    this.board.fill(0, idx(0, this.fieldRows - 1), idx(0, this.fieldRows));
   }
 
   protected linePoints(removed: number): number { return removed <= 4 ? (LINE_POINTS[removed] ?? 1) : 1; }
@@ -626,12 +625,12 @@ export abstract class TetrisCore extends BrickBase {
    */
   protected tryAddLine(): boolean {
     const piece = this.piece;
-    if (piece && (this.pieceY + 1 + piece.maxY >= BRICK_ROWS || this.pieceY + 1 + piece.minY < 0)) return false;
-    for (let x = 0; x < BRICK_COLS; x++) if (this.cellAt(x, BRICK_ROWS - 2) !== 0) return false;
+    if (piece && (this.pieceY + 1 + piece.maxY >= this.fieldRows || this.pieceY + 1 + piece.minY < 0)) return false;
+    for (let x = 0; x < BRICK_COLS; x++) if (this.cellAt(x, this.fieldRows - 2) !== 0) return false;
     // у донора поле включает и саму фигуру: обычная (не мигающая) фигура на этом ряду тоже мешает
-    if (piece && !piece.blink && piece.cells.some(([, cy]) => this.pieceY + cy === BRICK_ROWS - 2)) return false;
-    this.board.copyWithin(idx(0, 1), 0, idx(0, BRICK_ROWS - 2));
-    this.board.fill(0, idx(0, BRICK_ROWS - 1), BRICK_CELLS);
+    if (piece && !piece.blink && piece.cells.some(([, cy]) => this.pieceY + cy === this.fieldRows - 2)) return false;
+    this.board.copyWithin(idx(0, 1), 0, idx(0, this.fieldRows - 2));
+    this.board.fill(0, idx(0, this.fieldRows - 1), idx(0, this.fieldRows));
     this.writeGarbageRow(0);
     if (piece) this.pieceY++;
     return true;
@@ -643,7 +642,7 @@ export abstract class TetrisCore extends BrickBase {
   private shoot(piece: Piece): void {
     this.emit({ type: 'shot' });
     const y = this.pieceY + piece.minY;
-    if (y <= 0 || y > BRICK_ROWS) return;
+    if (y <= 0 || y > this.fieldRows) return;
     for (let i = y - 1; i >= 0; i--) {
       if (this.cellAt(this.pieceX, i) !== 0) {
         this.board[idx(this.pieceX, i)] = 0;
@@ -661,7 +660,7 @@ export abstract class TetrisCore extends BrickBase {
     this.emit({ type: 'shot' });
     const y = this.pieceY + piece.minY;
     const x = this.pieceX;
-    if (y <= 0 || y > BRICK_ROWS) return;
+    if (y <= 0 || y > this.fieldRows) return;
     for (let i = y - 1; i >= 0; i--) {
       if (this.cellAt(x, i) !== 0) {
         if (i + 1 < y && this.cellAt(x, i + 1) === 0) this.board[idx(x, i + 1)] = CELL_ON;

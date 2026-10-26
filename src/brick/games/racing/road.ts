@@ -27,17 +27,18 @@ export const CAR_MAX_Y = 2;
 export const CAR_Y = -CAR_MIN_Y;
 
 /** Горит ли клетка (x, y) у машины с центром (cx, cy). */
-export function carCovers(cx: number, cy: number, x: number, y: number): boolean {
-  const row = CAR_ROWS[y - cy - CAR_MIN_Y];
+export function carCovers(cx: number, cy: number, x: number, y: number, rows: readonly string[] = CAR_ROWS): boolean {
+  const row = rows[y - cy - CAR_MIN_Y];
   return row !== undefined && row[x - cx + 1] === '#';
 }
 
 /** Пересекаются ли две машины (общая горящая клетка) — `GameUtils.checkCollision` донора. */
-export function carsOverlap(ax: number, ay: number, bx: number, by: number): boolean {
-  if (Math.abs(ax - bx) > CAR_WIDTH - 1 || Math.abs(ay - by) > CAR_MAX_Y - CAR_MIN_Y) return false;
-  for (let dy = CAR_MIN_Y; dy <= CAR_MAX_Y; dy++) {
+export function carsOverlap(ax: number, ay: number, bx: number, by: number, rows: readonly string[] = CAR_ROWS): boolean {
+  const maxY = CAR_MIN_Y + rows.length - 1;
+  if (Math.abs(ax - bx) > CAR_WIDTH - 1 || Math.abs(ay - by) > maxY - CAR_MIN_Y) return false;
+  for (let dy = CAR_MIN_Y; dy <= maxY; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
-      if (carCovers(ax, ay, ax + dx, ay + dy) && carCovers(bx, by, ax + dx, ay + dy)) return true;
+      if (carCovers(ax, ay, ax + dx, ay + dy, rows) && carCovers(bx, by, ax + dx, ay + dy, rows)) return true;
     }
   }
   return false;
@@ -114,8 +115,12 @@ export class Road {
    */
   private tailY: number | null = null;
 
-  constructor(layout: RoadLayout) {
+  private readonly height: number;
+  private readonly carRows: readonly string[];
+  constructor(layout: RoadLayout, height = BRICK_ROWS, carRows: readonly string[] = CAR_ROWS) {
     this.layout = layout;
+    this.height = height;
+    this.carRows = carRows;
   }
 
   /** Пустая дорога. Фаза рамки так, чтобы первый же сдвиг показал фазу 0, как первый `moveOn` донора. */
@@ -140,8 +145,8 @@ export class Road {
     while (i < this.opponents.length) {
       const opponent = this.opponents[i];
       if (opponent === undefined) break;
-      if (opponent.y + CAR_MAX_Y > 0) {
-        const crashed = carsOverlap(opponent.x, opponent.y - 1, carX, carY);
+      if (opponent.y + CAR_MIN_Y + this.carRows.length - 1 > 0) {
+        const crashed = carsOverlap(opponent.x, opponent.y - 1, carX, carY, this.carRows);
         opponent.y--;
         if (crashed) return { passed, crashed: true };
         i++;
@@ -164,8 +169,9 @@ export class Road {
     const lanes = this.layout.lanes;
     this.lastSpawn = [];
     const distance = 10 - Math.floor(level / 2) + rng.int(3);
-    let lastY = this.tailY === null ? BRICK_ROWS - distance : this.tailY + CAR_MAX_Y;
-    if (lastY > BRICK_ROWS - distance) return [];
+    const carMaxY = CAR_MIN_Y + this.carRows.length - 1;
+    let lastY = this.tailY === null ? this.height - distance : this.tailY + carMaxY;
+    if (lastY > this.height - distance) return [];
 
     const added: Opponent[] = [];
     do {
@@ -196,8 +202,8 @@ export class Road {
         added.push(opponent);
       }
       this.tailY = y;
-      lastY = y + CAR_MAX_Y;
-    } while (lastY < BRICK_ROWS - distance);
+      lastY = y + carMaxY;
+    } while (lastY < this.height - distance);
 
     this.lastSpawn = added;
     return added;

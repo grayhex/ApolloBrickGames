@@ -7,8 +7,10 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
   const base = BRICK_GUIDES[entry.gameId];
   if (!entry.available || !base) return null;
   if (entry.gameId === 'tetris') {
-    const special = entry.profileId === 'e88' && ['2', '4'].includes(entry.nativeCode);
-    const obstruction = entry.profileId === 'e88' && ['3', '4'].includes(entry.nativeCode);
+    const mode = entry.profileId === 'e23' ? ((Number(entry.nativeCode)-1)%8)+1 : Number(entry.nativeCode);
+    const htBlock = entry.profileId === 'e88' || entry.profileId === 'e23';
+    const special = htBlock && [2, 4].includes(mode);
+    const obstruction = htBlock && [3, 4].includes(mode);
     return {
       ...base,
       rules: [

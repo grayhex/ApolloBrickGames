@@ -48,7 +48,6 @@ const GUN_TOP_ROW = 1;
 const START_X = BRICK_COLS / 2 - 1;
 /** Строка, с которой начинает полёт пуля (`curY + gun.maxY() + 1`), и последняя строка поля. */
 const BULLET_START_ROW = GUN_TOP_ROW + 1;
-const TOP_ROW = BRICK_ROWS - 1;
 /** Пуль в одной колонке одновременно (`boardHeight - gun.getHeight()`). */
 export const MAX_BULLETS_PER_COLUMN = BRICK_ROWS - GUN_HEIGHT;
 /** Скорость нашествия (`getSpeedOfFirstLevel/TenthLevel`): шаг в мс на скорости 1 и 10; сверх 50 кирпичей шаг замедляется. */
@@ -203,7 +202,7 @@ export class InvadersGame extends BrickBase {
   protected draw(): Uint8Array {
     const out = emptyField();
     const put = (x: number, y: number, value: number): void => {
-      if (x < 0 || x >= BRICK_COLS || y < 0 || y >= BRICK_ROWS) return;
+      if (x < 0 || x >= BRICK_COLS || y < 0 || y >= this.fieldRows) return;
       out[cellIndex(x, this.screenRow(y))] = value;
     };
     for (let row = 0; row < this.wall.height; row++) {
@@ -222,13 +221,13 @@ export class InvadersGame extends BrickBase {
 
   /** Строка экрана (0 — верх) для донорской строки `y` (0 — низ поля; на перевёрнутом поле — наоборот). */
   private screenRow(y: number): number {
-    return this.traits.inverted ? y : BRICK_ROWS - 1 - y;
+    return this.traits.inverted ? y : this.fieldRows - 1 - y;
   }
 
   /** Загрузить текущий уровень (`loadNewLevel`): новая стена (у случайных — новая случайная), орудие в центр, пули долой. */
   private loadLevel(): void {
     this.wall = this.traits.preloaded ? preloadedWall(this.level) : generatedWall(this.level, this.rng);
-    this.bricksY = BRICK_ROWS - this.wall.height;
+    this.bricksY = this.fieldRows - this.wall.height;
     this.ball = null;
     this.bullets = [];
     this.gunX = START_X;
@@ -320,7 +319,7 @@ export class InvadersGame extends BrickBase {
     let fired = false;
     for (const x of columns) {
       if (x < 0 || x >= BRICK_COLS) continue;
-      if (this.bullets.filter((bullet) => bullet.x === x).length >= MAX_BULLETS_PER_COLUMN) continue;
+      if (this.bullets.filter((bullet) => bullet.x === x).length >= this.fieldRows - GUN_HEIGHT) continue;
       this.bullets.push({ x, next: BULLET_START_ROW, shown: -1, fading: false });
       fired = true;
     }
@@ -344,7 +343,7 @@ export class InvadersGame extends BrickBase {
    * проверяет клетку, вспыхивает на один такт (в доноре — `sleep(15)`) и пропадает.
    */
   private flyBullet(bullet: Bullet): boolean {
-    if (bullet.next < TOP_ROW) {
+    if (bullet.next < this.fieldRows - 1) {
       if (this.occupied(bullet.x, bullet.next)) {
         this.hitCell(bullet.x, bullet.next);
         return false;
@@ -353,8 +352,8 @@ export class InvadersGame extends BrickBase {
       bullet.next++;
       return true;
     }
-    if (this.occupied(bullet.x, TOP_ROW)) this.hitCell(bullet.x, TOP_ROW);
-    bullet.shown = TOP_ROW;
+    if (this.occupied(bullet.x, this.fieldRows - 1)) this.hitCell(bullet.x, this.fieldRows - 1);
+    bullet.shown = this.fieldRows - 1;
     bullet.fading = true;
     return true;
   }
