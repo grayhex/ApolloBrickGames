@@ -116,14 +116,14 @@ test('FIRE нарисована только у игры, без которой 
   await expect.poll(() => area(page, 'boot')).toBe('off');
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'off');
   await expect(fire).toBeHidden();
-  // Меню идёт по возрастанию редкости (Snake и Tetris — Common, Jig Saw — Ultra Rare): Snake → Tetris → Jig Saw.
+  // Меню идёт по возрастанию редкости (Snake и Tetris — Common, Jig Saw — Ultra Rare): в меню за Snake сразу идёт Tetris.
   await page.locator('[data-key=jump]').click(); // ROTATE в меню: следующая игра
   await expect.poll(() => area(page, 'game')).toBe('tetris');
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'off');
   await expect(fire).toBeHidden();
   // В левой справке у Tetris FIRE не упомянута.
   await expect(page.locator('#gpanel .gctl')).not.toContainText('FIRE');
-  await page.locator('[data-key=jump]').click();
+  await page.locator('#guide-game').selectOption('jigsaw'); // игры без владельца (Pong и др.) встают в свои ступени между ними — выбираем в списке слева
   await expect.poll(() => area(page, 'game')).toBe('jigsaw');
   await expect(page.locator('#toy')).toHaveAttribute('data-fire', 'on');
   await expect(fire).toBeVisible();
