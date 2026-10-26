@@ -488,13 +488,14 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
       };
     }
     const blocks = mini.gameId === 'tetris';
+    const showLines = blocks && mini.phase !== 'over' && idle.lines;
     return {
       ...base,
       preview: mini.preview(),
       score: mini.score,
-      lines: blocks && idle.lines ? lines : null,
+      lines: showLines ? lines : null,
       label: 'score',
-      linesLabel: blocks && idle.lines,
+      linesLabel: showLines,
       next: mini.preview() !== null,
       speed: mini.displaySpeed,
       level: blocks ? mini.displayLevel : null,

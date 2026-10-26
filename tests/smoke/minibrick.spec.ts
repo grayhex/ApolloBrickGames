@@ -222,3 +222,20 @@ test('Mini racing waits for the single verse, waves the flag and opens its barri
  await expect(page.locator('#game-area .minibrick-lcd [data-lcd=level][data-on]')).toHaveCount(0);
  await tap(page,'p');const paused=await state();await page.waitForTimeout(700);expect((await state()).score).toBe(paused.score);
 });
+
+
+test('Mini Tetris game over shows final points even if the display clock stopped on lines',async({page})=>{
+ await page.goto('./?toy=minibrick&power=on&view=full&debug');
+ await expect(page.locator('#game-area')).toHaveAttribute('data-stage','intro');
+ for(let i=0;i<3;i++)await tap(page,'ArrowDown');
+ await expect(page.locator('#game-area')).toHaveAttribute('data-game','2');await tap(page,'Enter');
+ await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+ await page.evaluate('window.__minibrick.powerTicks=30;window.__minibrick.game.score=700;window.__minibrick.game.phase="over"');
+ const root=page.locator('#game-area .minibrick-lcd');
+ await expect(root.locator('[data-lcd=score][data-on]')).toHaveCount(1);
+ await expect(root.locator('[data-lcd=lines][data-on]')).toHaveCount(0);
+ const digits=await root.locator('.lcd-digits').first().locator('[data-seg]').evaluateAll(items=>{
+  const last=items.slice(-21);return Array.from({length:3},(_,i)=>last.slice(i*7,i*7+7).filter(n=>n.hasAttribute('data-on')).map(n=>n.getAttribute('data-seg')).sort().join(''));
+ });
+ expect(digits).toEqual(['abc','abcdef','abcdef']);
+});
