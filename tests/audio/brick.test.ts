@@ -318,3 +318,10 @@ it('Sea intro repeats after the last voice, but game melodies stop and disposed 
   port.play({type:'started'}, 'romeo-juliet', false, 'sea');
   voices[4]!.onended!(); voices[5]!.onended!(); expect(voices).toHaveLength(6);
 });
+
+it('Sea falling-piece landings use the clean pitched cue instead of generic noise', () => {
+  for (const game of ['tetris','romeo-juliet']) {
+    expect(brickSound({type:'lock'}, game, false, 'sea')).toBe('sea_fall_tick');
+    expect(brickSound({type:'drop'}, game, false, 'sea')).toBe('sea_fall_tick');
+  }
+});

@@ -118,9 +118,9 @@ describe('звук «Морского боя»', () => {
     expect(level(745.8)).toBe(level(664.8));
   });
 
-  it('эффекты — шум: вспышка заставки 0,5 с, тон падения фигуры 35 мс', () => {
+  it('эффекты — шум: вспышка заставки 0,5 с, тон падения фигуры 55 мс', () => {
     expect(SEA_BLAST_TONES).toEqual([expect.objectContaining({ ms: 500, noise: true })]);
-    expect(SEA_FALL_TICK_TONES).toEqual([expect.objectContaining({ ms: 35, to: 2000 })]);
+    expect(SEA_FALL_TICK_TONES).toEqual([expect.objectContaining({ ms: 55, to: 2000 })]);
   });
 
   it('вспышки заставки привязаны к кадрам: выстрел — труба появляется (состояние 24, кадр 211), взрыв — вспышка над парусником (состояние 31, кадр 317)', () => {

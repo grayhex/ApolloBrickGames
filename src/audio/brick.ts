@@ -11,6 +11,7 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
     if (event.type === 'introFx') return 'sea_blast';
     // Музыка партии (владелец): у всех игр, кроме A, один раз играет мелодия «Ромео»; в игре A один раз, без повтора, играет мелодия заставки.
     if (event.type === 'started') return game === 'sea-battle' ? 'sea_intro_once' : 'sea_romeo_music';
+    if (event.type === 'lock' || event.type === 'drop') return 'sea_fall_tick';
     if (event.type === 'step') return game === 'romeo-juliet' ? 'sea_fall_tick' : null;
     if (game === 'sea-battle') {
       // Ход игры A: вспышка при выстреле, «капля» из шести ступеней на падении мины, вспышка на потоплении корабля (звук `game-a.MOV`).

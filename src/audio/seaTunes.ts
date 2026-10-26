@@ -76,4 +76,4 @@ export const SEA_BLAST_TONES: readonly BrickTone[] = [{ hz: 904, ms: 500, noise:
 export const SEA_SPLASH_TONES: readonly BrickTone[] = [
   { hz: 770, ms: 50 }, { hz: 1257, ms: 47 }, { hz: 1542, ms: 42 }, { hz: 1908, ms: 50 }, { hz: 2191, ms: 43 }, { hz: 2557, ms: 47 },
 ];
-export const SEA_FALL_TICK_TONES: readonly BrickTone[] = [{ hz: 4000, ms: 35, to: 2000, gain: 0.35 }];
+export const SEA_FALL_TICK_TONES: readonly BrickTone[] = [{ hz: 4000, ms: 55, to: 2000, gain: 0.35 }];
