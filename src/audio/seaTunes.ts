@@ -1,6 +1,6 @@
 import type { BrickTone } from './brickPhrases';
 
-/** Notes transcribed from docs/research/start.m4a and romeo.m4a.
+/** Notes transcribed from the archived start.m4a and romeo.m4a recordings.
  * Re-synthesized as clean square-wave buzzer voices. Recording/speaker response,
  * room noise and frequency-dependent microphone gain are deliberately not reproduced.
  */

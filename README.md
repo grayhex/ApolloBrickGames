@@ -6,14 +6,16 @@
 
 <p align="center">
   Знакомый щелчок крышки, мерцание LCD и звук маленькой пищалки.<br>
-  <b>Девять карманных игрушек. Десятки игр. Одна коллекция.</b>
+  <b>Коллекция карманных игрушек. Десятки игр. Одна коллекция.</b>
 </p>
 
 <p align="center">
-  <a href="https://croco-mario.ru"><b>Открыть коллекцию →</b></a>
+  <a href="https://brick-game.online/"><b>Открыть коллекцию →</b></a>
 </p>
 
-![Коллекция складных игрушек](docs/screenshots/collection.png)
+![Каталог игрушек](docs/screenshots/device-picker-desktop-open.png)
+
+![TAKSUN TS-995 в коллекции](docs/screenshots/toys-taksun.png)
 
 ## Откройте крышку. Вспомните любимую игру.
 
@@ -62,6 +64,6 @@ npx wrangler secret put ADMIN_TOKEN
 
 **Статический хостинг:** `npm run build`, затем разместите содержимое `dist`. Для подкаталога: `npm run build -- --base=/your-path/`. Без Worker настройки коллекции публикуются через `src/config/default.json` и повторную сборку.
 
-[Архитектура](docs/architecture.md) · [Настройка коллекции](docs/admin.md) · [Редактор Mario](docs/editor.md) · [Энциклопедия](docs/encyclopedia.md) · [Каталог и статус игр](docs/brick/library.md) · [Источники](docs/reference-status.md) · [Сторонние материалы](docs/THIRD_PARTY.md)
+[Архитектура](docs/architecture.md) · [Проверка репозитория и CI](docs/repository-review.md) · [Настройка коллекции](docs/admin.md) · [Редактор Mario](docs/editor.md) · [Энциклопедия](docs/encyclopedia.md) · [Каталог и статус игр](docs/brick/library.md) · [Источники](docs/reference-status.md) · [Сторонние материалы](docs/THIRD_PARTY.md)
 
 Общие рекорды TOP-20 без регистрации: [настройка Cloudflare, категории и API](docs/leaderboards.md).

@@ -48,7 +48,7 @@
 ## Звук (чистые записи)
 
 `src/audio/seaTunes.ts` содержит только частоты и длительности двух голосов, снятые с
-`docs/research/start.m4a` и `romeo.m4a` скриптом `scripts/research/sea_audio_tunes.py`.
+[start.m4a](https://github.com/grayhex/ApolloBrickGames/blob/914601f/docs/research/start.m4a) и [romeo.m4a](https://github.com/grayhex/ApolloBrickGames/blob/914601f/docs/research/romeo.m4a) (сохранены в истории Git; для повторения скачайте их в `docs/research`) скриптом `scripts/research/sea_audio_tunes.py`.
 Записи используются для исследования и не загружаются проигрывателем.
 
 - Заставка: мелодия 10,435 с, два голоса, начальная задержка 0,347 с; повторяется до выхода из заставки. `BrickAudio` перезапускает цикл, а не планирует сотни нот на несколько минут вперёд.

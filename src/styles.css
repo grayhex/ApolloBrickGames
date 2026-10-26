@@ -3972,7 +3972,7 @@ body.route-editor .shell > :not(#fatal) {
   background-image: linear-gradient(180deg, #a98f77, #c4a98f 45%, #b39980);
 }
 
-/* Коробка TAKSUN TS-995 по развёртке из docs/research/TS995_packaging_assets.zip: лицо 565 × 939, глубина ≈ 140; цвет под картинками — печатный розовый на случай, если рисунок не загрузился. */
+/* Коробка TAKSUN TS-995 по развёртке из архива TS995_packaging_assets.zip в истории Git: лицо 565 × 939, глубина ≈ 140; цвет под картинками — печатный розовый на случай, если рисунок не загрузился. */
 .box3d[data-pack='taksun'] {
   --bw: 565px;
   --bh: 939px;
