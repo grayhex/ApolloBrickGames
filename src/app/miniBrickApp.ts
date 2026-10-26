@@ -41,10 +41,14 @@ const KEY_ACTIONS: Partial<Record<ToyKeyId, number>> = {
 /** Период мигания клеток и сегментов, мс (полпериода — «горит», полпериода — «погашена»). */
 const BLINK_MS = 500;
 /** Шкала значков на заставке горит целиком. */
-const MINI_SCALE = 13;
+
 
 /** Рекорд каждого номера игры хранится отдельно; недоступное хранилище не мешает игре. */
-const hiKey = (number: number): string => `crocodile-mario:minibrick:${String(number).padStart(2, '0')}:hi`;
+const hiKey = (number: number): string => `crocodile-mario:minibrick:${String(number).padStart(2, '0')}:${number<2?'r2:':''}hi`;
+const lineKey = (number:number):string => `crocodile-mario:minibrick:${number}:lines-hi`;
+function loadLines(number:number):number {
+  try {return Math.max(0,Math.min(MAX_SCORE,Number.parseInt(browserStorage()?.getItem(lineKey(number))??'',10)||0));}catch{return 0;}
+}
 function loadHi(number: number): number {
   try {
     const value = Number.parseInt(browserStorage()?.getItem(hiKey(number)) ?? '', 10);
@@ -131,6 +135,11 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
 
   // ── Игра ────────────────────────────────────────────────────────────
   const savedHi = new Map<number, number>();
+  const savedLines = new Map<number, number>();
+  const lineRecord=(number:number):number=>{
+    if(!savedLines.has(number))savedLines.set(number,loadLines(number));
+    return savedLines.get(number)!;
+  };
   const persistHi = (): void => {
     if (mini.inMenu) return;
     const stored = savedHi.get(mini.gameNumber) ?? loadHi(mini.gameNumber);
@@ -145,10 +154,13 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
   const emit = (events: readonly BrickEvent[]): void => {
     for (const event of events) {
       if (event.type === 'started') lines = 0;
-      else if (event.type === 'lines') lines += event.count;
+      else if (event.type === 'lines') {
+        lines += event.count;
+        if(lines>lineRecord(mini.gameNumber)){savedLines.set(mini.gameNumber,lines);try{browserStorage()?.setItem(lineKey(mini.gameNumber),String(lines));}catch{/* unavailable storage does not stop play */}}
+      }
       brickAudio.play(event, mini.game?.id ?? mini.id, mini.inMenu, 'mini');
     }
-    if (events.length > 0) persistHi();
+    persistHi(); // elapsed driving time also scores without an audio event
   };
   function suspend(): void {
     emit(mini.pause());
@@ -453,23 +465,24 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
   };
   const stateOf = (now: number): MiniLcdState => {
     const stage = mini.screenStage;
+    const idle = mini.idleDisplay;
     const base = { powered: true, cells: mini.cells(), blink: Math.floor(now / BLINK_MS) % 2 === 0, note: hub.settings.display.sound } as const;
     // Заставка по фото владельца: горят HI-SCORE с нулём, LINES, NEXT, GAME OVER, SPEED с нулём и вся шкала значков.
     if (stage === 'intro') {
-      return { ...base, preview: null, score: mini.hiScore, lines: null, label: 'hi', linesLabel: true, next: true, speed: mini.displaySpeed, level: null, scale: MINI_SCALE, pause: false, gameOver: true };
+      return { ...base, preview: null, score: mini.hiScore, lines: idle.lines?lineRecord(mini.gameNumber):null, label: 'hi', linesLabel: idle.lines, next: true, speed: mini.displaySpeed, level: null, scale: idle.scale, pause: false, gameOver: true };
     }
     if (stage === 'menu') {
       return {
         ...base,
         preview: null,
         score: mini.hiScore,
-        lines: null,
+        lines: idle.lines?lineRecord(mini.gameNumber):null,
         label: 'hi',
-        linesLabel: false,
+        linesLabel: idle.lines,
         next: false,
         speed: mini.displaySpeed,
         level: mini.displayLevel,
-        scale: mini.displayLevel + 1,
+        scale: idle.scale,
         pause: false,
         gameOver: false,
       };
@@ -479,12 +492,12 @@ export function startMiniBrickApp(carry?: Carry): AppHandle {
       ...base,
       preview: mini.preview(),
       score: mini.score,
-      lines: blocks ? lines : null,
+      lines: blocks && idle.lines ? lines : null,
       label: 'score',
-      linesLabel: blocks,
-      next: blocks,
+      linesLabel: blocks && idle.lines,
+      next: mini.preview() !== null,
       speed: mini.displaySpeed,
-      level: mini.displayLevel,
+      level: blocks ? mini.displayLevel : null,
       scale: mini.displayLevel + 1,
       pause: mini.phase === 'paused',
       gameOver: mini.phase === 'over',

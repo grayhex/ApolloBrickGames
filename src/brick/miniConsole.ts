@@ -2,7 +2,7 @@
  * Консоль Mini Brick Game B-S96: заставка при включении (рожица, затем «96»), меню номеров 00–96 и сама партия.
  * Меню по фото владельца: на матрице крупное двузначное число — номер игры («01»), без названий и превью; кнопки подписаны LEFT/LEVEL, RIGHT/SPEED, DOWN/GAME.
  * Допущения: DOWN листает номера вперёд, ROTATE — назад (на 97 номеров иначе неудобно), LEFT — уровень 0–12, RIGHT — скорость 0–9 (по кругу), START запускает.
- * Порядок кадров рожицы и сама рожица нарисованы по описанию владельца («заставка-анимация рожица, потом 96»), а не сняты с видео.
+ * Портрет по фото владельца держится 180 тактов, затем появляется 96.
  * Игра идёт как обычный `BrickGame`; после её конца START начинает ту же игру заново, `restart()` (RESET) возвращает в меню.
  */
 import { BIG_DIGITS } from './menuArt';
@@ -25,39 +25,18 @@ export const MINI_LEVEL_LIMIT = 13;
 const wrap = (value: number, count: number): number => ((value % count) + count) % count;
 const clamp = (value: number | undefined, max: number): number => Math.min(max, Math.max(0, Math.trunc(value ?? 0) || 0));
 
-/**
- * Рожица 10 × 9: круглое лицо, глаза и улыбка. Кадры отличаются глазами (открыты, моргнули, подмигнули) и ртом.
- */
-const FACE_BASE: Sprite = [
-  '..######..',
-  '.#......#.',
-  '#........#',
-  '#........#',
-  '#........#',
-  '#.#....#.#',
-  '#..####..#',
-  '.#......#.',
-  '..######..',
+/** Full-matrix portrait, owner photograph; static for about three seconds. */
+const FACE: Sprite = [
+  '##########','##########','##########','##########',
+  '###....###','##......##','#..#..#..#','#........#',
+  '#..#..#..#','##..##..##','.##....##.','..######..',
+  '....##....','#..####..#','##########','##########',
+  '##########','##########','##########','##########',
 ];
-const withRows = (rows: Readonly<Record<number, string>>): Sprite => FACE_BASE.map((row, y) => rows[y] ?? row);
-const FACE_OPEN = withRows({ 2: '#..#..#..#', 3: '#..#..#..#' });
-const FACE_BLINK = withRows({ 3: '#..#..#..#' });
-const FACE_WINK = withRows({ 2: '#..#.....#', 3: '#..#.###.#' });
-const FACE_GRIN = withRows({ 2: '#..#..#..#', 3: '#..#..#..#', 5: '#.######.#' });
-
-/** Кадры заставки (такты по 1/60 с): пустой экран, рожица с морганием, подмигиванием и широкой улыбкой. */
-export const MINI_FACE_FRAMES: readonly { readonly ticks: number; readonly face: Sprite | null }[] = [
-  { ticks: 30, face: null },
-  { ticks: 42, face: FACE_OPEN },
-  { ticks: 8, face: FACE_BLINK },
-  { ticks: 30, face: FACE_OPEN },
-  { ticks: 20, face: FACE_WINK },
-  { ticks: 36, face: FACE_GRIN },
-  { ticks: 14, face: FACE_OPEN },
-];
+export const MINI_FACE_FRAMES = [{ticks:180,face:FACE}] as const;
 export const MINI_FACE_TICKS = MINI_FACE_FRAMES.reduce((sum, frame) => sum + frame.ticks, 0);
 
-const FACE_ROW = 5;
+const FACE_ROW = 0;
 /** Две крупные цифры 4 × 7 на матрице 10 × 20: левая — колонки 0–3, правая — 6–9, строки 6–12. */
 const DIGIT_ROW = 6;
 const DIGIT_COLS: readonly [number, number] = [0, 6];
@@ -103,6 +82,7 @@ export class MiniConsole implements BrickGame {
   private starts = 0;
   private stage: MiniStage = 'intro';
   private stageTicks = 0;
+  private powerTicks = 0;
   private number: number;
   private menuSpeed: number;
   private menuLevel: number;
@@ -135,6 +115,12 @@ export class MiniConsole implements BrickGame {
   /** Заставка уже показывает «96» и ждёт нажатия. */
   get introDone(): boolean {
     return this.stage === 'intro' && this.stageTicks >= MINI_FACE_TICKS;
+  }
+
+  /** Idle animation clock starts at power-on and survives menu selection/settings changes. */
+  get idleDisplay(): {scale:number;lines:boolean} {
+    const pulse=Math.floor(this.powerTicks/30),phase=pulse%26;
+    return {scale:phase<13?phase+1:25-phase,lines:pulse%2===1};
   }
 
   /** Идентификатор игры выбранного номера (`racing` или `tetris`). */
@@ -172,14 +158,14 @@ export class MiniConsole implements BrickGame {
   powerOn(): BrickEvent[] {
     this.current = null;
     this.stage = 'intro';
-    this.stageTicks = 0;
+    this.stageTicks = 0; this.powerTicks = 0;
     return [{ type: 'intro' }];
   }
 
   /** Такт меню или заставки: любая кнопка в заставке открывает меню, в меню кнопки листают номера и меняют настройки. */
   menu(input: BrickInput): BrickEvent[] {
     if (this.current) return [];
-    this.stageTicks++;
+    this.stageTicks++; this.powerTicks++;
     const pressed = input.pressed;
     if (this.stage === 'intro') {
       if (pressed.size === 0) return [];
@@ -272,6 +258,7 @@ export class MiniConsole implements BrickGame {
   }
 
   step(input: BrickInput): BrickEvent[] {
+    this.powerTicks++;
     return this.current ? this.current.step(input) : [];
   }
 

@@ -18,8 +18,8 @@ const FIELD = { x: 11, y: 56 } as const;
 const FRAME = { left: 0.9, top: 0.8, right: 2.4, bottom: 1.9, gap: 1 } as const;
 const PREVIEW = { x: 148, y: 84, cell: CELL } as const;
 const SCORE_DIGITS = 8;
-/** Первые шесть цифр — счёт, две последние — число рядов (LINES). */
-const SCORE_GROUP = 6;
+/** Одна группа из восьми цифр, попеременно очки или линии. */
+const SCORE_GROUP = SCORE_DIGITS;
 const SCORE_BOX = { x: 112.2, y: 25, pitch: 12.2, w: 10.5, h: 23.5, t: 2.5 } as const;
 const SIDE_DIGIT = { x: 151, pitch: 14.4, w: 11.5, h: 15.7, t: 2.1 } as const;
 const SPEED_Y = 152.5;
@@ -53,9 +53,9 @@ export interface MiniLcdState {
   /** Поле 10 × 20: 0 — погашена, 1 — горит, 2 — мигает (в фазе `blink`). */
   cells: Uint8Array | null;
   preview: Uint8Array | null;
-  /** Число в шестизначной группе счёта (справа выровнено); `null` — пусто. */
+  /** Очки в общей восьмизначной группе (справа выровнены); `null` — пусто. */
   score: number | null;
-  /** Число рядов в двух последних цифрах; `null` — цифры погашены. */
+  /** Число рядов в той же группе; выбирается при linesLabel. */
   lines: number | null;
   /** Какая подпись горит у счёта: рекорд в меню, счёт в партии. */
   label: 'hi' | 'score' | null;
@@ -229,9 +229,10 @@ export class MiniLcd {
       }
     }
 
-    // Верх: подписи слева (HI-SCORE и SCORE одна над другой, нота и LINES под ними), справа восемь цифр: шесть счёта и две числа рядов.
+    // Верх: общая надпись HI-SCORE (SCORE используется отдельно), LINES, нота и восемь общих цифр.
+    // One physical HI-SCORE legend: HI- is independently addressable; SCORE is shared.
+    label('hi', text('HI-', 32, 29.5, 14));
     label('score', text('SCORE', 46, 29.5, 31));
-    label('hi', text('HI-SCORE', 46, 39, 42));
     label('note', svg('path', { class: 'lcd-seg', d: NOTE_PATH, transform: 'translate(49.5 44.5) scale(0.62)' }));
     label('lines', text('LINES', 63.4, 49, 25.8));
     const scoreBox = digitsBox(SCORE_BOX.y, SCORE_BOX.h);
@@ -293,17 +294,12 @@ export class MiniLcd {
     const next = state.preview;
     this.preview.forEach((node, index) => setOn(node, all || (on && next !== null && lit(next[index] ?? 0, state.blink))));
 
-    // Шестизначный счёт выровнен вправо: у нуля горит одна последняя цифра группы; две последние цифры — число рядов.
-    const scoreText = on && state.score !== null ? String(Math.max(0, Math.min(10 ** SCORE_GROUP - 1, Math.trunc(state.score)))) : '';
-    const linesText = on && state.lines !== null ? String(Math.max(0, Math.min(99, Math.trunc(state.lines)))) : '';
-    this.score.forEach((digit, index) => {
-      if (index < SCORE_GROUP) {
-        const place = SCORE_GROUP - 1 - index;
-        digit.show(scoreText.length > place ? scoreText[scoreText.length - 1 - place]! : '', all);
-      } else {
-        const place = SCORE_DIGITS - 1 - index;
-        digit.show(linesText.length > place ? linesText[linesText.length - 1 - place]! : '', all);
-      }
+    // The same eight digits show points or lines; no separate two-digit lines group.
+    const value=state.linesLabel && state.lines!==null ? state.lines : state.score;
+    const digits=on&&value!==null?String(Math.max(0,Math.min(99_999_999,Math.trunc(value)))):'';
+    this.score.forEach((digit,index)=>{
+      const place=SCORE_GROUP-1-index;
+      digit.show(digits.length>place?digits[digits.length-1-place]!:'',all);
     });
     const pair = (digits: Digit[], value: number | null): void => {
       const shown = on && value !== null ? Math.max(0, Math.min(19, Math.trunc(value))) : null;
@@ -314,8 +310,8 @@ export class MiniLcd {
     pair(this.level, state.level);
 
     const flags: Record<string, boolean> = {
-      hi: on && state.label === 'hi',
-      score: on && state.label === 'score',
+      hi: on && state.label === 'hi' && !state.linesLabel,
+      score: on && state.label !== null && !state.linesLabel,
       lines: on && state.linesLabel,
       note: on && state.note,
       next: on && state.next,

@@ -1,16 +1,17 @@
+import { MINI_BEAT_MS } from '../brick/miniTiming';
 import type { BrickTone } from './brickPhrases';
 
 /**
  * Звук Mini Brick Game B-S96. Владелец: музыка в играх звучит один раз при старте партии, это классические «Коробейники» из tetris brick game, монофония —
- * один голос-меандр без аккомпанемента. Мелодия — общеизвестная народная (тема A игры Tetris): две части по восемь тактов 4/4, темп 150 уд/мин.
+ * один голос-меандр без аккомпанемента. Мелодия — общеизвестная народная (тема A игры Tetris): один куплет из восьми тактов 4/4, темп 150 уд/мин.
  * Высота нот — равномерная темперация от ля первой октавы 440 Гц, а не настройка пищалки оригинала (запись с устройства не снималась).
  * Остальные сигналы (шаг меню, движение, поворот, посадка) — короткие допущения, не расшифровка прошивки.
  */
-const BEAT_MS = 400;
+const BEAT_MS = MINI_BEAT_MS;
 const hz = (midi: number): number => 440 * 2 ** ((midi - 69) / 12);
 
 /** Ноты по номерам MIDI. */
-const A4 = 69, GS4 = 68, B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, G5 = 79, A5 = 81, GS5 = 80, REST = 0;
+const A4 = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, G5 = 79, A5 = 81, REST = 0;
 
 /** (нота, длительность в долях такта-четверти). */
 type Note = readonly [number, number];
@@ -26,19 +27,8 @@ const PART_A: readonly Note[] = [
   [C5, 1], [A4, 1], [A4, 1], [REST, 1],
 ];
 
-const PART_B: readonly Note[] = [
-  [E5, 2], [C5, 2],
-  [D5, 2], [B4, 2],
-  [C5, 2], [A4, 2],
-  [GS4, 3], [B4, 1],
-  [E5, 2], [C5, 2],
-  [D5, 2], [B4, 2],
-  [C5, 1], [E5, 1], [A5, 2],
-  [GS5, 4],
-];
-
-/** Одноголосная мелодия целиком: части A и B подряд, один проход. */
-export const MINI_KOROBEINIKI: readonly BrickTone[] = [...PART_A, ...PART_B].map(([midi, beats]): BrickTone => ({ hz: midi === REST ? 0 : hz(midi), ms: beats * BEAT_MS, gain: 0.7 }));
+/** Один куплет (часть A), без второго куплета и без повтора. */
+export const MINI_KOROBEINIKI: readonly BrickTone[] = PART_A.map(([midi, beats]): BrickTone => ({ hz: midi === REST ? 0 : hz(midi), ms: beats * BEAT_MS, gain: 0.7 }));
 /** Длительность мелодии, мс. */
 export const MINI_KOROBEINIKI_MS = MINI_KOROBEINIKI.reduce((sum, note) => sum + note.ms, 0);
 

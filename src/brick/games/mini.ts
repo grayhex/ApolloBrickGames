@@ -1,12 +1,12 @@
 /**
  * Игры Mini Brick Game B-S96 («96 IN 1»). Владелец: настоящие только две — 00 и 01 («гонки» в двух вариациях), а 02–96 — вариации тетриса.
- * Правил оригинала нет, поэтому игры — общие ядра проекта: гонки (`RacingGame`, схемы «две полосы» и «три полосы») и тетрис (`TetrisCore`).
+ * Гонки — отдельная реконструкция по записи владельца и его уточнениям; тетрис — TetrisCore.
  * Какая вариация стоит под каким номером, неизвестно — порядок ниже допущение: 02–46 — типы 1–45 класса I донора (обычные и особые семейства фигур),
  * 47–51 — классы J, K, L, M, N (новые ряды по таймеру, смена фигуры вместо поворота, сдвиг поля и сочетания), 52–96 — перевёрнутое поле (типы 46–90).
  */
 import type { BrickGameDef, BrickGameOptions } from '../types';
-import { RacingGame } from './racing';
-import { RACING_ID, RACING_MODES } from './racing/modes';
+import { MiniRacingGame } from './miniRacing';
+
 import { TetrisCore } from './tetris/core';
 import { describeVariant, variantOf, type TetrisVariant } from './tetris/variants';
 
@@ -32,12 +32,12 @@ export class MiniTetrisGame extends TetrisCore {
   }
 }
 
-/** Гонки: вариации 0 и 1 — «две полосы» и «три полосы» (4 схемы дороги донора у «168 в 1 танк» здесь не нужны). */
+/** Гонки: одна механика, две формы носа машины по владельцу. */
 export const miniRacingDef: BrickGameDef = {
-  id: RACING_ID,
+  id: 'racing',
   declaredModes: MINI_RACING_COUNT,
-  modes: RACING_MODES.slice(0, MINI_RACING_COUNT),
-  create: (options) => new RacingGame(options),
+  modes: [{name:{ru:'Крест',en:'Cross'},note:'По видео владельца: различается только форма машины.'},{name:{ru:'Треугольник',en:'Triangle'},note:'По уточнению владельца: треугольный нос вместо креста.'}],
+  create: (options) => new MiniRacingGame(options),
 };
 
 export const miniTetrisDef: BrickGameDef = {

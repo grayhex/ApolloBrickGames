@@ -48,7 +48,7 @@ test('Mini Brick Game: рамка стакана видна на выключе�
   await expect(frame).toBeVisible();
 });
 
-test('Mini Brick Game: любая кнопка открывает меню, DOWN листает номера, LEFT/RIGHT — уровень и скорость, значки шкалы по уровню', async ({ page }) => {
+test('Mini Brick Game: любая кнопка открывает меню, DOWN листает номера, LEFT/RIGHT — уровень и скорость, анимация шкалы независима от уровня', async ({ page }) => {
   await page.goto('./?toy=minibrick&view=full&power=on&debug');
   await expect(page.locator('#game-area')).toHaveAttribute('data-stage', 'intro');
   await page.locator('[data-key=down]').dispatchEvent('pointerdown', { pointerId: 1, button: 0, pointerType: 'mouse' });
@@ -58,7 +58,8 @@ test('Mini Brick Game: любая кнопка открывает меню, DOWN
   const lit = await litCells(page);
   expect(lit).toBeGreaterThan(20); // крупное «00»
   expect(await page.locator('#game-area .minibrick-lcd [data-lcd=hi][data-on]').count()).toBe(1);
-  expect(await page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]').count()).toBe(1); // уровень 0 — одна вишня снизу
+  await page.evaluate('window.__minibrick.powerTicks=0');
+  await expect(page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]')).toHaveCount(1);
   await expect(page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]')).toHaveAttribute('data-icon', 'cherries');
 
   await tap(page, 'ArrowDown');
@@ -70,7 +71,7 @@ test('Mini Brick Game: любая кнопка открывает меню, DOWN
   await tap(page, 'ArrowLeft');
   await tap(page, 'ArrowLeft');
   await expect(page.locator('#game-area')).toHaveAttribute('data-level', '2');
-  expect(await page.locator('#game-area .minibrick-lcd .lcd-icon[data-on]').count()).toBe(3);
+  // The idle fruit animation is independent of the menu level setting.
   await tap(page, 'ArrowRight');
   await expect(page.locator('#game-area')).toHaveAttribute('data-speed', '1');
   // Ни названий игр, ни превью: на экране остаётся только число на матрице.
@@ -185,4 +186,39 @@ test('группа «Другие» не перекрывает системно
     expect(menu.y >= corner.y + corner.height || menu.x >= corner.x + corner.width).toBe(true);
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
   }
+});
+
+
+test('Mini menu cycles fruit rods and alternates HI-SCORE/LINES on a single eight-digit display',async({page})=>{
+ await page.goto('./?toy=minibrick&power=on&view=full&debug');
+ await expect(page.locator('#game-area')).toHaveAttribute('data-stage','intro');
+ const root=page.locator('#game-area .minibrick-lcd');
+ const at=async(tick:number)=>{await page.evaluate(t=>{(window as unknown as {__minibrick:{powerTicks:number}}).__minibrick.powerTicks=t;},tick);};
+ await at(0);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(1);
+ await expect(root.locator('[data-lcd=hi][data-on]')).toHaveCount(1);
+ await at(30);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(2);
+ await expect(root.locator('[data-lcd=lines][data-on]')).toHaveCount(1);
+ await expect(root.locator('[data-lcd=hi][data-on]')).toHaveCount(0);
+ await at(360);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(13);
+ await at(390);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(12);
+ await expect(root.locator('[data-icon=crown][data-on]')).toHaveCount(0);
+ await at(750);await expect(root.locator('.lcd-icon[data-on]')).toHaveCount(0);
+ expect(await root.locator('text').allTextContents()).not.toContain('HI-SCORE'); // one shared HI- / SCORE legend, not duplicate SCORE text
+ expect(await root.locator('text').allTextContents()).toContain('HI-');
+ expect(await root.locator('text:text-is("SCORE")').count()).toBe(1);
+});
+
+
+test('Mini racing waits for the single verse, waves the flag and opens its barrier before automatic acceleration',async({page})=>{
+ await page.goto('./?toy=minibrick&power=on&view=full&debug&seed=7');
+ await expect(page.locator('#game-area')).toHaveAttribute('data-stage','intro');
+ await tap(page,'ArrowDown');await tap(page,'Enter');
+ const state=()=>page.evaluate(()=>{const m=(window as unknown as {__minibrick:{game:{score:number;tick:number;cells():Uint8Array};displaySpeed:number}}).__minibrick;return{score:m.game.score,tick:m.game.tick,speed:m.displaySpeed,barrier:[...m.game.cells().slice(100,110)].reduce((a,b)=>a+b,0)}});
+ const first=await state();expect(first.score).toBe(0);expect(first.speed).toBe(0);expect(first.barrier).toBe(10);
+ await expect.poll(async()=> (await state()).speed,{timeout:16000}).toBeGreaterThanOrEqual(1);
+ await expect.poll(async()=> (await state()).score,{timeout:3000}).toBeGreaterThanOrEqual(10);
+ expect(await page.evaluate(()=>Number(localStorage.getItem('crocodile-mario:minibrick:00:r2:hi')))).toBeGreaterThanOrEqual(10);
+ await expect(page.locator('#game-area .minibrick-lcd [data-lcd=next][data-on]')).toHaveCount(1);
+ await expect(page.locator('#game-area .minibrick-lcd [data-lcd=level][data-on]')).toHaveCount(0);
+ await tap(page,'p');const paused=await state();await page.waitForTimeout(700);expect((await state()).score).toBe(paused.score);
 });
