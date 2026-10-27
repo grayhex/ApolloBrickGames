@@ -55,7 +55,8 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   const info = page.locator('#side-info');
   await expect(info.getByRole('heading', { name: 'Score' })).toBeVisible();
-  await expect(info.getByRole('heading', { name: 'Controls' })).toBeVisible();
+  await expect(info.locator('.dcard__flabel').first()).toHaveText('Year'); // карточка устройства переведена; раздела «Controls» слева нет
+  await expect(info.getByRole('heading', { name: 'Controls' })).toHaveCount(0);
   await expect(info.getByRole('heading', { name: 'Figures and enemies' })).toBeVisible();
   await expect(info.locator('#figures .fig__name').first()).toHaveText('Mario');
   await expect(info.locator('.hazard').first()).toHaveText('you fall into the river');
