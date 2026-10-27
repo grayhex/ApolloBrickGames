@@ -39,6 +39,29 @@ for (const toy of ['clock99', 'seabattle', 'tank168']) {
     expect(requests).toEqual([]);
   });
 }
+test('B0302 Tetris schedules measured ROM tones without sample requests',async({page})=>{
+  const requests:string[]=[];
+  page.on('request',request=>{if(request.url().includes('/audio/'))requests.push(request.url());});
+  await page.addInitScript(()=>{
+    const original=AudioContext.prototype.createOscillator;
+    Object.assign(window,{b0302Frequencies:[]});
+    AudioContext.prototype.createOscillator=function(){
+      const oscillator=original.call(this);
+      const set=oscillator.frequency.setValueAtTime.bind(oscillator.frequency);
+      oscillator.frequency.setValueAtTime=(value,time)=>{
+        (window as unknown as {b0302Frequencies:number[]}).b0302Frequencies.push(value);
+        return set(value,time);
+      };
+      return oscillator;
+    };
+  });
+  await page.goto('./?toy=apollo-b0302&power=on');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+  await page.locator('#guide-game').selectOption('apollo-b0302.03');
+  await page.locator('.gnav__btn--launch').click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {b0302Frequencies:number[]}).b0302Frequencies.some(hz=>Math.abs(hz-1158.1421)<.01))).toBe(true);
+  expect(requests).toEqual([]);
+});
 for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
   test(`${toy}: pause indicator toggles gameplay; control settings are on the left`, async ({ page }) => {
     await page.goto(`./?toy=${toy}&power=on`);

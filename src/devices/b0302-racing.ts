@@ -8,6 +8,7 @@ export class B0302Racing extends RacingBase {
   readonly id = 'racing';
   protected override get fieldRows(): number { return 17; }
   protected override get carRows(): readonly string[] { return ['#.#','.#.','###','.#.','.#.']; }
+  protected override get opponentRows():readonly string[] { return ['.#.','.##','..#']; }
   protected override get carY(): number { return 4; }
   // Speed 1–9 and score increments 1–38 observed on the ROM; 0 is an estimate.
   private static readonly roadPeriods = [330, 295, 265, 235, 210, 180, 150, 130, 115, 100] as const;

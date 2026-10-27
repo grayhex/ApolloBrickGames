@@ -8,6 +8,7 @@ class RacingProbe extends B0302Racing {
   end(): void { this.gameOver(); }
   clearTraffic():void { this.road.opponents=[]; }
   collide():void { this.onCrash(); }
+  placeOpponent(x:number,y:number):void { this.road.opponents=[{x,y}]; }
 }
 
 describe('B0302 racing geometry', () => {
@@ -23,6 +24,16 @@ describe('B0302 racing geometry', () => {
     expect(carsOverlap(3,4,3,7,car)).toBe(true);
     expect(carsOverlap(3,4,3,8,car)).toBe(false);
     expect(carsOverlap(3,4,6,4,car)).toBe(false);
+  });
+  it('draws and collides with the shorter observed traffic shape',()=>{
+    const game=new RacingProbe();game.placeOpponent(3,11);
+    const screen=game.cells();
+    const shape=Array.from({length:3},(_,y)=>Array.from({length:3},(_,x)=>screen[(4+y)*10+2+x]?'#':'.').join(''));
+    expect(shape).toEqual(['..#','.##','.#.']);
+    const player=['#.#','.#.','###','.#.','.#.'];
+    const traffic=['.#.','.##','..#'];
+    expect(carsOverlap(3,4,3,8,player,traffic)).toBe(true);
+    expect(carsOverlap(3,4,3,9,player,traffic)).toBe(false);
   });
   it('earns one point per road movement and accelerates every two points', () => {
     const game=new RacingProbe({seed:7});game.start();

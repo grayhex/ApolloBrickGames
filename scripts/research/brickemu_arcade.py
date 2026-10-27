@@ -24,7 +24,8 @@ def main():
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--speed', type=int, help='Limit the B0302 gravity probe to this number of RIGHT presses')
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-shooting-life', 'b0302-pieces', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-arcade', 'e23-array-life', 'e23-actions', 'e23-gravity', 'e23-speeds'], default='all')
+    parser.add_argument('--slot', type=int, help='E-23 menu slot for the action probe (default: 6)')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-audio-start', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-shooting-life', 'b0302-pieces', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-arcade', 'e23-array-life', 'e23-actions', 'e23-gravity', 'e23-speeds'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -248,6 +249,17 @@ def main():
                 probe.key(key, .2, .4)
             result['audio'].append({'key':key,'start':start,'before':machine.cells(),'after':probe.cells(),'events':probe.audio})
 
+    if args.section == 'b0302-audio-start':
+        machine=Machine('Apollo18in1B0302')
+        machine.run(8)
+        machine.key('Down')
+        machine.key('Down')
+        machine.audio.clear()
+        start=machine.cycles
+        machine.key('StartP',.2,.3)
+        machine.run(15)
+        result['audioStart']={'start':start,'end':machine.cycles,'events':machine.audio}
+
     if args.section == 'e23-variants':
         base = Machine('E23PlusMarkII96in1')
         base.run(3)
@@ -282,7 +294,7 @@ def main():
         machine=Machine('E23PlusMarkII96in1')
         machine.run(3)
         machine.key('Mute')
-        for _ in range(5):machine.key('Down')
+        for _ in range((args.slot or 6)-1):machine.key('Down')
         machine.key('Start',.08,.12)
         machine.run(2.5)
         result['actions']=[]

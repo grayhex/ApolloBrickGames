@@ -28,6 +28,31 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
       assumptions:[gt('Начальный кадр и спускающаяся точка по ROM; появление рядов, паузы и столкновения приближены.', 'The opening and descending point follow the ROM; row generation, pauses and collisions are approximate.')],
     };
   }
+  if(entry.profileId==='e23' && (entry.gameId==='shooting-figures' || entry.gameId==='construction')) {
+    const building=entry.gameId==='construction';
+    return {
+      ...base,
+      goal:building ? gt('Добавляйте клетки, не давая массиву дойти до игрока.', 'Add cells without letting the array reach the player.')
+        : gt('Убирайте клетки массива, пока он не достиг игрока.', 'Remove array cells before they reach the player.'),
+      rules:[
+        gt('Сверху появляются ряды клеток; игрок управляет одной нижней клеткой.', 'Rows appear from above; the player controls one cell at the bottom.'),
+        building ? gt('ROTATE добавляет клетку в выбранный столбец.', 'ROTATE adds a cell in the selected column.')
+          : gt('ROTATE убирает ближайшую клетку в выбранном столбце.', 'ROTATE removes the nearest cell in the selected column.'),
+        gt('При приближении массива к нижнему краю теряется жизнь.', 'A life is lost when the array reaches the bottom.'),
+      ],
+      controls:[
+        {button:'sides',text:gt('Переместить клетку игрока.', 'Move the player cell.')},
+        {button:'rotate',text:building?gt('Добавить клетку.', 'Add a cell.'):gt('Выбить клетку.', 'Remove a cell.')},
+        {button:'down',text:gt('Ускорить появление ряда.', 'Advance the next row.')},
+      ],
+      scoring:[{what:building?gt('Добавленная клетка', 'Cell added'):gt('Выбитая клетка', 'Cell removed'),points:'+1'}],
+      facts:[{value:'10×20',label:gt('поле','field')},{value:'4',label:gt('жизни в реализации','lives in this version')}],
+      progression:gt('Ряды постепенно появляются сверху и движутся к игроку.', 'Rows gradually appear above and move toward the player.'),
+      lives:gt('В текущей реализации четыре жизни.', 'The current implementation has four lives.'),
+      schemes:[{cells:['#..#.#.#..','..........','..........','....#.....'],caption:gt('Массив сверху и клетка игрока.', 'The array above and the player cell.')}],
+      assumptions:[gt('Действие ROTATE и одиночная клетка по ROM; генератор, очки и условия завершения приближены.', 'ROTATE and the single player cell follow the ROM; generation, scoring and end conditions are approximate.')],
+    };
+  }
   if (entry.gameId === 'tetris') {
     const mode = entry.profileId === 'e23' ? ((Number(entry.nativeCode)-1)%8)+1 : Number(entry.nativeCode);
     const htBlock = entry.profileId === 'e88' || entry.profileId === 'e23';

@@ -56,6 +56,7 @@ const translate = (action: BrickAction, inverted: boolean): BrickAction => {
 
 export abstract class RacingBase extends BrickBase {
   protected get carRows(): readonly string[] { return CAR_ROWS; }
+  protected get opponentRows():readonly string[] { return this.carRows; }
   protected get carY(): number { return CAR_Y; }
   protected readonly layout: RoadLayout;
   protected readonly road: Road;
@@ -73,7 +74,7 @@ export abstract class RacingBase extends BrickBase {
   protected constructor(options: BrickGameOptions, modeCount: number) {
     super(options, modeCount);
     this.layout = roadLayout(this.mode);
-    this.road = new Road(this.layout, this.fieldRows, this.carRows);
+    this.road = new Road(this.layout, this.fieldRows, this.carRows,this.opponentRows);
   }
 
   // ---------------------------------------------------------------- что дополняют игры
@@ -170,7 +171,7 @@ export abstract class RacingBase extends BrickBase {
       this.plot(out, BRICK_COLS - 1, y, CELL_ON);
       if (!wide) this.plot(out, 0, y, CELL_ON);
     }
-    for (const opponent of this.road.opponents) this.plotCar(out, opponent.x, opponent.y, false);
+    for (const opponent of this.road.opponents) this.plotCar(out, opponent.x, opponent.y, false,this.opponentRows);
     for (const [x, y] of this.blinkCells()) this.plot(out, x, y, CELL_BLINK);
     this.plotCar(out, this.carX, this.carY, this.armed);
     return out;
@@ -252,7 +253,7 @@ export abstract class RacingBase extends BrickBase {
     const lane = this.lane + delta;
     const x = this.layout.lanes[lane];
     if (x === undefined) return;
-    const accident = this.road.opponents.some((opponent) => carsOverlap(x, this.carY, opponent.x, opponent.y, this.carRows));
+    const accident = this.road.opponents.some((opponent) => carsOverlap(x, this.carY, opponent.x, opponent.y, this.carRows,this.opponentRows));
     this.lane = lane;
     this.carX = x;
     if (accident) {
@@ -284,12 +285,12 @@ export abstract class RacingBase extends BrickBase {
   }
 
   /** Рисует машину; у заряженной нос мигает. */
-  private plotCar(out: Uint8Array, cx: number, cy: number, armed: boolean): void {
-    this.carRows.forEach((row, index) => {
+  private plotCar(out: Uint8Array, cx: number, cy: number, armed: boolean, rows:readonly string[]=this.carRows): void {
+    rows.forEach((row, index) => {
       const dy = CAR_MIN_Y + index;
       for (let col = 0; col < row.length; col++) {
         if (row[col] !== '#') continue;
-        const nose = armed && dy === CAR_MIN_Y + this.carRows.length - 1;
+        const nose = armed && dy === CAR_MIN_Y + rows.length - 1;
         this.plot(out, cx + col - 1, cy + dy, nose ? CELL_BLINK : CELL_ON);
       }
     });

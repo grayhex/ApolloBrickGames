@@ -182,6 +182,8 @@ export class InvadersGame extends BrickBase {
   protected get invasionWhenWallEmpty():boolean { return false; }
   protected get singleCellGun():boolean { return false; }
   protected get initialInvasionDelay():number { return 1; }
+  protected get constructOnFire():boolean { return false; }
+  protected get repeatFire():boolean { return true; }
   protected specialTargetAt(x:number,y:number):boolean { void x;void y;return false; }
   protected hitSpecialTarget():void { /* no extra targets in the donor profile */ }
   protected createWall():Wall { return this.traits.preloaded ? preloadedWall(this.level) : generatedWall(this.level, this.rng); }
@@ -297,7 +299,7 @@ export class InvadersGame extends BrickBase {
     if (this.dead) return;
     // `rotate` и `fire` в этой игре — одна кнопка «огонь»
     const fireDown = input.pressed.has('rotate') || input.pressed.has('fire');
-    const fireHeld = input.held.has('rotate') || input.held.has('fire');
+    const fireHeld = this.repeatFire && (input.held.has('rotate') || input.held.has('fire'));
     if (this.fireKeys.fire('rotate', makeBrickInput(fireDown ? ['rotate'] : [], fireHeld ? ['rotate'] : []))) this.fire();
   }
 
@@ -359,12 +361,17 @@ export class InvadersGame extends BrickBase {
   private flyBullet(bullet: Bullet): boolean {
     if (bullet.next < this.fieldRows - 1) {
       if (this.occupied(bullet.x, bullet.next)) {
-        this.hitCell(bullet.x, bullet.next);
+        if(this.constructOnFire)this.buildCell(bullet.x,bullet.next-1);
+        else this.hitCell(bullet.x, bullet.next);
         return false;
       }
       bullet.shown = bullet.next;
       bullet.next++;
       return true;
+    }
+    if(this.constructOnFire){
+      this.buildCell(bullet.x,this.occupied(bullet.x,this.fieldRows-1)?this.fieldRows-2:this.fieldRows-1);
+      return false;
     }
     if (this.occupied(bullet.x, this.fieldRows - 1)) this.hitCell(bullet.x, this.fieldRows - 1);
     bullet.shown = this.fieldRows - 1;
@@ -377,6 +384,15 @@ export class InvadersGame extends BrickBase {
     const ball = this.ball;
     if (ball && ball.x === x && ball.y === y) return true;
     return hasBrick(this.wall, x, y - this.bricksY);
+  }
+
+  private buildCell(x:number,y:number):void {
+    const row=y-this.bricksY;
+    if(y<1 || row<0 || row>=this.wall.height || hasBrick(this.wall,x,row))return;
+    this.wall.cells[row*WALL_WIDTH+x]=CELL_ON;
+    this.wall.count++;
+    this.addScore(1);
+    this.emit({type:'hit'});
   }
 
   /** Попадание (`InvadersGame.removeCell`): шар сбивается без очков, кирпич выбивается за очко. */

@@ -1,5 +1,6 @@
 import { E88_TETRIS_EFFECTS } from './e88TetrisEffects';
 import { B0202_EFFECTS } from './b0202Effects';
+import { B0302_TETRIS_TUNE } from './b0302Tunes';
 import { E88_EFFECTS } from './e88Effects';
 import { MINI_INTRO_TONES, MINI_KOROBEINIKI, MINI_LOCK_TONES, MINI_MOVE_TONES, MINI_SELECT_TONES, MINI_TURN_TONES } from './miniTunes';
 import { SEA_BLAST_TONES, SEA_FALL_TICK_TONES, SEA_INTRO_ONCE_TUNE, SEA_INTRO_TUNE, SEA_ROMEO_TUNE, SEA_SPLASH_TONES } from './seaTunes';
@@ -25,6 +26,7 @@ export const BRICK_PHRASES = {
   // Original short greeting for the universal console, not a firmware transcription.
   welcome: [{hz:523,ms:100},{hz:659,ms:100},{hz:784,ms:100},{hz:0,ms:50},{hz:1047,ms:180},{hz:784,ms:100},{hz:1047,ms:220}],
   ...B0202_EFFECTS,
+  b0302_tetris_music: B0302_TETRIS_TUNE,
   ...E88_EFFECTS,
   ...E88_TETRIS_EFFECTS,
   sea_intro: SEA_INTRO_TUNE,

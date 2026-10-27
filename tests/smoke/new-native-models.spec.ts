@@ -55,3 +55,15 @@ test('E-23 array opening reaches the real LCD segments',async({page})=>{
     (document.querySelector(`.native__lcd [id="${id}"]`) as SVGElement | null)?.style.opacity==='1'?'#':'.').join('')),lcdMapping.e88.matrix)).toEqual(expected);
   await expect(page.locator(`.native__lcd [id="${lcdMapping.e88.matrix[19]![4]}"]`)).toHaveCSS('opacity','1');
 });
+
+test('E-23 construction adds a cell and displays one point',async({page})=>{
+  await page.goto('./?toy=e23&power=on');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+  await page.locator('#guide-game').selectOption('e23.08');
+  await page.locator('.gnav__btn--launch').click();
+  await expect(page.locator('#game-area')).toHaveAttribute('data-phase','playing');
+  await page.locator('#base [data-key=jump]').click();
+  for(const key of ['199_3','199_1'] as const)
+    await expect(page.locator(`.native__lcd [id="${lcdMapping.e88.segments[key]}"]`)).toHaveCSS('opacity','1');
+  await expect(page.locator(`.native__lcd [id="${lcdMapping.e88.segments['199_2']}"]`)).not.toHaveCSS('opacity','1');
+});
