@@ -36,7 +36,7 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
-  test('логотип справа, слева управление; компактная панель выбора устройства над консолью и все модели в каталоге', async ({ page }) => {
+  test('логотип справа под панелью настроек; компактная панель выбора устройства над консолью и все модели в каталоге', async ({ page }) => {
     await page.goto(marioUrl(''));
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
     const logo = page.locator('.site-brand img');
@@ -53,7 +53,7 @@ test.describe('шапка и переключатель', () => {
     await expect(items.locator('svg.devpick__icon image[href*="devices/"]')).toHaveCount(5); // моноблоки используют оригинальные векторы
     await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
     await closePicker(page);
-    // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён), логотип правее них.
+    // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён) в панели настроек, она стоит в правом столбце над логотипом.
     const dots = page.locator('#devices .dev:visible');
     await expect(dots).toHaveCount(2);
     const colors = await dots.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).getPropertyValue('--dev-c').trim()));
@@ -63,7 +63,7 @@ test.describe('шапка и переключатель', () => {
     const switchBox = await page.locator('#toy-switch').boundingBox();
     const toy = await page.locator('#toy').boundingBox();
     if (!devicesBox || !logoBox || !switchBox || !toy) throw new Error('нет размеров');
-    expect(devicesBox.x + devicesBox.width).toBeLessThanOrEqual(logoBox.x + 1);
+    expect(devicesBox.y + devicesBox.height).toBeLessThanOrEqual(logoBox.y + 1);
     expect(logoBox.x).toBeGreaterThanOrEqual(switchBox.x + switchBox.width - 1); // логотип правее панели выбора, не под ней
     // Переключатель по центру игрушки и над ней.
     expect(Math.abs(switchBox.x + switchBox.width / 2 - (toy.x + toy.width / 2))).toBeLessThan(2);
