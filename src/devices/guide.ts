@@ -6,6 +6,28 @@ import type { NativeEntry } from './catalog';
 export function nativeGuide(entry: NativeEntry): GameGuideData | null {
   const base = BRICK_GUIDES[entry.gameId];
   if (!entry.available || !base) return null;
+  if(entry.profileId==='e23' && entry.gameId==='shooting-array') {
+    return {
+      ...base,
+      goal:gt('Разрушайте массив, не давая ему достичь нижней клетки игрока.', 'Break the array before it reaches the player at the bottom.'),
+      rules:[
+        gt('Игра начинается с пяти рядов массива и одной клетки игрока внизу.', 'The game starts with five rows and a single player cell below.'),
+        gt('Удерживайте ROTATE, чтобы выбивать клетки в выбранном столбце.', 'Hold ROTATE to clear cells in the selected column.'),
+        gt('Уничтожайте также спускающуюся к игроку точку: попадание отнимает жизнь.', 'Shoot the point descending toward the player; a hit costs a life.'),
+      ],
+      controls:[
+        {button:'sides',text:gt('Переместить клетку игрока.', 'Move the player cell.')},
+        {button:'rotate',text:gt('Стрелять вверх; удержание повторяет выстрел.', 'Fire upward; holding repeats the shot.'),hold:true},
+        {button:'down',text:gt('Ускорить появление следующего ряда.', 'Advance the next row.')},
+      ],
+      scoring:[{what:gt('Выбитая клетка', 'Cell removed'),points:'+1'}],
+      facts:[{value:'10×20',label:gt('поле','field')},{value:'4',label:gt('жизни в реализации','lives in this version')}],
+      progression:gt('Дальнейшее заполнение массива и число жизней воссозданы приближённо.', 'Later array generation and the number of lives are approximate.'),
+      lives:gt('В текущей реализации четыре жизни.', 'The current implementation has four lives.'),
+      schemes:[{cells:['##########','##########','.########.','.########.','..######..','..........','....#.....'],caption:gt('Начальный массив и клетка игрока.', 'The opening array and player cell.')}],
+      assumptions:[gt('Начальный кадр и спускающаяся точка по ROM; появление рядов, паузы и столкновения приближены.', 'The opening and descending point follow the ROM; row generation, pauses and collisions are approximate.')],
+    };
+  }
   if (entry.gameId === 'tetris') {
     const mode = entry.profileId === 'e23' ? ((Number(entry.nativeCode)-1)%8)+1 : Number(entry.nativeCode);
     const htBlock = entry.profileId === 'e88' || entry.profileId === 'e23';

@@ -11,6 +11,8 @@ import { createCabinet } from '../../src/app/cabinet';
 import { TOYS } from '../../src/app/toys';
 import { BRICK_GAMES } from '../../src/brick/games';
 import { makeFrame } from '../../src/core';
+import { nativeGuide } from '../../src/devices/guide';
+import { guideProblems } from '../../src/brick/guide';
 
 describe('E-23 and B0302 native menus', () => {
   it('retains every observed physical menu number and its LCD geometry', () => {
@@ -52,6 +54,14 @@ describe('E-23 and B0302 native menus', () => {
         cabinet.menu(makeFrame({pressed:['down']}));
       }
       expect(cabinet.info['entry']).toBe(NATIVE_MENUS[id][0]!.entryId);
+    }
+  });
+
+  it('provides valid bilingual guides for every playable entry',()=>{
+    for(const id of ['e23','apollo-b0302'] as const)for(const entry of NATIVE_MENUS[id]){
+      const guide=nativeGuide(entry);
+      expect(guide,entry.entryId).not.toBeNull();
+      expect(guideProblems(guide!),entry.entryId).toEqual([]);
     }
   });
 

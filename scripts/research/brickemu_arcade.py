@@ -24,7 +24,7 @@ def main():
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--speed', type=int, help='Limit the B0302 gravity probe to this number of RIGHT presses')
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-shooting-life', 'b0302-pieces', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-arcade', 'e23-gravity', 'e23-speeds'], default='all')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-shooting-life', 'b0302-pieces', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-arcade', 'e23-array-life', 'e23-actions', 'e23-gravity', 'e23-speeds'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -277,6 +277,36 @@ def main():
                     frames.append({'cycle':machine.cycles,'cells':machine.cells()})
                 result['arcade'].append({'device':name,'slot':slot,'frames':frames,'inputs':machine.inputs})
                 base.key('Down')
+
+    if args.section == 'e23-actions':
+        machine=Machine('E23PlusMarkII96in1')
+        machine.run(3)
+        machine.key('Mute')
+        for _ in range(5):machine.key('Down')
+        machine.key('Start',.08,.12)
+        machine.run(2.5)
+        result['actions']=[]
+        for action,duration in (('none',0),('Left',.1),('Rotate',.1),('Rotate',.2),('Rotate',.3),('Rotate',.4),('Rotate',.6),('Rotate',1),('Down',.1)):
+            probe=copy.deepcopy(machine)
+            if action!='none':probe.set_key(action,True)
+            frames=[]
+            for i in range(160):
+                probe.run(.01)
+                if action!='none' and i+1==round(duration*100):probe.set_key(action,False)
+                frames.append({'cycle':probe.cycles,'cells':probe.cells(),'vram':list(probe.cpu.get_VRAM())})
+            result['actions'].append({'action':action,'duration':duration,'frames':frames})
+
+    if args.section == 'e23-array-life':
+        machine=Machine('E23PlusMarkII96in1')
+        machine.run(3)
+        machine.key('Mute')
+        for _ in range(5):machine.key('Down')
+        machine.key('Start',.08,.12)
+        result['arrayLife']=[]
+        for _ in range(60):
+            machine.run(.5)
+            result['arrayLife'].append({'cycle':machine.cycles,'cells':machine.cells(),
+                                       'vram':list(machine.cpu.get_VRAM())})
 
     if args.section == 'e23-gravity':
         result['gravity'] = []

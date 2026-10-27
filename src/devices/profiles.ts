@@ -4,6 +4,7 @@ import { variantOf } from '../brick/games/tetris/variants';
 import { FIRST_PENTOMINO, FIRST_SUPER, SHAPE_NONE, makePiece, rotatePiece, type Piece } from '../brick/games/tetris/shapes';
 import { E88Blocks } from './e88-blocks';
 import { B0302Racing } from './b0302-racing';
+import { E23Array } from './e23-array';
 import type { BrickGameDef, BrickGameOptions } from '../brick/types';
 import type { NativeEntry } from './catalog';
 
@@ -64,6 +65,7 @@ export function nativeDefinition(entry: NativeEntry): BrickGameDef | null {
         : entry.profileId === 'apollo-b0302' ? new B0302Blocks({...options,mode:0},Number(entry.nativeCode))
         : new NativeBlocks({...options, mode:0}, entry.nativeCode === 'H02')
       : entry.profileId === 'apollo-b0302' && entry.gameId === 'racing' ? new B0302Racing(options)
+        : entry.profileId === 'e23' && entry.gameId === 'shooting-array' ? new E23Array(options)
         : base.create({...options, mode:0, ...(entry.profileId==='e88'?{levelLimit:13 as const}:{})}),
   };
 }

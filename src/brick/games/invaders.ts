@@ -155,7 +155,7 @@ export class InvadersGame extends BrickBase {
   private ball: Ball | null = null;
   private bullets: Bullet[] = [];
   /** Колонка центра орудия 0..9 (крайние колонки показывают орудие с обрезанным боковым стволом — как у донора). */
-  private gunX = START_X;
+  protected gunX = START_X;
   /** Орудие погибло (шар попал, стена дошла или орудие въехало в шар): в конце такта начнётся потеря жизни. */
   protected dead = false;
   private invasionLeft = 1;
@@ -180,6 +180,10 @@ export class InvadersGame extends BrickBase {
   protected get projectileStepsPerTick():number { return 1; }
   protected get winWhenWallEmpty():boolean { return true; }
   protected get invasionWhenWallEmpty():boolean { return false; }
+  protected get singleCellGun():boolean { return false; }
+  protected get initialInvasionDelay():number { return 1; }
+  protected specialTargetAt(x:number,y:number):boolean { void x;void y;return false; }
+  protected hitSpecialTarget():void { /* no extra targets in the donor profile */ }
   protected createWall():Wall { return this.traits.preloaded ? preloadedWall(this.level) : generatedWall(this.level, this.rng); }
   protected invasionInterval(extra:number):number { return genuineTicks(this.speed, SPEED_FIRST_MS + extra, SPEED_TENTH_MS + extra); }
 
@@ -216,10 +220,9 @@ export class InvadersGame extends BrickBase {
     }
     if (this.ball) put(this.ball.x, this.ball.y, CELL_ON);
     for (const bullet of this.bullets) if (bullet.shown >= 0) put(bullet.x, bullet.shown, CELL_BLINK);
-    put(this.gunX - 1, 0, CELL_ON);
+    if(!this.singleCellGun)put(this.gunX - 1, 0, CELL_ON);
     put(this.gunX, 0, CELL_ON);
-    put(this.gunX + 1, 0, CELL_ON);
-    put(this.gunX, GUN_TOP_ROW, CELL_ON);
+    if(!this.singleCellGun){put(this.gunX + 1, 0, CELL_ON);put(this.gunX, GUN_TOP_ROW, CELL_ON);}
     return out;
   }
 
@@ -242,7 +245,7 @@ export class InvadersGame extends BrickBase {
     const extra = Math.max(this.wall.count - SLOW_BRICKS, 0);
     this.invasionPeriod = this.invasionInterval(extra);
     // таймер нашествия у донора стартует сразу после «мелодии»: первый шаг (опускание стены) — в первом такте игры
-    this.invasionLeft = 1;
+    this.invasionLeft = this.initialInvasionDelay;
     this.bulletLeft = this.bulletPeriod;
     this.moveKeys.reset();
     this.fireKeys.reset();
@@ -315,6 +318,7 @@ export class InvadersGame extends BrickBase {
 
   /** Занимает ли орудие с центром в колонке `gunX` клетку (x, y) в донорских координатах. */
   private gunCovers(gunX: number, x: number, y: number): boolean {
+    if(this.singleCellGun)return y===0 && x===gunX;
     if (y === 0) return Math.abs(x - gunX) <= 1;
     return y === GUN_TOP_ROW && x === gunX;
   }
@@ -326,7 +330,7 @@ export class InvadersGame extends BrickBase {
     for (const x of columns) {
       if (x < 0 || x >= BRICK_COLS) continue;
       if (this.bullets.filter((bullet) => bullet.x === x).length >= this.fieldRows - GUN_HEIGHT) continue;
-      this.bullets.push({ x, next: BULLET_START_ROW, shown: -1, fading: false });
+      this.bullets.push({ x, next: this.singleCellGun ? 1 : BULLET_START_ROW, shown: -1, fading: false });
       fired = true;
     }
     // допущение: у донора звук выстрела отключён «из-за артефактов», на игрушке выстрел, конечно, звучит
@@ -369,6 +373,7 @@ export class InvadersGame extends BrickBase {
   }
 
   private occupied(x: number, y: number): boolean {
+    if(this.specialTargetAt(x,y))return true;
     const ball = this.ball;
     if (ball && ball.x === x && ball.y === y) return true;
     return hasBrick(this.wall, x, y - this.bricksY);
@@ -376,6 +381,11 @@ export class InvadersGame extends BrickBase {
 
   /** Попадание (`InvadersGame.removeCell`): шар сбивается без очков, кирпич выбивается за очко. */
   private hitCell(x: number, y: number): void {
+    if(this.specialTargetAt(x,y)){
+      this.hitSpecialTarget();
+      this.emit({type:'hit'});
+      return;
+    }
     const ball = this.ball;
     if (ball && ball.x === x && ball.y === y) {
       this.removeBall();
