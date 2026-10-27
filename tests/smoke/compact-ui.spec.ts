@@ -2,6 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { openPicker } from './picker';
 
 const heights = (page: Page, selector: string): Promise<number[]> => page.locator(selector).evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
+/** Высоты отрисованных значков: сначала ждём, пока страница (энциклопедия рисует статью и список уже после загрузки) выведет все `count` значков. */
+const badgeHeights = async (page: Page, selector: string, count: number): Promise<number[]> => {
+  await expect(page.locator(selector)).toHaveCount(count);
+  return heights(page, selector);
+};
 const visit = async (page: Page, url: string): Promise<void> => {
   await page.goto(url);
   await page.locator('body:not([data-booting])').waitFor();
@@ -28,21 +33,19 @@ test('значки ROM/AI, α/β и редкости — одной формы �
   await page.setViewportSize({ width: 1440, height: 900 });
   await visit(page, './?toy=brickgame&view=full');
   await page.locator('#guide-game').selectOption('snake'); // у Snake есть и ROM, и бета, и редкость
-  const panel = await heights(page, '#gpanel .gpanel__head .game-origin, #gpanel .gpanel__head .gpanel__stage, #gpanel .gpanel__head .game-rarity');
-  expect(panel.length).toBe(3);
+  const panel = await badgeHeights(page, '#gpanel .gpanel__head .game-origin, #gpanel .gpanel__head .gpanel__stage, #gpanel .gpanel__head .game-rarity', 3);
   expect(new Set(panel).size, `высоты значков в левой панели: ${panel}`).toBe(1);
   await page.goto('./encyclopedia?game=snake');
-  const article = await heights(page, '.enc-article__head .game-origin, .enc-article__head .gpanel__stage, .enc-article__head .game-rarity');
-  expect(article.length).toBe(3);
+  const article = await badgeHeights(page, '.enc-article__head .game-origin, .enc-article__head .gpanel__stage, .enc-article__head .game-rarity', 3);
   expect(new Set(article).size, `высоты значков в статье: ${article}`).toBe(1);
-  const list = await heights(page, '.enc-item[data-game="snake"] .game-origin, .enc-item[data-game="snake"] .gpanel__stage, .enc-item[data-game="snake"] .game-rarity');
-  expect(list.length).toBe(3);
+  const list = await badgeHeights(page, '.enc-item[data-game="snake"] .game-origin, .enc-item[data-game="snake"] .gpanel__stage, .enc-item[data-game="snake"] .game-rarity', 3);
   expect(new Set(list).size, `высоты значков в списке: ${list}`).toBe(1);
 });
 
 test('энциклопедия компактна: вводный блок в две колонки, варианты в несколько колонок одной строкой, страница заметно короче', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await visit(page, './encyclopedia?game=tetris');
+  await expect(page.locator('.enc-modes li').first()).toBeVisible();
   const intro = await page.locator('.enc-intro').boundingBox();
   expect(intro!.height, 'вводный блок ниже 110px').toBeLessThan(110);
   const layout = await page.locator('.enc-layout').boundingBox();
