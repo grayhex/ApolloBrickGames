@@ -31,3 +31,14 @@ for(const [id, count, codes] of [
     expect(screen!.x+screen!.width).toBeLessThanOrEqual(width+1);
   });
 }
+
+test('B0302 shows the ROM-style digit 9 without a lower horizontal segment',async({page})=>{
+  await page.goto('./?toy=apollo-b0302&power=on');
+  await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
+  await page.locator('#game-area').focus();
+  for(let i=0;i<9;i++){await page.keyboard.press('ArrowRight');await page.waitForTimeout(70);}
+  for(const id of ['14_5','15_0','21_0','14_6','20_5'])
+    await expect(page.locator(`.native__lcd [id="${id}"]`)).toHaveCSS('opacity','1');
+  for(const id of ['26_5','20_6'])
+    await expect(page.locator(`.native__lcd [id="${id}"]`)).not.toHaveCSS('opacity','1');
+});

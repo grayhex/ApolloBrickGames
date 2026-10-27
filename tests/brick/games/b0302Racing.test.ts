@@ -6,6 +6,8 @@ import { NEUTRAL_BRICK_INPUT } from '../../../src/brick/types';
 
 class RacingProbe extends B0302Racing {
   end(): void { this.gameOver(); }
+  clearTraffic():void { this.road.opponents=[]; }
+  collide():void { this.onCrash(); }
 }
 
 describe('B0302 racing geometry', () => {
@@ -21,6 +23,26 @@ describe('B0302 racing geometry', () => {
     expect(carsOverlap(3,4,3,7,car)).toBe(true);
     expect(carsOverlap(3,4,3,8,car)).toBe(false);
     expect(carsOverlap(3,4,6,4,car)).toBe(false);
+  });
+  it('earns one point per road movement and accelerates every two points', () => {
+    const game=new RacingProbe({seed:7});game.start();
+    let last=0;
+    for(let tick=0;tick<600&&game.score<18;tick++) {
+      game.clearTraffic();game.step(NEUTRAL_BRICK_INPUT);
+      if(game.score!==last){
+        expect(game.score).toBe(last+1);
+        expect(game.speed).toBe(Math.min(10,1+Math.ceil(game.score/2)));
+        last=game.score;
+      }
+    }
+    expect(game.score).toBeGreaterThanOrEqual(18);
+    expect(game.speed).toBe(10);
+    const score=game.score;
+    game.collide();
+    expect(game.score).toBe(score);
+    expect(game.speed).toBe(1);
+    while(game.score===score){game.clearTraffic();game.step(NEUTRAL_BRICK_INPUT);}
+    expect(game.speed).toBe(2);
   });
   it('ends the fill animation after seventeen rows', () => {
     const game=new RacingProbe();game.start();game.end();

@@ -88,6 +88,12 @@ export abstract class RacingBase extends BrickBase {
     // у обычных гонок своего нет
   }
 
+  /** Default donor scoring counts opponents that leave the road. */
+  protected scorePassed(passed:number):void { for(let i=0;i<passed;i++)this.addScore(1); }
+
+  /** Interval between border half-steps; device profiles may use their own timer. */
+  protected get roadStepTicks():number { return halfStepTicks(this.speed, this.level, this.layout.wide); }
+
   /** Каждый такт после шага дороги и до обработки кнопок. */
   protected tickWorld(): void {
     // у обычных гонок своего нет
@@ -137,7 +143,7 @@ export abstract class RacingBase extends BrickBase {
 
     // шаг дороги по таймеру: рамка каждый раз, машины через раз
     this.sinceStep++;
-    if (this.sinceStep >= halfStepTicks(this.speed, this.level, this.layout.wide)) {
+    if (this.sinceStep >= this.roadStepTicks) {
       this.sinceStep = 0;
       this.oddMove = !this.oddMove;
       this.advance(this.oddMove);
@@ -193,6 +199,10 @@ export abstract class RacingBase extends BrickBase {
   protected override setScore(value: number): void {
     const before = this.score;
     super.setScore(value);
+    this.afterScoreChange(before);
+  }
+
+  protected afterScoreChange(before:number):void {
     if (Math.floor(this.score / LEVELUP_POINT) > Math.floor(before / LEVELUP_POINT)) {
       this.setSpeed(this.speed + 1);
       // скорость обернулась с 10 на 1 — уровень выше (после десятого — снова первый)
@@ -228,7 +238,7 @@ export abstract class RacingBase extends BrickBase {
     this.road.shiftBorder();
     if (!withTraffic) return;
     const result = this.road.scroll(this.carX, this.carY);
-    for (let i = 0; i < result.passed; i++) this.addScore(1);
+    this.scorePassed(result.passed);
     if (result.crashed) {
       this.crash(this.carX, this.carY + CAR_MIN_Y + this.carRows.length - 1);
       return;

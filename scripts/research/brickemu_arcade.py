@@ -24,7 +24,7 @@ def main():
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--speed', type=int, help='Limit the B0302 gravity probe to this number of RIGHT presses')
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-gravity', 'e23-speeds'], default='all')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-gravity', 'e23-speeds'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -116,6 +116,61 @@ def main():
                 machine.key(action, .2, .3)
                 observations.append({'action': action, 'cells': machine.cells(), 'cycles': machine.cycles})
             result['race'].append({'slot': slot, 'frames': observations, 'inputs': machine.inputs})
+            base.key('Down')
+
+    if args.section == 'b0302-race-timeline':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['races'] = []
+        for slot in (1, 2):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP', .2, .3)
+            frames = []
+            for _ in range(50):
+                machine.run(.5)
+                frames.append({'cycle':machine.cycles,'cells':machine.cells(),'vram':list(machine.cpu.get_VRAM())})
+            result['races'].append({'slot':slot,'frames':frames,'inputs':machine.inputs})
+            base.key('Down')
+
+    if args.section == 'b0302-race-score':
+        machine = Machine('Apollo18in1B0302')
+        machine.run(8)
+        machine.key('Mute')
+        machine.key('StartP', .2, .3)
+        frames, previous = [], None
+        for _ in range(1600):
+            machine.run(.005)
+            vram = list(machine.cpu.get_VRAM())
+            # Preserve raw display samples; decoding the score separately keeps
+            # transient multiplexed frames distinguishable from stable digits.
+            if vram != previous:
+                frames.append({'cycle':machine.cycles,'cells':machine.cells(),'vram':vram})
+            previous = vram
+        result['scoreFrames'] = frames
+
+    if args.section == 'b0302-shooting':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        for _ in range(16):
+            base.key('Down')
+        result['shooting'] = []
+        for slot in (17,18):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP', .2, .3)
+            machine.run(4)
+            trials=[]
+            for action in ('none','Rotate'):
+                probe=copy.deepcopy(machine)
+                if action=='Rotate':probe.set_key('Rotate',True)
+                frames=[]
+                for i in range(120):
+                    probe.run(.01)
+                    if i==9 and action=='Rotate':probe.set_key('Rotate',False)
+                    frames.append({'cycle':probe.cycles,'cells':probe.cells(),'vram':list(probe.cpu.get_VRAM())})
+                trials.append({'action':action,'frames':frames})
+            result['shooting'].append({'slot':slot,'trials':trials,'inputs':machine.inputs})
             base.key('Down')
 
     if args.section == 'b0302-inputs':
@@ -256,14 +311,14 @@ def main():
         base.key('Down')
         base.key('Down')
         result['debug'] = []
-        for speed in (0,1,2):
+        for trial in (0,1,2):
             machine = copy.deepcopy(base)
             machine.key('Mute')
-            if speed:
+            if trial:
                 machine.key('Right')
                 machine.run(1)
             machine.key('StartP', .2, .3)
-            if speed == 2:
+            if trial == 2:
                 machine.run(1)
                 machine.key('StartP', .2, .3)
             frames = []
@@ -272,7 +327,7 @@ def main():
                 cpu = machine.cpu.examine()
                 frames.append({'cycle':machine.cycles,'pc':cpu['PC'], 'cells':machine.cells(),
                                'lcd':list(cpu['LCDRAM']), 'io':list(cpu['IORAM'])})
-            result['debug'].append({'speed':speed,'inputs':machine.inputs,'frames':frames})
+            result['debug'].append({'trial':trial,'inputs':machine.inputs,'frames':frames})
 
     if args.section == 'native-menus':
         result['menus'] = {}

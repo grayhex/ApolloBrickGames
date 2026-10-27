@@ -44,7 +44,11 @@ export class NativeScreen {
     const active=new Set<string>(), matrix=measured.Apollo18in1B0302;
     const blink=Math.floor(scene.tick/15)%2===0;
     scene.cells.forEach((v,i)=>{const row=Math.floor(i/10),id=matrix[row]?.[i%10];if(id&&((scene.overFill>0&&row>=matrix.length-scene.overFill)||(v&&(v!==2||blink))))active.add(id);});
-    const digit=(value:number,ids:readonly string[]):void=>{for(const c of DIGITS[Math.max(0,Math.min(9,value))]!)active.add(ids['abcdefg'.indexOf(c)]!);};
+    const digit=(value:number,ids:readonly string[]):void=>{
+      // B0302 firmware uses a five-segment 9, without the lower horizontal bar.
+      const segments=value===9?'abcfg':DIGITS[Math.max(0,Math.min(9,value))]!;
+      for(const c of segments)active.add(ids['abcdefg'.indexOf(c)]!);
+    };
     const scores=[['44_3','38_3','32_3','26_2','32_2','44_2','38_2'],['44_5','38_5','32_5','26_4','32_4','44_4','38_4'],['44_7','38_7','32_7','26_6','32_6','44_6','38_6'],['45_1','39_1','33_1','27_0','33_0','45_0','39_0']];
     const value=scene.phase==='ready'?scene.hiScore:scene.score;
     const score=String(Math.floor(value)).padStart(4,' ').slice(-4);
