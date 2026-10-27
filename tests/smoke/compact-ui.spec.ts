@@ -67,3 +67,47 @@ test('ложбина под три служебные кнопки у Mini Brick
   // У TAKSUN кривая стоит как есть, у Mini — тот же путь, сдвинутый и увеличенный так, чтобы пройти через центры его кнопок.
   expect(mini.transforms.some((t) => t.includes('scale(1.08)'))).toBe(true);
 });
+
+test('стрелки по бокам панели листают устройства по кругу в порядке каталога; панель остаётся по центру', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, './?toy=brickgame&view=full');
+  const prev = page.locator('.devpick__step--prev');
+  const next = page.locator('.devpick__step--next');
+  await expect(prev).toBeVisible();
+  await expect(next).toBeVisible();
+  // Имена соседей — в подписи и подсказке; универсальный стоит первым, перед ним по кругу — последняя модель, за ним — Crocodile Mario.
+  await expect(next).toHaveAttribute('aria-label', /Crocodile Mario/);
+  await expect(next).toHaveAttribute('title', /Crocodile Mario/);
+  await expect(prev).toHaveAttribute('aria-label', /E-23/);
+  const barBox = await page.locator('.devpick__trigger').boundingBox();
+  const prevBox = (await prev.boundingBox())!;
+  const nextBox = (await next.boundingBox())!;
+  expect(prevBox.x + prevBox.width, 'левая стрелка слева от панели').toBeLessThanOrEqual(barBox!.x);
+  expect(nextBox.x, 'правая стрелка справа от панели').toBeGreaterThanOrEqual(barBox!.x + barBox!.width);
+  const toyBox = (await page.locator('#toy').boundingBox())!;
+  expect(Math.abs(barBox!.x + barBox!.width / 2 - (toyBox.x + toyBox.width / 2)), 'панель по-прежнему над серединой консоли').toBeLessThan(2);
+  expect(Math.round(prevBox.height)).toBe(Math.round(barBox!.height));
+  const current = page.locator('.devpick__trigger');
+  await next.click();
+  await expect(current).toHaveAttribute('data-toy', 'mario');
+  await expect(page).toHaveURL(/toy=mario/);
+  await expect(prev).toHaveAttribute('aria-label', /Brick Game/);
+  await prev.click();
+  await expect(current).toHaveAttribute('data-toy', 'brickgame');
+  await prev.click(); // с первой модели — на последнюю
+  await expect(current).toHaveAttribute('data-toy', 'e23');
+  await next.click(); // и обратно по кругу — на первую
+  await expect(current).toHaveAttribute('data-toy', 'brickgame');
+});
+
+test('стрелки выбора устройства на телефоне: страница не шире окна, обе стрелки видны и работают с открытым каталогом', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await visit(page, './?toy=brickgame&view=full');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(page.locator('.devpick__step--prev')).toBeVisible();
+  await expect(page.locator('.devpick__step--next')).toBeVisible();
+  await openPicker(page);
+  await page.locator('.devpick__step--next').click(); // стрелка при открытом каталоге закрывает его и переключает устройство
+  await expect(page.locator('.devpick__panel')).toBeHidden();
+  await expect(page.locator('.devpick__trigger')).toHaveAttribute('data-toy', 'mario');
+});

@@ -49,6 +49,15 @@ function chevron(): SVGSVGElement {
   );
 }
 
+/** Стрелка слева или справа от закрытой панели: соседнее устройство каталога. */
+function stepArrow(direction: -1 | 1): SVGSVGElement {
+  return svg(
+    'svg',
+    { viewBox: '0 0 16 16', class: 'devpick__step-icon', 'aria-hidden': 'true', focusable: 'false' },
+    svg('path', { d: direction < 0 ? 'M10 3.2L5.2 8l4.8 4.8' : 'M6 3.2L10.8 8 6 12.8', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+  );
+}
+
 function setReadyText(node: HTMLElement, ready: DeviceReadiness): string {
   const label = t(READY_TEXT[ready].label);
   node.setAttribute('aria-label', label);
@@ -85,6 +94,9 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
   // ── Закрытая панель ─────────────────────────────────────────────────
   const trigger = h('button', { type: 'button', class: 'devpick__trigger', 'aria-expanded': 'false', 'aria-controls': panelId, 'aria-haspopup': 'dialog' });
   const scrim = h('div', { class: 'devpick__scrim', hidden: '' });
+  // Стрелки по бокам панели листают каталог по кругу: предыдущее и следующее устройство в том порядке, в каком они стоят в сетке.
+  const prev = h('button', { type: 'button', class: 'devpick__step devpick__step--prev' }, stepArrow(-1));
+  const next = h('button', { type: 'button', class: 'devpick__step devpick__step--next' }, stepArrow(1));
 
   // ── Каталог ─────────────────────────────────────────────────────────
   const title = h('h2', { class: 'devpick__title', id: titleId });
@@ -136,7 +148,7 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
     legend,
   );
   nav.className = 'devpick';
-  nav.replaceChildren(trigger, panel);
+  nav.replaceChildren(prev, trigger, next, panel);
   document.body.append(scrim);
 
   // ── Тексты и состояние ─────────────────────────────────────────────
@@ -150,6 +162,19 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
     trigger.replaceChildren(thumb(active, 'devpick__thumb'), h('span', { class: 'devpick__text' }, h('span', { class: 'devpick__maker' }, label.maker), h('span', { class: 'devpick__model' }, label.title)), status, chevron());
     trigger.setAttribute('aria-label', `${t('picker.trigger', { name: `${label.maker} ${label.title}` })}, ${statusLabel}`);
     trigger.dataset['toy'] = active;
+    paintSteps();
+  };
+
+  /** Сосед `active` в каталоге: по кругу, первая модель следует за последней. */
+  const neighbour = (delta: -1 | 1): ToyId => order[(order.indexOf(active) + delta + order.length) % order.length]!;
+  const paintSteps = (): void => {
+    for (const [button, delta, key] of [[prev, -1, 'picker.prev'], [next, 1, 'picker.next']] as const) {
+      const label = deviceLabel(neighbour(delta), t);
+      const name = `${label.maker} ${label.title}`;
+      button.setAttribute('aria-label', t(key, { name }));
+      button.title = t(key, { name });
+      button.dataset['toy'] = neighbour(delta);
+    }
   };
 
   const paintTabs = (): void => {
@@ -279,6 +304,8 @@ export function mountToySwitch(nav: HTMLElement, current: ToyId, onSelect: (id: 
     }
   });
   close.addEventListener('click', () => closePanel(true));
+  prev.addEventListener('click', () => select(neighbour(-1)));
+  next.addEventListener('click', () => select(neighbour(1)));
   // Клик мимо каталога закрывает его и не доходит до игрушки под ним.
   scrim.addEventListener('pointerdown', (event) => {
     event.preventDefault();

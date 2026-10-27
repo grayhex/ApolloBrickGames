@@ -4746,9 +4746,19 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 /* ── Выбор устройства: компактная панель над консолью и выпадающий каталог (toySwitch.ts, deviceCatalog.ts) ──────────────────────────────────────────
    Замена горизонтальной карусели. Высота шапки (`.brand`) и положение консоли не меняются: панель стоит в той же строке по центру, каталог выпадает вниз
    поверх страницы и ничего не сдвигает. Колонки карточек — 3 / 2 / 1 по ширине окна, при открытом каталоге прокручивается только внутренний список. */
-.devpick { position: relative; z-index: 31; width: min(440px, 100%); min-width: 0; margin-inline: auto; }
+.devpick { position: relative; z-index: 31; display: flex; align-items: center; gap: 8px; width: min(536px, 100%); min-width: 0; margin-inline: auto; }
+/* Стрелки слева и справа от панели — соседнее устройство каталога (по кругу); той же высоты и стиля, что и сама панель. */
+.devpick__step {
+  flex: none; display: grid; place-items: center; align-self: stretch; width: 40px; padding: 0; color: var(--muted); cursor: pointer;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--corner-line); border-radius: 14px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 12%), inset 0 1px rgb(255 255 255 / 5%); transition: background 160ms, border-color 160ms, color 160ms;
+}
+.devpick__step:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 34%, var(--corner-line)); }
+.devpick__step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.devpick__step-icon { width: 18px; height: 18px; }
+body:not([data-booting]) .devpick__step { animation: dock-arrive 480ms cubic-bezier(.2, .8, .2, 1) both; }
 .devpick__trigger {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 6px 12px 6px 9px;
+  display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; min-height: 54px; padding: 6px 12px 6px 9px;
   color: var(--text); text-align: left; cursor: pointer;
   background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--corner-line); border-radius: 14px;
   box-shadow: 0 6px 22px rgb(0 0 0 / 12%), inset 0 1px rgb(255 255 255 / 5%);
@@ -4836,6 +4846,7 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 @media (max-width: 559px) {
   .devpick { width: 100%; }
   .devpick__trigger { min-height: 50px; padding-right: 10px; }
+  .devpick__step { width: 34px; border-radius: 12px; }
   .devpick__list { grid-template-columns: minmax(0, 1fr); }
   .devpick__panel { padding: 12px 10px 8px; max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)); }
   .devpick__tabs { width: 100%; }
