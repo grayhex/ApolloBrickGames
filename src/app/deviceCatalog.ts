@@ -41,6 +41,7 @@ export interface DeviceCatalogEntry {
 
 /** Значения по умолчанию (в репозитории); поверх них накладываются настройки из админки. */
 export const DEVICE_DEFAULTS: Readonly<Record<ToyId, DeviceCatalogEntry>> = {
+  fm38: {brand:'brickgame',readiness:'reconstructing',title:'FM-38 · 2 in 1',aliases:['FM38','FM-38']},
   mario: { brand: 'apollo', readiness: 'playable', aliases: ['Mario'] },
   clock99: { brand: 'apollo', readiness: 'playable', aliases: ['Clock+99', 'Clock 99'] },
   seabattle: { brand: 'apollo', readiness: 'playable', aliases: ['Sea Battle', 'Seabattle'] },

@@ -33,7 +33,7 @@ describe('каталог устройств: метаданные', () => {
     expect(DEFAULT_BRAND).toBe('brickgame');
     expect(TOY_IDS.filter((id) => DEVICE_DEFAULTS[id].brand === 'apollo')).toEqual(['mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302']);
     expect(TOY_IDS.filter((id) => DEVICE_DEFAULTS[id].brand === 'taksun')).toEqual(['taksun']);
-    expect(TOY_IDS.filter((id) => DEVICE_DEFAULTS[id].brand === 'brickgame')).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
+    expect(TOY_IDS.filter((id) => DEVICE_DEFAULTS[id].brand === 'brickgame')).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23', 'fm38']);
   });
 
   it('готовность — явное решение, а не число готовых игр', () => {
@@ -46,12 +46,12 @@ describe('каталог устройств: метаданные', () => {
   });
 
   it('порядок в сетке: бренды подряд (Apollo, TAKSUN, Brick Game), внутри — порядок регистрации', () => {
-    expect(catalogOrder()).toEqual(['mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302', 'taksun', 'alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
+    expect(catalogOrder()).toEqual(['mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302', 'taksun', 'alibaba', 'minibrick', 'brickgame', 'e88', 'e23', 'fm38']);
     expect(catalogOrder(['minibrick', 'brickgame', 'mario'])).toEqual(['mario', 'minibrick', 'brickgame']);
   });
 
   it('счётчики категорий', () => {
-    expect(brandCounts()).toEqual({ all: 12, apollo: 6, taksun: 1, brickgame: 5 });
+    expect(brandCounts()).toEqual({ all: 13, apollo: 6, taksun: 1, brickgame: 6 });
   });
 });
 
@@ -61,7 +61,7 @@ describe('каталог устройств: настройки из админ�
     expect(deviceEntry('minibrick')).toMatchObject({ brand: 'brickgame', readiness: 'playable' });
     expect(deviceEntry('taksun')).toMatchObject({ brand: 'brickgame', readiness: 'reconstructing' });
     expect(deviceEntry('mario')).toMatchObject({ brand: 'apollo', readiness: 'playable' });
-    expect(brandCounts()).toEqual({ all: 12, apollo: 6, taksun: 0, brickgame: 6 });
+    expect(brandCounts()).toEqual({ all: 13, apollo: 6, taksun: 0, brickgame: 7 });
     expect(deviceLabel('taksun', t).maker).toBe('Brick Game');
     expect(catalogOrder().indexOf('taksun')).toBeGreaterThan(catalogOrder().indexOf('apollo-b0202'));
     setDeviceOverrides({});
@@ -108,9 +108,9 @@ describe('каталог устройств: подписи и поиск', () =
     const ids = catalogOrder();
     expect(filterDevices(ids, { category: 'apollo', query: '' }, t)).toEqual(['mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302']);
     expect(filterDevices(ids, { category: 'taksun', query: '' }, t)).toEqual(['taksun']);
-    expect(filterDevices(ids, { category: 'brickgame', query: '' }, t)).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
+    expect(filterDevices(ids, { category: 'brickgame', query: '' }, t)).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23', 'fm38']);
     expect(filterDevices(ids, { category: 'brickgame', query: 'apollo' }, t)).toEqual([]);
-    expect(filterDevices(ids, { category: 'all', query: '' }, t)).toHaveLength(12);
+    expect(filterDevices(ids, { category: 'all', query: '' }, t)).toHaveLength(13);
   });
 });
 

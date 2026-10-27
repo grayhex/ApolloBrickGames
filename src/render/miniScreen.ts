@@ -46,6 +46,7 @@ const DIGIT_SEGMENTS: Readonly<Record<string, string>> = {
 
 /** Что показывает экран. */
 export interface MiniLcdState {
+  variant?: 'A' | 'B';
   /** Питание включено: иначе виден только «призрак» сегментов и рамка стакана. */
   powered: boolean;
   /** Проверка экрана: все сегменты включены (как на фото полностью включённого экрана). */
@@ -278,7 +279,7 @@ export class MiniLcd {
   /** Показать состояние; меняются только изменившиеся сегменты. */
   render(state: MiniLcdState): void {
     const key = [
-      state.powered, state.all ?? false, state.score, state.lines, state.label, state.linesLabel, state.next, state.speed, state.level, state.scale, state.note,
+      state.powered, state.all ?? false, state.variant, state.score, state.lines, state.label, state.linesLabel, state.next, state.speed, state.level, state.scale, state.note,
       state.pause, state.gameOver, state.blink,
       state.cells ? state.cells.join('') : '-',
       state.preview ? state.preview.join('') : '-',
@@ -318,8 +319,8 @@ export class MiniLcd {
       gameOver: on && state.gameOver,
       speed: on && state.speed !== null,
       level: on && state.level !== null,
-      gameA: false,
-      gameB: false,
+      gameA: on && state.variant==='A',
+      gameB: on && state.variant==='B',
       rotate: false,
       rotateText: false,
       pauseText: on && state.pause,

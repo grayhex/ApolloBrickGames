@@ -13,7 +13,7 @@ import type { ToyKeyId } from './toy';
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun', 'fm38'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -364,6 +364,14 @@ export const TOYS: Record<ToyId, ToyModel> = {
     labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START',bottom:'PAUSE'},{key:'sound',top:'MUSIC',bottom:'VOICE'},{key:'fire',top:'RESET'}],
       up: '', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'ROTATE' },
     keyWhat: { onoff: 'help.row.onoff', sp: 'help.row.sp', sound: 'help.row.sound', fire: 'help.row.menu', left: 'help.m.left', right: 'help.m.right', down: 'help.mini.down', jump: 'help.mini.rotate' },
+  },
+  fm38: {
+    id:'fm38',family:'other',name:'Brick Game FM-38',chassis:'monoblock',
+    shells:['white'],defaultShell:'white',games:[],defaultGame:null,gamesCount:2,menu:false,
+    gameKeys:'letters',glyph:'square',panel:'sea',deco:'frame',leds:false,info:true,pack:null,levels:false,
+    lcd:{bg:'#c6cfab',ink:'#303a30'},stageLabel:'stage.label.brickgame',
+    labels:{round:[{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START/PAUSE'},{key:'sound',top:'MELODY'}],up:'',left:'LEVEL/LEFT',right:'SPEED/RIGHT',down:'GAME A/B / DOWN',big:'ROTATE'},
+    keyWhat:{onoff:'help.row.onoff',sp:'help.row.sp',sound:'help.row.sound',left:'help.m.left',right:'help.m.right',down:'help.mini.down',jump:'help.mini.rotate'},
   },
   /** Корпус по фото владельца (`taksunModel.ts`, `docs/taksun.md`): складной, синий, розовые кнопки; игры появятся позже. */
   taksun: {

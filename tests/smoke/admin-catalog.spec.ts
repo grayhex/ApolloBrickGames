@@ -14,7 +14,7 @@ test('admin: бренд и готовность каждой модели нас
   });
   await page.goto('./admin');
   const section = page.locator('.admin__catalog');
-  await expect(section.locator('.admin__catalog-row')).toHaveCount(12);
+  await expect(section.locator('.admin__catalog-row')).toHaveCount(13);
   const brand = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: бренд$/);
   const ready = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: готовность$/);
   // Значения по умолчанию.

@@ -108,7 +108,7 @@ for (const width of [360, 900, 1440]) {
     await page.goto(marioUrl('?view=full'));
     await expect(page.locator('.site-brand img')).toBeVisible();
     await expect(page.locator('#topleft img')).toHaveCount(0);
-    await expect(page.locator('.devpick__card[data-shell=white]')).toHaveCount(8); // четыре Apollo, Brick Game и три экспоната (Alibaba, Mini, TAKSUN)
+    await expect(page.locator('.devpick__card[data-shell=white]')).toHaveCount(9); // четыре Apollo, Brick Game и три экспоната (Alibaba, Mini, TAKSUN)
     await openPicker(page);
     for (const label of await page.locator('.devpick__model').all()) await expect(label).toBeVisible();
     const fits = await page.locator('.devpick__model').evaluateAll((nodes) => nodes.every((n) => n.scrollWidth <= n.clientWidth + 1));

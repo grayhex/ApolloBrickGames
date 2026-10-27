@@ -56,8 +56,8 @@ test.describe('каталог устройств: закрытая панель'
     await openPicker(page);
     await expect(pickerCard(page, 'brickgame')).toHaveAttribute('aria-current', 'page');
     // Нет закреплённого блока, разделителей и отдельной «универсальной» кнопки: все модели — карточки одной сетки.
-    await expect(page.locator('.devpick__list > li')).toHaveCount(12);
-    await expect(page.locator('.devpick__card')).toHaveCount(12);
+    await expect(page.locator('.devpick__list > li')).toHaveCount(13);
+    await expect(page.locator('.devpick__card')).toHaveCount(13);
   });
 
   test('панель стоит на месте карусели: центр над консолью, консоль не сдвигается и страница не прокручивается при открытии', async ({ page }) => {
@@ -91,13 +91,13 @@ test.describe('каталог устройств: содержимое', () => {
     await openPicker(page);
     const panel = pickerPanel(page);
     await expect(panel.getByRole('heading', { name: 'Коллекция устройств' })).toBeVisible();
-    await expect(panel.locator('.devpick__count')).toHaveText('12 моделей');
+    await expect(panel.locator('.devpick__count')).toHaveText('13 моделей');
     await expect(panel.locator('.devpick__close')).toBeVisible();
     await expect(panel.getByRole('searchbox')).toHaveCount(1);
     await expect(panel.getByRole('tab')).toHaveText(['Все', 'Apollo', 'TAKSUN', 'Brick Game']);
     await expect(panel.getByRole('tab', { name: 'Все' })).toHaveAttribute('aria-selected', 'true');
     await expect(panel).not.toContainText(/Играбельные|В разработке|Экспонаты/);
-    await expect(page.locator('.devpick__card')).toHaveCount(12);
+    await expect(page.locator('.devpick__card')).toHaveCount(13);
   });
 
   test('каждое устройство показывает производителя, модель, значок готовности и настоящую миниатюру', async ({ page }) => {
@@ -150,7 +150,7 @@ test.describe('каталог устройств: содержимое', () => {
     await expect(shown).toHaveCount(0);
     await expect(page.locator('.devpick__empty')).toHaveText('Ничего не найдено');
     await search.fill('');
-    await expect(shown).toHaveCount(12);
+    await expect(shown).toHaveCount(13);
     await expect(page.locator('.devpick__empty')).toBeHidden();
   });
 
@@ -167,10 +167,10 @@ test.describe('каталог устройств: содержимое', () => {
     await expect(shown).toHaveCount(1);
     expect(await ids()).toEqual(['taksun']);
     await tab('Brick Game').click();
-    await expect(shown).toHaveCount(5);
-    expect(await ids()).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
+    await expect(shown).toHaveCount(6);
+    expect(await ids()).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23', 'fm38']);
     await tab('Все').click();
-    await expect(shown).toHaveCount(12);
+    await expect(shown).toHaveCount(13);
     // Категория и поиск работают вместе; пустой поиск в категории — «Ничего не найдено».
     await tab('Apollo').click();
     await pickerPanel(page).getByRole('searchbox').fill('b0202');
@@ -182,7 +182,7 @@ test.describe('каталог устройств: содержимое', () => {
     await openPicker(page);
     await expect(tab('Все')).toHaveAttribute('aria-selected', 'true');
     await expect(pickerPanel(page).getByRole('searchbox')).toHaveValue('');
-    await expect(shown).toHaveCount(12);
+    await expect(shown).toHaveCount(13);
   });
 
   test('бренд и готовность из админки применяются: пустая категория показывает пояснение, значок и порядок следуют настройкам', async ({ page }) => {
@@ -351,7 +351,7 @@ test.describe('каталог устройств: ввод', () => {
     await page.keyboard.press('ArrowRight');
     await expect.poll(focusedToy).toBe('clock99');
     await page.keyboard.press('End');
-    await expect.poll(focusedToy).toBe('e23');
+    await expect.poll(focusedToy).toBe('fm38');
     await page.keyboard.press('Home');
     await expect.poll(focusedToy).toBe('mario');
     await page.keyboard.press('ArrowUp'); // из первой строки — в поле поиска
@@ -392,7 +392,7 @@ test.describe('каталог устройств: ввод', () => {
     await visit(page, marioUrl('?view=full'));
     await openPicker(page);
     await page.keyboard.press('End');
-    await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['toy'])).toBe('e23');
+    await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset['toy'])).toBe('fm38');
     await page.keyboard.press('Tab');
     await expect(pickerPanel(page)).toBeHidden();
     await expect(page.locator('.devpick__scrim')).toBeHidden();
@@ -409,7 +409,7 @@ test.describe('каталог устройств: язык и движение',
     await openPicker(page);
     const panel = pickerPanel(page);
     await expect(panel.getByRole('heading')).toHaveText('Device collection');
-    await expect(panel.locator('.devpick__count')).toHaveText('12 models');
+    await expect(panel.locator('.devpick__count')).toHaveText('13 models');
     await expect(panel.getByRole('tab')).toHaveText(['All', 'Apollo', 'TAKSUN', 'Brick Game']);
     await expect(pickerCard(page, 'alibaba').locator('.devpick__maker')).toHaveText('Brick Game');
     await expect(pickerCard(page, 'mario').locator('.devpick__ready')).toHaveAttribute('aria-label', 'Playable');
