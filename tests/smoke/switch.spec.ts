@@ -311,7 +311,8 @@ test.describe('переключение игрушек на месте', () => {
     await ready(page, '?power=on');
     const hrefs = await page.locator('.devpick__card').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
     expect(hrefs.map((href) => href?.replace(/^.*\//, ''))).toEqual([
-      '?toy=mario', // порядок каталога: Apollo, TAKSUN, затем Brick Game (в порядке регистрации)
+      '', // универсальный Brick Game стоит первым — страница без параметра
+      '?toy=mario', // дальше порядок каталога: Apollo, TAKSUN, затем остальные Brick Game (в порядке регистрации)
       '?toy=clock99',
       '?toy=seabattle',
       '?toy=tank168',
@@ -320,7 +321,6 @@ test.describe('переключение игрушек на месте', () => {
       '?toy=taksun',
       '?toy=alibaba',
       '?toy=minibrick',
-      '', // универсальный Brick Game — страница без параметра
       '?toy=e88',
       '?toy=e23',
     ]);

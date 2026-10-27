@@ -37,6 +37,8 @@ test('открытый каталог устройств сохраняет иг
   await page.keyboard.press('ArrowRight');
   await expect(pickerCard(page, 'minibrick')).toBeFocused();
   await page.keyboard.press('Home');
+  await expect(pickerCard(page, 'brickgame')).toBeFocused(); // универсальный стоит в каталоге первым
+  await page.keyboard.press('ArrowRight');
   await expect(pickerCard(page, 'mario')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(pickerPanel(page)).toBeHidden();

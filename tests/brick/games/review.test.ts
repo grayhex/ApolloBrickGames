@@ -170,17 +170,18 @@ describe('R03 RoadGame: столкновение совпадает с види�
     }
   });
 
-  it('извилистая трасса: стенка, задевающая клетку игрока на любой из строк 17–19, — столкновение; в стороне — нет', () => {
-    // Клетки игрока при x = 4: (4,17), (4,18), (3,19), (5,19). Левая стенка — колонка road[y], правая — road[y] + 5.
+  it('извилистая трасса: стенка, задевающая клетку игрока на любой из строк 17–19, подталкивает машину, а не отнимает жизнь; в стороне — стоит на месте', () => {
+    // Клетки игрока при x = 4: (4,17), (4,18), (3,19), (5,19). Левая стенка — колонка road[y], правая — road[y] + 6.
     const hitColumn: Record<number, number> = { 17: 4, 18: 4, 19: 3 };
     for (const row of [17, 18, 19]) {
       const g = new RoadGame('obstacle-race');
       g.start();
-      g.road.fill(1); // коридор колонок 2–5 вокруг игрока свободен: левая стенка в колонке 1, правая в 6
+      g.road.fill(1); // коридор колонок 2–6 вокруг игрока свободен: левая стенка в колонке 1, правая в 7
       g.road[row] = hitColumn[row]!;
       g.x = 4;
       g.step(NEUTRAL_BRICK_INPUT);
-      expect(g.lives, `строка ${row}`).toBe(3);
+      expect(g.lives, `строка ${row}: жизнь цела`).toBe(4);
+      expect(g.x, `строка ${row}: машину сдвинуло от стенки`).toBe(5);
     }
     const clear = new RoadGame('obstacle-race');
     clear.start();
@@ -188,6 +189,16 @@ describe('R03 RoadGame: столкновение совпадает с види�
     clear.x = 4;
     clear.step(NEUTRAL_BRICK_INPUT);
     expect(clear.lives).toBe(4);
+    expect(clear.x).toBe(4);
+  });
+
+  it('извилистая трасса: камень, задевающий клетку игрока, — столкновение', () => {
+    const g = new RoadGame('obstacle-race');
+    g.start();
+    g.x = 4;
+    g.obstacles = [{ x: 4, y: 17, kind: -2 }];
+    g.step(NEUTRAL_BRICK_INPUT);
+    expect(g.lives).toBe(3);
   });
 });
 

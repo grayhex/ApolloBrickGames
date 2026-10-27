@@ -64,6 +64,10 @@ export interface TetrisScene {
   navalPanel?: boolean;
   /** Life rods are not a next-piece preview. */
   nextLabelOff?: boolean;
+  /** Меню консоли: число снятых рядов в партии с рекордом очков (E‑88 по ROM чередует HI-SCORE и LINES). */
+  hiLines?: number;
+  /** Меню консоли: сколько тактов идёт меню (для чередования надписей); в партии — 0. */
+  menuTick?: number;
 }
 
 /** Мигающие клетки: полпериода в тактах. */

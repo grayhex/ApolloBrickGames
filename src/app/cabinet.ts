@@ -270,8 +270,13 @@ class ConsoleCabinet implements Cabinet {
   private mood: Mood = 'idle';
   private moodUntil = 0;
   private clock = 0;
+  /** Ряды, снятые в текущей партии (рекорд рядов хранит оболочка вместе с рекордом очков), и такты меню — для чередования HI-SCORE ↔ LINES. */
+  private gameLines = 0;
+  private menuTicks = 0;
+  private readonly recordLines: (gameId: string, mode: number) => number;
 
-  constructor(model: ToyModel, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0) {
+  constructor(model: ToyModel, entries: readonly BrickConsoleEntry[], seed: number, hiScore: (gameId: string, mode: number) => number, game = 0, recordLines: (gameId: string, mode: number) => number = () => 0) {
+    this.recordLines = recordLines;
     this.toy = model.id;
     this.nativeDevice = !!model.nativeDevice;
     this.allowed = bodyActions(model);
@@ -288,7 +293,9 @@ class ConsoleCabinet implements Cabinet {
   get hiScore(): number {
     return this.console_.hiScore;
   }
-  readonly lines = 0;
+  get lines(): number {
+    return this.gameLines;
+  }
   get speed(): number {
     return this.console_.displaySpeed;
   }
@@ -341,7 +348,9 @@ class ConsoleCabinet implements Cabinet {
   }
   start(): CabinetEvent[] {
     this.mood = 'idle';
-    return this.console_.start();
+    const events = this.console_.start();
+    if (events.some((event) => event.type === 'started')) this.gameLines = 0;
+    return events;
   }
   pause(): CabinetEvent[] {
     return this.console_.pause();
@@ -364,6 +373,7 @@ class ConsoleCabinet implements Cabinet {
   /** UP is only an alias for the real ROTATE key on these seven/eight-button devices. */
   private nativeMask(mask: number): number { return this.nativeDevice && (mask & UP) ? (mask & ~UP) | JUMP : mask; }
   private react(events: CabinetEvent[]): CabinetEvent[] {
+    for (const event of events) if (event.type === 'lines') this.gameLines += event.count;
     const mood = moodOf(events);
     if (mood) {
       this.mood = mood;
@@ -377,6 +387,7 @@ class ConsoleCabinet implements Cabinet {
     return this.react(this.console_.step(makeBrickInput(brickActions(this.nativeMask(frame.pressed), buttons), brickActions(this.nativeMask(frame.held), buttons))));
   }
   menu(frame: InputFrame): CabinetEvent[] {
+    this.menuTicks++;
     const buttons = this.buttons();
     return this.console_.menu(makeBrickInput(brickActions(this.nativeMask(frame.pressed), buttons), brickActions(this.nativeMask(frame.held), buttons)));
   }
@@ -403,6 +414,8 @@ class ConsoleCabinet implements Cabinet {
       panelOff: c.intro,
       navalPanel: this.activeGame === 'sea-battle',
       nextLabelOff: this.activeGame === 'arkanoid',
+      ...(c.inMenu ? { hiLines: this.recordLines(c.entryId, c.mode) } : {}),
+      menuTick: c.inMenu ? this.menuTicks : 0,
     };
   }
   /** Человечек: после события радуется или огорчается на время, при конце игры остаётся огорчённым, на паузе, в меню и без событий стоит. */
@@ -428,7 +441,7 @@ export function createCabinet(model: ToyModel, options: CabinetOptions): Cabinet
   if (model.defaultGame === null) throw new Error('This console has no game engine yet.');
   if (!model.menu) return new TetrisCabinet(model.id, options.seed, options.loadHi(`crocodile-mario:tetris:${model.id}:hi`));
   const hiKey = (gameId: string, mode: number): string => `crocodile-mario:brick:${model.id}:${gameId}:${mode}${model.nativeDevice ? `:native-r${nativeEntry(model.nativeDevice,gameId)?.rulesetVersion ?? '1'}` : localHiSuffix(gameId,mode,model.id)}`;
-  return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => model.defaultEntry ? g.entryId === model.defaultEntry : g.id === model.defaultGame)));
+  return new ConsoleCabinet(model, consoleEntries(model, options.defs), options.seed, (gameId, mode) => options.loadHi(hiKey(gameId, mode)), Math.max(0, model.games.findIndex((g) => model.defaultEntry ? g.entryId === model.defaultEntry : g.id === model.defaultGame)), (gameId, mode) => options.loadHi(`${hiKey(gameId, mode)}:lines`));
 }
 
 /** Звук события для кабинета: в консоли движение звучит только там, где оно уместно. */

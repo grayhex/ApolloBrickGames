@@ -48,7 +48,7 @@ test.describe('шапка и переключатель', () => {
     await openPicker(page);
     const items = page.locator('.devpick__card');
     await expect(items).toHaveCount(12);
-    await expect(items.locator('.devpick__model')).toHaveText(['Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'B0202 · 126 in 1', 'B0302 · 18 in 1', 'TS-995 · 9999 in 1', 'Alibaba Dance 99 in 1', 'Mini Brick Game B\u2011S96', 'Универсальный', 'E-88 · 8 in 1', 'E-23 · 96 in 1']);
+    await expect(items.locator('.devpick__model')).toHaveText(['Универсальный', 'Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'B0202 · 126 in 1', 'B0302 · 18 in 1', 'TS-995 · 9999 in 1', 'Alibaba Dance 99 in 1', 'Mini Brick Game B\u2011S96', 'E-88 · 8 in 1', 'E-23 · 96 in 1']);
     await expect(items.locator('svg.devpick__icon')).toHaveCount(12);
     await expect(items.locator('svg.devpick__icon image[href*="devices/"]')).toHaveCount(4); // моноблоки используют оригинальные векторы
     await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');

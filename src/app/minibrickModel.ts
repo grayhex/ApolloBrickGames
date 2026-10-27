@@ -1,5 +1,6 @@
 import { MiniLcd, miniLcdIdle } from '../render/miniScreen';
 import { h, svg } from './dom';
+import { functionGroove } from './groove';
 import type { ToyKeyId } from './toy';
 import type { View } from './view';
 
@@ -76,8 +77,11 @@ export const MINI_BRICK_KEYS: readonly { key: ToyKeyId; label: string; x: number
   { key: 'sound', label: 'MUSIC/VOICE', x: 64, y: 310, w: 25, h: 25 },
   { key: 'fire', label: 'RESET', x: 91, y: 362, w: 22, h: 22 },
 ];
-/** Ось ложбины: через центры ON/OFF (64, 255), MUSIC/VOICE (64, 310) и RESET (91, 362). */
-const FUNCTION_GROOVE = 'M64 238V312C64 340 76 353 91 364';
+/**
+ * Ложбина под три служебные кнопки (ON/OFF (64, 255), MUSIC/VOICE (64, 310) и RESET (91, 362)) — той же формы, что у TAKSUN TS-995 (`groove.ts`): кривая TS-995,
+ * сдвинутая на (−32, −26) и увеличенная в 1,08 раза, проходит в пределах 4 клеток чертежа от центров всех трёх кнопок. Толщина — по размеру кнопок (≈ 1,3 кнопки).
+ */
+const GROOVE = { transform: 'translate(-32 -26) scale(1.08)', width: 30.4, edge: '#6aa7c1', edgeOpacity: '.55', shadow: '#0b2c42', floor: '#154a68' } as const;
 export function miniBrickBase(buttons = false): SVGSVGElement {
   const id = `mini-base-${++serial}`;
   const root = svg('svg', { viewBox: '0 0 400 650', class: 'base__art', 'aria-hidden': 'true', focusable: 'false' });
@@ -94,9 +98,7 @@ export function miniBrickBase(buttons = false): SVGSVGElement {
     svg('path', { d: 'M24 25H376V227Q200 213 24 227Z', fill: '#569ab5', 'fill-opacity': '.28', stroke: '#4c8ba6', 'stroke-width': '2' }),
     svg('circle', { cx: '220', cy: '300', r: '102', fill: `url(#${id}-blue)`, stroke: '#205774', 'stroke-width': '3' }),
     // Три функциональные кнопки слева (ON/OFF, MUSIC/VOICE, RESET) сидят в одной выемке-ложбине, как на фото: светлая кромка снизу, тень сверху, дно темнее панели.
-    svg('path', { d: FUNCTION_GROOVE, transform: 'translate(0 1.8)', fill: 'none', stroke: '#6aa7c1', 'stroke-opacity': '.55', 'stroke-width': '28', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
-    svg('path', { d: FUNCTION_GROOVE, fill: 'none', stroke: '#0b2c42', 'stroke-width': '28', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
-    svg('path', { d: FUNCTION_GROOVE, transform: 'translate(0 1.2)', fill: 'none', stroke: '#154a68', 'stroke-width': '23', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+    ...functionGroove(GROOVE),
   );
   for (const [row, offsets] of [
     [0, [-21, 21]],

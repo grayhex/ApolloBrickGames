@@ -21,9 +21,9 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
         {button:'down',text:gt('Ускорить появление следующего ряда.', 'Advance the next row.')},
       ],
       scoring:[{what:gt('Выбитая клетка', 'Cell removed'),points:'+1'}],
-      facts:[{value:'10×20',label:gt('поле','field')},{value:'4',label:gt('жизни в реализации','lives in this version')}],
-      progression:gt('Дальнейшее заполнение массива и число жизней воссозданы приближённо.', 'Later array generation and the number of lives are approximate.'),
-      lives:gt('В текущей реализации четыре жизни.', 'The current implementation has four lives.'),
+      facts:[{value:'10×20',label:gt('поле','field')},{value:'4',label:gt('жизни','lives')}],
+      progression:gt('Новые ряды появляются сверху и опускаются к игроку.', 'New rows appear above and descend toward the player.'),
+      lives:gt('Четыре жизни.', 'Four lives.'),
       schemes:[{cells:['##########','##########','.########.','.########.','..######..','..........','....#.....'],caption:gt('Начальный массив и клетка игрока.', 'The opening array and player cell.')}],
       assumptions:[gt('Начальный кадр и спускающаяся точка по ROM; появление рядов, паузы и столкновения приближены.', 'The opening and descending point follow the ROM; row generation, pauses and collisions are approximate.')],
     };
@@ -46,9 +46,9 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
         {button:'down',text:gt('Ускорить появление ряда.', 'Advance the next row.')},
       ],
       scoring:[{what:building?gt('Добавленная клетка', 'Cell added'):gt('Выбитая клетка', 'Cell removed'),points:'+1'}],
-      facts:[{value:'10×20',label:gt('поле','field')},{value:'4',label:gt('жизни в реализации','lives in this version')}],
+      facts:[{value:'10×20',label:gt('поле','field')},{value:'4',label:gt('жизни','lives')}],
       progression:gt('Ряды постепенно появляются сверху и движутся к игроку.', 'Rows gradually appear above and move toward the player.'),
-      lives:gt('В текущей реализации четыре жизни.', 'The current implementation has four lives.'),
+      lives:gt('Четыре жизни.', 'Four lives.'),
       schemes:[{cells:['#..#.#.#..','..........','..........','....#.....'],caption:gt('Массив сверху и клетка игрока.', 'The array above and the player cell.')}],
       assumptions:[gt('Действие ROTATE и одиночная клетка по ROM; генератор, очки и условия завершения приближены.', 'ROTATE and the single player cell follow the ROM; generation, scoring and end conditions are approximate.')],
     };
@@ -64,7 +64,7 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
       rules: [
         gt('Заполняйте горизонтальные ряды без пропусков: полные ряды исчезают.', 'Fill horizontal rows without gaps to clear them.'),
         b0302 && mode >= 9
-          ? gt('В приближённой реализации встречаются обычные и пятиклеточные фигуры, а также одиночные клетки.', 'This approximate profile mixes regular and five-cell pieces with single cells.')
+          ? gt('Встречаются обычные и пятиклеточные фигуры, а также одиночные клетки.', 'Regular and five-cell pieces appear, along with single cells.')
               : special
           ? gt('Каждая четвёртая фигура берётся из дополнительного набора.', 'Every fourth piece comes from the additional shape set.')
           : gt('В наборе семь обычных фигур; следующая показана справа.', 'Seven standard shapes; the next piece appears on the right.'),

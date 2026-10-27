@@ -1,16 +1,22 @@
-.game-badges { display:inline-flex; flex-wrap:wrap; align-items:center; gap:5px; vertical-align:middle; }
-.game-origin,.game-rarity,.game-badges .gpanel__stage { display:inline-flex; align-items:center; gap:4px; padding:3px 6px; border:1px solid currentColor; border-radius:6px; font:600 9px/1.2 system-ui,sans-serif; white-space:nowrap; letter-spacing:.03em; }
+/* Все значки — одной формы и одного размера: капсула высотой 24px с круглым значком слева (ROM/AI, α/β, ступень редкости). */
+.game-badges { display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; vertical-align:middle; }
+.game-origin,.game-rarity,.game-badges .gpanel__stage { box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; gap:5px; height:24px; min-width:60px; padding:0 9px 0 4px; border:1px solid currentColor; border-radius:999px; background:transparent; font:650 10px/1 system-ui,sans-serif; white-space:nowrap; letter-spacing:.03em; cursor:help; }
+.game-origin > span:first-child,.game-rarity > i,.game-badges .gpanel__stage > b { display:grid; place-items:center; flex:none; width:16px; height:16px; border-radius:50%; background:color-mix(in srgb,currentColor 16%,transparent); color:inherit; font:700 10px/1 system-ui,sans-serif; }
+.game-badges .gpanel__stage > b { font:700 12px/1 ui-serif,Georgia,serif; }
+.game-rarity > i::after { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
 .game-origin { color:var(--ink, currentColor); opacity:.72; }
-.game-origin span { font-size:12px; }
 .game-badges .gpanel__stage[data-stage="alpha"] { color:light-dark(#875017,#e7b578); }
 .game-badges .gpanel__stage[data-stage="beta"] { color:light-dark(#326052,#8fc9ae); }
 .game-rarity { color:var(--rarity, currentColor); }
-.game-rarity i { width:6px; height:6px; border-radius:50%; background:currentColor; }
 .game-rarity[data-rarity="common"] { --rarity:light-dark(#4f5b66,#a7b2bd); }
 .game-rarity[data-rarity="uncommon"] { --rarity:light-dark(#2f7a4a,#79c995); }
 .game-rarity[data-rarity="rare"] { --rarity:light-dark(#2a63b8,#7fb0f2); }
 .game-rarity[data-rarity="ultra-rare"] { --rarity:light-dark(#8a3fb5,#cf9af0); }
 .game-rarity[data-rarity="mobile"] { --rarity:light-dark(#b34d3a,#f0a08e); }
-.enc-item .game-badges { margin-top:5px; }
+.enc-item .game-badges { margin-top:4px; gap:4px; }
+.enc-item .game-origin,.enc-item .game-rarity,.enc-item .game-badges .gpanel__stage,.enc-modes .game-origin,.enc-modes .game-rarity,.enc-modes .game-badges .gpanel__stage { height:18px; min-width:0; gap:4px; padding:0 7px 0 3px; font-size:9px; }
+.enc-item .game-origin > span:first-child,.enc-item .game-rarity > i,.enc-item .game-badges .gpanel__stage > b,.enc-modes .game-origin > span:first-child,.enc-modes .game-rarity > i,.enc-modes .game-badges .gpanel__stage > b { width:12px; height:12px; font-size:8px; }
+.enc-item .game-badges .gpanel__stage > b,.enc-modes .game-badges .gpanel__stage > b { font-size:9px; }
+.enc-item .game-rarity > i::after,.enc-modes .game-rarity > i::after { width:5px; height:5px; }
 .enc-article__head .game-badges { margin-block:8px; }
 .enc-modes .game-badges { margin-left:auto; }
