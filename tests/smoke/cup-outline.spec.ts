@@ -27,19 +27,19 @@ const canvasInk = (page: Page): Promise<{ total: number; leftEdge: number; botto
   });
 
 for (const toy of ['clock99', 'tank168', 'brickgame']) {
-  test(`${toy}: обводка стакана видна на выключенной игрушке и остаётся после включения`, async ({ page }) => {
+  test(`${toy}: разделитель виден без лишних линий на выключенном экране`, async ({ page }) => {
     await page.goto(toy === 'clock99' || toy === 'tank168' ? `./?toy=${toy}&view=full` : './?view=full');
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');
     const off = await canvasInk(page);
-    expect(off.total, 'на выключенном экране нарисована обводка').toBeGreaterThan(200);
-    expect(off.leftEdge, 'левая линия стакана').toBeGreaterThan(20);
-    expect(off.bottomEdge, 'нижняя линия стакана').toBeGreaterThan(20);
+    expect(off.total, 'на выключенном экране нарисован разделитель').toBeGreaterThan(100);
+    expect(off.leftEdge, 'лишней левой линии нет').toBe(0);
+    expect(off.bottomEdge, 'лишней нижней линии нет').toBe(0);
     await page.locator('#base [data-key=onoff]').click();
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
     await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
     const on = await canvasInk(page);
-    expect(on.leftEdge).toBeGreaterThan(20);
+    expect(on.total).toBeGreaterThan(off.total);
   });
 }
 
@@ -51,7 +51,7 @@ test('Морской бой: на выключенном экране по-пр�
   expect(ink.total).toBeGreaterThan(100);
 });
 
-for (const toy of ['e88', 'apollo-b0202']) {
+for (const toy of ['e88', 'apollo-b0202', 'e23', 'apollo-b0302']) {
   test(`${toy}: рамка стакана (#frame) видна на выключенной игрушке, сегменты скрыты`, async ({ page }) => {
     await page.goto(`./?toy=${toy}&view=full`);
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);

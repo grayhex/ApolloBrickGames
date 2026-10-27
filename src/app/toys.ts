@@ -13,7 +13,7 @@ import type { ToyKeyId } from './toy';
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'taksun'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -342,6 +342,8 @@ export const TOYS: Record<ToyId, ToyModel> = {
   },
   e88: nativeToy('e88'),
   'apollo-b0202': nativeToy('apollo-b0202'),
+  e23: nativeToy('e23'),
+  'apollo-b0302': nativeToy('apollo-b0302'),
   alibaba: {
     id: 'alibaba', family: 'other', name: 'Alibaba Dance 99 in 1',
     shells: ['white'], defaultShell: 'white', games: [], defaultGame: null,
@@ -436,14 +438,15 @@ export function keyLabel(model: ToyModel, id: ToyKeyId): string {
 
 /** Native firmware descriptors share only the application's lifecycle, not the universal controls. */
 function nativeToy(id: NativeDeviceId): ToyModel {
-  const apollo = id === 'apollo-b0202';
+  const apollo = id === 'apollo-b0202' || id === 'apollo-b0302';
+  const name = id === 'apollo-b0202' ? 'Apollo B0202 · 126 in 1' : id === 'apollo-b0302' ? 'Apollo B0302 · 18 in 1' : id === 'e23' ? 'Super Brick Game E‑23 · 96 in 1' : 'Brick Game E-88 · 8 in 1';
   return {
-    id, name: apollo ? 'Apollo B0202 · 126 in 1' : 'Brick Game E-88 · 8 in 1',
+    id, name,
     family: apollo ? 'apollo' : 'other', chassis: 'monoblock', nativeDevice: id,
     shells: [apollo ? 'black' : 'gray'], defaultShell: apollo ? 'black' : 'gray', thumbShell: apollo ? 'black' : 'gray',
     games: NATIVE_MENUS[id].filter(e => e.available).map(e => ({ id: e.gameId, entryId: e.entryId, label: `${e.nativeCode} · ${e.name.en}`, status: e.available ? 'ready' : 'planned' })),
     defaultGame: NATIVE_MENUS[id][0]!.gameId, defaultEntry: NATIVE_MENUS[id][0]!.entryId,
-    gamesCount: apollo ? 126 : 8, menu: true, gameKeys: apollo ? 'letters' : 'digits',
+    gamesCount: id === 'apollo-b0202' ? 126 : id === 'apollo-b0302' ? 18 : id === 'e23' ? 96 : 8, menu: true, gameKeys: id === 'apollo-b0202' ? 'letters' : 'digits',
     glyph: 'square', panel: 'sea', deco: 'frame', leds: false, info: true, pack: null, levels: false,
     lcd: {bg: '#b7beb1', ink: '#202720'}, stageLabel: 'stage.label.brickgame',
     labels: {round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:apollo?'START/P':'START/PAUSE'},{key:'sound',top:'MUTE'},...(apollo?[{key:'fire' as const,top:'RESET'}]:[])],

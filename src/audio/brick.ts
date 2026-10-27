@@ -37,7 +37,8 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
       default: return null;
     }
   }
-  if (nativeProfile === 'e88') {
+  if(nativeProfile==='apollo-b0302' && !inMenu && event.type==='started' && TETRIS.has(game))return 'b0302_tetris_music';
+  if (nativeProfile === 'e88' || nativeProfile === 'e23') {
     if (inMenu) return event.type === 'move' ? 'e88_menu' : null;
     if (event.type === 'started') return TETRIS.has(game) ? 'e88_tetris_music' : 'e88_start';
     if (event.type === 'gameOver') return 'e88_over';
@@ -111,7 +112,7 @@ export function seekTones(notes:readonly BrickTone[],offsetMs:number):BrickTone[
   return out;
 }
 /** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
-const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki']);
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'b0302_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>

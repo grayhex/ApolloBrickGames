@@ -15,7 +15,7 @@ export function nativeMenuEditor(id: NativeDeviceId, toy: ConfigToy, changed: ()
   };
   const render=():void=>{
     const original=JSON.stringify(toy.games)===JSON.stringify(nativeDefault(id).games);
-    root.replaceChildren(text('h2',`Игры · ${toy.games.length} / ${families.length}`),text('p',original?'Оригинальный набор':'Изменённый набор'),text('p',id==='e88'?'Восемь самостоятельных пунктов оригинального меню, включая четыре игры с падающими фигурами.':'Назначается игра целиком. Она запускается с базового варианта; включённые модификации выбираются кнопкой MODE на корпусе.'));
+    root.replaceChildren(text('h2',`Игры · ${toy.games.length} / ${families.length}`),text('p',original?'Оригинальный набор':'Изменённый набор'),text('p',id==='apollo-b0202'?'Назначается игра целиком. Она запускается с базового варианта; включённые модификации выбираются кнопкой MODE на корпусе.':`Каждый номер — самостоятельный пункт меню устройства (${families.length} пунктов).`));
     const label=text('label','Выбрана при включении'),first=document.createElement('select');first.setAttribute('aria-label','Выбрана при включении');
     first.append(...toy.games.map(g=>option(g.entryId!)));first.value=toy.defaultEntry!;
     first.addEventListener('change',()=>{toy.defaultEntry=first.value;toy.defaultGame=nativeEntry(id,first.value)!.gameId;changed();});label.append(first);root.append(label);

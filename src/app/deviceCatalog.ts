@@ -52,6 +52,8 @@ export const DEVICE_DEFAULTS: Readonly<Record<ToyId, DeviceCatalogEntry>> = {
   brickgame: { brand: 'brickgame', readiness: 'playable', titleKey: 'toy.universal', aliases: ['Universal', 'Универсальный'] },
   e88: { brand: 'brickgame', readiness: 'reconstructing', title: 'E-88 · 8 in 1', aliases: ['E-88', 'E88', '8 in 1'] },
   'apollo-b0202': { brand: 'apollo', readiness: 'reconstructing', title: 'B0202 · 126 in 1', aliases: ['B0202', '126 in 1', 'Apollo B0202'] },
+  e23: { brand: 'brickgame', readiness: 'reconstructing', title: 'E-23 · 96 in 1', aliases: ['E-23', 'E23', '96 in 1'] },
+  'apollo-b0302': { brand: 'apollo', readiness: 'reconstructing', title: 'B0302 · 18 in 1', aliases: ['B0302', '18 in 1', 'Apollo B0302'] },
   // Корпус по фото владельца (docs/taksun.md); игры появятся позже.
   taksun: { brand: 'taksun', readiness: 'shell', title: 'TS-995 · 9999 in 1', aliases: ['TAKSUN TS-995', 'TS-995', 'TS995', '9999 in 1', 'Taksun'] },
 };

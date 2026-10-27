@@ -13,7 +13,7 @@
   <a href="https://brick-game.online/"><b>Открыть коллекцию →</b></a>
 </p>
 
-![Каталог игрушек](docs/screenshots/device-picker-desktop-open.png)
+![Универсальный Brick Game](docs/screenshots/brickgame-readme.png)
 
 ![TAKSUN TS-995 в коллекции](docs/screenshots/toys-taksun.png)
 

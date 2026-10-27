@@ -11,7 +11,6 @@ import { cellIndex, emptyField } from '../../grid';
 import { Repeater, msToTicks } from '../../timing';
 import {
   BRICK_COLS,
-  BRICK_ROWS,
   CELL_BLINK,
   CELL_ON,
   MAX_LEVEL,
@@ -22,7 +21,6 @@ import {
   type BrickInput,
 } from '../../types';
 import {
-  CAR_MAX_Y,
   CAR_MIN_Y,
   CAR_ROWS,
   CAR_Y,
@@ -57,6 +55,9 @@ const translate = (action: BrickAction, inverted: boolean): BrickAction => {
 };
 
 export abstract class RacingBase extends BrickBase {
+  protected get carRows(): readonly string[] { return CAR_ROWS; }
+  protected get opponentRows():readonly string[] { return this.carRows; }
+  protected get carY(): number { return CAR_Y; }
   protected readonly layout: RoadLayout;
   protected readonly road: Road;
   /** Индекс полосы машины игрока и её центр по x. */
@@ -73,7 +74,7 @@ export abstract class RacingBase extends BrickBase {
   protected constructor(options: BrickGameOptions, modeCount: number) {
     super(options, modeCount);
     this.layout = roadLayout(this.mode);
-    this.road = new Road(this.layout);
+    this.road = new Road(this.layout, this.fieldRows, this.carRows,this.opponentRows);
   }
 
   // ---------------------------------------------------------------- что дополняют игры
@@ -87,6 +88,12 @@ export abstract class RacingBase extends BrickBase {
   protected onTraffic(): void {
     // у обычных гонок своего нет
   }
+
+  /** Default donor scoring counts opponents that leave the road. */
+  protected scorePassed(passed:number):void { for(let i=0;i<passed;i++)this.addScore(1); }
+
+  /** Interval between border half-steps; device profiles may use their own timer. */
+  protected get roadStepTicks():number { return halfStepTicks(this.speed, this.level, this.layout.wide); }
 
   /** Каждый такт после шага дороги и до обработки кнопок. */
   protected tickWorld(): void {
@@ -137,7 +144,7 @@ export abstract class RacingBase extends BrickBase {
 
     // шаг дороги по таймеру: рамка каждый раз, машины через раз
     this.sinceStep++;
-    if (this.sinceStep >= halfStepTicks(this.speed, this.level, this.layout.wide)) {
+    if (this.sinceStep >= this.roadStepTicks) {
       this.sinceStep = 0;
       this.oddMove = !this.oddMove;
       this.advance(this.oddMove);
@@ -159,14 +166,14 @@ export abstract class RacingBase extends BrickBase {
   protected draw(): Uint8Array {
     const out = emptyField();
     const wide = this.layout.wide;
-    for (let y = 0; y < BRICK_ROWS; y++) {
+    for (let y = 0; y < this.fieldRows; y++) {
       if (!borderLit(y, this.road.borderPhase)) continue;
       this.plot(out, BRICK_COLS - 1, y, CELL_ON);
       if (!wide) this.plot(out, 0, y, CELL_ON);
     }
-    for (const opponent of this.road.opponents) this.plotCar(out, opponent.x, opponent.y, false);
+    for (const opponent of this.road.opponents) this.plotCar(out, opponent.x, opponent.y, false,this.opponentRows);
     for (const [x, y] of this.blinkCells()) this.plot(out, x, y, CELL_BLINK);
-    this.plotCar(out, this.carX, CAR_Y, this.armed);
+    this.plotCar(out, this.carX, this.carY, this.armed);
     return out;
   }
 
@@ -174,13 +181,13 @@ export abstract class RacingBase extends BrickBase {
 
   /** Поставить клетку по донорским координатам (x, y снизу вверх); в перевёрнутых вариантах «низ» дороги — верх экрана. */
   protected plot(out: Uint8Array, x: number, y: number, value: number): void {
-    if (x < 0 || x >= BRICK_COLS || y < 0 || y >= BRICK_ROWS) return;
+    if (x < 0 || x >= BRICK_COLS || y < 0 || y >= this.fieldRows) return;
     out[cellIndex(x, this.screenRow(y))] = value;
   }
 
   /** Строка экрана (0 — верх) для донорской координаты y. */
   protected screenRow(y: number): number {
-    return this.layout.inverted ? y : BRICK_ROWS - 1 - y;
+    return this.layout.inverted ? y : this.fieldRows - 1 - y;
   }
 
   /** Ускорение: лишний шаг дороги вне таймера (`moveOn(oddMove = !oddMove)` донора). */
@@ -193,6 +200,10 @@ export abstract class RacingBase extends BrickBase {
   protected override setScore(value: number): void {
     const before = this.score;
     super.setScore(value);
+    this.afterScoreChange(before);
+  }
+
+  protected afterScoreChange(before:number):void {
     if (Math.floor(this.score / LEVELUP_POINT) > Math.floor(before / LEVELUP_POINT)) {
       this.setSpeed(this.speed + 1);
       // скорость обернулась с 10 на 1 — уровень выше (после десятого — снова первый)
@@ -227,10 +238,10 @@ export abstract class RacingBase extends BrickBase {
   private advance(withTraffic: boolean): void {
     this.road.shiftBorder();
     if (!withTraffic) return;
-    const result = this.road.scroll(this.carX, CAR_Y);
-    for (let i = 0; i < result.passed; i++) this.addScore(1);
+    const result = this.road.scroll(this.carX, this.carY);
+    this.scorePassed(result.passed);
     if (result.crashed) {
-      this.crash(this.carX, CAR_Y + CAR_MAX_Y);
+      this.crash(this.carX, this.carY + CAR_MIN_Y + this.carRows.length - 1);
       return;
     }
     this.road.spawn(this.level, this.rng);
@@ -242,11 +253,11 @@ export abstract class RacingBase extends BrickBase {
     const lane = this.lane + delta;
     const x = this.layout.lanes[lane];
     if (x === undefined) return;
-    const accident = this.road.opponents.some((opponent) => carsOverlap(x, CAR_Y, opponent.x, opponent.y));
+    const accident = this.road.opponents.some((opponent) => carsOverlap(x, this.carY, opponent.x, opponent.y, this.carRows,this.opponentRows));
     this.lane = lane;
     this.carX = x;
     if (accident) {
-      this.crash(x, CAR_Y);
+      this.crash(x, this.carY);
       return;
     }
     this.emit({ type: 'move' });
@@ -274,12 +285,12 @@ export abstract class RacingBase extends BrickBase {
   }
 
   /** Рисует машину; у заряженной нос мигает. */
-  private plotCar(out: Uint8Array, cx: number, cy: number, armed: boolean): void {
-    CAR_ROWS.forEach((row, index) => {
+  private plotCar(out: Uint8Array, cx: number, cy: number, armed: boolean, rows:readonly string[]=this.carRows): void {
+    rows.forEach((row, index) => {
       const dy = CAR_MIN_Y + index;
       for (let col = 0; col < row.length; col++) {
         if (row[col] !== '#') continue;
-        const nose = armed && dy === CAR_MAX_Y;
+        const nose = armed && dy === CAR_MIN_Y + rows.length - 1;
         this.plot(out, cx + col - 1, cy + dy, nose ? CELL_BLINK : CELL_ON);
       }
     });

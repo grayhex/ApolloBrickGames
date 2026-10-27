@@ -149,25 +149,14 @@ export class TetrisScreen {
     this.blank = true;
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    // The cup outline and the separator are printed on the LCD glass, not addressable segments: they stay visible while the toy is off.
+    // The separator is printed on the LCD glass and remains visible when powered off.
     this.ctx.save();
     this.ctx.setTransform(this.scale, 0, 0, this.scale, this.offsetX, this.offsetY);
     this.ctx.globalAlpha = 1;
     this.ctx.fillStyle = this.options.ink;
     this.ctx.strokeStyle = this.options.ink;
-    if (this.options.panel === 'seabattle') this.ctx.fillRect(DIVIDER_X, 0, 1.4, SCREEN_HEIGHT);
-    else this.drawCup();
+    this.ctx.fillRect(DIVIDER_X, 0, 1.4, SCREEN_HEIGHT);
     this.ctx.restore();
-  }
-
-  /** Обводка стакана (поле 10 × 20): левая, верхняя и нижняя линии и разделитель справа; видна всегда, как напечатана на стекле. */
-  private drawCup(): void {
-    const ctx = this.ctx;
-    ctx.lineWidth = 1.4;
-    ctx.lineJoin = 'miter';
-    ctx.beginPath();
-    ctx.rect(0.7, 0.7, DIVIDER_X, SCREEN_HEIGHT - 1.4);
-    ctx.stroke();
   }
 
   /** Шутка со шлейфом: куски экрана гаснут (`level` 0…1); зерно меняется — куски мерцают. */
@@ -210,7 +199,6 @@ export class TetrisScreen {
     ctx.strokeStyle = this.options.ink;
     this.drawMatrix(scene);
     ctx.globalAlpha = 1;
-    ctx.fillRect(DIVIDER_X, 0, 1.4, SCREEN_HEIGHT);
     this.drawPanel(scene);
     ctx.globalAlpha = 1;
     this.blank = false;

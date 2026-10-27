@@ -84,6 +84,24 @@ test('E88 admin assigns eight independent entries and exports their order',async
   expect(exported.toys.e88.defaultEntry).toBe('e88.5');expect(exported.toys.e88.games[0]!.entryId).toBe('e88.5');expect(exported.toys.e88.games.map(g=>g.entryId)).toEqual(['e88.5','e88.1','e88.2','e88.3','e88.6','e88.7','e88.8']);
 });
 
+for (const [id, name, count, selected] of [
+  ['e23','Super Brick Game E‑23 · 96 in 1',99,'e23.99'],
+  ['apollo-b0302','Apollo B0302 · 18 in 1',18,'apollo-b0302.16'],
+] as const) test(`${id}: admin edits and exports its numbered menu`,async({page})=>{
+  await page.route('**/api/config',route=>route.fulfill({json:{config:validateConfig(defaults),revision:8}}));
+  await page.goto('./admin');
+  await page.getByRole('button',{name,exact:true}).click();
+  await expect(page.locator('.admin__games>li')).toHaveCount(count);
+  await page.getByLabel('Выбрана при включении').selectOption(selected);
+  const download=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Скачать JSON'}).click();
+  const stream=await (await download).createReadStream();
+  const chunks:Buffer[]=[]; for await(const chunk of stream!)chunks.push(Buffer.from(chunk));
+  const exported=validateConfig(JSON.parse(Buffer.concat(chunks).toString()));
+  expect(exported.toys[id].defaultEntry).toBe(selected);
+  expect(exported.toys[id].games).toHaveLength(count);
+});
+
 test('B0202 lists games once and hides unfinished modes; H02 stays on the physical menu',async({page})=>{
  await page.goto('./?toy=apollo-b0202&power=on');await expect(page.locator('#game-area')).toHaveAttribute('data-boot','off');
  await expect(page.locator('#guide-game option')).toHaveText(['A: Лягушка','B: α · Гонки','C: α · Стрельба','D: Жуки','E: β · Кости','F: α · Стрельба по массиву','G: α · Падающие фигуры','H: Тетрис','I: α · Пентомино']);

@@ -23,7 +23,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog'], default='all')
+    parser.add_argument('--speed', type=int, help='Limit the B0302 gravity probe to this number of RIGHT presses')
+    parser.add_argument('--slot', type=int, help='E-23 menu slot for the action probe (default: 6)')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-audio-start', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-shooting-life', 'b0302-pieces', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-arcade', 'e23-array-life', 'e23-actions', 'e23-gravity', 'e23-speeds'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -82,6 +84,375 @@ def main():
                         'romSha256': hashlib.sha256(Path(config['mask_options']['rom_path']).read_bytes()).hexdigest(),
                         'faceSha256': hashlib.sha256(Path(config['face_path']).read_bytes()).hexdigest()})
     result = {'reference': {'repository': 'https://github.com/azya52/BrickEmuPy', 'revision': REVISION, 'devices': devices}}
+
+    if args.section == 'b0302-variants':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['variants'] = []
+        for slot in range(1, 19):
+            probe = copy.deepcopy(base)
+            probe.key('Mute')
+            probe.key('StartP', .2, .3)
+            probe.run(4)
+            sample = {'slot':slot, 'cells':probe.cells(), 'ram':list(probe.cpu._RAM),
+                      'cycle':probe.cycles, 'inputs':probe.inputs, 'timeline':[]}
+            if slot >= 3:
+                for _ in range(40):
+                    probe.run(.1)
+                    sample['timeline'].append({'cycle':probe.cycles,'cells':probe.cells()})
+            result['variants'].append(sample)
+            base.key('Down')
+
+    if args.section == 'b0302-pieces':
+        base=Machine('Apollo18in1B0302')
+        base.run(8)
+        result['pieces']=[]
+        for slot in range(1,17):
+            if slot>=3:
+                samples=[]
+                for delay in (0,.15,.3,.45):
+                    probe=copy.deepcopy(base)
+                    probe.key('Mute')
+                    if delay:probe.run(delay)
+                    probe.key('StartP',.2,.3)
+                    if delay:
+                        probe.run(1)
+                        probe.key('StartP',.2,.3)
+                    probe.run(3)
+                    samples.append({'delay':delay,'cells':probe.cells(),'cycle':probe.cycles})
+                result['pieces'].append({'slot':slot,'samples':samples})
+            base.key('Down')
+
+    if args.section == 'b0302-racing':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['race'] = []
+        for slot in (1, 2):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP', .2, .3)
+            machine.run(4)
+            observations = [{'action': 'none', 'cells': machine.cells(), 'cycles': machine.cycles}]
+            for action in ('Left', 'Left', 'Right', 'Right', 'Rotate', 'Down'):
+                machine.key(action, .2, .3)
+                observations.append({'action': action, 'cells': machine.cells(), 'cycles': machine.cycles})
+            result['race'].append({'slot': slot, 'frames': observations, 'inputs': machine.inputs})
+            base.key('Down')
+
+    if args.section == 'b0302-race-timeline':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['races'] = []
+        for slot in (1, 2):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP', .2, .3)
+            frames = []
+            for _ in range(50):
+                machine.run(.5)
+                frames.append({'cycle':machine.cycles,'cells':machine.cells(),'vram':list(machine.cpu.get_VRAM())})
+            result['races'].append({'slot':slot,'frames':frames,'inputs':machine.inputs})
+            base.key('Down')
+
+    if args.section == 'b0302-race-score':
+        machine = Machine('Apollo18in1B0302')
+        machine.run(8)
+        machine.key('Mute')
+        machine.key('StartP', .2, .3)
+        frames, previous = [], None
+        for _ in range(1600):
+            machine.run(.005)
+            vram = list(machine.cpu.get_VRAM())
+            # Preserve raw display samples; decoding the score separately keeps
+            # transient multiplexed frames distinguishable from stable digits.
+            if vram != previous:
+                frames.append({'cycle':machine.cycles,'cells':machine.cells(),'vram':vram})
+            previous = vram
+        result['scoreFrames'] = frames
+
+    if args.section == 'b0302-shooting':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        for _ in range(16):
+            base.key('Down')
+        result['shooting'] = []
+        for slot in (17,18):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP', .2, .3)
+            machine.run(4)
+            trials=[]
+            for action in ('none','Rotate'):
+                probe=copy.deepcopy(machine)
+                if action=='Rotate':probe.set_key('Rotate',True)
+                frames=[]
+                for i in range(120):
+                    probe.run(.01)
+                    if i==9 and action=='Rotate':probe.set_key('Rotate',False)
+                    frames.append({'cycle':probe.cycles,'cells':probe.cells(),'vram':list(probe.cpu.get_VRAM())})
+                trials.append({'action':action,'frames':frames})
+            result['shooting'].append({'slot':slot,'trials':trials,'inputs':machine.inputs})
+            base.key('Down')
+
+    if args.section == 'b0302-shooting-life':
+        base=Machine('Apollo18in1B0302')
+        base.run(8)
+        for _ in range(16):base.key('Down')
+        result['shootingLife']=[]
+        for slot in (17,18):
+            machine=copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP',.2,.3)
+            frames=[]
+            for _ in range(120):
+                machine.run(.25)
+                frames.append({'cycle':machine.cycles,'cells':machine.cells(),'vram':list(machine.cpu.get_VRAM())})
+            result['shootingLife'].append({'slot':slot,'frames':frames})
+            base.key('Down')
+
+    if args.section == 'b0302-inputs':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['inputs'] = []
+        for slot in range(1, 5):
+            if slot in (3, 4):
+                machine = copy.deepcopy(base)
+                machine.key('Mute')
+                machine.key('StartP', .2, .3)
+                machine.run(3)
+                for key in ('none', 'Down', 'Rotate'):
+                    probe = copy.deepcopy(machine)
+                    before = probe.cells()
+                    if key == 'none':
+                        probe.run(.4)
+                    else:
+                        probe.key(key, .4, 0)
+                    result['inputs'].append({'slot': slot, 'key': key, 'before': before,
+                                             'after': probe.cells(), 'cycles': probe.cycles})
+            base.key('Down')
+
+    if args.section == 'b0302-audio':
+        machine = Machine('Apollo18in1B0302')
+        machine.run(8)
+        machine.key('Down')
+        machine.key('Down')
+        machine.key('StartP', .2, .3)
+        machine.run(8)
+        result['audio'] = []
+        for key in ('none', 'Left', 'Rotate', 'Down'):
+            probe = copy.deepcopy(machine)
+            probe.audio.clear()
+            start = probe.cycles
+            if key == 'none':
+                probe.run(.6)
+            else:
+                probe.key(key, .2, .4)
+            result['audio'].append({'key':key,'start':start,'before':machine.cells(),'after':probe.cells(),'events':probe.audio})
+
+    if args.section == 'b0302-audio-start':
+        machine=Machine('Apollo18in1B0302')
+        machine.run(8)
+        machine.key('Down')
+        machine.key('Down')
+        machine.audio.clear()
+        start=machine.cycles
+        machine.key('StartP',.2,.3)
+        machine.run(15)
+        result['audioStart']={'start':start,'end':machine.cycles,'events':machine.audio}
+
+    if args.section == 'e23-variants':
+        base = Machine('E23PlusMarkII96in1')
+        base.run(3)
+        base.key('Mute')
+        result['variants'] = []
+        for slot in range(1, 100):
+            probe = copy.deepcopy(base)
+            probe.key('Start', .08, .12)
+            probe.run(2)
+            result['variants'].append({'slot': slot, 'cells': probe.cells(),
+                                       'ram': list(probe.cpu._RAM), 'cycle': probe.cycles})
+            base.key('Down')
+
+    if args.section == 'e23-arcade':
+        result['arcade'] = []
+        for name in ('E23PlusMarkII96in1','E88_8in1'):
+            base=Machine(name)
+            base.run(3)
+            base.key('Mute')
+            for _ in range(5):base.key('Down')
+            for slot in (6,7,8):
+                machine=copy.deepcopy(base)
+                machine.key('Start',.08,.12)
+                frames=[]
+                for _ in range(16):
+                    machine.run(.5)
+                    frames.append({'cycle':machine.cycles,'cells':machine.cells()})
+                result['arcade'].append({'device':name,'slot':slot,'frames':frames,'inputs':machine.inputs})
+                base.key('Down')
+
+    if args.section == 'e23-actions':
+        machine=Machine('E23PlusMarkII96in1')
+        machine.run(3)
+        machine.key('Mute')
+        for _ in range((args.slot or 6)-1):machine.key('Down')
+        machine.key('Start',.08,.12)
+        machine.run(2.5)
+        result['actions']=[]
+        for action,duration in (('none',0),('Left',.1),('Rotate',.1),('Rotate',.2),('Rotate',.3),('Rotate',.4),('Rotate',.6),('Rotate',1),('Down',.1)):
+            probe=copy.deepcopy(machine)
+            if action!='none':probe.set_key(action,True)
+            frames=[]
+            for i in range(160):
+                probe.run(.01)
+                if action!='none' and i+1==round(duration*100):probe.set_key(action,False)
+                frames.append({'cycle':probe.cycles,'cells':probe.cells(),'vram':list(probe.cpu.get_VRAM())})
+            result['actions'].append({'action':action,'duration':duration,'frames':frames})
+
+    if args.section == 'e23-array-life':
+        machine=Machine('E23PlusMarkII96in1')
+        machine.run(3)
+        machine.key('Mute')
+        for _ in range(5):machine.key('Down')
+        machine.key('Start',.08,.12)
+        result['arrayLife']=[]
+        for _ in range(60):
+            machine.run(.5)
+            result['arrayLife'].append({'cycle':machine.cycles,'cells':machine.cells(),
+                                       'vram':list(machine.cpu.get_VRAM())})
+
+    if args.section == 'e23-gravity':
+        result['gravity'] = []
+        for name in ('E23PlusMarkII96in1', 'E88_8in1'):
+            machine = Machine(name)
+            machine.run(3)
+            machine.key('Mute')
+            machine.key('Start', .08, .12)
+            previous, full_cycle, deltas = None, None, []
+            for _ in range(1000):
+                machine.run(.005)
+                cells = machine.cells()
+                if len(cells) != 4 or cells == previous:
+                    continue
+                if previous is not None and cells == [[x, y+1] for x,y in previous]:
+                    deltas.append(machine.cycles-full_cycle)
+                previous, full_cycle = cells, machine.cycles
+            result['gravity'].append({'device':name, 'intervalCycles':deltas, 'inputs':machine.inputs})
+
+    if args.section == 'e23-speeds':
+        base = Machine('E23PlusMarkII96in1')
+        base.run(3)
+        base.key('Mute')
+        result['speeds'] = []
+        for speed in range(10):
+            machine = copy.deepcopy(base)
+            for _ in range(speed):
+                machine.key('Right')
+            machine.key('Start', .08, .12)
+            previous, full_cycle, deltas = None, None, []
+            for _ in range(1500):
+                machine.run(.002)
+                cells = machine.cells()
+                if len(cells) != 4 or cells == previous:
+                    continue
+                if previous is not None and cells == [[x, y+1] for x,y in previous]:
+                    deltas.append(machine.cycles-full_cycle)
+                previous, full_cycle = cells, machine.cycles
+            result['speeds'].append({'speed':speed, 'intervalCycles':deltas, 'inputs':machine.inputs})
+
+    if args.section == 'b0302-gravity':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        for _ in range(2):
+            base.key('Down')
+        observations = []
+        for speed in ([args.speed] if args.speed is not None else range(11)):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            for _ in range(speed):
+                machine.key('Right')
+            # Allow the firmware's key feedback to finish before START; an
+            # immediate press can be consumed while the menu is still busy.
+            if speed:
+                machine.run(1)
+            menu_cells = machine.cells()
+            menu_vram = list(machine.cpu.get_VRAM())
+            machine.key('StartP', .2, .3)
+            # After changing speed the first START leaves the settings screen;
+            # the next starts the game (observed with b0302-debug).
+            if speed:
+                machine.run(1)
+                machine.key('StartP', .2, .3)
+            after_start = machine.cells()
+            previous, full_previous, full_cycle, deltas, changes = None, None, None, [], []
+            for _ in range(800):
+                machine.run(.005)
+                cells = machine.cells()
+                if cells == previous:
+                    continue
+                if len(changes) < 24:
+                    changes.append({'cycle': machine.cycles, 'cells': cells})
+                if len(cells) == 4 and cells != full_previous:
+                    if full_previous is not None and cells == [[x, y + 1] for x, y in full_previous]:
+                        deltas.append(machine.cycles - full_cycle)
+                    full_previous, full_cycle = cells, machine.cycles
+                previous = cells
+            observations.append({'speed': speed, 'intervalCycles': deltas, 'menu': menu_cells, 'menuVram':menu_vram,
+                                 'afterStart': after_start, 'changes': changes, 'inputs': machine.inputs})
+        result['gravity'] = observations
+
+    if args.section == 'b0302-debug':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        base.key('Down')
+        base.key('Down')
+        result['debug'] = []
+        for trial in (0,1,2):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            if trial:
+                machine.key('Right')
+                machine.run(1)
+            machine.key('StartP', .2, .3)
+            if trial == 2:
+                machine.run(1)
+                machine.key('StartP', .2, .3)
+            frames = []
+            for _ in range(12):
+                machine.run(.5)
+                cpu = machine.cpu.examine()
+                frames.append({'cycle':machine.cycles,'pc':cpu['PC'], 'cells':machine.cells(),
+                               'lcd':list(cpu['LCDRAM']), 'io':list(cpu['IORAM'])})
+            result['debug'].append({'trial':trial,'inputs':machine.inputs,'frames':frames})
+
+    if args.section == 'native-menus':
+        result['menus'] = {}
+        for name, count in [('E23PlusMarkII96in1', 96), ('Apollo18in1B0302', 18)]:
+            machine = Machine(name)
+            machine.run(8)
+            machine.key('Mute')
+            # On B0302 the first DOWN dismisses the startup screen instead of
+            # advancing the selected game. Begin observation in the menu.
+            if name == 'Apollo18in1B0302':
+                machine.key('Down')
+            frames = []
+            for slot in range(1, count + 1):
+                frames.append({'slot': slot, 'cells': machine.cells(), 'cycles': machine.cycles})
+                machine.key('Down')
+            following = []
+            extra_games = []
+            for _ in range(4):
+                following.append(machine.cells())
+                if name == 'E23PlusMarkII96in1' and len(following) <= 3:
+                    probe = copy.deepcopy(machine)
+                    probe.key('Start', .2, .3)
+                    probe.run(4)
+                    before = probe.cells()
+                    probe.key('Rotate', .2, .3)
+                    extra_games.append({'slot': 96 + len(following), 'beforeRotate': before,
+                                        'afterRotate': probe.cells(), 'inputs': probe.inputs})
+                machine.key('Down')
+            result['menus'][name] = {'frames': frames, 'following': following,
+                                      'extraGames': extra_games, 'inputs': machine.inputs}
 
     if args.section == 'inventory':
         starts = dict(zip(NAMES, ['StartP', 'StartP', 'Start', 'Start', 'Start', 'Rotate', 'StartRotate', 'OnPause', 'StartPause', 'OnOff']))

@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { BrickAudio, brickSound, seekTones } from '../../src/audio/brick';
 import { BRICK_PHRASES } from '../../src/audio/brickPhrases';
 import rom from '../fixtures/brickemu/b0202.json';
+import b0302Tune from '../fixtures/brickemu/b0302-tetris-tune.json';
 import { MASTER_GAIN } from '../../src/audio/beeper';
 afterEach(() => vi.unstubAllGlobals());
 function harness() {
@@ -49,6 +50,18 @@ it('maps effects without duplicate death cues', () => {
   expect(brickSound({ type: 'started' }, 'tank', false)).toBe('start');
   expect(brickSound({ type: 'started' }, 'tetris', false)).toBe('select');
   expect(brickSound({ type: 'lines', count: 4 }, 'tetris', false)).toBe('tetris');
+});
+it('B0302 Tetris plays the measured tone-channel melody without cutting it on movement',()=>{
+  expect(BRICK_PHRASES.b0302_tetris_music).toEqual(b0302Tune.notes);
+  expect(brickSound({type:'started'},'tetris',false,'apollo-b0302')).toBe('b0302_tetris_music');
+  expect(brickSound({type:'started'},'racing',false,'apollo-b0302')).toBe('start');
+  const {port,voices}=harness();port.unlock();
+  port.play({type:'started'},'tetris',false,'apollo-b0302');
+  expect(voices).toHaveLength(1);
+  expect(voices[0]!.frequency.setValueAtTime.mock.calls[0]![0]).toBe(b0302Tune.notes[0]!.hz);
+  port.play({type:'move'},'tetris',false,'apollo-b0302');
+  expect(voices).toHaveLength(2);
+  expect(voices[0]!.stop).toHaveBeenCalledTimes(1);
 });
 it('Sea Battle: intro, its flashes, Romeo music and the falling-figure tick are only mapped for the sea profile', () => {
   expect(brickSound({ type: 'intro' }, 'sea-battle', true, 'sea')).toBe('sea_intro');
@@ -283,6 +296,8 @@ it('a terminal game cue can interrupt a pad tone instead of being lost', () => {
 it('selects E88-native menu/start cues without borrowing B0202 Tetris effects',()=>{
   expect(brickSound({type:'move'},'tetris',true,'e88')).toBe('e88_menu');
   expect(brickSound({type:'started'},'tetris',false,'e88')).toBe('e88_tetris_music');
+  expect(brickSound({type:'started'},'tetris',false,'e23')).toBe('e88_tetris_music');
+  expect(brickSound({type:'move'},'tetris',true,'e23')).toBe('e88_menu');
   expect(brickSound({type:'rotate'},'tetris',false,'e88')).toBe('e88_turn');
   expect(brickSound({type:'rotate'},'tetris',false,'apollo-b0202')).toBe('b0202_turn');
   const {port,voices}=harness();port.unlock();port.play({type:'move'},'tetris',true,'e88');

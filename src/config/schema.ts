@@ -25,7 +25,7 @@ export interface ConfigToy {
   thumbShell: Shell;
 }
 /** Цвета миниатюры: у приставок Apollo — их палитра, у универсальной — все её корпуса и белый (прежний вид переключателя). */
-export const thumbPalette = (id: ConfigToyId): readonly Shell[] => (isNativeDevice(id) ? [id === 'e88' ? 'gray' : 'black'] : id === 'brickgame' ? ['white', ...MONOBLOCK_SHELLS] : APOLLO_SHELLS);
+export const thumbPalette = (id: ConfigToyId): readonly Shell[] => (isNativeDevice(id) ? [id === 'e88' || id === 'e23' ? 'gray' : 'black'] : id === 'brickgame' ? ['white', ...MONOBLOCK_SHELLS] : APOLLO_SHELLS);
 export const DEFAULT_THUMB_SHELL: Shell = 'white';
 export const CONFIG_TOY_IDS = [...APOLLO_IDS, 'brickgame', ...NATIVE_DEVICE_IDS] as const;
 export type ConfigToyId = ApolloId | 'brickgame' | NativeDeviceId;
@@ -156,7 +156,7 @@ export function validateConfig(value: unknown): SiteConfig {
 /** Additive v1 migration: only missing device documents are populated; existing values are validated intact. */
 export function nativeDefault(id: NativeDeviceId): ConfigToy {
   const games = nativeFamilies(id).map(({base,variants})=>({id:base.gameId,entryId:base.entryId,variants:variants.map(e=>e.entryId)}));
-  const shell: Shell = id === 'e88' ? 'gray' : 'black';
+  const shell: Shell = id === 'e88' || id === 'e23' ? 'gray' : 'black';
   return { games, defaultEntry:games[0]!.entryId,defaultGame:games[0]!.id,shells:[shell],defaultShell:shell,thumbShell:shell };
 }
 function validateNativeToy(id: NativeDeviceId, source: unknown): ConfigToy {
@@ -164,20 +164,21 @@ function validateNativeToy(id: NativeDeviceId, source: unknown): ConfigToy {
     throw new Error(`${id}: недопустимый набор игр.`);
   // E88 exposes eight top-level games, including four distinct Tetris entries.
   // Expand the previous five-family document without changing the selected entry.
-  if(id==='e88'){
+  if(id!=='apollo-b0202'){
     const games:ConfigGame[]=[],seen=new Set<string>();
     for(const g of source['games']){
       if(!record(g)||typeof g['entryId']!=='string'||g['modes']!==undefined||g['variants']!==undefined&&!Array.isArray(g['variants']))throw new Error('e88: недопустимый пункт меню.');
       for(const entryId of [g['entryId'],...(g['variants'] as unknown[]??[])]){
         const entry=typeof entryId==='string'?nativeEntry(id,entryId):undefined;
-        if(!entry?.available||entry.gameId!==g['id']||seen.has(entry.entryId))throw new Error('e88: неизвестный или повторный пункт.');
+        if(!entry?.available||entry.gameId!==g['id']||seen.has(entry.entryId))throw new Error(`${id}: неизвестный или повторный пункт.`);
         seen.add(entry.entryId);games.push({id:entry.gameId,entryId:entry.entryId,variants:[]});
       }
     }
     const first=games.find(g=>g.entryId===source['defaultEntry']);
     if(!first||first.id!==source['defaultGame'])throw new Error('e88: стартовая игра должна входить в меню.');
-    if(JSON.stringify(source['shells'])!==JSON.stringify(['gray'])||source['defaultShell']!=='gray'||(source['thumbShell']??'gray')!=='gray')throw new Error('e88: разрешён только подтверждённый серый цвет.');
-    return {games,defaultEntry:first.entryId,defaultGame:first.id,shells:['gray'],defaultShell:'gray',thumbShell:'gray'};
+    const shell = id === 'apollo-b0302' ? 'black' : 'gray';
+    if(JSON.stringify(source['shells'])!==JSON.stringify([shell])||source['defaultShell']!==shell||(source['thumbShell']??shell)!==shell)throw new Error(`${id}: разрешён только подтверждённый цвет ${shell}.`);
+    return {games,defaultEntry:first.entryId,defaultGame:first.id,shells:[shell],defaultShell:shell,thumbShell:shell};
   }
   const seen = new Set<string>(), groups = new Map<GameId,ConfigGame>();
   const grouped = source['games'].some(g=>record(g)&&g['variants']!==undefined);

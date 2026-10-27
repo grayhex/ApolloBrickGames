@@ -4652,13 +4652,13 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 
 
 .about__model { margin:8px 0 0; font-size:13px; font-weight:650; letter-spacing:.04em; white-space:nowrap; text-align:center; color:var(--muted); }
-.about__logo--e88,.about__logo--apollo-b0202 { width:100%; height:110px; object-fit:contain; }
-:root:not([data-theme='light']) .about__logo--e88 { filter:brightness(0) invert(1); }
+.about__logo--e88,.about__logo--apollo-b0202,.about__logo--e23,.about__logo--apollo-b0302 { width:100%; height:110px; object-fit:contain; }
+:root:not([data-theme='light']) .about__logo--e88,:root:not([data-theme='light']) .about__logo--e23 { filter:brightness(0) invert(1); }
 .gpanel__approx { font-size:11px; line-height:1.5; color:var(--muted); padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
 
 
 
-:root:not([data-theme="light"]) .about__logo--apollo-b0202 { filter:brightness(1.55); }
+:root:not([data-theme="light"]) .about__logo--apollo-b0202,:root:not([data-theme="light"]) .about__logo--apollo-b0302 { filter:brightness(1.55); }
 
 /* Keep the encyclopedia label on one line; compact screens retain the book icon. */
 .corner__btn--book>span { max-width:none; white-space:nowrap; font-size:9px; }
