@@ -4,7 +4,8 @@ import { adminLeaderboards } from './leaderboards';
 import { adminEncyclopedia } from './encyclopedia';
 import './admin.css';
 import { TOYS, TOY_IDS, type ToyId } from '../app/toys';
-import { BRAND_LABEL, DEVICE_BRANDS, DEVICE_DEFAULTS, READINESS_ORDER, type DeviceBrand, type DeviceReadiness } from '../app/deviceCatalog';
+import { BRAND_LABEL, DEVICE_BRANDS, DEVICE_DEFAULTS, READINESS_ORDER, type DeviceBrand, type DeviceOverride, type DeviceReadiness } from '../app/deviceCatalog';
+import { DEVICE_FACTS, isPower, isYear, POWER_MAX } from '../app/deviceFacts';
 import { GAMES, type GameId } from '../games/catalog';
 import { BRICK_GAMES } from '../brick/games';
 import { canAssign } from '../app/bodyButtons';
@@ -46,13 +47,19 @@ export async function startAdmin(): Promise<void> {
   function setBusy(value: boolean): void { busy = value; content.inert = value; tabs.inert = value; footer.inert = value; const illustrations = root.querySelector<HTMLElement>('#admin-encyclopedia'); if (illustrations) illustrations.inert = value; save.disabled = value || !connected; }
   function message(text: string, error = false): void { status.textContent = text; status.dataset['error'] = String(error); }
   function changed(): void { dirty = true; message('Есть неопубликованные изменения.'); }
-  /** Бренд и готовность модели в каталоге устройств: в конфигурации хранятся только отличия от значений по умолчанию (`deviceCatalog.ts`). */
-  function setCatalog(id: ToyId, patch: { brand?: DeviceBrand; readiness?: DeviceReadiness }): void {
-    const next = { ...(config.catalog?.[id] ?? {}), ...patch };
+  /** Бренд, готовность, год выпуска и питание модели в каталоге устройств: в конфигурации хранятся только отличия от значений по умолчанию (`deviceCatalog.ts`, `deviceFacts.ts`); пустое поле возвращает значение по умолчанию. */
+  function setCatalog(id: ToyId, patch: { brand?: DeviceBrand; readiness?: DeviceReadiness; year?: string; power?: string }): void {
+    const next: DeviceOverride = { ...(config.catalog?.[id] ?? {}) };
+    if (patch.brand !== undefined) next.brand = patch.brand;
+    if (patch.readiness !== undefined) next.readiness = patch.readiness;
+    if (patch.year !== undefined) { if (patch.year === '') delete next.year; else next.year = patch.year; }
+    if (patch.power !== undefined) { if (patch.power === '') delete next.power; else next.power = patch.power; }
     if (next.brand === DEVICE_DEFAULTS[id].brand) delete next.brand;
     if (next.readiness === DEVICE_DEFAULTS[id].readiness) delete next.readiness;
+    if (next.year === DEVICE_FACTS[id].year) delete next.year;
+    if (next.power === DEVICE_FACTS[id].power) delete next.power;
     const all = { ...(config.catalog ?? {}) };
-    if (next.brand !== undefined || next.readiness !== undefined) all[id] = next; else delete all[id];
+    if (Object.keys(next).length) all[id] = next; else delete all[id];
     if (Object.keys(all).length) config.catalog = all; else delete config.catalog;
     changed();
   }
@@ -68,9 +75,13 @@ export async function startAdmin(): Promise<void> {
       brand.addEventListener('change',() => setCatalog(id,{ brand:brand.value as DeviceBrand })); brandLabel.append(brand);
       const readyLabel = el('label','Готовность'); const ready = el('select'); ready.setAttribute('aria-label',`${TOYS[id].name}: готовность`); ready.append(...READINESS_ORDER.map((r) => option(r,readinessNames[r]))); ready.value = own?.readiness ?? base.readiness;
       ready.addEventListener('change',() => setCatalog(id,{ readiness:ready.value as DeviceReadiness })); readyLabel.append(ready);
-      row.append(el('strong',TOYS[id].name),brandLabel,readyLabel); return row;
+      const yearLabel = el('label','Год выпуска'); const year = el('input'); year.type = 'text'; year.inputMode = 'numeric'; year.maxLength = 4; year.placeholder = 'не указан'; year.setAttribute('aria-label',`${TOYS[id].name}: год выпуска`); year.value = own?.year ?? DEVICE_FACTS[id].year ?? '';
+      year.addEventListener('change',() => { const value = year.value.trim(); if (value !== '' && !isYear(value)) { message('Год выпуска — четыре цифры, например 2008.',true); year.value = config.catalog?.[id]?.year ?? DEVICE_FACTS[id].year ?? ''; return; } year.value = value; setCatalog(id,{ year:value }); }); yearLabel.append(year);
+      const powerLabel = el('label','Питание'); const power = el('input'); power.type = 'text'; power.maxLength = POWER_MAX; power.placeholder = 'например, 2×AA'; power.setAttribute('aria-label',`${TOYS[id].name}: питание`); power.value = own?.power ?? DEVICE_FACTS[id].power ?? '';
+      power.addEventListener('change',() => { const value = power.value.trim(); if (value !== '' && !isPower(value)) { message(`Питание — короткая строка до ${POWER_MAX} знаков без < и >, например 2×AA.`,true); power.value = config.catalog?.[id]?.power ?? DEVICE_FACTS[id].power ?? ''; return; } power.value = value; setCatalog(id,{ power:value }); }); powerLabel.append(power);
+      row.append(el('strong',TOYS[id].name),brandLabel,readyLabel,yearLabel,powerLabel); return row;
     });
-    catalog.replaceChildren(el('h2','Каталог устройств'),el('p','Бренд задаёт категорию и подпись производителя в каталоге («Apollo», «TAKSUN», «Brick Game»); если другой бренд не указан, модель считается Brick Game. Готовность — значок ✓ / ◐ / ○ на карточке: выбирается вручную, по числу готовых игр не вычисляется.','admin__eyebrow'),...rows);
+    catalog.replaceChildren(el('h2','Каталог устройств'),el('p','Бренд задаёт категорию и подпись производителя в каталоге («Apollo», «TAKSUN», «Brick Game»); если другой бренд не указан, модель считается Brick Game. Готовность — значок ✓ / ◐ / ○ на карточке: выбирается вручную, по числу готовых игр не вычисляется. Год выпуска и питание показываются в карточке устройства слева от игры; пустое поле — прочерк.','admin__eyebrow'),...rows);
     tabs.replaceChildren(...CONFIG_TOY_IDS.map((id) => { const b = button(TOYS[id].name,() => { active = id; render(); }); b.setAttribute('aria-pressed',String(active === id)); return b; }));
     content.replaceChildren(); const toy = config.toys[active];
     const appearance = el('section','','admin__card'); appearance.append(el('h2',TOYS[active].name),el('p','Цвета корпуса','admin__eyebrow'));

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { deviceEntry, setDeviceOverrides } from '../../src/app/deviceCatalog';
+import { deviceFacts } from '../../src/app/deviceFacts';
 import { applyConfig, defaultConfig } from '../../src/config/runtime';
 import { validateConfig } from '../../src/config/schema';
 
@@ -33,5 +34,27 @@ describe('настройки каталога устройств в конфиг
     expect(deviceEntry('alibaba')).toMatchObject({ brand: 'apollo', readiness: 'reconstructing' });
     applyConfig(defaultConfig());
     expect(deviceEntry('alibaba')).toMatchObject({ brand: 'brickgame', readiness: 'shell' });
+  });
+
+  it('год выпуска и питание: четыре цифры и короткая строка; пустой записи нет, неверные значения отвергаются', () => {
+    const config = defaultConfig();
+    config.catalog = { e88: { year: '2009', power: '2×AA' }, taksun: { power: '3×AAA (4,5 В)' } };
+    expect(validateConfig(config).catalog).toEqual({ e88: { year: '2009', power: '2×AA' }, taksun: { power: '3×AAA (4,5 В)' } });
+    for (const bad of [{ year: '09' }, { year: '20099' }, { year: 'abcd' }, { year: 2009 }, { year: '1859' }, { power: '' }, { power: ' 2×AA ' }, { power: '<b>2×AA</b>' }, { power: 'A'.repeat(33) }, { power: 5 }]) {
+      const broken = defaultConfig();
+      (broken as { catalog?: unknown }).catalog = { mario: bad };
+      expect(() => validateConfig(broken), JSON.stringify(bad)).toThrow();
+    }
+  });
+
+  it('год и питание из конфигурации попадают в сведения карточки, снятие записей возвращает прочерки (значения по умолчанию)', () => {
+    expect(deviceFacts('e88')).toMatchObject({ year: null, power: null });
+    const config = defaultConfig();
+    config.catalog = { e88: { year: '2009', power: '2×AA' } };
+    applyConfig(validateConfig(config));
+    expect(deviceFacts('e88')).toMatchObject({ year: '2009', power: '2×AA' });
+    expect(deviceFacts('e23')).toMatchObject({ year: null, power: null });
+    applyConfig(defaultConfig());
+    expect(deviceFacts('e88')).toMatchObject({ year: null, power: null });
   });
 });

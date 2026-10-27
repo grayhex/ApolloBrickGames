@@ -1,6 +1,6 @@
 import { h, svg } from './dom';
 import { deviceEntry, deviceLabel } from './deviceCatalog';
-import { DEVICE_FACTS, SOURCE_ORDER, type SourceKind } from './deviceFacts';
+import { deviceFacts, SOURCE_ORDER, type SourceKind } from './deviceFacts';
 import { getLang, t } from './i18n';
 import type { MsgKey } from './messages';
 import type { ToyId } from './toys';
@@ -63,7 +63,7 @@ const fact = (name: IconName, label: string, full: string, value: string, unknow
 export function deviceCard(options: DeviceCardOptions): HTMLElement {
   const { toy, logo, box, liveGames } = options;
   const lang = getLang();
-  const facts = DEVICE_FACTS[toy];
+  const facts = deviceFacts(toy);
   const label = deviceLabel(toy, t);
   const names = liveGames ?? facts.games.map((game) => game[lang]);
   const shown = names.slice(0, LIST_LIMIT).join(' · ');

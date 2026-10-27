@@ -1,4 +1,5 @@
 import { gt, type GuideText } from '../brick/guide';
+import { deviceOverride } from './deviceCatalog';
 import type { ToyId } from './toys';
 
 /**
@@ -79,3 +80,18 @@ export const DEVICE_FACTS: Readonly<Record<ToyId, DeviceFacts>> = {
 };
 
 export const SOURCE_ORDER: readonly SourceKind[] = ['rom', 'photo', 'video', 'wiki', 'owner', 'donor'];
+
+/** Пределы значений, которые вносятся в админке: год — четыре цифры, питание — короткая строка без разметки и управляющих символов. */
+export const YEAR_PATTERN = /^(19[6-9]\d|20\d{2})$/;
+export const POWER_MAX = 32;
+export const isYear = (value: unknown): value is string => typeof value === 'string' && YEAR_PATTERN.test(value);
+const hasControl = (value: string): boolean => [...value].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127);
+export const isPower = (value: unknown): value is string =>
+  typeof value === 'string' && value === value.trim() && value.length > 0 && value.length <= POWER_MAX && !hasControl(value) && !/[<>]/.test(value);
+
+/** Сведения об устройстве с учётом настроек админки: год и питание из конфигурации важнее записанных в репозитории. */
+export function deviceFacts(id: ToyId): DeviceFacts {
+  const base = DEVICE_FACTS[id];
+  const own = deviceOverride(id);
+  return { ...base, year: own?.year ?? base.year, power: own?.power ?? base.power };
+}

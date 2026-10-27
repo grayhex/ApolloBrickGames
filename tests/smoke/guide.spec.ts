@@ -178,15 +178,17 @@ test.describe('логотип Mario в левой панели', () => {
     [1366, 1000],
     [1440, 900],
   ] as const) {
-    test(`по центру панели при окне ${width} × ${height}`, async ({ page }) => {
+    test(`логотип в карточке устройства внутри панели при окне ${width} × ${height}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(marioUrl('?view=full'));
-      await expect(page.locator('#side-info .about__logo')).toBeVisible();
+      await expect(page.locator('#side-info .dcard .about__logo')).toBeVisible();
       const panel = (await page.locator('#side-info').boundingBox())!;
-      const logo = (await page.locator('#side-info .about__logo').boundingBox())!;
-      const logoCenter = logo.x + logo.width / 2;
-      const panelCenter = panel.x + panel.width / 2;
-      expect(Math.abs(logoCenter - panelCenter), `логотип ${logoCenter}, панель ${panelCenter}`).toBeLessThanOrEqual(2);
+      const card = (await page.locator('#side-info .dcard').boundingBox())!;
+      const logo = (await page.locator('#side-info .dcard .about__logo').boundingBox())!;
+      expect(logo.x, 'логотип внутри карточки').toBeGreaterThanOrEqual(card.x);
+      expect(logo.x + logo.width, 'логотип внутри карточки').toBeLessThanOrEqual(card.x + card.width + 1);
+      expect(card.x, 'карточка внутри панели').toBeGreaterThanOrEqual(panel.x);
+      expect(card.x + card.width, 'карточка внутри панели').toBeLessThanOrEqual(panel.x + panel.width + 1);
       await expect(page.locator('#side-info .gtab')).toHaveCount(0); // у Mario панель по упаковке, без вкладок
     });
   }

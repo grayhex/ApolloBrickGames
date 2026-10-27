@@ -63,12 +63,21 @@ export const DEVICE_DEFAULTS: Readonly<Record<ToyId, DeviceCatalogEntry>> = {
 export interface DeviceOverride {
   brand?: DeviceBrand;
   readiness?: DeviceReadiness;
+  /** Год выпуска для карточки устройства (четыре цифры); в репозитории он нигде не записан, задаётся в админке. */
+  year?: string;
+  /** Питание для карточки устройства (например, `2×AA`); задаётся в админке. */
+  power?: string;
 }
 let overrides: Partial<Record<ToyId, DeviceOverride>> = {};
 
 /** Принять настройки из конфигурации (вызывает `applyConfig`); пустой объект возвращает значения по умолчанию. */
 export function setDeviceOverrides(next: Partial<Record<ToyId, DeviceOverride>> = {}): void {
   overrides = next;
+}
+
+/** Отличия модели от значений по умолчанию, заданные в админке (для карточки устройства: год и питание). */
+export function deviceOverride(id: ToyId): DeviceOverride | undefined {
+  return overrides[id];
 }
 
 /** Бренд и готовность модели с учётом настроек админки. */
