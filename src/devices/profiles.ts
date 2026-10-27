@@ -7,6 +7,9 @@ import { B0302Racing } from './b0302-racing';
 import type { BrickGameDef, BrickGameOptions } from '../brick/types';
 import type { NativeEntry } from './catalog';
 
+/** B0302 mode 03: observed at 690 kHz with 5 ms LCD sampling, speeds 0–9. */
+export const B0302_BLOCK_FALL_MS = [445.18,355.15,340.15,295.13,265.12,235.1,220.11,192.59,165.05,135.04] as const;
+
 /** Native profiles use the common collision/line engine; they never change old toy factories. */
 class NativeBlocks extends TetrisCore {
   readonly id = 'tetris';
@@ -25,9 +28,17 @@ class B0302Blocks extends TetrisCore {
   private readonly slot:number;
   private readonly direction:1|-1;
   protected override get fieldRows(): number { return 17; }
+  protected override fallTicks():number { return B0302_BLOCK_FALL_MS[this.speed-1]!*60/1000; }
   constructor(options:BrickGameOptions,slot:number) {
     super(options,[variantOf('I',1)]);
     this.slot=slot;this.direction=options.rotationDirection??1;this.init();
+  }
+  // In the observed ROM, even block slots 04–16 rise from the bottom.
+  // DOWN still accelerates the piece on the physical device.
+  protected override rowOf(y:number):number { return this.slot % 2 === 0 ? y : super.rowOf(y); }
+  protected override drawPreview():Uint8Array {
+    const preview=super.drawPreview();
+    return this.slot % 2 === 0 ? Uint8Array.from(Array.from({length:16},(_,i)=>preview[(3-Math.floor(i/4))*4+i%4]!)) : preview;
   }
   private fiveCellPiece():Piece {return makePiece(FIRST_PENTOMINO+this.rng.int(FIRST_SUPER-FIRST_PENTOMINO),this.rng.int(4));}
   protected override firstPiece():Piece {

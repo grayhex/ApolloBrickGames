@@ -283,6 +283,8 @@ it('a terminal game cue can interrupt a pad tone instead of being lost', () => {
 it('selects E88-native menu/start cues without borrowing B0202 Tetris effects',()=>{
   expect(brickSound({type:'move'},'tetris',true,'e88')).toBe('e88_menu');
   expect(brickSound({type:'started'},'tetris',false,'e88')).toBe('e88_tetris_music');
+  expect(brickSound({type:'started'},'tetris',false,'e23')).toBe('e88_tetris_music');
+  expect(brickSound({type:'move'},'tetris',true,'e23')).toBe('e88_menu');
   expect(brickSound({type:'rotate'},'tetris',false,'e88')).toBe('e88_turn');
   expect(brickSound({type:'rotate'},'tetris',false,'apollo-b0202')).toBe('b0202_turn');
   const {port,voices}=harness();port.unlock();port.play({type:'move'},'tetris',true,'e88');

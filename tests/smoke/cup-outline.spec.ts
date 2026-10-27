@@ -51,7 +51,7 @@ test('Морской бой: на выключенном экране по-пр�
   expect(ink.total).toBeGreaterThan(100);
 });
 
-for (const toy of ['e88', 'apollo-b0202']) {
+for (const toy of ['e88', 'apollo-b0202', 'e23', 'apollo-b0302']) {
   test(`${toy}: рамка стакана (#frame) видна на выключенной игрушке, сегменты скрыты`, async ({ page }) => {
     await page.goto(`./?toy=${toy}&view=full`);
     await expect(page.locator('body')).not.toHaveAttribute('data-booting', /.*/);

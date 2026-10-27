@@ -316,11 +316,13 @@ test.describe('переключение игрушек на месте', () => {
       '?toy=seabattle',
       '?toy=tank168',
       '?toy=apollo-b0202',
+      '?toy=apollo-b0302',
       '?toy=taksun',
       '?toy=alibaba',
       '?toy=minibrick',
       '', // универсальный Brick Game — страница без параметра
       '?toy=e88',
+      '?toy=e23',
     ]);
     // Щелчок посылается событием: после обработчика переключателя фиксируем, отменено ли действие по умолчанию (и отменяем сами, чтобы страница не ушла).
     const prevented = await page.evaluate(() => {

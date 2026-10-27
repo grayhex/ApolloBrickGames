@@ -14,12 +14,14 @@ test('admin: бренд и готовность каждой модели нас
   });
   await page.goto('./admin');
   const section = page.locator('.admin__catalog');
-  await expect(section.locator('.admin__catalog-row')).toHaveCount(10);
+  await expect(section.locator('.admin__catalog-row')).toHaveCount(12);
   const brand = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: бренд$/);
   const ready = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: готовность$/);
   // Значения по умолчанию.
   await expect(brand('taksun')).toHaveValue('taksun');
   await expect(brand('alibaba')).toHaveValue('brickgame');
+  await expect(brand('e23')).toHaveValue('brickgame');
+  await expect(brand('apollo-b0302')).toHaveValue('apollo');
   await expect(ready('minibrick')).toHaveValue('reconstructing');
   await expect(ready('mario')).toHaveValue('playable');
   expect(await brand('mario').locator('option').evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).textContent))).toEqual(['Apollo', 'TAKSUN', 'Brick Game']);

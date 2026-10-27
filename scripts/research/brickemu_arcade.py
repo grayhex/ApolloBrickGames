@@ -23,7 +23,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-racing', 'b0302-variants', 'e23-variants'], default='all')
+    parser.add_argument('--speed', type=int, help='Limit the B0302 gravity probe to this number of RIGHT presses')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-gravity', 'e23-speeds'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -94,8 +95,8 @@ def main():
             probe.run(4)
             sample = {'slot':slot, 'cells':probe.cells(), 'ram':list(probe.cpu._RAM),
                       'cycle':probe.cycles, 'inputs':probe.inputs, 'timeline':[]}
-            if slot in (3,9,10,13,14,15,16,17,18):
-                for _ in range(80):
+            if slot >= 3:
+                for _ in range(40):
                     probe.run(.1)
                     sample['timeline'].append({'cycle':probe.cycles,'cells':probe.cells()})
             result['variants'].append(sample)
@@ -117,6 +118,45 @@ def main():
             result['race'].append({'slot': slot, 'frames': observations, 'inputs': machine.inputs})
             base.key('Down')
 
+    if args.section == 'b0302-inputs':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        result['inputs'] = []
+        for slot in range(1, 5):
+            if slot in (3, 4):
+                machine = copy.deepcopy(base)
+                machine.key('Mute')
+                machine.key('StartP', .2, .3)
+                machine.run(3)
+                for key in ('none', 'Down', 'Rotate'):
+                    probe = copy.deepcopy(machine)
+                    before = probe.cells()
+                    if key == 'none':
+                        probe.run(.4)
+                    else:
+                        probe.key(key, .4, 0)
+                    result['inputs'].append({'slot': slot, 'key': key, 'before': before,
+                                             'after': probe.cells(), 'cycles': probe.cycles})
+            base.key('Down')
+
+    if args.section == 'b0302-audio':
+        machine = Machine('Apollo18in1B0302')
+        machine.run(8)
+        machine.key('Down')
+        machine.key('Down')
+        machine.key('StartP', .2, .3)
+        machine.run(8)
+        result['audio'] = []
+        for key in ('none', 'Left', 'Rotate', 'Down'):
+            probe = copy.deepcopy(machine)
+            probe.audio.clear()
+            start = probe.cycles
+            if key == 'none':
+                probe.run(.6)
+            else:
+                probe.key(key, .2, .4)
+            result['audio'].append({'key':key,'start':start,'before':machine.cells(),'after':probe.cells(),'events':probe.audio})
+
     if args.section == 'e23-variants':
         base = Machine('E23PlusMarkII96in1')
         base.run(3)
@@ -130,22 +170,71 @@ def main():
                                        'ram': list(probe.cpu._RAM), 'cycle': probe.cycles})
             base.key('Down')
 
+    if args.section == 'e23-gravity':
+        result['gravity'] = []
+        for name in ('E23PlusMarkII96in1', 'E88_8in1'):
+            machine = Machine(name)
+            machine.run(3)
+            machine.key('Mute')
+            machine.key('Start', .08, .12)
+            previous, full_cycle, deltas = None, None, []
+            for _ in range(1000):
+                machine.run(.005)
+                cells = machine.cells()
+                if len(cells) != 4 or cells == previous:
+                    continue
+                if previous is not None and cells == [[x, y+1] for x,y in previous]:
+                    deltas.append(machine.cycles-full_cycle)
+                previous, full_cycle = cells, machine.cycles
+            result['gravity'].append({'device':name, 'intervalCycles':deltas, 'inputs':machine.inputs})
+
+    if args.section == 'e23-speeds':
+        base = Machine('E23PlusMarkII96in1')
+        base.run(3)
+        base.key('Mute')
+        result['speeds'] = []
+        for speed in range(10):
+            machine = copy.deepcopy(base)
+            for _ in range(speed):
+                machine.key('Right')
+            machine.key('Start', .08, .12)
+            previous, full_cycle, deltas = None, None, []
+            for _ in range(1500):
+                machine.run(.002)
+                cells = machine.cells()
+                if len(cells) != 4 or cells == previous:
+                    continue
+                if previous is not None and cells == [[x, y+1] for x,y in previous]:
+                    deltas.append(machine.cycles-full_cycle)
+                previous, full_cycle = cells, machine.cycles
+            result['speeds'].append({'speed':speed, 'intervalCycles':deltas, 'inputs':machine.inputs})
+
     if args.section == 'b0302-gravity':
         base = Machine('Apollo18in1B0302')
         base.run(8)
         for _ in range(2):
             base.key('Down')
         observations = []
-        for speed in range(10):
+        for speed in ([args.speed] if args.speed is not None else range(11)):
             machine = copy.deepcopy(base)
             machine.key('Mute')
             for _ in range(speed):
                 machine.key('Right')
+            # Allow the firmware's key feedback to finish before START; an
+            # immediate press can be consumed while the menu is still busy.
+            if speed:
+                machine.run(1)
             menu_cells = machine.cells()
+            menu_vram = list(machine.cpu.get_VRAM())
             machine.key('StartP', .2, .3)
+            # After changing speed the first START leaves the settings screen;
+            # the next starts the game (observed with b0302-debug).
+            if speed:
+                machine.run(1)
+                machine.key('StartP', .2, .3)
             after_start = machine.cells()
             previous, full_previous, full_cycle, deltas, changes = None, None, None, [], []
-            for _ in range(1600):
+            for _ in range(800):
                 machine.run(.005)
                 cells = machine.cells()
                 if cells == previous:
@@ -157,9 +246,33 @@ def main():
                         deltas.append(machine.cycles - full_cycle)
                     full_previous, full_cycle = cells, machine.cycles
                 previous = cells
-            observations.append({'speed': speed, 'intervalCycles': deltas, 'menu': menu_cells,
+            observations.append({'speed': speed, 'intervalCycles': deltas, 'menu': menu_cells, 'menuVram':menu_vram,
                                  'afterStart': after_start, 'changes': changes, 'inputs': machine.inputs})
         result['gravity'] = observations
+
+    if args.section == 'b0302-debug':
+        base = Machine('Apollo18in1B0302')
+        base.run(8)
+        base.key('Down')
+        base.key('Down')
+        result['debug'] = []
+        for speed in (0,1,2):
+            machine = copy.deepcopy(base)
+            machine.key('Mute')
+            if speed:
+                machine.key('Right')
+                machine.run(1)
+            machine.key('StartP', .2, .3)
+            if speed == 2:
+                machine.run(1)
+                machine.key('StartP', .2, .3)
+            frames = []
+            for _ in range(12):
+                machine.run(.5)
+                cpu = machine.cpu.examine()
+                frames.append({'cycle':machine.cycles,'pc':cpu['PC'], 'cells':machine.cells(),
+                               'lcd':list(cpu['LCDRAM']), 'io':list(cpu['IORAM'])})
+            result['debug'].append({'speed':speed,'inputs':machine.inputs,'frames':frames})
 
     if args.section == 'native-menus':
         result['menus'] = {}

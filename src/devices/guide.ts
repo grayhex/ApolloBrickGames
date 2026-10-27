@@ -11,16 +11,23 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
     const htBlock = entry.profileId === 'e88' || entry.profileId === 'e23';
     const special = htBlock && [2, 4].includes(mode);
     const obstruction = htBlock && [3, 4].includes(mode);
+    const b0302 = entry.profileId === 'apollo-b0302';
     return {
       ...base,
       rules: [
         gt('Заполняйте горизонтальные ряды без пропусков: полные ряды исчезают.', 'Fill horizontal rows without gaps to clear them.'),
-        special
+        b0302 && mode === 15
+          ? gt('В этом варианте падают одиночные клетки.', 'Single cells fall in this variant.')
+          : b0302 && [9, 13, 14].includes(mode)
+            ? gt('В этом варианте падают фигуры из пяти клеток.', 'Five-cell pieces fall in this variant.')
+            : b0302 && mode === 10
+              ? gt('Среди фигур могут появляться одиночные клетки.', 'Single cells may appear among the pieces.')
+              : special
           ? gt('Каждая четвёртая фигура берётся из дополнительного набора.', 'Every fourth piece comes from the additional shape set.')
           : gt('В наборе семь обычных фигур; следующая показана справа.', 'Seven standard shapes; the next piece appears on the right.'),
         obstruction
           ? gt('Мигающая клетка в центре дна — постоянное препятствие.', 'The blinking cell at the centre of the floor is a permanent obstacle.')
-          : entry.nativeCode === 'H02'
+          : entry.nativeCode === 'H02' || (b0302 && mode % 2 === 0)
             ? gt('Поле перевёрнуто: фигуры движутся вверх, назначение кнопок сохранено.', 'The board is flipped: pieces rise, while the buttons keep their functions.')
             : gt('Не дайте стопке фигур достичь верхней границы.', 'Keep the stack below the top of the well.'),
       ],
