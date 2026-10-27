@@ -92,7 +92,7 @@ for (const width of [320, 360, 900, 1440])
       expect(panel.x + panel.width).toBeLessThanOrEqual(width + 1);
       await pickerCard(page, 'minibrick').focus();
       await page.keyboard.press('Home');
-      await expect(pickerCard(page, 'mario')).toBeFocused();
+      await expect(pickerCard(page, 'brickgame')).toBeFocused(); // универсальный стоит в каталоге первым
       await closePicker(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       await page.locator('#corner-theme').click();
