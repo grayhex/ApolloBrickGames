@@ -45,6 +45,8 @@ test('значки ROM/AI, α/β и редкости — одной формы �
 test('энциклопедия компактна: вводный блок в две колонки, варианты в несколько колонок одной строкой, страница заметно короче', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await visit(page, './encyclopedia?game=tetris');
+  // CI uses DejaVu Sans for system-ui; its wider glyphs expose wrapping missed by the local system font.
+  await page.addStyleTag({content:"body[data-chrome='encyclopedia'] {font-family:'DejaVu Sans',sans-serif;}"});
   await expect(page.locator('.enc-modes li').first()).toBeVisible();
   const intro = await page.locator('.enc-intro').boundingBox();
   expect(intro!.height, 'вводный блок ниже 110px').toBeLessThan(110);

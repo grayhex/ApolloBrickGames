@@ -77,9 +77,10 @@ body[data-chrome='encyclopedia'] { display:block; min-height:100dvh; margin:0; b
 .enc-scoring { list-style:none; padding:0; columns:2 360px; column-gap:40px; }
 .enc-scoring li { display:flex; justify-content:space-between; gap:20px; padding:6px 0; border-bottom:1px dashed var(--line); }
 .enc-scoring b { color:var(--accent); white-space:nowrap; }
-.enc-modes { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr)); gap:6px; list-style:none; padding:0; }
-.enc-modes li { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--chip); border-radius:10px; font-size:12px; line-height:1.35; }
-.enc-modes li>span:first-child { color:var(--accent); display:inline-block; font:650 11px ui-monospace,monospace; margin-right:8px; }
+.enc-modes { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr)); gap:4px; list-style:none; padding:0; }
+.enc-modes li { display:grid; grid-template-columns:1.8em minmax(0,1fr) auto; align-items:center; gap:6px; padding:4px 8px; background:var(--chip); border-radius:10px; font-size:12px; line-height:1.35; }
+.enc-modes li>span:first-child { color:var(--accent); display:inline-block; font:650 11px ui-monospace,monospace; }
+.enc-mode__name { min-width:0; overflow-wrap:break-word; }
 .enc-scope { padding:12px 14px; border-radius:12px; background:var(--chip); color:var(--muted); }
 .enc-sources { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr)); gap:8px; margin:12px 0; }
 .enc-sources>a { border:1px solid var(--line); border-radius:12px; padding:11px 14px; text-decoration:none; transition:border-color .2s,transform .2s; overflow-wrap:anywhere; }
