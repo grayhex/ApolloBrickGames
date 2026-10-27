@@ -353,10 +353,12 @@ test.describe('каталог устройств: ввод', () => {
     await page.keyboard.press('End');
     await expect.poll(focusedToy).toBe('e23');
     await page.keyboard.press('Home');
-    await expect.poll(focusedToy).toBe('mario');
+    await expect.poll(focusedToy).toBe('brickgame'); // универсальный стоит в каталоге первым
     await page.keyboard.press('ArrowUp'); // из первой строки — в поле поиска
     await expect(pickerPanel(page).getByRole('searchbox')).toBeFocused();
     await page.keyboard.press('ArrowDown');
+    await expect.poll(focusedToy).toBe('brickgame');
+    await page.keyboard.press('ArrowRight');
     await expect.poll(focusedToy).toBe('mario');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
