@@ -44,7 +44,7 @@
 | Tank / Battle City | Существующая `tank`, 5 режимов |
 | Tetromino / Tetris / Pentomino | Существующие `tetris`, `tetris-big`, `tetris-pentix` |
 | Car racing, 2/3 lanes | Существующая `racing` |
-| Obstacles Race | **`obstacle-race`**: изгибающаяся дорога, границы, ускорение; вариантов 2 (02 — вверх дном) |
+| Obstacles Race | **`obstacle-race`**: изгибающаяся дорога, границы, ускорение; вариантов 2 (02 — вверх дном). С 2026-10-27 стенки трассы **не отнимают жизнь**: они не пускают машину (руль упирается в бордюр), а на повороте подталкивают её на колонку; жизнь стоит только камень (`RoadGame.fitsRoad`/`settleOnRoad`). Отпечаток прогона варианта 01 в `library.modes.test.ts` обновлён осознанно |
 | Shooting Disappearing | Существующие `shooting-array`, `shooting-figures`; все четыре режима раздела Modes есть среди 16 вариантов `shooting-array` ([modes-reference.md](modes-reference.md)) |
 | Shooting Filling | Существующая `construction`; все четыре режима раздела Modes есть среди её 8 вариантов ([modes-reference.md](modes-reference.md)) |
 | Frogger | Существующая `frog` |
