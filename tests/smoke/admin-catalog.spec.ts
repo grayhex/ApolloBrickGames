@@ -37,6 +37,7 @@ test('admin: бренд и готовность каждой модели нас
   await power('e88').fill('2×AA');
   await power('taksun').fill('3×AAA');
   await year('e23').fill('20x9'); // неверный год не принимается: поле возвращается к прежнему значению
+  await year('e23').blur(); // значение вносится при уходе из поля или по Enter
   await expect(page.locator('.admin__status')).toContainText('четыре цифры');
   await expect(year('e23')).toHaveValue('');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key');
