@@ -156,7 +156,7 @@ const GOLDEN: Readonly<Record<string, readonly [string, string]>> = {
   'pong-double': ['cd306a5f', '77457c28'],
   'pneumatic-ball': ['ef2fc58c', '2a0853b0'],
   honeybee: ['cbe2702d', '51f0f149'],
-  'obstacle-race': ['27d1e30d', 'd9add65a'],
+  'obstacle-race': ['c937208b', 'b4d9082a'], // ревизия 2026-10-27: стенки трассы не отнимают жизнь (запрос владельца)
   'matching-blocks': ['e54e7f75', '58487de9'],
   'whack-a-mole': ['a45bec5b', '7eb5f3ad'],
   simon: ['ce1e7174', '3ceca6d5'],
@@ -836,11 +836,15 @@ describe('Obstacles Race, вариант 02: поле вверх дном', () =
     expect(g.road.every((v) => v === 2)).toBe(true);
   });
 
-  it('[obstacle-race · вариант 02 · неудача] съезд на стенку отнимает жизнь; четыре аварии — конец партии, рекорд сохраняется', () => {
+  it('[obstacle-race · вариант 02 · неудача] стенки не пускают машину, жизнь отнимает камень; четыре аварии — конец партии, рекорд сохраняется', () => {
     const g = race(1);
+    for (let i = 0; i < 6; i++) expect(count(tap(g, 'left'), 'lifeLost')).toBe(0); // бордюр держит машину, жизнь цела
+    expect(g.lives).toBe(4);
     for (let n = 1; n <= 4; n++) {
+      g.x = 4;
+      g.obstacles = [{ x: 4, y: 14, kind: -2 }]; // камень на пути машины
       const events: BrickEvent[] = [];
-      for (let i = 0; i < 6 && g.lives === 5 - n; i++) events.push(...tap(g, 'left')); // из пяти свободных клеток безопасны три положения: первый же шаг влево задевает стенку
+      for (let i = 0; i < 200 && count(events, 'lifeLost') === 0; i++) events.push(...g.step(makeBrickInput([], ['down'])));
       expect(count(events, 'lifeLost'), `авария ${n}`).toBe(1);
       expect(g.lives).toBe(4 - n);
       expect(count(events, 'gameOver')).toBe(n === 4 ? 1 : 0);

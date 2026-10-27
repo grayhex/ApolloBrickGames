@@ -28,10 +28,6 @@ export const MINI_RACING_GUIDE: GameGuideData = {
   ),
   goal: gt('Ехать как можно дольше, объезжая туннели и фигуры и собирая палочки.', 'Drive as long as possible, avoiding tunnels and shapes and collecting rods.'),
   rules: [
-    gt(
-      'Перед стартом один раз звучит куплет «Коробейников»; пока идёт заставка с флагом, машина и дорога стоят, очки не начисляются.',
-      'Before the start one verse of “Korobeiniki” plays; during the flag scene the car and road stand still and no points are scored.',
-    ),
     gt('Туннели и фигуры нужно объезжать: столкновение заканчивает партию, жизней нет.', 'Tunnels and shapes must be avoided: a collision ends the game, there are no lives.'),
     gt('Вертикальные палочки из 2–4 клеток нужно собирать: касание даёт 20, 30 или 40 очков один раз.', 'Collect the vertical rods of 2–4 cells: touching one gives 20, 30 or 40 points once.'),
     gt('Каждая полная секунда езды даёт +10 очков.', 'Every full second of driving gives +10 points.'),
@@ -62,6 +58,7 @@ export const MINI_RACING_GUIDE: GameGuideData = {
   ],
   assumptions: [
     gt('Фигуры препятствий, расстояние между ними и интервал разгона подобраны по записи владельца, а не измерены по прошивке.', 'Obstacle shapes, their spacing and the acceleration interval follow the owner recording, not a firmware measurement.'),
+    gt('Перед стартом один раз звучит куплет «Коробейников»; пока идёт заставка с флагом, машина и дорога стоят, очки не начисляются.', 'Before the start one verse of “Korobeiniki” plays; during the flag scene the car and road stand still and no points are scored.'),
     gt('Рисунок треугольного носа — по уточнению владельца.', 'The triangular nose drawing follows the owner clarification.'),
   ],
 };
@@ -69,8 +66,8 @@ export const MINI_RACING_GUIDE: GameGuideData = {
 export const MINI_TETRIS_GUIDE: GameGuideData = {
   ...TETRIS_GUIDE,
   summary: gt(
-    `Тетрис на поле 10×20: фигуры падают сверху, собранный ряд исчезает. Номера ${MINI_GAME_RANGE.tetris} — ${MINI_TETRIS_COUNT} вариации одной игры; описание общее, вариации по отдельности не описываются.`,
-    `Tetris on a 10×20 field: pieces fall from the top and a completed row vanishes. Numbers ${MINI_GAME_RANGE.tetris} are ${MINI_TETRIS_COUNT} variations of one game; the description is shared and variations are not described one by one.`,
+    `Тетрис на поле 10×20: фигуры падают сверху, собранный ряд исчезает. Номера ${MINI_GAME_RANGE.tetris} — вариации одной игры.`,
+    `Tetris on a 10×20 field: pieces fall from the top and a completed row vanishes. Numbers ${MINI_GAME_RANGE.tetris} are variations of one game.`,
   ),
   rules: [
     ...TETRIS_GUIDE.rules.slice(0, 3),
@@ -78,15 +75,17 @@ export const MINI_TETRIS_GUIDE: GameGuideData = {
       'Вариации различаются фигурами, поворотом (где-то вместо него смена фигуры), новыми рядами по таймеру, сдвигом и перевёрнутым полем.',
       'Variations differ in pieces, turning (in some a piece swap instead), timed new rows, board shifts and an upside-down board.',
     ),
-    gt('Какой вариации соответствует какой номер, не установлено: порядок номеров — допущение.', 'Which number holds which variation is unknown: the order of the numbers is an assumption.'),
-    gt('Уровень 0–12 и скорость 0–9 выбираются в меню перед партией; один раз звучит куплет «Коробейников».', 'Level 0–12 and speed 0–9 are chosen in the menu before the game; one verse of “Korobeiniki” plays.'),
+    gt('Уровень 0–12 и скорость 0–9 выбираются в меню перед партией.', 'Level 0–12 and speed 0–9 are chosen in the menu before the game.'),
   ],
   facts: [
     { value: String(MINI_TETRIS_COUNT), label: gt('вариации тетриса', 'Tetris variations') },
     { value: '0–12', label: gt('уровень в меню', 'level in the menu') },
     { value: '0–9', label: gt('скорость в меню', 'speed in the menu') },
   ],
-  assumptions: [gt('Порядок вариаций по номерам — допущение: таблицы устройства нет.', 'The order of variations by number is an assumption: there is no device table.')],
+  assumptions: [
+    gt('Какой вариации соответствует какой номер, не установлено: порядок номеров — допущение, таблицы устройства нет.', 'Which number holds which variation is unknown: the order of the numbers is an assumption, there is no device table.'),
+    gt('Перед партией один раз звучит куплет «Коробейников».', 'One verse of “Korobeiniki” plays before the game.'),
+  ],
 };
 
 export interface MiniGameInfo {
@@ -113,8 +112,8 @@ export const MINI_GAMES: readonly MiniGameInfo[] = [
     key: MINI_GAME_RANGE.tetris,
     name: gt('Тетрис', 'Tetris'),
     note: gt(
-      `Номера ${MINI_GAME_RANGE.tetris}: ${MINI_TETRIS_COUNT} вариаций одной игры; описание общее, порядок номеров — допущение.`,
-      `Numbers ${MINI_GAME_RANGE.tetris}: ${MINI_TETRIS_COUNT} variations of one game; the description is shared, the order of the numbers is an assumption.`,
+      `Номера ${MINI_GAME_RANGE.tetris}: ${MINI_TETRIS_COUNT} вариаций одной игры.`,
+      `Numbers ${MINI_GAME_RANGE.tetris}: ${MINI_TETRIS_COUNT} variations of one game.`,
     ),
     guide: MINI_TETRIS_GUIDE,
   },

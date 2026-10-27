@@ -194,35 +194,49 @@ describe('obstacle-race: извилистая трасса (сценарии)', 
     expect(g.road.slice(15)).toEqual([2, 2, 2, 2, 2]); // стенка уже прошла нижние строки и ушла
   });
 
-  coveredScenario('obstacle-race', 'неудача', 'неудача: из пяти свободных клеток машине безопасны три положения (4, 5, 6); зацепить стенку — потерять жизнь', () => {
+  coveredScenario('obstacle-race', 'неудача', 'неудача: стенки не пускают машину — из пяти свободных клеток она встаёт в трёх положениях (4, 5, 6), руль у бордюра жизнь не отнимает', () => {
     expect([0, 1, 2, 3, 4, 5, 6, 7, 8].filter((x) => !touchesWall(x))).toEqual([4, 5, 6]);
-    for (const target of [0, 1, 2, 3, 5, 6, 7, 8]) {
-      const g = begin('obstacle-race');
-      const dir: BrickAction = target < 4 ? 'left' : 'right';
-      const sign = target < 4 ? -1 : 1;
-      let crashed = false;
-      for (let x = 4 + sign; x !== target + sign && !crashed; x += sign) {
-        const events = tap(g, dir);
-        crashed = touchesWall(x);
-        expect(g.lives, `к колонке ${target}: шаг в колонку ${x}`).toBe(crashed ? 3 : 4);
-        expect(count(events, 'lifeLost'), `к колонке ${target}: шаг в колонку ${x}`).toBe(crashed ? 1 : 0);
-      }
-    }
+    const left = begin('obstacle-race');
+    for (let i = 0; i < 6; i++) expect(count(tap(left, 'left'), 'lifeLost')).toBe(0);
+    expect(left.x, 'левый бордюр держит машину в колонке 4').toBe(4);
+    expect(left.lives).toBe(4);
+    const right = begin('obstacle-race');
+    for (let i = 0; i < 6; i++) expect(count(tap(right, 'right'), 'lifeLost')).toBe(0);
+    expect(right.x, 'правый бордюр держит машину в колонке 6').toBe(6);
+    expect(right.lives).toBe(4);
+    const held = begin('obstacle-race');
+    run(held, 40, hold('left'));
+    expect(held.x).toBe(4); // удержание руля у бордюра тоже безопасно
+    expect(held.lives).toBe(4);
   });
 
-  coveredScenario('obstacle-race', 'неудача', 'неудача: стенка опасна ровно на строках 17–19 — на строке 16 безвредна, с очередным шагом на строке 17 стоит жизни', () => {
+  coveredScenario('obstacle-race', 'неудача', 'неудача: поворот, пришедший на машину, подталкивает её на колонку — стенка на строке 16 безвредна, на строке 17 сдвигает машину, жизни целы', () => {
     const g = begin('obstacle-race');
     tap(g, 'right');
     tap(g, 'right'); // x = 6: клетки (6,17), (6,18), (5,19), (7,19)
     g.road[15] = 0; // правая стенка поворота в колонке 6, на строке 15
     stepRoad(g);
     expect(g.road[16]).toBe(0);
-    expect(g.lives, 'стенка на строке 16 машину не задевает').toBe(4);
+    expect(g.x, 'стенка на строке 16 машину не задевает').toBe(6);
     const events = stepRoad(g);
     expect(g.road[17]).toBe(0);
+    expect(touch(playerCells(6), [[6, 17]])).toBe(true); // общая клетка (6,17): здесь машину подталкивает
+    expect(g.x).toBe(5);
+    expect(count(events, 'lifeLost')).toBe(0);
+    expect(g.lives).toBe(4);
+  });
+
+  coveredScenario('obstacle-race', 'неудача', 'неудача: безвыходный коридор (машине негде поместиться) стоит жизни, камень на пути — тоже', () => {
+    const tight = begin('obstacle-race');
+    tight.road[15] = 0; tight.road[16] = 0; tight.road[17] = 0; // верхние строки машины — у левой стенки
+    tight.road[18] = 5; tight.road[19] = 5; // нижние — у правой: общего положения нет (в игре так не бывает)
+    const events = runUntil(tight, has('lifeLost'), hold('up'), 100).events;
     expect(count(events, 'lifeLost')).toBe(1);
-    expect(g.lives).toBe(3);
-    expect(touch(playerCells(6), [[6, 17]])).toBe(true); // общая клетка (6,17) — причина столкновения
+    expect(tight.lives).toBe(3);
+    const stone = begin('obstacle-race');
+    stone.obstacles = [{ x: 4, y: 14, kind: -2 }]; // камень на пути машины в колонке 4
+    expect(count(runUntil(stone, has('lifeLost'), hold('up'), 100).events, 'lifeLost')).toBe(1);
+    expect(stone.lives).toBe(3);
   });
 });
 
@@ -721,9 +735,9 @@ describe('дорожные игры: тридцатое препятствие �
 });
 
 describe('дорожные игры: потеря жизни и конец партии', () => {
-  /** Неминуемое столкновение: препятствие на своей полосе (у извилистой трассы — шаг в стенку); доигрывает до потери жизни. */
+  /** Неминуемое столкновение: препятствие на своей полосе (у извилистой трассы — камень на пути); доигрывает до потери жизни. */
   const collide = (g: RoadGame): BrickEvent[] => {
-    if (g.id === 'obstacle-race') return tap(g, 'left'); // из колонки 4 в колонку 3: левая нижняя клетка машины на стенке (2,19)
+    if (g.id === 'obstacle-race') { g.obstacles = [{ x: 4, y: 17, kind: -2 }]; return runUntil(g, has('lifeLost'), hold('up'), 100).events; } // камень уже на носу машины в колонке 4
     const lane = g.id === 'racing-four' ? 3 : 4;
     g.x = lane;
     g.obstacles = [{ x: lane, y: 10, kind: 0 }];

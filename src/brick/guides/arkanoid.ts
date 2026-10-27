@@ -145,7 +145,7 @@ export const ARKANOID_GUIDE: GameGuideData = {
   ),
   schemes: [
     { cells: START_FIELD, caption: gt('Вариант 01, уровень 1: стена, мяч над платформой из 4 клеток', 'Variant 01, level 1: the wall and the ball on a 4-cell paddle') },
-    {cells:[...blanks(4),'.########.','..######..','.########.','..######..','.########.',...blanks(9),'.#........','.####.....'], caption:gt('«Морской бой» F01: старт по фото оригинала','Sea Battle F01: opening from the original photo')},
+    {cells:[...blanks(4),'.########.','..######..','.########.','..######..','.########.',...blanks(9),'.#........','.####.....'], caption:gt('«Морской бой» F01: стартовая расстановка','Sea Battle F01: the opening layout')},
     { cells: DOUBLE_FIELD, caption: gt('Вариант 09: платформы внизу и вверху, стена по центру', 'Variant 09: paddles at the bottom and the top, wall mid-field') },
   ],
   assumptions: [

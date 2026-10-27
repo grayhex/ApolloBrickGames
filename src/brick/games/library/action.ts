@@ -76,7 +76,11 @@ export class RoadGame extends LibraryGame {
     if (this.id === 'racing-four' || this.id === 'boat-racing') {
       const lanes = this.id === 'racing-four' ? [1,3,5,7] : [1,4,7];
       const index = Math.max(0, lanes.indexOf(this.x)); this.x = lanes[this.horizontal(input, index, lanes.length - 1)]!;
-    } else this.x = this.horizontal(input, this.x, 8);
+    } else {
+      const wanted = this.horizontal(input, this.x, 8);
+      // Стенки трассы не пускают машину: руль упирается в бордюр, а не стоит жизни.
+      if (this.id !== 'obstacle-race' || this.fitsRoad(wanted)) this.x = wanted;
+    }
     if (this.cooldown) this.cooldown--;
     if (heldAction(input) && !this.cooldown) {
       this.cooldown = 12;
@@ -106,8 +110,8 @@ export class RoadGame extends LibraryGame {
       }
       if (this.id === 'obstacle-race') { this.addScore(1); this.passed++; }
     }
+    if (this.id === 'obstacle-race' && !this.settleOnRoad()) { this.passed = 0; this.lose(() => this.setup()); return; }
     const mine = new Set(roadPlayerPixels(this.slim, this.x).map((c) => cellKey(c.x, c.y)));
-    if (this.id === 'obstacle-race' && [17, 18, 19].some((y) => mine.has(cellKey(this.road[y]!, y)) || mine.has(cellKey(this.road[y]! + ROAD_CORRIDOR, y)) || this.outside(y))) { this.passed=0; this.lose(() => this.setup()); return; }
     let crashed = false;
     for (const o of [...this.obstacles]) {
       if (![...this.obstacleKeys(o)].some((key) => mine.has(key))) continue;
@@ -117,8 +121,19 @@ export class RoadGame extends LibraryGame {
     if (crashed) { if(this.id==='obstacle-race')this.passed=0; this.lose(() => this.setup()); return; }
     if (this.passed >= (this.id === 'obstacle-race' ? 60 : 30)) { this.passed = 0; this.win(() => this.setup()); }
   }
-  /** Игрок вышел за край поля на строке `y` (клетка с отрицательной колонкой или правее девятой): у трассы это тоже съезд с дороги. */
-  private outside(y: number): boolean { return roadPlayerPixels(this.slim, this.x).some((c) => c.y === y && (c.x < 0 || c.x > 9)); }
+  /** Машина с носом в колонке `x` целиком между стенками трассы на строках 17–19 (и в пределах поля). */
+  private fitsRoad(x: number): boolean {
+    return roadPlayerPixels(this.slim, x).every((c) => c.x >= 0 && c.x <= 9 && c.x > this.road[c.y]! && c.x < this.road[c.y]! + ROAD_CORRIDOR);
+  }
+  /**
+   * Поворот трассы подталкивает машину, а не отнимает жизнь: если стенка пришла на машину, её сдвигает на колонку в сторону свободной полосы. Жизнь стоит только камень.
+   * `false` — места не нашлось (при коридоре в пять клеток и сдвиге в одну такого не бывает).
+   */
+  private settleOnRoad(): boolean {
+    if (this.fitsRoad(this.x)) return true;
+    for (const dx of [-1, 1, -2, 2]) if (this.fitsRoad(this.x + dx)) { this.x += dx; return true; }
+    return false;
+  }
   protected draw(): Uint8Array {
     const out = new Uint8Array(200);
     if (this.id === 'obstacle-race') this.road.forEach((x, y) => { put(out, x, y); put(out, x + ROAD_CORRIDOR, y); });
