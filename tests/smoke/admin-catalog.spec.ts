@@ -17,6 +17,8 @@ test('admin: бренд и готовность каждой модели нас
   await expect(section.locator('.admin__catalog-row')).toHaveCount(13);
   const brand = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: бренд$/);
   const ready = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: готовность$/);
+  const year = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: год выпуска$/);
+  const power = (id: string) => page.locator(`.admin__catalog-row[data-toy=${id}]`).getByLabel(/: питание$/);
   // Значения по умолчанию.
   await expect(brand('taksun')).toHaveValue('taksun');
   await expect(brand('alibaba')).toHaveValue('brickgame');
@@ -31,10 +33,17 @@ test('admin: бренд и готовность каждой модели нас
   await ready('minibrick').selectOption('playable');
   await brand('alibaba').selectOption('apollo');
   await brand('mario').selectOption('apollo'); // как по умолчанию — записи не будет
+  await year('e88').fill('2009');
+  await power('e88').fill('2×AA');
+  await power('taksun').fill('3×AAA');
+  await year('e23').fill('20x9'); // неверный год не принимается: поле возвращается к прежнему значению
+  await year('e23').blur(); // значение вносится при уходе из поля или по Enter
+  await expect(page.locator('.admin__status')).toContainText('четыре цифры');
+  await expect(year('e23')).toHaveValue('');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key');
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();
   await expect(page.locator('.admin__status')).toContainText('Опубликовано для всех игроков');
-  expect(config.catalog).toEqual({ taksun: { brand: 'brickgame' }, minibrick: { readiness: 'playable' }, alibaba: { brand: 'apollo' } });
+  expect(config.catalog).toEqual({ taksun: { brand: 'brickgame', power: '3×AAA' }, minibrick: { readiness: 'playable' }, alibaba: { brand: 'apollo' }, e88: { year: '2009', power: '2×AA' } });
   // Новая страница видит настройки.
   const game = await context.newPage();
   await game.goto('./?toy=clock99');
@@ -42,11 +51,18 @@ test('admin: бренд и готовность каждой модели нас
   await expect(game.locator('.devpick__card[data-toy=taksun] .devpick__maker')).toHaveText('Brick Game');
   await expect(game.locator('.devpick__card[data-toy=alibaba] .devpick__maker')).toHaveText('Apollo');
   await expect(game.locator('.devpick__card[data-toy=minibrick]')).toHaveAttribute('data-ready', 'playable');
+  // Год и питание из админки видны в карточке устройства слева.
+  await game.goto('./?toy=e88&view=full');
+  await expect(game.locator('#side-info .dcard__fact').nth(0)).toContainText('2009');
+  await expect(game.locator('#side-info .dcard__fact').nth(1)).toContainText('2×AA');
   await game.close();
   // Возврат к значениям по умолчанию снимает записи.
   await brand('taksun').selectOption('taksun');
   await ready('minibrick').selectOption('reconstructing');
   await brand('alibaba').selectOption('brickgame');
+  await year('e88').fill('');
+  await power('e88').fill('');
+  await power('taksun').fill('');
   await page.getByPlaceholder('ADMIN_TOKEN').fill('browser-test-key');
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();
   await expect(page.locator('.admin__status')).toContainText('ревизия 2');

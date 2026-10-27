@@ -5,6 +5,7 @@ import { sortByRarity } from '../games/rarity';
 import { APOLLO_SHELLS, MONOBLOCK_SHELLS, type Shell } from '../input/settings';
 import { APOLLO_IDS, TOYS, TOY_IDS, type ApolloId, type ToyId } from '../app/toys';
 import { DEVICE_DEFAULTS, isBrand, isReadiness, type DeviceOverride } from '../app/deviceCatalog';
+import { DEVICE_FACTS, isPower, isYear, POWER_MAX } from '../app/deviceFacts';
 import { missingButtons } from '../app/bodyButtons';
 import { DEFAULT_LANG, isLang, type Lang } from '../input/lang';
 export interface ConfigGame {
@@ -128,9 +129,9 @@ export function validateConfig(value: unknown): SiteConfig {
     if (!record(value['catalog'])) throw new Error('Некорректный каталог устройств.');
     for (const [key, entry] of Object.entries(value['catalog'])) {
       const toy = TOY_IDS.find((id) => id === key);
-      if (!toy || !record(entry) || Object.keys(entry).some((field) => field !== 'brand' && field !== 'readiness')) throw new Error(`Каталог устройств: неизвестная модель или поле (${key}).`);
+      if (!toy || !record(entry) || Object.keys(entry).some((field) => field !== 'brand' && field !== 'readiness' && field !== 'year' && field !== 'power')) throw new Error(`Каталог устройств: неизвестная модель или поле (${key}).`);
       const own: DeviceOverride = {};
-      const { brand, readiness } = entry;
+      const { brand, readiness, year, power } = entry;
       if (brand !== undefined) {
         if (!isBrand(brand)) throw new Error(`${toy}: неизвестный бренд.`);
         if (brand !== DEVICE_DEFAULTS[toy].brand) own.brand = brand; // хранятся только отличия от значений по умолчанию
@@ -139,7 +140,15 @@ export function validateConfig(value: unknown): SiteConfig {
         if (!isReadiness(readiness)) throw new Error(`${toy}: неизвестный статус готовности.`);
         if (readiness !== DEVICE_DEFAULTS[toy].readiness) own.readiness = readiness;
       }
-      if (own.brand !== undefined || own.readiness !== undefined) catalog[toy] = own;
+      if (year !== undefined) {
+        if (!isYear(year)) throw new Error(`${toy}: год выпуска — четыре цифры (1960–2099).`);
+        if (year !== DEVICE_FACTS[toy].year) own.year = year;
+      }
+      if (power !== undefined) {
+        if (!isPower(power)) throw new Error(`${toy}: питание — короткая строка (до ${POWER_MAX} знаков, без < и >), например 2×AA.`);
+        if (power !== DEVICE_FACTS[toy].power) own.power = power;
+      }
+      if (own.brand !== undefined || own.readiness !== undefined || own.year !== undefined || own.power !== undefined) catalog[toy] = own;
     }
   }
   const encyclopedia: NonNullable<SiteConfig['encyclopedia']> = {};

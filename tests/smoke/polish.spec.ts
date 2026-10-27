@@ -55,7 +55,8 @@ test('RU/EN: кнопка в уголке переключает язык пан
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   const info = page.locator('#side-info');
   await expect(info.getByRole('heading', { name: 'Score' })).toBeVisible();
-  await expect(info.getByRole('heading', { name: 'Controls' })).toBeVisible();
+  await expect(info.locator('.dcard__flabel').first()).toHaveText('Year'); // карточка устройства переведена; раздела «Controls» слева нет
+  await expect(info.getByRole('heading', { name: 'Controls' })).toHaveCount(0);
   await expect(info.getByRole('heading', { name: 'Figures and enemies' })).toBeVisible();
   await expect(info.locator('#figures .fig__name').first()).toHaveText('Mario');
   await expect(info.locator('.hazard').first()).toHaveText('you fall into the river');
@@ -115,10 +116,8 @@ test('справка слева по упаковке: фигуры, очки, �
   await expect(info.locator('.hazard')).toHaveText(['падение в реку', 'Devil съедает', 'Fiery dragon', 'Missile', 'Iron gate']);
   await expect(info).toContainText('потеряны 4 жизни или вышло время (400 секунд)');
   await expect(info.locator('.facts')).toContainText('400');
-  // Управление: UP — тоже прыжок.
-  const jump = info.locator('.keys__row', { hasText: 'Прыжок' });
-  await expect(jump).toContainText('Пробел');
-  await expect(jump).toContainText('↑');
+  // Схемы управления в левой панели нет: привязки — в настройках.
+  await expect(info.locator('.keys__row')).toHaveCount(0);
   await page.locator('#corner-help').click();
   await expect(page.locator('#sources')).toContainText('видео');
   await expect(page.locator('.enc-article h2')).toHaveText('Crocodile Mario');

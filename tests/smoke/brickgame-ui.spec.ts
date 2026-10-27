@@ -295,19 +295,26 @@ test('«Игры на устройстве»: запуск, отложенный
   expect(await area(page, 'phase')).toBe('ready');
 });
 
-test('панель настроек сверху слева — над левой панелью справки: тот же центр и та же ширина', async ({ page }) => {
+test('панель настроек — в правом столбце над картинкой сайта и пультом: тот же центр и та же ширина у всех трёх', async ({ page }) => {
   await open(page, '?toy=brickgame');
   const boxes = await page.evaluate(() => {
-    const rect = (id: string) => {
-      const r = document.getElementById(id)!.getBoundingClientRect();
-      return { left: r.left, width: r.width, centre: r.left + r.width / 2 };
+    const rect = (selector: string) => {
+      const r = document.querySelector(selector)!.getBoundingClientRect();
+      return { left: r.left, top: r.top, bottom: r.bottom, width: r.width, centre: r.left + r.width / 2 };
     };
-    return { dock: rect('topleft'), panel: rect('side-info') };
+    return { dock: rect('#topleft'), brand: rect('.site-brand'), panel: rect('#side-ctl'), info: rect('#side-info') };
   });
-  expect(Math.abs(boxes.dock.centre - boxes.panel.centre)).toBeLessThan(2);
-  expect(Math.abs(boxes.dock.width - boxes.panel.width)).toBeLessThan(2);
+  for (const other of [boxes.brand, boxes.panel]) {
+    expect(Math.abs(boxes.dock.centre - other.centre), 'тот же центр').toBeLessThan(2);
+    expect(Math.abs(boxes.dock.width - other.width), 'та же ширина').toBeLessThan(2);
+  }
+  expect(boxes.brand.top, 'картинка сайта под панелью настроек').toBeGreaterThanOrEqual(boxes.dock.bottom - 1);
+  expect(boxes.panel.top, 'пульт под картинкой сайта').toBeGreaterThanOrEqual(boxes.brand.bottom - 1);
+  expect(boxes.info.left, 'панель настроек больше не над левой панелью').toBeLessThan(boxes.dock.left - 200);
   await page.setViewportSize({ width: 1000, height: 800 });
-  await expect(page.locator('#topleft')).not.toHaveAttribute('data-aligned', ''); // на узком окне панель остаётся в углу
+  await expect(page.locator('#topleft')).not.toHaveAttribute('data-aligned', ''); // на узком окне панель остаётся в левом углу
+  const narrow = await page.evaluate(() => ({ dock: document.getElementById('topleft')!.getBoundingClientRect().left, brand: document.querySelector('.site-brand')!.getBoundingClientRect().left }));
+  expect(narrow.dock).toBeLessThan(narrow.brand);
 });
 
 test('блок «Рекорды» не затемняется и всегда обведён', async ({ page }) => {

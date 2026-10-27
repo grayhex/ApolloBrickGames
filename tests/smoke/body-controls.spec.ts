@@ -14,8 +14,7 @@ for (const toy of ['clock99', 'tank168', 'seabattle'])
       await page.keyboard.press('Space');
       await expect(area).toHaveAttribute('data-stage', 'menu');
     }
-    await expect(page.locator('#keymap')).not.toContainText('Бросок');
-    await expect(page.locator('#keymap kbd').filter({ hasText: /^X$/ })).toHaveCount(0);
+    await expect(page.locator('#keymap')).toHaveCount(0); // схемы клавиш в левой панели нет
     const initial = await area.getAttribute('data-game');
     await page.keyboard.press('KeyX');
     await page.waitForTimeout(100);

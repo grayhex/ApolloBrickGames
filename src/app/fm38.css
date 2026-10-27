@@ -1,3 +1,4 @@
+/* FM-38: корпус — графика владельца без кнопок (`body-plain.png`), кнопки — отдельные спрайты поверх (`fm38Model.ts`), экран — свой ЖК (`render/fm38Screen.ts`). */
 body .toy[data-model='fm38'] {--lcd-dim:none;}
 .arena .toy[data-model='fm38'] .lid__front {height:85cqw;}
 .arena .toy[data-model='fm38'] .toy__lower {height:calc(var(--native-height) - 85cqw);}
@@ -6,13 +7,21 @@ body[data-toy='fm38'] .lid__screw,body[data-toy='fm38'] .lid__art,body[data-toy=
 .arena .toy[data-chassis='native'][data-model='fm38']::before {background-size:132.44% 100%;background-position:center top;}
 body[data-chrome='toy'] .arena[data-model='fm38']:not([data-compact]) {--stage-w:clamp(300px,calc((100dvh - var(--head-h) - 30px) / 1.766),540px);}
 .arena .toy[data-chassis='native'][data-model='fm38'] .lid__window {background:#c2c8b1;}
-body[data-toy='fm38'] #side-info {display:block;}
-body[data-toy='fm38'] #side-info>img {max-width:160px;}
-[data-theme='dark'] body[data-toy='fm38'] #side-info>img {filter:brightness(1.8);}
-body[data-toy='fm38'] #side-info p {font-size:14px;line-height:1.55;margin:16px 0;}
-body[data-toy='fm38'] #side-info h2 {font-size:19px;margin:20px 0;}
-body[data-toy='fm38'] [data-lcd='hi'],body[data-toy='fm38'] [data-lcd='score'] {display:none;}
-/* Crop the same supplied housing around the LCD, scaling art and live segments together. */
-.arena .toy[data-chassis='native'][data-model='fm38'][data-compact]::before {width:180%;height:317.88cqw;left:-40%;right:auto;top:-27.82cqw;bottom:auto;}
-.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__front {height:118cqw;}
-.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__window {left:12.92cqw;top:8cqw;width:72.9cqw;height:97.92cqw;}
+/* Призрак погашенных сегментов включается и выключается настройкой «Сегменты экрана». */
+.fm38-lcd[data-ghost='off'] .lcd-seg:not([data-on]) {opacity:0;}
+
+/* Кнопки: нажатие уводит спрайт вглубь (небольшое сжатие и затемнение вместе с силуэтом), область нажатия повторяет форму кнопки. */
+.arena .toy[data-chassis='native'][data-model='fm38'] .fm__key {transform:none;border-radius:0;background:none;box-shadow:none;clip-path:var(--fm-clip);-webkit-tap-highlight-color:transparent;cursor:pointer;}
+.arena .toy[data-chassis='native'][data-model='fm38'] .fm__key[data-pressed],.arena .toy[data-chassis='native'][data-model='fm38'] .fm__key:active {background:none;box-shadow:none;}
+.arena .toy[data-chassis='native'][data-model='fm38'] .fm__art {position:absolute;pointer-events:none;}
+.arena .toy[data-chassis='native'][data-model='fm38'] .fm__art img {display:block;width:100%;height:100%;transform-origin:50% 58%;transition:transform 70ms ease-out,filter 70ms ease-out;user-select:none;-webkit-user-drag:none;}
+.arena .toy[data-chassis='native'][data-model='fm38'] .fm__key:is([data-pressed],:active)+.fm__art img {transform:translateY(3.2%) scale(.95);filter:brightness(.92) saturate(1.1);transition-duration:35ms;}
+@media (prefers-reduced-motion:reduce) {
+  .arena .toy[data-chassis='native'][data-model='fm38'] .fm__art img {transition:none;}
+}
+
+/* «Только экран»: рамка экрана вырезана из той же графики по внешнему контуру синей полосы (`screen-frame.png`, прозрачный фон, сглаженный край), окно под экран — такой ширины, как у остальных «кирпичей». */
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact]::before {background:var(--fm-frame-art) 0 0 / 100% 100% no-repeat;width:var(--fm-frame-w);height:var(--fm-frame-h);left:calc((100cqw - var(--fm-frame-w)) / 2);right:auto;top:var(--fm-pad);bottom:auto;filter:drop-shadow(0 .8cqw 1.4cqw rgb(0 0 0 / .38));}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__front {height:calc(var(--fm-frame-h) + 2 * var(--fm-pad));}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__window {left:calc((100cqw - var(--fm-frame-w)) / 2 + var(--fm-win-x));top:calc(var(--fm-pad) + var(--fm-win-y));width:var(--fm-win-w);height:var(--fm-win-h);}
+

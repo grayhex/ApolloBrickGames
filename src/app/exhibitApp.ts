@@ -9,7 +9,7 @@ import { ControlPanel } from './controlPanel';
 import { CornerNav } from './cornerNav';
 import { h } from './dom';
 import { InputHub } from './hub';
-import { packButton } from './packButton';
+import { deviceCard } from './deviceCard';
 import { PACKS } from './packs';
 import { applyStatic, getLang, onLangChange, setLang, t } from './i18n';
 import { Lifecycle, type AppHandle, type Carry } from './lifecycle';
@@ -56,8 +56,6 @@ export async function startExhibitApp(id: 'alibaba' | 'taksun', carry?: Carry): 
   document.body.append(notice);
   // TAKSUN: 3D-коробка (пока заглушка) открывается из левой панели; пока диалог открыт, клавиши модели не работают.
   const box = id === 'taksun' ? new BoxDialog(byId<HTMLDialogElement>('box-dialog'), PACKS.taksun, { onOpen: () => {}, onClose: focus }, signal) : null;
-  let boxThumb: { dispose(): void } | null = null;
-  life.onDispose(() => boxThumb?.dispose());
   const closeDialog = (dialog: HTMLDialogElement): void => {
     dialog.close();
     focus(); // Native close events are queued; keyboard input must work immediately after Escape.
@@ -170,19 +168,14 @@ export async function startExhibitApp(id: 'alibaba' | 'taksun', carry?: Carry): 
     lang.title = t('corner.langTitle');
     const info = byId('side-info');
     info.dataset['toy'] = id;
-    boxThumb?.dispose();
-    boxThumb = null;
     if (id === 'taksun') {
-      const pack = box ? packButton(PACKS.taksun, box, signal) : null;
-      boxThumb = pack;
       info.replaceChildren(
-        h(
-          'header',
-          { class: `side__top side__top--logo${pack ? ' side__top--box' : ''}` },
-          h('h2', { class: 'visually-hidden', id: 'info-title' }, model.name),
-          h('div', { class: 'about__sticker' }, h('img', { class: 'about__logo', src: `${import.meta.env.BASE_URL}brand/taksun-wordmark.svg`, width: '465', height: '125', alt: model.name })),
-          ...(pack ? [pack.element] : []),
-        ),
+        h('h2', { class: 'visually-hidden', id: 'info-title' }, model.name),
+        deviceCard({
+          toy: 'taksun',
+          logo: h('div', { class: 'about__sticker' }, h('img', { class: 'about__logo', src: `${import.meta.env.BASE_URL}brand/taksun-wordmark.svg`, width: '465', height: '125', alt: model.name })),
+          ...(box ? { box: { open: () => box.open(), label: t(PACKS.taksun.text.open), id: PACKS.taksun.id } } : {}),
+        }),
         h(
           'section',
           { class: 'side__sec' },
@@ -199,7 +192,7 @@ export async function startExhibitApp(id: 'alibaba' | 'taksun', carry?: Carry): 
       );
     } else {
       info.replaceChildren(
-        h('div', { class: 'alibaba-info__mark' }, alibabaMark('dance')),
+        deviceCard({ toy: 'alibaba', logo: h('div', { class: 'alibaba-info__mark' }, alibabaMark('dance')) }),
         h(
           'section',
           { class: 'side__sec' },

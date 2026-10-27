@@ -132,7 +132,8 @@ test.describe('«168 в 1 танк»', () => {
   test('слева справка с наклейкой этой игрушки', async ({ page }) => {
     await ready(page, '?toy=tank168&power=on');
     await expect(page.locator('#side-info .about__logo')).toHaveAttribute('src', /sticker-tank168/);
-    await expect(page.locator('#side-info #keymap')).toContainText('ROTATE');
+    await expect(page.locator('#side-info .dcard')).toBeVisible(); // карточка устройства сверху; схемы клавиш в панели нет
+    await expect(page.locator('#side-info #keymap')).toHaveCount(0);
     await expect(page.locator('#side-info')).toContainText('Игры на устройстве'); // набор игр консоли — вкладками
     await expect(page.locator('#side-info')).not.toContainText('заявлено 168'); // надпись про 168 убрана (на наклейке 168 и так напечатано)
   });

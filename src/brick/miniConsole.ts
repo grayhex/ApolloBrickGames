@@ -251,8 +251,8 @@ export class MiniConsole implements BrickGame {
   }
 
   /** Курсор меню на первый номер игры (вкладка левой панели); только в меню, номер другой игры заменяется, номер той же игры остаётся. */
-  selectGame(id: 'racing' | 'tetris'): void {
-    if (this.current || this.stage !== 'menu' || this.gameId === id) return;
+  selectGame(id: string): void {
+    if ((id !== 'racing' && id !== 'tetris') || this.current || this.stage !== 'menu' || this.gameId === id) return;
     this.number = id === 'racing' ? 0 : MINI_RACING_COUNT;
   }
 

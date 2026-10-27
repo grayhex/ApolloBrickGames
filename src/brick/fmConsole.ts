@@ -49,6 +49,13 @@ export class FMConsole extends MiniConsole {
     if(this.demo.phase==='over')this.resetDemo();
     return [];
   }
+  /** Вкладка левой панели A или B выбирает игру в меню (демонстрация начинается заново); в партии и у Mini-имён вкладки курсор не трогают. */
+  override selectGame(id:string):void{
+    if(this.live||(id!=='a'&&id!=='b'))return;
+    const variant=id==='b'?1:0;
+    if(variant===this.variant)return;
+    this.variant=variant;this.resetDemo();
+  }
   override start():BrickEvent[]{if(this.live)return this.live.start();this.live=this.create();return this.live.start();}
   override startButton():BrickEvent[]{return this.pause();}
   override pause():BrickEvent[]{return this.live?.pause()??[];}

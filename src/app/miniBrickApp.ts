@@ -1,6 +1,6 @@
 import { FMConsole } from '../brick/fmConsole';
+import { FM38_GAMES } from '../brick/guides/fm38';
 import { applyFM38Model } from './fm38Model';
-import { h } from './dom';
 import './exhibit.css';
 import './minibrick.css';
 import { BrickAudio } from '../audio/brick';
@@ -9,7 +9,7 @@ import { makeBrickInput, BRICK_TICK_HZ, MAX_SCORE, type BrickAction, type BrickE
 import { actionBit, maskOf, type InputFrame } from '../core';
 import { browserGamepadProvider } from '../input/gamepad';
 import { browserStorage, musicVolumeOf } from '../input/settings';
-import { MINI_LCD_OFF, type MiniLcd, type MiniLcdState } from '../render/miniScreen';
+import { MINI_LCD_OFF, type LcdView, type MiniLcdState } from '../render/miniScreen';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
 import { openEncyclopedia } from './help';
@@ -94,7 +94,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   const model = fm?TOYS.fm38:TOYS.minibrick;
   document.body.dataset['chrome'] = 'toy';
   document.body.dataset['motion'] = 'off';
-  const lcd: MiniLcd = fm?applyFM38Model():applyMiniBrickModel();
+  const lcd: LcdView = fm?applyFM38Model():applyMiniBrickModel();
   const toy = byId('toy');
   const arena = byId('arena');
   const area = byId('game-area');
@@ -144,6 +144,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   window.addEventListener('keydown', unlockAudio, { signal });
   window.addEventListener('pointerdown', unlockAudio, { signal });
 
+  const ghostOn = (): boolean => hub.settings.display.ghost ?? true;
   const refocus = (): void => {
     if (view !== 'closed') area.focus({ preventScroll: true });
   };
@@ -331,7 +332,13 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     },
     setMusicVolume: none,
     setMusic: none,
-    toggleGhost: none,
+    toggleGhost: () => {
+      if (!fm) return;
+      hub.updateSettings((s) => {
+        s.display.ghost = !ghostOn();
+      });
+      applyDisplay();
+    },
     setView,
     pickOriginal: none,
     pickBundled: none,
@@ -361,7 +368,13 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
         });
         applyDisplay();
       },
-      toggleGhost: none,
+      toggleGhost: () => {
+        if (!fm) return;
+        hub.updateSettings((s) => {
+          s.display.ghost = !ghostOn();
+        });
+        applyDisplay();
+      },
       togglePause: () => {
         if (powered && !mini.inMenu) emit(mini.phase === 'paused' ? mini.resume() : mini.pause());
       },
@@ -385,7 +398,11 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const display = hub.settings.display;
     applyTheme(display.theme);
     corner.setTheme(display.theme);
-    corner.setGhost(null);
+    // «Сегменты экрана» (призрак погашенных сегментов) есть у FM-38; у Mini призрак всегда виден.
+    if (fm) {
+      lcd.setGhost?.(ghostOn());
+      corner.setGhost(ghostOn());
+    } else corner.setGhost(null);
     brickAudio.setMuted(!display.sound);
     brickAudio.setVolume(display.volume);
     controls.update({
@@ -400,16 +417,16 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     });
   }
 
-  // Левая панель — как у остальных игрушек: наклейка, управление и описание игр (гонки и тетрис); сама следит за языком и привязками клавиш.
-  const renderFMInfo=():void=>{
-    const ru=getLang()==='ru';
-    byId('side-info').replaceChildren(h('img',{src:`${import.meta.env.BASE_URL}devices/fm38/logo.png`,alt:'Brick Game 2 in 1',style:'width:70%;display:block;margin:20px auto'}),
-      h('h2',{},'Brick Game FM-38'),h('p',{},ru?'Тетрис A/B':'Tetris A/B'),
-      h('p',{},ru?'После включения идёт демонстрация. DOWN выбирает A/B, LEFT — уровень, RIGHT — скорость. START начинает партию; затем ставит её на паузу. ROTATE поворачивает фигуру. MELODY переключает мелодии.':'Power-on starts a demo. DOWN selects A/B, LEFT selects level, RIGHT selects speed. START begins or pauses play. ROTATE turns the piece. MELODY cycles music.'),
-      h('p',{},ru?'A — обычные фигуры, B — усложнённый набор из 3–5 клеток. Точный набор B и тайминги пока приближены.':'A uses regular pieces; B uses a complex set of 3–5 cells. The exact B pool and timing remain approximate.'));
-  };
-  const info=fm?{setActive:()=>{}}:new MiniInfoPanel(byId('side-info'),hub,{onChoose:id=>{if(powered)mini.selectGame(id);},onPointerUse:refocus,signal});
-  if(fm){renderFMInfo();onLangChange(renderFMInfo,signal);}
+  // Левая панель — как у остальных игрушек: карточка устройства и вкладки игр (Mini: гонки и тетрис; FM-38: тетрис A и B); сама следит за языком и привязками клавиш.
+  const info = new MiniInfoPanel(byId('side-info'), hub, {
+    toy: fm ? 'fm38' : 'minibrick',
+    ...(fm ? { games: FM38_GAMES } : {}),
+    onChoose: (id) => {
+      if (powered) mini.selectGame(id);
+    },
+    onPointerUse: refocus,
+    signal,
+  });
   function relabel(): void {
     document.documentElement.lang = getLang();
     applyStatic();
@@ -488,7 +505,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const stage = mini.screenStage;
     const idle = mini.idleDisplay;
     const base = { powered: true, cells: mini.cells(), blink: Math.floor(now / BLINK_MS) % 2 === 0, note: hub.settings.display.sound } as const;
-    if(fm)return {...base,variant:mini.gameNumber?'B':'A',preview:mini.preview(),score:null,lines:mini.inMenu?0:lines,label:null,linesLabel:true,next:true,speed:mini.displaySpeed,level:mini.displayLevel,scale:mini.displayLevel+1,pause:mini.phase==='paused',gameOver:mini.phase==='over'};
+    if(fm)return {...base,variant:mini.gameNumber?'B':'A',preview:mini.preview(),score:null,lines:mini.inMenu?0:lines,label:null,linesLabel:true,next:true,speed:mini.displaySpeed,level:mini.displayLevel,scale:mini.displayLevel+1,pause:mini.phase==='paused',gameOver:mini.phase==='over',rotate:mini.phase!=='over'};
     // Заставка по фото владельца: горят HI-SCORE с нулём, LINES, NEXT, GAME OVER, SPEED с нулём и вся шкала значков.
     if (stage === 'intro') {
       return { ...base, preview: null, score: mini.hiScore, lines: idle.lines?lineRecord(mini.gameNumber):null, label: 'hi', linesLabel: idle.lines, next: true, speed: mini.displaySpeed, level: null, scale: idle.scale, pause: false, gameOver: true };
@@ -528,7 +545,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   };
   let lastStatus = '';
   const updateUi = (): void => {
-    info.setActive(mini.gameId as 'racing' | 'tetris');
+    info.setActive(fm ? (mini.gameNumber ? 'b' : 'a') : mini.gameId);
     setData('power', powered ? 'on' : 'off');
     setData('phase', powered ? (mini.inMenu ? 'ready' : mini.phase) : 'ready');
     setData('stage', powered ? mini.screenStage : 'off');

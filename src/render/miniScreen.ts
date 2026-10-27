@@ -29,6 +29,7 @@ const SCALE = { x: 210.8, size: 0.13, centers: [98.4, 114.1, 128.1, 149, 173.5, 
 /** Наклон цифр: на фото они слегка скошены. */
 const SLANT = -6;
 const LABEL_SIZE = 11.7;
+export const MINI_LABEL_SIZE = LABEL_SIZE;
 
 /** Сегменты цифры: a — верх, b — верхний правый, c — нижний правый, d — низ, e — нижний левый, f — верхний левый, g — середина. */
 const DIGIT_SEGMENTS: Readonly<Record<string, string>> = {
@@ -71,8 +72,18 @@ export interface MiniLcdState {
   note: boolean;
   pause: boolean;
   gameOver: boolean;
+  /** Горит подпись ROTATE (FM-38: пока идёт игра или демонстрация). */
+  rotate?: boolean;
   /** Фаза мигания: мигающие клетки горят, пока она истинна. */
   blink: boolean;
+}
+
+/** Что нужно оболочке от экрана: корень SVG для вставки и показ состояния; у экранов разных моделей разная раскладка. */
+export interface LcdView {
+  readonly element: SVGSVGElement;
+  render(state: MiniLcdState): void;
+  /** Призрак выключенных сегментов: показать или скрыть (если экран это поддерживает). */
+  setGhost?(on: boolean): void;
 }
 
 export const MINI_LCD_OFF: MiniLcdState = {
@@ -96,7 +107,7 @@ export const MINI_LCD_OFF: MiniLcdState = {
 type Part = SVGElement;
 
 /** Шестиугольный сегмент: горизонтальный или вертикальный, с заострёнными концами. */
-function bar(cx: number, cy: number, length: number, thick: number, vertical: boolean): SVGPolygonElement {
+export function bar(cx: number, cy: number, length: number, thick: number, vertical: boolean): SVGPolygonElement {
   const l = length / 2;
   const t = thick / 2;
   const points = vertical
@@ -106,11 +117,10 @@ function bar(cx: number, cy: number, length: number, thick: number, vertical: bo
 }
 
 /** Одна семисегментная цифра. */
-class Digit {
+export class Digit {
   private readonly segments = new Map<string, Part>();
   private shown = '';
-  constructor(parent: Element, x: number, y: number, w: number, h: number, t: number) {
-    const gap = 0.7;
+  constructor(parent: Element, x: number, y: number, w: number, h: number, t: number, gap = 0.7) {
     const mid = y + h / 2;
     const top = y + t / 2;
     const bottom = y + h - t / 2;
@@ -144,22 +154,22 @@ class Digit {
   }
 }
 
-function setOn(element: Element, on: boolean): void {
+export function setOn(element: Element, on: boolean): void {
   if (on) element.setAttribute('data-on', '');
   else element.removeAttribute('data-on');
 }
 
 /** Подпись: узкий шрифт, ширина строки задана по фото (`textLength`), поэтому не зависит от шрифта на устройстве. */
-function text(label: string, x: number, y: number, width: number, segment = true): SVGTextElement {
+export function text(label: string, x: number, y: number, width: number, segment = true, size = LABEL_SIZE): SVGTextElement {
   return svg(
     'text',
-    { class: segment ? 'lcd-seg lcd-label' : 'lcd-label', x: String(x), y: String(y), 'font-size': String(LABEL_SIZE), textLength: String(width), lengthAdjust: 'spacingAndGlyphs' },
+    { class: segment ? 'lcd-seg lcd-label' : 'lcd-label', x: String(x), y: String(y), 'font-size': String(size), textLength: String(width), lengthAdjust: 'spacingAndGlyphs' },
     label,
   );
 }
 
 /** Ячейка матрицы: рамка почти во весь шаг и квадрат внутри, как у настоящего ЖК. */
-function cell(x: number, y: number, size: number): SVGGElement {
+export function cell(x: number, y: number, size: number): SVGGElement {
   const inset = size * 0.06;
   const inner = size * 0.38;
   return svg(
@@ -171,7 +181,7 @@ function cell(x: number, y: number, size: number): SVGGElement {
 }
 
 /** Нота «звук включён»: по фото — ножка с флажком. */
-const NOTE_PATH = 'M-3.2 3.4C-4.6 3.4 -5.6 4.1 -5.6 5C-5.6 5.9 -4.7 6.6 -3.4 6.6C-2.1 6.6 -1.2 5.9 -1.2 4.9V-4.8L4.8 -3.2V-6.4L-3.2 -8.6Z';
+export const NOTE_PATH = 'M-3.2 3.4C-4.6 3.4 -5.6 4.1 -5.6 5C-5.6 5.9 -4.7 6.6 -3.4 6.6C-2.1 6.6 -1.2 5.9 -1.2 4.9V-4.8L4.8 -3.2V-6.4L-3.2 -8.6Z';
 
 /** Круговая стрелка ROTATE: две дуги с наконечниками. */
 const ROTATE_PATH = 'M-6.4 -1A6.8 6.8 0 0 1 5 -4.8M2.8 -6.1L5.9 -5.1L5.1 -2M6.4 1A6.8 6.8 0 0 1 -5 4.8M-2.8 6.1L-5.9 5.1L-5.1 2';
@@ -331,7 +341,7 @@ export class MiniLcd {
   }
 }
 
-const lit = (value: number, blink: boolean): boolean => value === 1 || (value === CELL_BLINK && blink);
+export const lit = (value: number, blink: boolean): boolean => value === 1 || (value === CELL_BLINK && blink);
 
 /** Выключенный экран: рамка стакана и призрак сегментов (миниатюры карусели и выключенная игрушка). */
 export function miniLcdIdle(): SVGSVGElement {
