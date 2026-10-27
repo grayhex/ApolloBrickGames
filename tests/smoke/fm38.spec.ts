@@ -74,3 +74,76 @@ test('MELODY cycles clean synthesized tunes without muting or restarting the gam
  }
  expect(requests).toEqual([]);
 });
+
+test('FM-38 keys are separate objects shaped like the buttons: sprite + silhouette hit area, the body is drawn without them',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('./?toy=fm38&power=on&view=full');
+ await expect(page.locator('#base [data-key]')).toHaveCount(7);
+ expect(await page.evaluate(()=>getComputedStyle(document.getElementById('toy')!,'::before').backgroundImage)).toContain('body-plain.png');
+ for(const key of ['left','right','down','sp','sound','onoff','jump']){
+  const art=page.locator(`#base [data-key=${key}] + .fm__art img`);
+  await expect(art,`${key}: спрайт кнопки следует за областью нажатия`).toHaveCount(1);
+  await expect.poll(()=>art.evaluate((image:HTMLImageElement)=>image.complete&&image.naturalWidth>40),`${key}: спрайт загружен`).toBe(true);
+ }
+ // Нажатие уводит спрайт вглубь (сжатие со сдвигом), отпускание возвращает его на место.
+ const left=page.locator('#base [data-key=left]'),art=page.locator('#base [data-key=left] + .fm__art img');
+ const box=(await left.boundingBox())!;
+ await page.mouse.move(box.x+box.width*.5,box.y+box.height*.55);await page.mouse.down();
+ await expect(left).toHaveAttribute('data-pressed','');
+ await expect.poll(()=>art.evaluate((image)=>getComputedStyle(image).transform)).not.toBe('none');
+ await page.mouse.up();
+ await expect(page.locator('#game-area')).toHaveAttribute('data-level','1'); // LEVEL / LEFT сработала один раз
+ await expect.poll(()=>art.evaluate((image)=>getComputedStyle(image).transform)).toBe('none');
+ // Область нажатия — силуэт треугольника: угол рамки спрайта кнопкой не является.
+ await page.mouse.move(box.x+2,box.y+2);await page.mouse.down();
+ await expect(left).not.toHaveAttribute('data-pressed','');
+ await page.mouse.up();
+ await expect(page.locator('#game-area')).toHaveAttribute('data-level','1'); // угол рамки не нажал кнопку
+});
+
+test('FM-38 LCD follows the photographed layout: single cup outline, LEVEL label under its digit, two lit LINES digits in the middle of eight',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('./?toy=fm38&power=on&view=full');
+ await expect(page.locator('.fm38-lcd .lcd-frame')).toHaveCount(1);
+ const boxes=await page.evaluate(()=>{
+  const rect=(selector:string)=>{const r=document.querySelector(selector)!.getBoundingClientRect();return{top:r.top,bottom:r.bottom};};
+  const groups=[...document.querySelectorAll('.fm38-lcd .lcd-digits')].map(g=>g.getBoundingClientRect());
+  return{speedLabel:rect('.fm38-lcd [data-lcd=speed]'),levelLabel:rect('.fm38-lcd [data-lcd=level]'),gameB:rect('.fm38-lcd [data-lcd=gameB]'),rotate:rect('.fm38-lcd [data-lcd=rotateText]'),row:groups[0]!,speed:groups[1]!,level:groups[2]!};
+ });
+ expect(boxes.speedLabel.bottom,'SPEED стоит над своей цифрой').toBeLessThanOrEqual(boxes.speed.top+2);
+ expect(boxes.levelLabel.top,'LEVEL стоит под своей цифрой').toBeGreaterThanOrEqual(boxes.level.bottom-2);
+ expect(boxes.speed.bottom,'цифры SPEED и LEVEL идут одна за другой').toBeLessThanOrEqual(boxes.level.top+2);
+ expect(boxes.rotate.top,'ROTATE под GAME A/B').toBeGreaterThan(boxes.gameB.top);
+ // Первая группа — восемь цифр по семь сегментов; горят только пятая и шестая (индексы 28–41).
+ const lit=await page.evaluate(()=>[...document.querySelector('.fm38-lcd .lcd-digits')!.children].flatMap((segment,index)=>segment.hasAttribute('data-on')?[index]:[]));
+ expect(lit.length).toBeGreaterThan(0);
+ expect(lit.every(index=>index>=28&&index<42),`горят сегменты ${lit}`).toBe(true);
+});
+
+test('FM-38 has the segment ghost switch like the other toys',async({page})=>{
+ await page.goto('./?toy=fm38&power=on&view=full');
+ await expect(page.locator('#segments-options')).toBeVisible();
+ const unlit=page.locator('.fm38-lcd .lcd-cell:not([data-on])').first();
+ await expect.poll(()=>unlit.evaluate((node)=>+getComputedStyle(node).opacity)).toBeGreaterThan(0);
+ await page.locator('#segments-options label:has(input[value=off])').click();
+ await expect(page.locator('.fm38-lcd')).toHaveAttribute('data-ghost','off');
+ await expect.poll(()=>unlit.evaluate((node)=>+getComputedStyle(node).opacity)).toBe(0);
+ await expect.poll(()=>page.locator('.fm38-lcd .lcd-cell[data-on]').first().evaluate((node)=>+getComputedStyle(node).opacity)).toBeGreaterThan(.5);
+});
+
+test('FM-38 screen-only view: the screen is as large as on the other bricks and the housing is cut along the screen frame',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ const windowOf=async(toy:string)=>{
+  await page.goto(`./?toy=${toy}&view=screen`);
+  await expect(page.locator('#toy')).toHaveAttribute('data-view','screen');
+  return {window:(await page.locator('.lid__window').boundingBox())!,front:(await page.locator('#lid-front').boundingBox())!};
+ };
+ const mini=await windowOf('minibrick');
+ const fm=await windowOf('fm38');
+ expect(Math.abs(fm.window.width/mini.window.width-1),'ширина экрана как у Mini Brick (±8 %)').toBeLessThan(.08);
+ expect(fm.front.height,'вид помещается в окно без прокрутки').toBeLessThan(800);
+ expect(await page.evaluate(()=>getComputedStyle(document.getElementById('toy')!,'::before').backgroundImage),'корпус вырезан по рамке экрана').toContain('screen-frame.png');
+ const lcd=(await page.locator('.minibrick-lcd--live').boundingBox())!;
+ expect(lcd.x).toBeGreaterThan(fm.front.x+fm.front.width*.1);
+ expect(lcd.x+lcd.width).toBeLessThan(fm.front.x+fm.front.width*.9);
+});

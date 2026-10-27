@@ -9,7 +9,7 @@ import { makeBrickInput, BRICK_TICK_HZ, MAX_SCORE, type BrickAction, type BrickE
 import { actionBit, maskOf, type InputFrame } from '../core';
 import { browserGamepadProvider } from '../input/gamepad';
 import { browserStorage, musicVolumeOf } from '../input/settings';
-import { MINI_LCD_OFF, type MiniLcd, type MiniLcdState } from '../render/miniScreen';
+import { MINI_LCD_OFF, type LcdView, type MiniLcdState } from '../render/miniScreen';
 import { ControlPanel, type ControlPanelActions } from './controlPanel';
 import { CornerNav } from './cornerNav';
 import { openEncyclopedia } from './help';
@@ -94,7 +94,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   const model = fm?TOYS.fm38:TOYS.minibrick;
   document.body.dataset['chrome'] = 'toy';
   document.body.dataset['motion'] = 'off';
-  const lcd: MiniLcd = fm?applyFM38Model():applyMiniBrickModel();
+  const lcd: LcdView = fm?applyFM38Model():applyMiniBrickModel();
   const toy = byId('toy');
   const arena = byId('arena');
   const area = byId('game-area');
@@ -144,6 +144,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   window.addEventListener('keydown', unlockAudio, { signal });
   window.addEventListener('pointerdown', unlockAudio, { signal });
 
+  const ghostOn = (): boolean => hub.settings.display.ghost ?? true;
   const refocus = (): void => {
     if (view !== 'closed') area.focus({ preventScroll: true });
   };
@@ -331,7 +332,13 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     },
     setMusicVolume: none,
     setMusic: none,
-    toggleGhost: none,
+    toggleGhost: () => {
+      if (!fm) return;
+      hub.updateSettings((s) => {
+        s.display.ghost = !ghostOn();
+      });
+      applyDisplay();
+    },
     setView,
     pickOriginal: none,
     pickBundled: none,
@@ -361,7 +368,13 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
         });
         applyDisplay();
       },
-      toggleGhost: none,
+      toggleGhost: () => {
+        if (!fm) return;
+        hub.updateSettings((s) => {
+          s.display.ghost = !ghostOn();
+        });
+        applyDisplay();
+      },
       togglePause: () => {
         if (powered && !mini.inMenu) emit(mini.phase === 'paused' ? mini.resume() : mini.pause());
       },
@@ -385,7 +398,11 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const display = hub.settings.display;
     applyTheme(display.theme);
     corner.setTheme(display.theme);
-    corner.setGhost(null);
+    // «Сегменты экрана» (призрак погашенных сегментов) есть у FM-38; у Mini призрак всегда виден.
+    if (fm) {
+      lcd.setGhost?.(ghostOn());
+      corner.setGhost(ghostOn());
+    } else corner.setGhost(null);
     brickAudio.setMuted(!display.sound);
     brickAudio.setVolume(display.volume);
     controls.update({
@@ -488,7 +505,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const stage = mini.screenStage;
     const idle = mini.idleDisplay;
     const base = { powered: true, cells: mini.cells(), blink: Math.floor(now / BLINK_MS) % 2 === 0, note: hub.settings.display.sound } as const;
-    if(fm)return {...base,variant:mini.gameNumber?'B':'A',preview:mini.preview(),score:null,lines:mini.inMenu?0:lines,label:null,linesLabel:true,next:true,speed:mini.displaySpeed,level:mini.displayLevel,scale:mini.displayLevel+1,pause:mini.phase==='paused',gameOver:mini.phase==='over'};
+    if(fm)return {...base,variant:mini.gameNumber?'B':'A',preview:mini.preview(),score:null,lines:mini.inMenu?0:lines,label:null,linesLabel:true,next:true,speed:mini.displaySpeed,level:mini.displayLevel,scale:mini.displayLevel+1,pause:mini.phase==='paused',gameOver:mini.phase==='over',rotate:mini.phase!=='over'};
     // Заставка по фото владельца: горят HI-SCORE с нулём, LINES, NEXT, GAME OVER, SPEED с нулём и вся шкала значков.
     if (stage === 'intro') {
       return { ...base, preview: null, score: mini.hiScore, lines: idle.lines?lineRecord(mini.gameNumber):null, label: 'hi', linesLabel: idle.lines, next: true, speed: mini.displaySpeed, level: null, scale: idle.scale, pause: false, gameOver: true };
