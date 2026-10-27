@@ -15,7 +15,7 @@ export interface ToySwitch {
 type CategoryFilter = DeviceBrand | 'all';
 
 /** Ширина каталога на десктопе и отступ от края окна, px. */
-const MAX_WIDTH = 760;
+const MAX_WIDTH = 1120;
 const EDGE = 12;
 
 const READY_TEXT: Record<DeviceReadiness, { label: MsgKey; hint: MsgKey }> = {

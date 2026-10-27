@@ -168,7 +168,7 @@ test.describe('каталог устройств: содержимое', () => {
     expect(await ids()).toEqual(['taksun']);
     await tab('Brick Game').click();
     await expect(shown).toHaveCount(5);
-    expect(await ids()).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
+    expect(await ids()).toEqual(['brickgame', 'alibaba', 'minibrick', 'e88', 'e23']);
     await tab('Все').click();
     await expect(shown).toHaveCount(12);
     // Категория и поиск работают вместе; пустой поиск в категории — «Ничего не найдено».
@@ -431,7 +431,8 @@ test.describe('каталог устройств: язык и движение',
   });
 });
 
-for (const [width, height, columns] of [[1440, 820, 3], [1024, 800, 2], [768, 1024, 2], [390, 664, 1], [320, 568, 1]] as const) {
+// Каталог широкий и компактный: колонок столько, сколько помещается карточек не уже 176px; на телефоне — одна.
+for (const [width, height, columns] of [[1440, 820, 6], [1024, 800, 5], [768, 1024, 3], [390, 664, 1], [320, 568, 1]] as const) {
   test(`${width}×${height}: 15 моделей помещаются без горизонтальной прокрутки, колонок: ${columns}, список прокручивается внутри каталога`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await visit(page, './?toy=brickgame');

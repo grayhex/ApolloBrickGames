@@ -77,9 +77,12 @@ export function deviceEntry(id: ToyId): DeviceCatalogEntry {
   return { ...base, brand: own?.brand ?? base.brand, readiness: own?.readiness ?? base.readiness };
 }
 
-/** Порядок в сетке: бренды подряд (Apollo, TAKSUN, Brick Game), внутри — порядок регистрации в `TOY_IDS`. */
+/** Первой в каталоге стоит универсальная модель — основная на сайте (открывается без параметра `?toy=`). */
+const FIRST_DEVICE: ToyId = 'brickgame';
+
+/** Порядок в сетке: сначала универсальный Brick Game, затем бренды подряд (Apollo, TAKSUN, Brick Game), внутри бренда — порядок регистрации в `TOY_IDS`. */
 export function catalogOrder(ids: readonly ToyId[] = TOY_IDS): ToyId[] {
-  const rank = (id: ToyId): number => DEVICE_BRANDS.indexOf(deviceEntry(id).brand);
+  const rank = (id: ToyId): number => (id === FIRST_DEVICE ? -1 : DEVICE_BRANDS.indexOf(deviceEntry(id).brand));
   return [...ids].sort((a, b) => rank(a) - rank(b) || ids.indexOf(a) - ids.indexOf(b));
 }
 

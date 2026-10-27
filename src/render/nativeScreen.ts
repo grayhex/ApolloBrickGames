@@ -6,6 +6,8 @@ import type { TetrisScene } from './tetrisScreen';
 const DIGITS=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
 // a,b,c,d,e,f,g: original segment addresses, not replacement fonts.
 const SCORE=[['203_2','203_3','203_1','191_0','191_1','191_2','191_3'],['187_2','187_3','187_1','189_0','189_1','189_2','189_3'],['201_2','201_3','201_1','185_0','185_1','185_2','185_3'],['199_2','199_3','199_1','179_0','179_1','179_2','179_3']];
+/** E‑88 по ROM: в меню каждые ~1,05 с (63 такта) чередуются «HI-SCORE + рекорд очков» и «LINES + число рядов в партии рекорда». */
+export const E88_MENU_PHASE_TICKS = 63;
 const SPEED=['196_3','198_3','200_3','202_3','200_2','196_2','198_2'];
 const LEVEL=['204_3','206_3','208_3','210_3','208_2','204_2','206_2'];
 /** Own SVG segment panel for each physical LCD. Static housing is a separate resource. */
@@ -75,11 +77,12 @@ export class NativeScreen {
       const blink=Math.floor(scene.tick/15)%2===0;
       scene.cells.forEach((v,i)=>{const y=Math.floor(i/10),row=map.matrix[y];if(row&&((scene.overFill>0&&y>=map.matrix.length-scene.overFill)||(v&&(v!==2||blink))))active.add(row[i%10]!);});
       if(scene.preview)scene.preview.forEach((v,i)=>{if(v && (v!==2||blink))segment(`${[190,188,186,184][i%4]}_${[3,0,2,1][Math.floor(i/4)]}`);});
-      const value=scene.phase==='ready'?scene.hiScore:scene.score;
+      const linesPhase=this.device==='e88'&&scene.phase==='ready'&&scene.hiLines!==undefined&&Math.floor((scene.menuTick??0)/E88_MENU_PHASE_TICKS)%2===1;
+      const value=linesPhase?scene.hiLines!:scene.phase==='ready'?scene.hiScore:scene.score;
       const score=String(Math.floor(value)).padStart(4,' ').slice(-4);
       SCORE.forEach((ids,i)=>{if(score[i]!==' ')digit(Number(score[i]),ids);});
       if(value>=10000)segment('193_3');
-      segment('193_2');if(scene.phase==='ready')segment('195_2');
+      if(linesPhase)segment('193_0');else{segment('193_2');if(scene.phase==='ready')segment('195_2');}
       digit(scene.speed%10,SPEED);digit(scene.level%10,LEVEL);
       if(scene.speed>=10)segment('202_2');if(scene.level>=10)segment('210_2');
       segment('197_1');segment('182_2');if(scene.preview)segment('187_0');

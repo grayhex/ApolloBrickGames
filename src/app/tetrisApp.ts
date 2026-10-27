@@ -279,6 +279,7 @@ export async function startTetrisApp(toyId: ToyId, carryIn?: Carry): Promise<App
     if (cabinet.hiScore > stored) {
       savedHi.set(key, cabinet.hiScore);
       saveHi(key, cabinet.hiScore);
+      saveHi(`${key}:lines`, cabinet.lines); // рядом с рекордом очков — сколько рядов снято в этой партии (меню E‑88 показывает оба)
     }
   };
   const emit = (events: readonly CabinetEvent[]): void => {

@@ -45,9 +45,9 @@ describe('каталог устройств: метаданные', () => {
     expect(DEVICE_DEFAULTS['apollo-b0202'].readiness).toBe('reconstructing');
   });
 
-  it('порядок в сетке: бренды подряд (Apollo, TAKSUN, Brick Game), внутри — порядок регистрации', () => {
-    expect(catalogOrder()).toEqual(['mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302', 'taksun', 'alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
-    expect(catalogOrder(['minibrick', 'brickgame', 'mario'])).toEqual(['mario', 'minibrick', 'brickgame']);
+  it('порядок в сетке: сначала универсальный, затем бренды подряд (Apollo, TAKSUN, Brick Game), внутри — порядок регистрации', () => {
+    expect(catalogOrder()).toEqual(['brickgame', 'mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302', 'taksun', 'alibaba', 'minibrick', 'e88', 'e23']);
+    expect(catalogOrder(['minibrick', 'mario', 'brickgame'])).toEqual(['brickgame', 'mario', 'minibrick']);
   });
 
   it('счётчики категорий', () => {
@@ -108,7 +108,7 @@ describe('каталог устройств: подписи и поиск', () =
     const ids = catalogOrder();
     expect(filterDevices(ids, { category: 'apollo', query: '' }, t)).toEqual(['mario', 'clock99', 'seabattle', 'tank168', 'apollo-b0202', 'apollo-b0302']);
     expect(filterDevices(ids, { category: 'taksun', query: '' }, t)).toEqual(['taksun']);
-    expect(filterDevices(ids, { category: 'brickgame', query: '' }, t)).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23']);
+    expect(filterDevices(ids, { category: 'brickgame', query: '' }, t)).toEqual(['brickgame', 'alibaba', 'minibrick', 'e88', 'e23']);
     expect(filterDevices(ids, { category: 'brickgame', query: 'apollo' }, t)).toEqual([]);
     expect(filterDevices(ids, { category: 'all', query: '' }, t)).toHaveLength(12);
   });
