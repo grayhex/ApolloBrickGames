@@ -23,7 +23,7 @@ describe('описание игр Mini Brick Game B-S96', () => {
   it('гонки описаны по коду: +10 за секунду, палочки 20/30/40, жизней нет; тетрис общий, без перечня вариаций', () => {
     expect(MINI_RACING_GUIDE.scoring.map((row) => row.points)).toEqual(['+10', '+20', '+30', '+40']);
     expect(MINI_RACING_GUIDE.lives).toBeNull();
-    expect(MINI_TETRIS_GUIDE.summary.ru).toContain('общее');
+    expect(MINI_TETRIS_GUIDE.summary.ru).toContain('вариации одной игры');
     expect(MINI_TETRIS_GUIDE.rules.length).toBeLessThan(9);
   });
 });

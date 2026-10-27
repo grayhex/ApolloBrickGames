@@ -37,6 +37,9 @@ for (const toy of ['clock99', 'tank168', 'brickgame']) {
     expect(off.bottomEdge, 'лишней нижней линии нет').toBe(0);
     await page.locator('#base [data-key=onoff]').click();
     await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
+    // `data-power` ставится сразу в обработчике кнопки, а `data-boot` и холст обновляются лишь со следующим кадром: сразу после щелчка `data-boot` ещё «off» от выключенной игрушки, а холст пуст.
+    // Поэтому сперва ждём, пока включённый экран нарисует хоть что-то сверх разделителя (кадр прошёл, атрибуты свежие), и лишь потом конец проверки экрана.
+    await expect.poll(async () => (await canvasInk(page)).total, 'после включения на экране появляется больше, чем разделитель').toBeGreaterThan(off.total);
     await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
     const on = await canvasInk(page);
     expect(on.total).toBeGreaterThan(off.total);

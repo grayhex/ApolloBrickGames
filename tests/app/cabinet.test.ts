@@ -192,3 +192,24 @@ describe('ROM rules through the cabinet',()=>{
     }
   });
 });
+
+describe('E‑88: рекорд рядов и такты меню для чередования HI-SCORE ↔ LINES', () => {
+  const e88 = TOYS['e88'];
+  it('в меню сцена несёт рекорд рядов выбранной игры и счётчик тактов меню; в партии их нет', () => {
+    const loadHi = (key: string): number => (key.endsWith(':lines') ? 45 : 1230); // рекорд очков и рекорд рядов лежат под соседними ключами
+    const c = createCabinet(e88, { seed: 7, loadHi, defs: BRICK_GAMES });
+    expect(c.inMenu).toBe(true);
+    const first = c.scene({ sound: true, allOn: false });
+    expect(first.hiScore).toBe(1230);
+    expect(first.hiLines).toBe(45);
+    expect(first.menuTick).toBe(0);
+    for (let i = 0; i < 70; i++) c.menu(NEUTRAL_FRAME);
+    expect(c.scene({ sound: true, allOn: false }).menuTick).toBe(70);
+    c.start();
+    play(c);
+    const running = c.scene({ sound: true, allOn: false });
+    expect(running.hiLines).toBeUndefined();
+    expect(running.menuTick).toBe(0);
+    expect(c.lines).toBe(0);
+  });
+});

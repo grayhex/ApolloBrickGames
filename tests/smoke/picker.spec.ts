@@ -168,7 +168,7 @@ test.describe('каталог устройств: содержимое', () => {
     expect(await ids()).toEqual(['taksun']);
     await tab('Brick Game').click();
     await expect(shown).toHaveCount(6);
-    expect(await ids()).toEqual(['alibaba', 'minibrick', 'brickgame', 'e88', 'e23', 'fm38']);
+    expect(await ids()).toEqual(['brickgame', 'alibaba', 'minibrick', 'e88', 'e23', 'fm38']);
     await tab('Все').click();
     await expect(shown).toHaveCount(13);
     // Категория и поиск работают вместе; пустой поиск в категории — «Ничего не найдено».
@@ -353,10 +353,12 @@ test.describe('каталог устройств: ввод', () => {
     await page.keyboard.press('End');
     await expect.poll(focusedToy).toBe('fm38');
     await page.keyboard.press('Home');
-    await expect.poll(focusedToy).toBe('mario');
+    await expect.poll(focusedToy).toBe('brickgame'); // универсальный стоит в каталоге первым
     await page.keyboard.press('ArrowUp'); // из первой строки — в поле поиска
     await expect(pickerPanel(page).getByRole('searchbox')).toBeFocused();
     await page.keyboard.press('ArrowDown');
+    await expect.poll(focusedToy).toBe('brickgame');
+    await page.keyboard.press('ArrowRight');
     await expect.poll(focusedToy).toBe('mario');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
@@ -431,7 +433,8 @@ test.describe('каталог устройств: язык и движение',
   });
 });
 
-for (const [width, height, columns] of [[1440, 820, 3], [1024, 800, 2], [768, 1024, 2], [390, 664, 1], [320, 568, 1]] as const) {
+// Каталог широкий и компактный: колонок столько, сколько помещается карточек не уже 176px; на телефоне — одна.
+for (const [width, height, columns] of [[1440, 820, 6], [1024, 800, 5], [768, 1024, 3], [390, 664, 1], [320, 568, 1]] as const) {
   test(`${width}×${height}: 15 моделей помещаются без горизонтальной прокрутки, колонок: ${columns}, список прокручивается внутри каталога`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await visit(page, './?toy=brickgame');

@@ -4746,9 +4746,19 @@ body[data-chrome='toy'] .arena[data-model='brickgame'][data-compact] { --stage-w
 /* ── Выбор устройства: компактная панель над консолью и выпадающий каталог (toySwitch.ts, deviceCatalog.ts) ──────────────────────────────────────────
    Замена горизонтальной карусели. Высота шапки (`.brand`) и положение консоли не меняются: панель стоит в той же строке по центру, каталог выпадает вниз
    поверх страницы и ничего не сдвигает. Колонки карточек — 3 / 2 / 1 по ширине окна, при открытом каталоге прокручивается только внутренний список. */
-.devpick { position: relative; z-index: 31; width: min(440px, 100%); min-width: 0; margin-inline: auto; }
+.devpick { position: relative; z-index: 31; display: flex; align-items: center; gap: 8px; width: min(536px, 100%); min-width: 0; margin-inline: auto; }
+/* Стрелки слева и справа от панели — соседнее устройство каталога (по кругу); той же высоты и стиля, что и сама панель. */
+.devpick__step {
+  flex: none; display: grid; place-items: center; align-self: stretch; width: 40px; padding: 0; color: var(--muted); cursor: pointer;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--corner-line); border-radius: 14px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 12%), inset 0 1px rgb(255 255 255 / 5%); transition: background 160ms, border-color 160ms, color 160ms;
+}
+.devpick__step:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 34%, var(--corner-line)); }
+.devpick__step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.devpick__step-icon { width: 18px; height: 18px; }
+body:not([data-booting]) .devpick__step { animation: dock-arrive 480ms cubic-bezier(.2, .8, .2, 1) both; }
 .devpick__trigger {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 6px 12px 6px 9px;
+  display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; min-height: 54px; padding: 6px 12px 6px 9px;
   color: var(--text); text-align: left; cursor: pointer;
   background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--corner-line); border-radius: 14px;
   box-shadow: 0 6px 22px rgb(0 0 0 / 12%), inset 0 1px rgb(255 255 255 / 5%);
@@ -4774,9 +4784,9 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 .devpick__scrim[hidden], .devpick__panel[hidden] { display: none; }
 
 .devpick__panel {
-  --devpick-w: 760px; --devpick-left: 0px; --devpick-max: 560px;
+  --devpick-w: 1120px; --devpick-left: 0px; --devpick-max: 560px;
   position: absolute; top: calc(100% + 8px); left: var(--devpick-left); z-index: 31;
-  display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; width: var(--devpick-w); max-width: calc(100vw - 24px); max-height: var(--devpick-max); padding: 14px 14px 10px;
+  display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; width: var(--devpick-w); max-width: calc(100vw - 24px); max-height: var(--devpick-max); padding: 10px 12px 8px;
   color: var(--text); background: var(--panel); border: 1px solid var(--corner-line); border-radius: 14px;
   box-shadow: 0 18px 48px rgb(0 0 0 / 38%), inset 0 1px rgb(255 255 255 / 5%);
   animation: devpick-in 150ms cubic-bezier(.2, .8, .2, 1) both; touch-action: none; /* жест на шапке и поиске не прокручивает страницу под каталогом */
@@ -4800,16 +4810,22 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 .devpick__tab[aria-selected='true'] { color: var(--text); background: color-mix(in srgb, var(--accent) 14%, var(--chip)); border-color: color-mix(in srgb, var(--accent) 36%, transparent); }
 
 .devpick__scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; margin-inline: -4px; padding: 2px 4px 4px; scrollbar-width: thin; }
-.devpick__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.devpick__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .devpick__item { min-width: 0; }
 .devpick__item[hidden] { display: none; }
 .devpick__card {
-  display: flex; align-items: center; gap: 11px; box-sizing: border-box; width: 100%; min-height: 62px; padding: 8px 10px; color: var(--text); text-decoration: none;
+  display: flex; align-items: center; gap: 7px; box-sizing: border-box; width: 100%; min-height: 50px; padding: 5px 7px; color: var(--text); text-decoration: none;
   background: var(--chip); border: 1px solid var(--line); border-radius: 10px; transition: background 140ms, border-color 140ms;
 }
 .devpick__card:hover { background: color-mix(in srgb, var(--accent) 7%, var(--chip)); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
 .devpick__card[aria-current='page'] { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); }
-.devpick__card .devpick__model { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; }
+.devpick__card .devpick__model { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: normal; word-break: normal; hyphens: manual; font-size: 13px; }
+.devpick__card .devpick__maker { font-size: 9.5px; }
+.devpick__card .devpick__icon { width: 22px; }
+/* Значок готовности — в углу карточки: названию остаётся вся ширина, слово «Универсальный» не переносится по буквам. */
+.devpick__card { position: relative; }
+.devpick__card .devpick__ready { position: absolute; top: 5px; right: 6px; width: 13px; height: 13px; }
+.devpick__card .devpick__maker { padding-right: 18px; }
 .devpick__empty { margin: 14px 4px 10px; font-size: 13px; text-align: center; color: var(--muted); }
 .devpick__empty[hidden] { display: none; }
 .devpick__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 8px 2px 0; list-style: none; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
@@ -4817,10 +4833,20 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 
 @keyframes devpick-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes devpick-fade { from { opacity: 0; } to { opacity: 1; } }
-@media (max-width: 1099px) { .devpick__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Широкий каталог: заголовок, поиск и вкладки в одной строке, карточки компактно в несколько колонок — каталог ниже и не закрывает консоль. */
+@media (min-width: 760px) {
+  .devpick__panel { display: grid; grid-template-columns: auto auto minmax(220px, 1fr) auto auto; grid-template-rows: auto minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 8px; }
+  .devpick__head, .devpick__tools { display: contents; }
+  .devpick__count { flex: none; white-space: nowrap; }
+  .devpick__tab { height: 32px; padding: 0 11px; }
+  .devpick__search { height: 32px; }
+  .devpick__scroll, .devpick__legend { grid-column: 1 / -1; }
+  .devpick__scroll { align-self: stretch; }
+}
 @media (max-width: 559px) {
   .devpick { width: 100%; }
   .devpick__trigger { min-height: 50px; padding-right: 10px; }
+  .devpick__step { width: 34px; border-radius: 12px; }
   .devpick__list { grid-template-columns: minmax(0, 1fr); }
   .devpick__panel { padding: 12px 10px 8px; max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)); }
   .devpick__tabs { width: 100%; }

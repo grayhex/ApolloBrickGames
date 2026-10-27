@@ -1,4 +1,5 @@
 import { h, svg } from './dom';
+import { functionGroove } from './groove';
 import type { ToyKeyId } from './toy';
 import type { View } from './view';
 
@@ -90,8 +91,8 @@ export const TAKSUN_KEYS: readonly { key: ToyKeyId; label: string; x: number; y:
   { key: 'onoff', label: 'ON/OFF', x: 120, y: 365, w: 29, h: 29 },
   { key: 'fire', label: 'RESET', x: 161.5, y: 396, w: 26, h: 26 },
 ];
-/** Ось ложбины: через центры PAUSE/START (86, 270), VOLUME (94, 320) и ON/OFF (120, 365); RESET стоит ниже, вне ложбины. */
-const FUNCTION_GROOVE = 'M86 262Q84 322 122 368';
+/** Ложбина идёт через центры PAUSE/START (86, 270), VOLUME (94, 320) и ON/OFF (120, 365); RESET стоит ниже, вне ложбины. Форма — общая с Mini Brick (`groove.ts`). */
+const GROOVE = { transform: '', width: 38, edge: '#6cc0e8', edgeOpacity: '.5', shadow: '#042f4f', floor: '#0a4c7b' } as const;
 const TILT = -24;
 
 export function taksunBase(buttons = false): SVGSVGElement {
@@ -113,9 +114,7 @@ export function taksunBase(buttons = false): SVGSVGElement {
     svg('circle', { cx: '215', cy: '265', r: '94', fill: `url(#${id}-panel)`, stroke: '#07406a', 'stroke-width': '3' }),
     svg('circle', { cx: '215', cy: '265', r: '89', fill: 'none', stroke: '#52b2e0', 'stroke-opacity': '.35', 'stroke-width': '1.5' }),
     // Три служебные кнопки сидят в одной изогнутой ложбине: светлая кромка снизу, тень сверху, дно темнее панели.
-    svg('path', { d: FUNCTION_GROOVE, transform: 'translate(0 1.8)', fill: 'none', stroke: '#6cc0e8', 'stroke-opacity': '.5', 'stroke-width': '38', 'stroke-linecap': 'round' }),
-    svg('path', { d: FUNCTION_GROOVE, fill: 'none', stroke: '#042f4f', 'stroke-width': '38', 'stroke-linecap': 'round' }),
-    svg('path', { d: FUNCTION_GROOVE, transform: 'translate(0 1.2)', fill: 'none', stroke: '#0a4c7b', 'stroke-width': '33', 'stroke-linecap': 'round' }),
+    ...functionGroove(GROOVE),
   );
   // Динамик: семь прорезей 2 + 3 + 2.
   for (const [row, offsets] of [
