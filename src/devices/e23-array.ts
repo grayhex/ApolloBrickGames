@@ -13,8 +13,10 @@ export class E23Array extends InvadersGame {
   protected override get singleCellGun():boolean { return true; }
   protected override get initialInvasionDelay():number { return 30; }
   protected override invasionInterval():number { return 120; }
-  protected override reset():void { this.openingStep=true;this.pointY=-1;this.pointTimer=24;this.pointRespawn=120;super.reset(); }
+  /** The opening step and the descending point belong to one level: every new wall (a new game, a cleared array, a lost life) starts them afresh. */
+  private resetLevelState():void { this.openingStep=true;this.pointY=-1;this.pointTimer=24;this.pointRespawn=120; }
   protected override createWall():Wall {
+    this.resetLevelState();
     const cells=new Uint8Array(this.fieldRows*10);
     const rows=['##########','##########','.########.','.########.','..######..'];
     rows.forEach((row,i)=>Array.from(row).forEach((cell,x)=>{if(cell==='#')cells[(this.fieldRows-1-i)*10+x]=1;}));
