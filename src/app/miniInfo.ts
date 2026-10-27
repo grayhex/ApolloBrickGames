@@ -1,16 +1,28 @@
-import { MINI_GAMES, type MiniGameId } from '../brick/guides/mini';
+import type { GameGuideData, GuideText } from '../brick/guide';
+import { MINI_GAMES } from '../brick/guides/mini';
 import { h } from './dom';
+import { deviceCard } from './deviceCard';
 import { compactGuide } from './guidePanel';
 import { getLang, onLangChange, t } from './i18n';
-import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
-import { keyRow } from './infoPanel';
 import { miniBrickMark } from './minibrickModel';
 import { TOYS } from './toys';
 
+/** Игра на вкладке левой панели: метка, название, описание «по факту реализации» и короткая пометка (Mini: гонки и тетрис; FM-38: тетрис A и B). */
+export interface PanelGame {
+  id: string;
+  key: string;
+  name: GuideText;
+  guide: GameGuideData;
+  note: GuideText;
+}
+
 export interface MiniInfoHooks {
-  /** Вкладку игры выбрали: консоль в меню переходит к первому номеру этой игры. */
-  onChoose?(id: MiniGameId): void;
+  /** Какая это игрушка и какие у неё вкладки (по умолчанию — Mini Brick B-S96). */
+  toy?: 'minibrick' | 'fm38';
+  games?: readonly PanelGame[];
+  /** Вкладку игры выбрали: консоль в меню переходит к первому номеру этой игры (или к варианту A/B). */
+  onChoose?(id: string): void;
   /** Щелчок мышью по вкладке: клавиатура возвращается игре. */
   onPointerUse?(): void;
   signal?: AbortSignal;
@@ -23,23 +35,25 @@ export interface MiniInfoHooks {
  */
 export class MiniInfoPanel {
   private readonly root: HTMLElement;
-  private readonly hub: InputHub;
   private readonly hooks: MiniInfoHooks;
-  private selected: MiniGameId = 'racing';
-  private active: MiniGameId = 'racing';
-  private tabs = new Map<MiniGameId, HTMLButtonElement>();
-  private showTab: ((id: MiniGameId) => void) | null = null;
+  private readonly games: readonly PanelGame[];
+  private selected: string;
+  private active: string;
+  private tabs = new Map<string, HTMLButtonElement>();
+  private showTab: ((id: string) => void) | null = null;
 
-  constructor(root: HTMLElement, hub: InputHub, hooks: MiniInfoHooks = {}) {
+  constructor(root: HTMLElement, _hub: InputHub, hooks: MiniInfoHooks = {}) {
     this.root = root;
-    this.hub = hub;
     this.hooks = hooks;
+    this.games = hooks.games ?? MINI_GAMES;
+    this.selected = this.games[0]!.id;
+    this.active = this.selected;
     this.render();
     onLangChange(() => this.render(), hooks.signal);
   }
 
   /** Игра под курсором меню консоли изменилась: точка на вкладке и открытое описание переходят к ней (пока игра та же, вкладку читателя не трогаем). */
-  setActive(id: MiniGameId): void {
+  setActive(id: string): void {
     if (id === this.active) return;
     this.active = id;
     for (const [gameId, tab] of this.tabs) {
@@ -50,43 +64,29 @@ export class MiniInfoPanel {
   }
 
   render(): void {
-    const { keyboard } = this.hub.settings;
-    const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
-    this.root.dataset['toy'] = 'minibrick';
-    const head = h(
-      'header',
-      { class: 'side__top side__top--logo' },
-      h('h2', { class: 'visually-hidden', id: 'info-title' }, TOYS.minibrick.name),
-      h('div', { class: 'about__sticker' }, miniBrickMark('label', { class: 'minibrick-sticker' })),
-    );
-    const keyList = h(
-      'ul',
-      { class: 'keys', id: 'keymap' },
-      keyRow('LEFT / LEVEL', keys('left')),
-      keyRow('RIGHT / SPEED', keys('right')),
-      keyRow('DOWN / GAME', keys('down')),
-      keyRow('ROTATE', keys('jump', 'up')),
-      keyRow(t('info.keys.startPause'), keys('start', 'pause')),
-      keyRow(t('info.keys.power'), [POWER_KEY]),
-      keyRow(t('info.keys.sound'), [SOUND_KEY]),
-    );
-    const controls = h('details', { class: 'side__sec side__sec--keys' }, h('summary', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')), keyList);
-    this.root.replaceChildren(head, controls, this.gamesSection());
+    const toy = this.hooks.toy ?? 'minibrick';
+    this.root.dataset['toy'] = toy;
+    // Логотип: у Mini — наклейка «96 IN 1», у FM-38 — знак «2 IN 1 BRICK GAME» по графике владельца.
+    const logo =
+      toy === 'fm38'
+        ? h('img', { class: 'about__logo fm38-logo', src: `${import.meta.env.BASE_URL}devices/fm38/logo.png`, width: '600', height: '600', alt: 'Brick Game 2 in 1' })
+        : h('div', { class: 'about__sticker' }, miniBrickMark('label', { class: 'minibrick-sticker' }));
+    this.root.replaceChildren(h('h2', { class: 'visually-hidden', id: 'info-title' }, TOYS[toy].name), deviceCard({ toy, logo }), this.gamesSection());
   }
 
   private gamesSection(): HTMLElement {
     const lang = getLang();
     const list = h('div', { class: 'gtabs', role: 'tablist', 'aria-label': t('games.tabs') });
     const panel = h('div', { class: 'gpanel', role: 'region', id: 'gpanel' });
-    const tabs = new Map<MiniGameId, HTMLButtonElement>();
+    const tabs = new Map<string, HTMLButtonElement>();
     this.tabs = tabs;
-    const select = (id: MiniGameId, focus = false): void => {
+    const select = (id: string, focus = false): void => {
       this.selected = id;
       for (const [gameId, tab] of tabs) {
         tab.setAttribute('aria-selected', String(gameId === id));
         tab.tabIndex = gameId === id ? 0 : -1;
       }
-      const game = MINI_GAMES.find((item) => item.id === id)!;
+      const game = this.games.find((item) => item.id === id)!;
       panel.dataset['game'] = id;
       panel.setAttribute('aria-labelledby', `gtab-${id}`);
       panel.replaceChildren(
@@ -96,7 +96,7 @@ export class MiniInfoPanel {
       );
       if (focus) tabs.get(id)?.focus();
     };
-    for (const game of MINI_GAMES) {
+    for (const game of this.games) {
       const tab = h(
         'button',
         { type: 'button', role: 'tab', class: 'gtab', id: `gtab-${game.id}`, 'data-game': game.id, 'aria-controls': 'gpanel', title: `${game.key}: ${game.name[lang]}`, 'aria-label': `${game.key}: ${game.name[lang]}` },
@@ -112,7 +112,7 @@ export class MiniInfoPanel {
       list.append(tab);
     }
     list.addEventListener('keydown', (event) => {
-      const ids = MINI_GAMES.map((game) => game.id);
+      const ids = this.games.map((game) => game.id);
       const at = ids.indexOf(this.selected);
       const last = ids.length - 1;
       const next = { ArrowRight: at >= last ? 0 : at + 1, ArrowDown: at >= last ? 0 : at + 1, ArrowLeft: at <= 0 ? last : at - 1, ArrowUp: at <= 0 ? last : at - 1, Home: 0, End: last }[event.key];

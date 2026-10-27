@@ -166,8 +166,8 @@ test.describe('«Часы+99»', () => {
     await open(page, 'clock99');
     await expect(page.locator('#side-info')).toBeVisible();
     await expect(page.locator('#side-info .grules li')).toHaveCount(3);
-    await expect(page.locator('#side-info #keymap')).toContainText('ROTATE');
-    await expect(page.locator('#side-info .about__logo')).toHaveAttribute('src', /sticker-clock99/);
+    await expect(page.locator('#side-info #keymap')).toHaveCount(0); // схемы клавиш в панели нет
+    await expect(page.locator('#side-info .dcard .about__logo')).toHaveAttribute('src', /sticker-clock99/);
     await expect(page.locator('#tgl-sound')).toBeVisible();
     await expect(page.locator('#volume')).toBeVisible();
     await expect(page.locator('#music')).toHaveCount(0);
@@ -348,7 +348,8 @@ test('Crocodile Mario не изменился: свои подписи, лого
   const labels = await page.locator('.base__art text').allTextContents();
   for (const text of ['ON/OFF', 'S./P.', 'SOUND', 'FIRE', 'UP', 'LEFT', 'RIGHT', 'DOWN', 'JUMP']) expect(labels, text).toContain(text);
   await expect(page.locator('.base__sticker')).toHaveCount(0);
-  await expect(page.locator('#keymap')).toBeVisible(); // слева справка по упаковке и клавишам
+  await expect(page.locator('#side-info .dcard')).toContainText('Crocodile Mario'); // слева карточка устройства и справка по упаковке
+  await expect(page.locator('#keymap')).toHaveCount(0);
   await expect(page.locator('#shell-picker .shellpick__btn')).toHaveCount(4);
   await expect(page.locator('#original-levels .lv[aria-disabled="true"]')).toHaveCount(0);
   await page.locator('#shell-picker [data-shell="yellow"]').click();
@@ -372,7 +373,7 @@ for (const toy of ['mario', 'clock99', 'seabattle', 'tank168']) {
     await page.locator('#segments-off').click();
     await expect(page.locator('#segments-off')).toBeChecked();
     await page.locator('#corner-lang').click();
-    await expect(page.locator('#side-info #keys-title')).toHaveText('Controls');
+    await expect(page.locator('#side-info .dcard__flabel').first()).toHaveText('Year'); // карточка устройства переведена
     if (toy !== 'mario') await expect(page.locator('#side-info .grules li')).toHaveCount(3);
     // Both docks (device picker bar and service menu) use the same surface, and the left indicators do not overlap the right menu.
     const docks = await page.locator('.chrome-dock, .devpick__trigger').evaluateAll(nodes => nodes.map(n => {

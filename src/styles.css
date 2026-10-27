@@ -3999,50 +3999,6 @@ body.route-editor .shell > :not(#fatal) {
 .box3d--live[data-dragging] { cursor: grabbing; }
 .box3d--live:focus-visible { outline: 2px solid var(--tone, currentColor); }
 
-/* Миниатюра рядом с наклейкой: кнопка с мелкой коробкой и пометкой «3D». */
-.side__top--box {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-}
-
-.side--info[data-toy] .side__top--box .about__sticker { width: auto; max-width: 176px; margin-inline: auto; padding: 6px 4px; }
-
-.boxbtn {
-  position: relative;
-  width: 100px;
-  height: 128px;
-  padding: 0;
-  color: var(--muted);
-  cursor: pointer;
-  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--tone, #888) 22%, transparent), transparent 72%);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.boxbtn .box3d { pointer-events: none; }
-
-.boxbtn:is(:hover, :focus-visible) {
-  border-color: color-mix(in srgb, var(--tone, #888) 70%, var(--line));
-}
-
-.boxbtn:focus-visible { outline: 2px solid var(--tone, currentColor); outline-offset: 2px; }
-
-.boxbtn__cap {
-  position: absolute;
-  right: 6px;
-  bottom: 5px;
-  padding: 1px 5px;
-  font: 800 0.56rem/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: 0.1em;
-  color: var(--lcd-ink, #222);
-  background: var(--lcd, #bbb);
-  border-radius: 6px;
-  opacity: 0.85;
-}
-
 .box-dialog {
   width: min(560px, calc(100vw - 24px));
 }
@@ -4213,7 +4169,7 @@ body.route-editor .shell > :not(#fatal) {
 .games__note { margin: 0; font-size: 0.68rem; opacity: 0.75; }
 
 @media (prefers-reduced-motion: reduce) {
-  .boxbtn, .gtab { transition: none; }
+  .gtab { transition: none; }
 }
 
 /* ── Описание игры «по факту реализации» во вкладке (src/app/guidePanel.ts) ─────────────────────────── */
@@ -4290,20 +4246,7 @@ body.route-editor .shell > :not(#fatal) {
 @keyframes gblink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.18; } }
 @media (prefers-reduced-motion: reduce) { .gscheme__grid i[data-v='*'] { animation: none; opacity: 0.55; } }
 
-/* ── Кнопка 3D-упаковки: размер по высоте окна (панель Mario должна помещаться без прокрутки) ─────────── */
 .side--info { position: relative; }
-.boxbtn__label { display: none; }
-
-/* У Mario миниатюра лежит поверх правого края шапки и места не занимает: логотип остаётся ровно по центру панели, а справка без прокрутки.
-   Высокие окна — крупнее и логотип поуже, чтобы они не перекрывались. */
-.side--info:not([data-toy]) .side__top--box { display: block; }
-.side--info:not([data-toy]) .boxbtn { position: absolute; top: 10px; right: 12px; z-index: 1; width: 84px; height: 108px; }
-.side--info:not([data-toy]) .side__top--box .about__sticker { max-width: 150px; }
-
-@media (max-height: 960px) {
-  .boxbtn { width: 64px; height: 84px; }
-  .side--info:not([data-toy]) .boxbtn { width: 64px; height: 84px; }
-}
 
 /* Запас для квадратных иллюстраций и различий метрик шрифтов браузеров. */
 @media (max-height: 960px) {
@@ -4316,28 +4259,6 @@ body.route-editor .shell > :not(#fatal) {
   .side--info:not([data-toy]) { padding-block: 8px; }
   .side--info:not([data-toy]) .fig { grid-template-rows: 22px auto; }
   .side--info:not([data-toy]) .fig__box { height: 22px; }
-
-  .side--info:not([data-toy]) .boxbtn {
-    position: relative;
-    top: auto;
-    right: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    height: 34px;
-    padding: 0 10px 0 6px;
-    border-radius: 12px;
-  }
-
-  .side--info:not([data-toy]) .boxbtn .box3d { flex: none; width: 26px; height: 30px; }
-  .side--info:not([data-toy]) .boxbtn__cap { display: none; }
-  .side--info:not([data-toy]) .boxbtn__label {
-    display: block;
-    font: 700 0.7rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    letter-spacing: 0.04em;
-    color: var(--text);
-  }
 }
 
 /* Player cards retain square frames at every viewport height. */
@@ -4857,4 +4778,21 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 @media (prefers-reduced-motion: reduce) {
   .devpick__panel, .devpick__scrim, body:not([data-booting]) .devpick__trigger { animation: none; }
   .devpick__trigger, .devpick__chevron, .devpick__card, .devpick__tab { transition: none; }
+}
+
+/* Верхняя панель настроек — в правом столбце над картинкой сайта и пультом, одной с ними ширины (положение по `dockAlign.ts`). Слева панель справки поднимается к верху. */
+@media (min-width:1200px) {
+  body[data-chrome='toy'] .site-brand { top:70px; }
+  body[data-chrome='toy'] .side--ctl { margin-top:calc(78px + var(--side-w) * .396); max-height:calc(100dvh - 100px - var(--side-w) * .396); }
+  body[data-chrome='toy'] .side--info { margin-top:0; align-self:start; max-height:calc(100dvh - 24px); }
+  .topleft[data-aligned] { gap:3px; padding:4px; }
+  .topleft[data-aligned] .devs { gap:3px; }
+  .topleft[data-aligned] #corner { gap:1px; padding-left:3px; }
+  .topleft[data-aligned] .corner__btn--book>span { display:none; }
+  .topleft[data-aligned] .corner__btn--book { flex:1; width:auto; min-width:30px; padding:5px 4px; }
+}
+@media (min-width:1200px) and (max-width:1359px) {
+  .topleft[data-aligned] .dev { width:26px; }
+  .topleft[data-aligned] .corner__btn:not(.corner__btn--book):not(.corner__btn--lang) { width:26px; }
+  .topleft[data-aligned] .corner__btn--lang { width:42px; font-size:10px; }
 }

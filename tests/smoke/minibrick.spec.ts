@@ -269,8 +269,9 @@ test('Mini: очки и шкала фруктов меняются раз в 2 �
 test('Mini: левая панель — как у остальных игрушек: наклейка, управление и две игры с общим описанием, старого текста нет', async ({ page }) => {
   await page.goto('./?toy=minibrick&view=full&debug');
   const info = page.locator('#side-info');
-  await expect(info.locator('.about__sticker svg')).toBeVisible();
-  await expect(info.locator('summary')).toHaveText('Управление');
+  await expect(info.locator('.dcard .about__sticker svg')).toBeVisible();
+  await expect(info.locator('.dcard')).toContainText('Mini Brick Game');
+  await expect(info.locator('summary'), 'раздела «Управление» слева нет').toHaveCount(0);
   await expect(info.locator('.gtab')).toHaveText(['00–01', '02–96']);
   await expect(info.locator('.gtab[aria-selected=true]')).toHaveText('00–01');
   await expect(info.locator('.gpanel__name')).toHaveText('Гонки');
@@ -290,7 +291,7 @@ test('Mini: левая панель — как у остальных игруш�
   await expect(info).not.toContainText('Красно-синий складной корпус');
   await expect(info).not.toContainText('97 номеров');
   await page.locator('#corner-lang').click();
-  await expect(info.locator('summary')).toHaveText('Controls');
+  await expect(info.locator('.dcard__flabel').first()).toHaveText('Year');
   await expect(info.locator('.gpanel__name')).toHaveText('Tetris');
   await expect(info.locator('.gtab')).toHaveText(['00–01', '02–96']);
 });

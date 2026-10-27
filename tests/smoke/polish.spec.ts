@@ -115,10 +115,8 @@ test('справка слева по упаковке: фигуры, очки, �
   await expect(info.locator('.hazard')).toHaveText(['падение в реку', 'Devil съедает', 'Fiery dragon', 'Missile', 'Iron gate']);
   await expect(info).toContainText('потеряны 4 жизни или вышло время (400 секунд)');
   await expect(info.locator('.facts')).toContainText('400');
-  // Управление: UP — тоже прыжок.
-  const jump = info.locator('.keys__row', { hasText: 'Прыжок' });
-  await expect(jump).toContainText('Пробел');
-  await expect(jump).toContainText('↑');
+  // Схемы управления в левой панели нет: привязки — в настройках.
+  await expect(info.locator('.keys__row')).toHaveCount(0);
   await page.locator('#corner-help').click();
   await expect(page.locator('#sources')).toContainText('видео');
   await expect(page.locator('.enc-article h2')).toHaveText('Crocodile Mario');

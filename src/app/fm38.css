@@ -25,8 +25,3 @@ body[data-chrome='toy'] .arena[data-model='fm38']:not([data-compact]) {--stage-w
 .arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__front {height:calc(var(--fm-frame-h) + 2 * var(--fm-pad));}
 .arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__window {left:calc((100cqw - var(--fm-frame-w)) / 2 + var(--fm-win-x));top:calc(var(--fm-pad) + var(--fm-win-y));width:var(--fm-win-w);height:var(--fm-win-h);}
 
-body[data-toy='fm38'] #side-info {display:block;}
-body[data-toy='fm38'] #side-info>img {max-width:160px;}
-[data-theme='dark'] body[data-toy='fm38'] #side-info>img {filter:brightness(1.8);}
-body[data-toy='fm38'] #side-info p {font-size:14px;line-height:1.55;margin:16px 0;}
-body[data-toy='fm38'] #side-info h2 {font-size:19px;margin:20px 0;}

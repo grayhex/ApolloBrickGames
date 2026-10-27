@@ -83,7 +83,8 @@ test('слева справка, справа пульт; панели отод�
 
   const info = page.locator('#side-info');
   await expect(info.getByRole('heading', { name: 'Путешествие Марио' })).toBeVisible();
-  await expect(info.getByRole('heading', { name: 'Управление' })).toBeVisible();
+  await expect(info.locator('.dcard')).toContainText('Crocodile Mario'); // карточка устройства вверху панели
+  await expect(info.getByRole('heading', { name: 'Управление' }), 'раздела «Управление» слева нет').toHaveCount(0);
   await expect(info.getByRole('heading', { name: 'Очки' })).toBeVisible();
   await expect(info.getByRole('heading', { name: 'Фигуры и враги' })).toBeVisible();
   for (const text of ['Heart', 'Small devil', 'Big devil', '+100', '+200', '+400']) {
@@ -130,19 +131,13 @@ test('левая справка помещается в окне без прок
   }
 });
 
-test('схема управления слева следует за переназначением клавиш', async ({ page }) => {
+test('в левой панели нет схемы управления: привязки клавиш видны и меняются в настройках', async ({ page }) => {
   await ready(page);
-  const keymap = page.locator('#keymap');
-  await expect(keymap).toContainText('Пробел');
-  const fire = keymap.locator('.keys__row', { hasText: 'Огонь' });
-  await expect(fire).toContainText('X');
+  await expect(page.locator('#keymap')).toHaveCount(0);
   await page.locator('#corner-settings').click();
-  await page.locator('[data-key="kb:fire"]').click(); // «Назначить» у «Огонь»
-  await page.keyboard.press('KeyV');
+  await expect(page.locator('[data-key="kb:fire"]')).toBeVisible(); // «Назначить» у «Огонь»
   await page.keyboard.press('Escape');
   await expect(page.locator('dialog#settings')).toBeHidden();
-  await expect(fire).toContainText('V');
-  await expect(fire).not.toContainText('X');
 });
 
 test('пульт: звук следует за SOUND, музыка, сегменты, состояние вида, фон в уголке — выбор запоминается', async ({ page }) => {

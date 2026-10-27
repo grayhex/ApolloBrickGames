@@ -7,12 +7,11 @@ import { BRICK_GUIDES } from '../brick/guides';
 import { GAMES, type GameId } from '../games/catalog';
 import { rarityOf, RARITY_LABEL } from '../games/rarity';
 import { BoxDialog } from './boxViewer';
-import { packButton } from './packButton';
 import { PACKS, type PackModel } from './packs';
 import { h } from './dom';
+import { deviceCard } from './deviceCard';
 import { compactGuide } from './guidePanel';
 import { getLang, onLangChange, t, type MsgKey } from './i18n';
-import { keyCaps, POWER_KEY, SOUND_KEY } from './help';
 import type { InputHub } from './hub';
 import { engineOf, gameKey, TOYS, type ToyId, type ToyModel } from './toys';
 
@@ -126,17 +125,13 @@ export interface InfoPanelBox {
 
 export class InfoPanel {
   private readonly root: HTMLElement;
-  private readonly hub: InputHub;
   private readonly toy: ToyId;
-  private readonly signal: AbortSignal | undefined;
   private readonly onPointerUse: (() => void) | undefined;
   private readonly onChoose: ((id: string) => void) | undefined;
   private readonly onLaunch: ((id: string) => void) | undefined;
   /** Модель упаковки игрушки (если есть) и диалог, где её можно рассмотреть. */
   private readonly pack: PackModel | null;
   private readonly boxDialog: BoxDialog | null;
-  /** Миниатюра коробки в шапке: пересоздаётся вместе с панелью. */
-  private thumb: { dispose(): void } | null = null;
   /** Открытая вкладка игры (по умолчанию — играемая сейчас); при перерисовке и смене языка сохраняется. */
   private selected: string;
   /** Игра, которая выбрана в меню консоли или играет сейчас (вкладка с точкой); у консоли с меню вкладка следует за выбором в меню. */
@@ -144,11 +139,9 @@ export class InfoPanel {
   private tabEls = new Map<string, HTMLButtonElement>();
   private showTab: ((id: string) => void) | null = null;
 
-  constructor(root: HTMLElement, hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal, box?: InfoPanelBox) {
+  constructor(root: HTMLElement, _hub: InputHub, toy: ToyId = 'mario', signal?: AbortSignal, box?: InfoPanelBox) {
     this.toy = toy;
     this.root = root;
-    this.hub = hub;
-    this.signal = signal;
     this.onPointerUse = box?.onPointerUse;
     this.onChoose = box?.onChoose;
     this.onLaunch = box?.onLaunch;
@@ -187,51 +180,27 @@ export class InfoPanel {
   }
 
   render(): void {
-    const { keyboard } = this.hub.settings;
-    const keys = (...actions: Parameters<typeof keyCaps>[1][]): string[] => keyCaps(keyboard, ...actions);
-
     const model = TOYS[this.toy];
     const sticker = h('div', {class:'about__sticker'}, h('img', {
       class: `about__logo${this.toy === 'seabattle' ? ' sticker--seabattle' : ''}${model.nativeDevice ? ` about__logo--${model.nativeDevice}` : ''}`,
       src: `${import.meta.env.BASE_URL}brand/${model.nativeDevice ? `${model.nativeDevice}-wordmark.svg` : this.toy === 'brickgame' ? 'brick-game-wordmark.svg' : this.toy === 'mario' ? 'crocodile-mario-logo.png' : `sticker-${this.toy}.webp`}`,
       width:'1000', height:'443', alt:model.name,
     }), ...(model.nativeDevice ? [h('p',{class:'about__model'}, ({e88:'E‑88 · 8 in 1','apollo-b0202':'B0202 · 126 in 1',e23:'E‑23 · 96 in 1','apollo-b0302':'B0302 · 18 in 1'} as const)[model.nativeDevice])] : []));
-    const boxButton = this.boxButton();
-    const head = h(
-      'header',
-      { class: `side__top side__top--logo${boxButton ? ' side__top--box' : ''}` },
+    // Верх панели — карточка устройства: логотип остаётся, 3D-коробка открывается ссылкой, схемы клавиш в панели нет (привязки — в настройках управления).
+    const lang = getLang();
+    const head = [
       h('h2', { class: 'visually-hidden', id: 'info-title' }, t('info.title')),
-      sticker,
-      ...(boxButton ? [boxButton] : []),
-    );
+      deviceCard({
+        toy: this.toy,
+        logo: sticker,
+        ...(this.boxDialog && this.pack ? { box: { open: () => this.boxDialog!.open(), label: t(this.pack.text.open), id: this.pack.id } } : {}),
+        ...(this.toy === 'brickgame' ? { liveGames: model.games.map((game) => GAMES[game.id].names[lang]) } : {}),
+      }),
+    ];
 
     if (engineOf(model) === 'tetris') {
       this.root.dataset['toy'] = model.id;
-      // Консоль с меню: кнопки работают и в меню (выбор игры, варианта, уровня и скорости), и в игре; у модели без меню — только тетрис.
-      const rows = model.nativeDevice ? [keyRow(model.labels.left.replace('/', ' / '),keys('left')),keyRow('RIGHT / SPEED',keys('right')),keyRow('DOWN / MODE',keys('down')),keyRow('ROTATE / DIRECTION',keys('jump','up'))] : model.menu
-        ? [
-            keyRow(`${t('info.m.leftRight')} (${t('info.m.leftRight.menu')})`, keys('left'), keys('right')),
-            keyRow(`${t('info.m.upDown')} (${t('info.m.upDown.menu')})`, keys('up'), keys('down')),
-            keyRow(`${t('info.m.rotate')} (${t('info.m.rotate.menu')})`, keys('jump')),
-          ]
-        : [
-            keyRow(t('info.t.move'), keys('left'), keys('right')),
-            keyRow(t('info.t.rotate'), keys('jump', 'up')),
-            keyRow(t('info.t.down'), keys('down')),
-          ];
-      const keyList = h(
-        'ul',
-        { class: 'keys', id: 'keymap' },
-        ...rows,
-        keyRow(t('info.keys.startPause'), keys('start', 'pause')),
-        keyRow(t('info.keys.power'), [POWER_KEY]),
-        keyRow(t('info.keys.sound'), [SOUND_KEY]),
-      );
-      // У консоли с меню описания игр важнее схемы клавиш: на невысоком окне схема свёрнута (раскрывается заголовком), чтобы описанию хватило места.
-      const controls = model.menu
-        ? h('details', { class: 'side__sec side__sec--keys' }, h('summary', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')), keyList)
-        : h('section', { class: 'side__sec', 'aria-labelledby': 'keys-title' }, h('h3', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')), keyList);
-      this.root.replaceChildren(head, controls, this.gamesSection(model));
+      this.root.replaceChildren(...head, this.gamesSection(model));
       return;
     }
 
@@ -246,23 +215,6 @@ export class InfoPanel {
         h('li', {}, h('b', {}, '4'), h('span', {}, t('info.facts.lives'))),
         h('li', {}, h('b', {}, '400'), h('span', {}, t('info.facts.seconds'))),
         h('li', {}, h('b', {}, '9'), h('span', {}, t('info.facts.levels'))),
-      ),
-    );
-
-    const controls = h(
-      'section',
-      { class: 'side__sec', 'aria-labelledby': 'keys-title' },
-      h('h3', { class: 'side__h', id: 'keys-title' }, t('info.controls.h')),
-      h(
-        'ul',
-        { class: 'keys', id: 'keymap' },
-        keyRow(t('info.keys.move'), keys('left'), keys('right')),
-        // По упаковке в режиме MARIO прыжок — и UP, и JUMP.
-        keyRow(t('info.keys.jump'), keys('jump'), keys('up')),
-        keyRow(t('info.keys.fire'), keys('fire')),
-        keyRow(t('info.keys.startPause'), keys('start', 'pause')),
-        keyRow(t('info.keys.power'), [POWER_KEY]),
-        keyRow(t('info.keys.sound'), [SOUND_KEY]),
       ),
     );
 
@@ -308,17 +260,7 @@ export class InfoPanel {
       h('p', { class: 'side__text side__text--over' }, t('info.over')),
     );
 
-    this.root.replaceChildren(head, about, controls, figures, score);
-  }
-
-  /** Миниатюра 3D-упаковки рядом с наклейкой: щелчок открывает диалог, над ней (наведение, фокус) упаковка медленно поворачивается. */
-  private boxButton(): HTMLElement | null {
-    this.thumb?.dispose();
-    this.thumb = null;
-    if (!this.boxDialog || !this.pack) return null;
-    const button = packButton(this.pack, this.boxDialog, this.signal);
-    this.thumb = button;
-    return button.element;
+    this.root.replaceChildren(...head, about, figures, score);
   }
 
   /** Раздел «Игры на устройстве»: вкладки игр консоли (цифры или буквы, как в меню устройства) и описание открытой игры. */

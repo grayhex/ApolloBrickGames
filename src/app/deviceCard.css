@@ -1,0 +1,173 @@
+/* Карточка устройства — верх левой панели: компактно, с мелкими анимациями (при reduced-motion они выключены). */
+.dcard {
+  --dcard-r: 12px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--chip) 55%, transparent);
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%);
+}
+.dcard > * {
+  animation: dcard-in 420ms cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+@keyframes dcard-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* Логотип и название */
+.dcard__top { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr); align-items: center; gap: 10px; }
+.dcard__logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 62px;
+  max-height: 76px;
+  padding: 4px;
+  overflow: hidden;
+  border-radius: var(--dcard-r);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), box-shadow 260ms;
+}
+.dcard__logo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 22%) 50%, transparent 65%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.dcard__logo:hover { transform: rotate(-1.2deg) scale(1.03); box-shadow: 0 6px 16px rgb(0 0 0 / 22%); }
+.dcard__logo:hover::after { transform: translateX(120%); transition: transform 700ms ease; }
+.dcard .about__sticker, .dcard .minibrick-sticker { display: block; width: 100%; max-width: 100%; margin: 0; padding: 0; }
+.dcard .about__logo, .dcard .about__sticker img, .dcard__logo > img { display: block; width: 100%; height: auto; max-height: 64px; object-fit: contain; margin-inline: auto; }
+.dcard .about__logo--e88, .dcard .about__logo--apollo-b0202, .dcard .about__logo--e23, .dcard .about__logo--apollo-b0302 { height: 56px; }
+.dcard .about__model { display: none; }
+.dcard__id { display: grid; gap: 2px; min-width: 0; }
+.dcard__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dcard__brand .dcard__ic { width: 13px; height: 13px; color: var(--accent); transition: transform 300ms cubic-bezier(.2, .8, .2, 1); }
+.dcard:hover .dcard__brand .dcard__ic { transform: rotate(-18deg) scale(1.15); }
+.dcard__model { margin: 0; font-size: 15px; line-height: 1.2; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+
+/* Год, питание, игры, вариации */
+.dcard__facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.dcard__fact {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 6px 6px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  transition: transform 200ms cubic-bezier(.2, .8, .2, 1), border-color 200ms, background 200ms;
+  animation: dcard-in 420ms cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: calc(120ms + var(--i, 0) * 50ms);
+}
+.dcard__fact:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.dcard__flabel { margin: 0; font-size: 10px; font-weight: 600; letter-spacing: .01em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcard__fvalue { display: flex; align-items: center; gap: 5px; min-width: 0; margin: 0; font-size: 14px; font-weight: 700; line-height: 1.25; color: var(--text); font-variant-numeric: tabular-nums; }
+.dcard__fvalue span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dcard__fvalue .dcard__ic { flex: none; width: 14px; height: 14px; color: var(--accent); }
+.dcard__fact[data-wide] .dcard__fvalue .dcard__ic { display: none; } /* четыре цифры (9999) занимают всю ячейку */
+.dcard__fact[data-unknown] .dcard__fvalue { color: var(--muted); font-weight: 500; }
+.dcard__fact[data-unknown] .dcard__fvalue .dcard__ic { color: var(--muted); opacity: .6; }
+.dcard__fact:hover .dcard__fvalue .dcard__ic { animation: dcard-wiggle 520ms ease; }
+@keyframes dcard-wiggle {
+  25% { transform: rotate(-14deg) scale(1.15); }
+  60% { transform: rotate(10deg) scale(1.1); }
+}
+/* Батарейка «заряжается» при появлении карточки: три деления зажигаются по очереди. */
+.dcard__ic--battery path:nth-child(n + 3) { opacity: 0; animation: dcard-bar 360ms ease-out forwards; }
+.dcard__ic--battery path:nth-child(3) { animation-delay: 380ms; }
+.dcard__ic--battery path:nth-child(4) { animation-delay: 520ms; }
+.dcard__ic--battery path:nth-child(5) { animation-delay: 660ms; }
+@keyframes dcard-bar { to { opacity: 1; } }
+
+:root:not([data-theme='light']) .dcard .fm38-logo { filter: brightness(1.8); }
+
+/* Список игр: просто названия, не больше трёх строк */
+.dcard__games { display: flex; gap: 7px; align-items: flex-start; margin: 0; font-size: 12px; line-height: 1.4; color: var(--text); }
+.dcard__games .dcard__ic { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--muted); }
+.dcard__gtext { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.dcard__more { font-style: normal; color: var(--muted); }
+
+/* Источники и 3D-коробка */
+.dcard__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.dcard__sources { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.dcard__source {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px 3px 5px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  cursor: default;
+  transition: transform 180ms cubic-bezier(.2, .8, .2, 1), color 180ms, border-color 180ms;
+  animation: dcard-in 380ms cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: calc(260ms + var(--i, 0) * 45ms);
+}
+.dcard__source .dcard__ic { width: 12px; height: 12px; }
+.dcard__source:hover { transform: translateY(-1px) scale(1.05); color: var(--text); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.dcard__source:hover .dcard__ic { animation: dcard-wiggle 520ms ease; }
+.dcard__source[data-kind='rom']::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-left: 1px;
+  border-radius: 50%;
+  background: #4ad18a;
+  animation: dcard-pulse 2.2s ease-in-out infinite;
+}
+@keyframes dcard-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(74 209 138 / 55%); }
+  50% { box-shadow: 0 0 0 4px rgb(74 209 138 / 0%); }
+}
+.dcard__box {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 3px 8px 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 999px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  cursor: pointer;
+  transition: transform 180ms cubic-bezier(.2, .8, .2, 1), background 180ms;
+}
+.dcard__box .dcard__ic { width: 14px; height: 14px; transition: transform 500ms cubic-bezier(.2, .8, .2, 1); }
+.dcard__box:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.dcard__box:hover .dcard__ic { transform: rotateY(180deg) rotate(8deg); }
+.dcard__box:active { transform: translateY(0) scale(.96); }
+.dcard__box:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 540px) {
+  .dcard__top { grid-template-columns: minmax(0, 38%) minmax(0, 1fr); }
+  .dcard__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dcard > *, .dcard__fact, .dcard__source, .dcard__ic--battery path { animation: none !important; opacity: 1 !important; }
+  .dcard__logo, .dcard__fact, .dcard__source, .dcard__box, .dcard__box .dcard__ic, .dcard__brand .dcard__ic { transition: none; }
+  .dcard__logo:hover, .dcard__fact:hover, .dcard__source:hover, .dcard__box:hover { transform: none; }
+  .dcard__source[data-kind='rom']::after { animation: none; }
+}

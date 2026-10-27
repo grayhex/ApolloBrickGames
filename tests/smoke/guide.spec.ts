@@ -44,7 +44,8 @@ test.describe('вкладки игр', () => {
     await expect(selected(page)).toHaveText('1');
     await expect(page.locator('#side-info .gtab[data-playing]')).toHaveText('1');
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Танки');
-    await expect(page.locator('#side-info #keymap')).toContainText('ROTATE'); // управление — кнопки консоли с меню
+    await expect(page.locator('#side-info .dcard')).toContainText('168 в 1 танк'); // вверху панели — карточка устройства, схемы клавиш в панели нет
+    await expect(page.locator('#side-info #keymap')).toHaveCount(0);
     // Тетрис (8) — 51 вариант; правил и очков заглушки у консоли с меню нет.
     await tabs(page).nth(7).click();
     await expect(page.locator('#gpanel .gpanel__name')).toHaveText('Тетрис');
@@ -197,28 +198,20 @@ test.describe('3D-коробка «168 в 1 танк»', () => {
   const yaw = async (page: Page): Promise<number> => Number(await viewer(page).getAttribute('data-yaw'));
   const pitch = async (page: Page): Promise<number> => Number(await viewer(page).getAttribute('data-pitch'));
 
-  test('миниатюра стоит рядом с наклейкой справа, внутри панели, с пометкой «3D» и доступным названием', async ({ page }) => {
+  test('3D-коробка открывается ссылкой в карточке устройства: без миниатюры, с доступным названием, внутри панели', async ({ page }) => {
     await open(page, 'toy=tank168');
-    const button = page.locator('#side-info [data-box-open]');
-    await expect(button).toBeVisible();
-    await expect(button).toHaveAttribute('aria-label', 'Рассмотреть коробку 3D');
-    await expect(button.locator('.boxbtn__cap')).toHaveText('3D');
-    const sticker = (await page.locator('#side-info .about__sticker').boundingBox())!;
-    const box = (await button.boundingBox())!;
+    const link = page.locator('#side-info .dcard [data-box-open]');
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('aria-label', 'Рассмотреть коробку 3D');
+    await expect(link).toContainText('3D-коробка');
+    await expect(page.locator('#side-info .box3d'), 'миниатюры коробки в панели нет').toHaveCount(0);
+    const box = (await link.boundingBox())!;
     const panel = (await page.locator('#side-info').boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(sticker.x + sticker.width - 2); // правее наклейки
-    expect(Math.abs(box.y + box.height / 2 - (sticker.y + sticker.height / 2))).toBeLessThan(40); // на одной линии
+    expect(box.x).toBeGreaterThanOrEqual(panel.x);
     expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width);
-    // Шесть граней миниатюры с картинками, коробка не выходит за кнопку.
-    await expect(button.locator('.box3d__face')).toHaveCount(6);
-    const inside = await button.evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-      return [...el.querySelectorAll<HTMLElement>('.box3d__face')].every((face) => {
-        const r = face.getBoundingClientRect();
-        return r.left >= rect.left - 4 && r.right <= rect.right + 4 && r.top >= rect.top - 4 && r.bottom <= rect.bottom + 4;
-      });
-    });
-    expect(inside).toBe(true);
+    await link.click();
+    await expect(page.locator('#box-dialog')).toHaveAttribute('open', '');
+    await expect(page.locator('#box-dialog .box3d__face')).toHaveCount(6);
   });
 
   test('щелчок открывает диалог: шесть граней с картинками, все файлы граней отдаются; Esc закрывает', async ({ page }) => {
@@ -344,16 +337,14 @@ test.describe('3D-коробка Crocodile Mario: вывод выключен', 
     [1440, 900],
     [1280, 720],
   ] as const) {
-    test(`у Mario нет кнопки 3D, логотип по центру панели, справка помещается без прокрутки (${width} × ${height})`, async ({ page }) => {
+    test(`у Mario нет ссылки на 3D-коробку, логотип в карточке устройства, справка помещается без прокрутки (${width} × ${height})`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(marioUrl('?view=full&power=on'));
       await expect.poll(phase(page)).toBe('ready');
       await expect(page.locator('#side-info [data-box-open]')).toHaveCount(0);
       await expect(page.locator('#side-info .box3d')).toHaveCount(0);
       await expect(page.locator('#box-dialog')).not.toHaveAttribute('open', '');
-      const logo = await page.locator('#side-info .about__logo').boundingBox(); // в низком окне (1280 × 720) логотип скрыт
-      const panel = (await page.locator('#side-info').boundingBox())!;
-      if (logo) expect(Math.abs(logo.x + logo.width / 2 - (panel.x + panel.width / 2))).toBeLessThanOrEqual(2);
+      await expect(page.locator('#side-info .dcard .about__logo')).toBeVisible(); // логотип остаётся в карточке устройства
       const fit = await page.locator('#side-info').evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
       expect(fit.scroll, `${width}×${height}: справка без прокрутки`).toBeLessThanOrEqual(fit.client + 1);
     });
