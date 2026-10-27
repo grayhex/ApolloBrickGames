@@ -16,12 +16,8 @@ export function nativeGuide(entry: NativeEntry): GameGuideData | null {
       ...base,
       rules: [
         gt('Заполняйте горизонтальные ряды без пропусков: полные ряды исчезают.', 'Fill horizontal rows without gaps to clear them.'),
-        b0302 && mode === 15
-          ? gt('В этом варианте падают одиночные клетки.', 'Single cells fall in this variant.')
-          : b0302 && [9, 13, 14].includes(mode)
-            ? gt('В этом варианте падают фигуры из пяти клеток.', 'Five-cell pieces fall in this variant.')
-            : b0302 && mode === 10
-              ? gt('Среди фигур могут появляться одиночные клетки.', 'Single cells may appear among the pieces.')
+        b0302 && mode >= 9
+          ? gt('В приближённой реализации встречаются обычные и пятиклеточные фигуры, а также одиночные клетки.', 'This approximate profile mixes regular and five-cell pieces with single cells.')
               : special
           ? gt('Каждая четвёртая фигура берётся из дополнительного набора.', 'Every fourth piece comes from the additional shape set.')
           : gt('В наборе семь обычных фигур; следующая показана справа.', 'Seven standard shapes; the next piece appears on the right.'),

@@ -7,6 +7,10 @@ import raw from '../../src/config/default.json';
 import { nativeDefinition } from '../../src/devices/profiles';
 import { NEUTRAL_BRICK_INPUT, makeBrickInput } from '../../src/brick/types';
 import { categoryFor, validateCategory, STANDARD_START } from '../../src/leaderboards/category';
+import { createCabinet } from '../../src/app/cabinet';
+import { TOYS } from '../../src/app/toys';
+import { BRICK_GAMES } from '../../src/brick/games';
+import { makeFrame } from '../../src/core';
 
 describe('E-23 and B0302 native menus', () => {
   it('retains every observed physical menu number and its LCD geometry', () => {
@@ -37,15 +41,33 @@ describe('E-23 and B0302 native menus', () => {
     expect(validateConfig(defaultConfig())).toEqual(defaultConfig());
   });
 
-  it('uses observed one-cell and five-cell families on B0302', () => {
-    for(const [slot, expected] of [[3,4],[9,5],[13,5],[14,5],[15,1]] as const) {
-      const game=nativeDefinition(NATIVE_MENUS['apollo-b0302'][slot-1]!)!.create({seed:7});
-      game.start();let max=0;
-      for(let tick=0;tick<180;tick++) {
-        game.step(NEUTRAL_BRICK_INPUT);
-        max=Math.max(max,[...game.cells()].filter(Boolean).length);
+  it('shows each captured ROM menu frame while DOWN traverses and wraps the physical menu', () => {
+    for(const id of ['e23','apollo-b0302'] as const) {
+      const cabinet=createCabinet(TOYS[id],{seed:7,loadHi:()=>0,defs:BRICK_GAMES});
+      for(const entry of NATIVE_MENUS[id]) {
+        expect(cabinet.info['entry']).toBe(entry.entryId);
+        const rows=(frames[id] as Record<string,string[]>)[entry.nativeCode]!;
+        const expected=Uint8Array.from(rows.join(''),Number);
+        expect(cabinet.scene({sound:false,allOn:false}).cells.slice(0,expected.length),entry.entryId).toEqual(expected);
+        cabinet.menu(makeFrame({pressed:['down']}));
       }
-      expect(max,`slot ${slot}`).toBe(expected);
+      expect(cabinet.info['entry']).toBe(NATIVE_MENUS[id][0]!.entryId);
+    }
+  });
+
+  it('allows the mixed piece families observed in later B0302 block entries', () => {
+    for(let slot=9;slot<=16;slot++) {
+      const counts=new Set<number>();
+      for(let seed=1;seed<=48;seed++) {
+        const game=nativeDefinition(NATIVE_MENUS['apollo-b0302'][slot-1]!)!.create({seed});
+        game.start();let max=0;
+        for(let tick=0;tick<180;tick++) {
+          game.step(NEUTRAL_BRICK_INPUT);
+          max=Math.max(max,[...game.cells()].filter(Boolean).length);
+        }
+        counts.add(max);
+      }
+      expect([...counts].sort(),`slot ${slot}`).toEqual([1,4,5]);
     }
   });
 

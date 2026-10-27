@@ -24,7 +24,7 @@ def main():
     parser.add_argument('--upstream', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--speed', type=int, help='Limit the B0302 gravity probe to this number of RIGHT presses')
-    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-gravity', 'e23-speeds'], default='all')
+    parser.add_argument('--section', choices=['all', 'inventory', 'snake', 'dice', 'audio', 'frog', 'beetle', 'catalog', 'native-menus', 'b0302-gravity', 'b0302-debug', 'b0302-audio', 'b0302-racing', 'b0302-race-timeline', 'b0302-race-score', 'b0302-shooting', 'b0302-shooting-life', 'b0302-pieces', 'b0302-variants', 'b0302-inputs', 'e23-variants', 'e23-arcade', 'e23-gravity', 'e23-speeds'], default='all')
     args = parser.parse_args()
     root, output = args.upstream.resolve(), args.output.resolve()
     if subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip() != REVISION:
@@ -102,6 +102,26 @@ def main():
             result['variants'].append(sample)
             base.key('Down')
 
+    if args.section == 'b0302-pieces':
+        base=Machine('Apollo18in1B0302')
+        base.run(8)
+        result['pieces']=[]
+        for slot in range(1,17):
+            if slot>=3:
+                samples=[]
+                for delay in (0,.15,.3,.45):
+                    probe=copy.deepcopy(base)
+                    probe.key('Mute')
+                    if delay:probe.run(delay)
+                    probe.key('StartP',.2,.3)
+                    if delay:
+                        probe.run(1)
+                        probe.key('StartP',.2,.3)
+                    probe.run(3)
+                    samples.append({'delay':delay,'cells':probe.cells(),'cycle':probe.cycles})
+                result['pieces'].append({'slot':slot,'samples':samples})
+            base.key('Down')
+
     if args.section == 'b0302-racing':
         base = Machine('Apollo18in1B0302')
         base.run(8)
@@ -173,6 +193,22 @@ def main():
             result['shooting'].append({'slot':slot,'trials':trials,'inputs':machine.inputs})
             base.key('Down')
 
+    if args.section == 'b0302-shooting-life':
+        base=Machine('Apollo18in1B0302')
+        base.run(8)
+        for _ in range(16):base.key('Down')
+        result['shootingLife']=[]
+        for slot in (17,18):
+            machine=copy.deepcopy(base)
+            machine.key('Mute')
+            machine.key('StartP',.2,.3)
+            frames=[]
+            for _ in range(120):
+                machine.run(.25)
+                frames.append({'cycle':machine.cycles,'cells':machine.cells(),'vram':list(machine.cpu.get_VRAM())})
+            result['shootingLife'].append({'slot':slot,'frames':frames})
+            base.key('Down')
+
     if args.section == 'b0302-inputs':
         base = Machine('Apollo18in1B0302')
         base.run(8)
@@ -224,6 +260,23 @@ def main():
             result['variants'].append({'slot': slot, 'cells': probe.cells(),
                                        'ram': list(probe.cpu._RAM), 'cycle': probe.cycles})
             base.key('Down')
+
+    if args.section == 'e23-arcade':
+        result['arcade'] = []
+        for name in ('E23PlusMarkII96in1','E88_8in1'):
+            base=Machine(name)
+            base.run(3)
+            base.key('Mute')
+            for _ in range(5):base.key('Down')
+            for slot in (6,7,8):
+                machine=copy.deepcopy(base)
+                machine.key('Start',.08,.12)
+                frames=[]
+                for _ in range(16):
+                    machine.run(.5)
+                    frames.append({'cycle':machine.cycles,'cells':machine.cells()})
+                result['arcade'].append({'device':name,'slot':slot,'frames':frames,'inputs':machine.inputs})
+                base.key('Down')
 
     if args.section == 'e23-gravity':
         result['gravity'] = []

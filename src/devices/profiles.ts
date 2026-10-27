@@ -41,14 +41,15 @@ class B0302Blocks extends TetrisCore {
     return this.slot % 2 === 0 ? Uint8Array.from(Array.from({length:16},(_,i)=>preview[(3-Math.floor(i/4))*4+i%4]!)) : preview;
   }
   private fiveCellPiece():Piece {return makePiece(FIRST_PENTOMINO+this.rng.int(FIRST_SUPER-FIRST_PENTOMINO),this.rng.int(4));}
-  protected override firstPiece():Piece {
-    if(this.slot===10||this.slot===15)return makePiece(SHAPE_NONE);
-    return [9,13,14].includes(this.slot)?this.fiveCellPiece():super.firstPiece();
-  }
+  protected override firstPiece():Piece { return this.pickNext(); }
   protected override pickNext():Piece {
-    if(this.slot===15)return makePiece(SHAPE_NONE);
-    if(this.slot===10&&this.rng.int(8)===0)return makePiece(SHAPE_NONE);
-    return [9,13,14].includes(this.slot)?this.fiveCellPiece():super.pickNext();
+    // ROM samples in 09–16 contain mixed families; exact pools and RNG are
+    // still being studied, so these weights are explicitly provisional.
+    if(this.slot>=9){
+      if(this.rng.int(8)===0)return makePiece(SHAPE_NONE);
+      if(this.rng.int(2)===0)return this.fiveCellPiece();
+    }
+    return super.pickNext();
   }
   protected override rotatedPiece(piece:Piece):Piece {return rotatePiece(piece,this.direction);}
 }

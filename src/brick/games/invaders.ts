@@ -149,15 +149,15 @@ export class InvadersGame extends BrickBase {
   readonly id = 'invaders';
   readonly traits: InvadersTraits;
 
-  private wall: Wall = preloadedWall(1);
+  protected wall: Wall = preloadedWall(1);
   /** Строка (донорская, снизу) нижнего ряда стены. */
-  private bricksY = 0;
+  protected bricksY = 0;
   private ball: Ball | null = null;
   private bullets: Bullet[] = [];
   /** Колонка центра орудия 0..9 (крайние колонки показывают орудие с обрезанным боковым стволом — как у донора). */
   private gunX = START_X;
   /** Орудие погибло (шар попал, стена дошла или орудие въехало в шар): в конце такта начнётся потеря жизни. */
-  private dead = false;
+  protected dead = false;
   private invasionLeft = 1;
   private invasionPeriod = 1;
   private bulletLeft = 1;
@@ -177,6 +177,12 @@ export class InvadersGame extends BrickBase {
     this.init();
   }
 
+  protected get projectileStepsPerTick():number { return 1; }
+  protected get winWhenWallEmpty():boolean { return true; }
+  protected get invasionWhenWallEmpty():boolean { return false; }
+  protected createWall():Wall { return this.traits.preloaded ? preloadedWall(this.level) : generatedWall(this.level, this.rng); }
+  protected invasionInterval(extra:number):number { return genuineTicks(this.speed, SPEED_FIRST_MS + extra, SPEED_TENTH_MS + extra); }
+
   // ---------------------------------------------------------------- BrickBase
 
   protected reset(): void {
@@ -194,9 +200,9 @@ export class InvadersGame extends BrickBase {
     if (this.bullets.some((bullet) => bullet.fading)) this.bullets = this.bullets.filter((bullet) => !bullet.fading);
     this.handleKeys(input);
     if (!this.dead) this.flyBullets();
-    if (!this.dead && this.wall.count > 0) this.tickInvasion();
+    if (!this.dead && (this.wall.count > 0 || this.invasionWhenWallEmpty)) this.tickInvasion();
     if (this.dead) this.loseLife();
-    else if (this.wall.count <= 0) this.winLevel();
+    else if (this.wall.count <= 0 && this.winWhenWallEmpty) this.winLevel();
   }
 
   protected draw(): Uint8Array {
@@ -226,7 +232,7 @@ export class InvadersGame extends BrickBase {
 
   /** Загрузить текущий уровень (`loadNewLevel`): новая стена (у случайных — новая случайная), орудие в центр, пули долой. */
   private loadLevel(): void {
-    this.wall = this.traits.preloaded ? preloadedWall(this.level) : generatedWall(this.level, this.rng);
+    this.wall = this.createWall();
     this.bricksY = this.fieldRows - this.wall.height;
     this.ball = null;
     this.bullets = [];
@@ -234,7 +240,7 @@ export class InvadersGame extends BrickBase {
     this.dead = false;
     // шаг нашествия: скорость по формуле донора, сверх 50 кирпичей каждый лишний замедляет шаг на 1 мс (createInvasionTimer)
     const extra = Math.max(this.wall.count - SLOW_BRICKS, 0);
-    this.invasionPeriod = genuineTicks(this.speed, SPEED_FIRST_MS + extra, SPEED_TENTH_MS + extra);
+    this.invasionPeriod = this.invasionInterval(extra);
     // таймер нашествия у донора стартует сразу после «мелодии»: первый шаг (опускание стены) — в первом такте игры
     this.invasionLeft = 1;
     this.bulletLeft = this.bulletPeriod;
@@ -333,7 +339,11 @@ export class InvadersGame extends BrickBase {
     if (--this.bulletLeft > 0) return;
     this.bulletLeft = this.bulletPeriod;
     const kept: Bullet[] = [];
-    for (const bullet of this.bullets) if (this.flyBullet(bullet)) kept.push(bullet);
+    for (const bullet of this.bullets) {
+      let alive=true;
+      for(let i=0;i<this.projectileStepsPerTick && alive && !bullet.fading;i++)alive=this.flyBullet(bullet);
+      if(alive)kept.push(bullet);
+    }
     this.bullets = kept;
   }
 
@@ -394,7 +404,7 @@ export class InvadersGame extends BrickBase {
   }
 
   /** Шаг нашествия (`processInvasion`): пока шар летит — шаг шара, иначе стена опускается на строку и от неё отделяется шар. */
-  private processInvasion(): void {
+  protected processInvasion(): void {
     if (this.ball) this.moveBall(this.ball);
     else if (this.dropWall()) this.createBall();
     else this.dead = true;
