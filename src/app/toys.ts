@@ -371,7 +371,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     gameKeys:'letters',glyph:'square',panel:'sea',deco:'frame',leds:false,info:true,pack:null,levels:false,
     lcd:{bg:'#c6cfab',ink:'#303a30'},stageLabel:'stage.label.brickgame',
     labels:{round:[{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START/PAUSE'},{key:'sound',top:'MELODY'}],up:'',left:'LEVEL/LEFT',right:'SPEED/RIGHT',down:'GAME A/B / DOWN',big:'ROTATE'},
-    keyWhat:{onoff:'help.row.onoff',sp:'help.row.sp',sound:'help.row.sound',left:'help.m.left',right:'help.m.right',down:'help.mini.down',jump:'help.mini.rotate'},
+    keyWhat:{onoff:'help.row.onoff',sp:'help.row.sp',sound:'help.fm38.melody',left:'help.m.left',right:'help.m.right',down:'help.fm38.down',jump:'help.mini.rotate'},
   },
   /** Корпус по фото владельца (`taksunModel.ts`, `docs/taksun.md`): складной, синий, розовые кнопки; игры появятся позже. */
   taksun: {

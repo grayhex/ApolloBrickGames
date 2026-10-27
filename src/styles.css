@@ -4835,7 +4835,7 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 @keyframes devpick-fade { from { opacity: 0; } to { opacity: 1; } }
 /* Широкий каталог: заголовок, поиск и вкладки в одной строке, карточки компактно в несколько колонок — каталог ниже и не закрывает консоль. */
 @media (min-width: 760px) {
-  .devpick__panel { display: grid; grid-template-columns: auto auto minmax(220px, 1fr) auto auto; grid-template-rows: auto minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 8px; }
+  .devpick__panel { display: grid; grid-template-columns: auto auto minmax(220px, 1fr) auto auto; grid-template-rows: auto minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 8px; max-height:min(var(--devpick-max),252px); }
   .devpick__head, .devpick__tools { display: contents; }
   .devpick__count { flex: none; white-space: nowrap; }
   .devpick__tab { height: 32px; padding: 0 11px; }

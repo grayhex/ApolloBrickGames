@@ -12,3 +12,7 @@ body[data-toy='fm38'] #side-info>img {max-width:160px;}
 body[data-toy='fm38'] #side-info p {font-size:14px;line-height:1.55;margin:16px 0;}
 body[data-toy='fm38'] #side-info h2 {font-size:19px;margin:20px 0;}
 body[data-toy='fm38'] [data-lcd='hi'],body[data-toy='fm38'] [data-lcd='score'] {display:none;}
+/* Crop the same supplied housing around the LCD, scaling art and live segments together. */
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact]::before {width:180%;height:317.88cqw;left:-40%;right:auto;top:-27.82cqw;bottom:auto;}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__front {height:118cqw;}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__window {left:12.92cqw;top:8cqw;width:72.9cqw;height:97.92cqw;}

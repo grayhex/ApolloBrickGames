@@ -5,6 +5,10 @@ import { MASTER_GAIN } from './beeper';
 
 const TETRIS = new Set(['tetris', 'tetris-big', 'tetris-pentix', 'tetris-flicker']);
 export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nativeProfile?: string): BrickSound | null {
+  if(nativeProfile?.startsWith('fm38-')) {
+    if(event.type==='started')return nativeProfile==='fm38-1'?'fm38_joy':'fm38_korobeiniki';
+    return brickSound(event,game,inMenu,'mini');
+  }
   if (nativeProfile === 'sea') {
     // «Морской бой»: мелодии и эффекты сняты с записей оригинала (`seaTunes.ts`); остальное — общие сигналы Brick Game.
     if (event.type === 'intro') return 'sea_intro';
@@ -112,7 +116,7 @@ export function seekTones(notes:readonly BrickTone[],offsetMs:number):BrickTone[
   return out;
 }
 /** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
-const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'b0302_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki']);
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'b0302_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki', 'fm38_korobeiniki', 'fm38_joy']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>
@@ -163,7 +167,7 @@ export class BrickAudio {
     }
     if(event.type==='resumed'){this.resumeMusic();return;}
     // Вспышка заставки идёт поверх её мелодии: единственное событие меню, которое музыку не обрывает.
-    if((inMenu&&event.type!=='introFx')||event.type==='started'||event.type==='gameOver')this.silence();
+    if((inMenu&&event.type!=='introFx'&&!nativeProfile?.startsWith('fm38-'))||event.type==='started'||event.type==='gameOver')this.silence();
     const sound = brickSound(event, game, inMenu, nativeProfile);
     const padHz = event.type === 'tone' ? PAD_HZ[event.pad] : undefined;
     const notes: readonly BrickTone[] | null =

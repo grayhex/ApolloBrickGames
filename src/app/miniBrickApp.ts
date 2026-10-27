@@ -137,6 +137,8 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   setLang(hub.settings.display.lang);
   const stepper = new FixedStepper(1000 / BRICK_TICK_HZ);
   const brickAudio = new BrickAudio();
+  let fmMelody = 0;
+  const audioProfile = ():string => fm?`fm38-${fmMelody}`:'mini';
   life.onDispose(() => brickAudio.dispose());
   const unlockAudio = (): void => brickAudio.unlock();
   window.addEventListener('keydown', unlockAudio, { signal });
@@ -171,7 +173,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
         lines += event.count;
         if(!fm && lines>lineRecord(mini.gameNumber)){savedLines.set(mini.gameNumber,lines);try{browserStorage()?.setItem(lineKey(mini.gameNumber),String(lines));}catch{/* unavailable storage does not stop play */}}
       }
-      brickAudio.play(event, mini.game?.id ?? mini.id, mini.inMenu, fm?undefined:'mini');
+      brickAudio.play(event, mini.game?.id ?? mini.id, mini.inMenu, audioProfile());
     }
     persistHi(); // elapsed driving time also scores without an audio event
   };
@@ -194,6 +196,17 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
       s.display.sound = on;
     });
     applyDisplay();
+  };
+
+  const pressMelody = ():void => {
+    if(!fm){setSound(!hub.settings.display.sound);return;}
+    if(!powered)return;
+    fmMelody=(fmMelody+1)%2;
+    unlockAudio();
+    // Select music without starting a new game or resetting its line counter.
+    brickAudio.play({type:'started'},mini.gameId,false,audioProfile());
+    if(mini.phase==='paused')brickAudio.play({type:'paused'},mini.gameId,false,audioProfile());
+    toy.dataset['melody']=String(fmMelody);
   };
 
   function tick(): void {
@@ -249,7 +262,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     phase: () => (mini.phase === 'playing' ? 'playing' : mini.phase === 'paused' ? 'paused' : 'ready'),
     powered: () => powered,
     onPower: () => setPower(!powered),
-    onSound: () => setSound(!hub.settings.display.sound),
+    onSound: pressMelody,
     keyActions: KEY_ACTIONS,
     // RESET возвращает в меню; игрового действия у него нет.
     onPress: (id) => {
@@ -301,6 +314,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     view = next;
     applyView();
     applyDisplay();
+    if(fm)window.scrollTo(0,0);
     refocus();
   };
   const none = (): void => {};
@@ -391,7 +405,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const ru=getLang()==='ru';
     byId('side-info').replaceChildren(h('img',{src:`${import.meta.env.BASE_URL}devices/fm38/logo.png`,alt:'Brick Game 2 in 1',style:'width:70%;display:block;margin:20px auto'}),
       h('h2',{},'Brick Game FM-38'),h('p',{},ru?'Тетрис A/B':'Tetris A/B'),
-      h('p',{},ru?'После включения идёт демонстрация. DOWN выбирает A/B, LEFT — уровень, RIGHT — скорость. START начинает партию; затем ставит её на паузу. ROTATE поворачивает фигуру.':'Power-on starts a demo. DOWN selects A/B, LEFT selects level, RIGHT selects speed. START begins or pauses play. ROTATE turns the piece.'),
+      h('p',{},ru?'После включения идёт демонстрация. DOWN выбирает A/B, LEFT — уровень, RIGHT — скорость. START начинает партию; затем ставит её на паузу. ROTATE поворачивает фигуру. MELODY переключает мелодии.':'Power-on starts a demo. DOWN selects A/B, LEFT selects level, RIGHT selects speed. START begins or pauses play. ROTATE turns the piece. MELODY cycles music.'),
       h('p',{},ru?'A — обычные фигуры, B — усложнённый набор из 3–5 клеток. Точный набор B и тайминги пока приближены.':'A uses regular pieces; B uses a complex set of 3–5 cells. The exact B pool and timing remain approximate.'));
   };
   const info=fm?{setActive:()=>{}}:new MiniInfoPanel(byId('side-info'),hub,{onChoose:id=>{if(powered)mini.selectGame(id);},onPointerUse:refocus,signal});
@@ -538,6 +552,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   }
 
   toy.dataset['power'] = powered ? 'on' : 'off';
+  if(fm)toy.dataset['melody']=String(fmMelody);
   area.dataset['power'] = powered ? 'on' : 'off';
   applyView();
   applyDisplay();
