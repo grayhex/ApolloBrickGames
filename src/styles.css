@@ -4792,7 +4792,10 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
   .topleft[data-aligned] .corner__btn--book { flex:1; width:auto; min-width:30px; padding:5px 4px; }
 }
 @media (min-width:1200px) and (max-width:1359px) {
-  .topleft[data-aligned] .dev { width:26px; }
-  .topleft[data-aligned] .corner__btn:not(.corner__btn--book):not(.corner__btn--lang) { width:26px; }
-  .topleft[data-aligned] .corner__btn--lang { width:42px; font-size:10px; }
+  /* Правый столбец здесь всего 220 px: при трёх индикаторах ввода (клавиатура, геймпад, пауза) кнопки ещё уже. */
+  .topleft[data-aligned] { gap:2px; padding:4px 3px; }
+  .topleft[data-aligned] .dev { width:24px; }
+  .topleft[data-aligned] .corner__btn:not(.corner__btn--book):not(.corner__btn--lang) { width:24px; }
+  .topleft[data-aligned] .corner__btn--lang { width:38px; font-size:9.5px; }
+  .topleft[data-aligned] .corner__btn--book { min-width:24px; padding:5px 2px; }
 }
