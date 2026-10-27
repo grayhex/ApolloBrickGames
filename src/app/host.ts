@@ -62,6 +62,7 @@ export async function startHost(initial: ToyId): Promise<void> {
   const heading = document.querySelector('h1');
   const mount = (id: ToyId, carry?: Carry): Promise<AppHandle> => {
     if (heading) heading.textContent = TOYS[id].name;
+    if (id === 'fm38') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry,true));
     if (id === 'minibrick') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry));
     if (id === 'alibaba' || id === 'taksun') return import('./exhibitApp').then(({startExhibitApp}) => startExhibitApp(id, carry));
     return engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry);
@@ -82,13 +83,13 @@ export async function startHost(initial: ToyId): Promise<void> {
 
   /** Подготовка новой игрушки до того, как прежняя будет снята: данные и картинки уже на месте, поэтому замена пройдёт за один кадр. */
   async function prepare(id: ToyId): Promise<void> {
-    if (id === 'minibrick') await import('./miniBrickApp');
+    if (id === 'minibrick' || id === 'fm38') await import('./miniBrickApp');
     else if (engineOf(TOYS[id]) === 'exhibit') await import('./exhibitApp');
     if (engineOf(TOYS[id]) === 'mario') {
       await preloadRoom();
     } else {
       const image = new Image();
-      image.src = TOYS[id].nativeDevice ? `${import.meta.env.BASE_URL}devices/${id}-body.svg` : `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : id === 'taksun' ? 'taksun-upper-logo-stencil.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
+      image.src = id==='fm38' ? `${import.meta.env.BASE_URL}devices/fm38/body.png` : TOYS[id].nativeDevice ? `${import.meta.env.BASE_URL}devices/${id}-body.svg` : `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : id === 'taksun' ? 'taksun-upper-logo-stencil.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
       await image.decode().catch(() => undefined); // не загрузилась — игрушка всё равно запустится, наклейка появится позже
     }
   }

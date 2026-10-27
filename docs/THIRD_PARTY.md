@@ -49,3 +49,7 @@ SOFTWARE.
 Подготавливаемые `public/devices/e23-{body,lcd}.svg` и `apollo-b0302-{body,lcd}.svg` извлечены из `assets/E23PlusMarkII96in1.svg` и `assets/Apollo18in1B0302.svg` той же ревизии BrickEmuPy; исходные векторы предоставлены под CC0-1.0. Разделение слоёв воспроизводится `scripts/research/extract_native_svg.py` с закреплённой ревизией. Дамп прошивки и фотографии в эти файлы не входят.
 
 Прозрачные версии универсального корпуса (`clear` / `smoke`) вдохновлены предоставленным владельцем фото прозрачных Brick Games. Плата, дорожки и компоненты придуманы для проекта; это не копия электроники E‑88 или B0202. На универсальном корпусе используется предоставленный логотип Brick Game Online; красный знак с ладонями сохранён только на E‑88.
+
+## FM-38 owner graphics
+
+`public/devices/fm38/body.png` and `logo.png` are supplied by the project owner in `docs/research/fm-38.zip`, with explicit permission to use them for this model. They are not assets from BrickEmuPy.

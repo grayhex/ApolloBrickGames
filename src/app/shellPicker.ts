@@ -1,3 +1,4 @@
+import { fm38Mini } from './fm38Model';
 import { isNativeDevice } from '../devices/catalog';
 import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
@@ -20,6 +21,7 @@ let pickerSerial = 0;
  * печати берётся из палитры `[data-shell]` (CSS-переменные), поэтому совпадает с настоящей игрушкой.
  */
 export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'): SVGSVGElement {
+  if(toy==='fm38')return fm38Mini();
   if (isNativeDevice(toy)) return nativeMini(toy);
   if (toy === 'brickgame') {
     const icon = brickGameMini('full', shell);

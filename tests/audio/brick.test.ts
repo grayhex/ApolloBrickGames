@@ -5,6 +5,27 @@ import rom from '../fixtures/brickemu/b0202.json';
 import b0302Tune from '../fixtures/brickemu/b0302-tetris-tune.json';
 import { MASTER_GAIN } from '../../src/audio/beeper';
 afterEach(() => vi.unstubAllGlobals());
+it('FM-38 switches synthesized melodies, keeps them through demo settings and resumes after pause',()=>{
+  expect(brickSound({type:'started'},'tetris',false,'fm38-0')).toBe('fm38_korobeiniki');
+  expect(brickSound({type:'started'},'pentix',false,'fm38-1')).toBe('fm38_joy');
+  const {port,voices,context}=harness();port.unlock();
+  port.play({type:'started'},'tetris',false,'fm38-0');
+  const first=voices[0]!;
+  port.play({type:'move'},'tetris',true,'fm38-0');
+  expect(first.stop).toHaveBeenCalledTimes(1); // only its scheduled natural end
+  port.play({type:'started'},'tetris',false,'fm38-1');
+  expect(first.stop).toHaveBeenCalledTimes(2);
+  const joy=voices[2]!;
+  expect(joy.type).toBe('square');
+  expect(joy.frequency.setValueAtTime.mock.calls.slice(0,3).map(call=>call[0])).toEqual([76,76,77].map(midi=>440*2**((midi-69)/12)));
+  context.currentTime=1;
+  port.play({type:'paused'},'tetris',false,'fm38-1');
+  expect(joy.stop).toHaveBeenCalledTimes(2);
+  port.play({type:'resumed'},'tetris',false,'fm38-1');
+  expect(voices).toHaveLength(4);
+  expect(voices[3]!.frequency.setValueAtTime.mock.calls[0]![0]).toBe(440*2**((77-69)/12));
+  port.dispose();
+});
 function harness() {
   const param = () => ({ value: 0, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
   const voices: {
