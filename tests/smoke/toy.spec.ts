@@ -226,24 +226,26 @@ test('логотип: на синем и красном корпусе — бе�
   }
 });
 
-test('динамик: ровная симметричная решётка отверстий относительно оси корпуса', async ({ page }) => {
+test('динамик: отливка как у остальных складных Apollo — три симметричных ряда отверстий, крайние мельче и бледнее', async ({ page }) => {
   await ready(page);
   const holes = await page.evaluate(() =>
     [...document.querySelectorAll('#toy .base__speaker circle')].map((c) => [Number(c.getAttribute('cx')), Number(c.getAttribute('cy')), Number(c.getAttribute('r'))]),
   );
-  expect(holes.length).toBeGreaterThanOrEqual(40);
-  expect(new Set(holes.map(([, , r]) => r)).size).toBe(1); // одинаковый размер
+  expect(holes).toHaveLength(9 + 7 + 5);
+  expect(new Set(holes.map(([, , r]) => r)).size).toBe(2); // ядро и бледные крайние отверстия
   const rows = new Map<number, number[]>();
   for (const [x, y] of holes) rows.set(y as number, [...(rows.get(y as number) ?? []), x as number]);
+  expect(rows.size).toBe(3);
   for (const xs of rows.values()) {
     const sorted = [...xs].sort((a, b) => a - b);
     expect(sorted[0]! + sorted[sorted.length - 1]!).toBeCloseTo(400, 5); // симметрия: центр ряда — ось корпуса (x = 200)
     const steps = new Set(sorted.slice(1).map((x, i) => +(x - sorted[i]!).toFixed(3)));
     expect(steps.size).toBe(1); // равный шаг
   }
+  expect(await page.locator('#base').getAttribute('data-body')).toBe('sea'); // та же отливка, что у «Морского боя», «168 в 1 танк» и «Часов+99»
 });
 
-test('крестовина: клавиши и надписи стоят ровно — симметрично, без наклона', async ({ page }) => {
+test('крестовина: клавиши стоят ровно — симметрично; подписи — пологие дуги, LEFT и RIGHT вдоль краёв крестовины', async ({ page }) => {
   await ready(page);
   const c = async (id: string): Promise<{ x: number; y: number }> => center(page, id);
   const [up, down, left, right] = [await c('up'), await c('down'), await c('left'), await c('right')];
@@ -251,16 +253,20 @@ test('крестовина: клавиши и надписи стоят ровн
   expect(Math.abs(left.y - right.y)).toBeLessThan(0.6); // влево и вправо — на одной горизонтали
   expect(Math.abs((left.x + right.x) / 2 - up.x)).toBeLessThan(0.6); // и обе оси пересекаются в центре
   expect(Math.abs((up.y + down.y) / 2 - left.y)).toBeLessThan(0.6);
-  // Надписи: UP и DOWN — строго горизонтально, LEFT и RIGHT — строго вертикально (±90°), без «кривизны».
-  const turns = await page.evaluate(() =>
-    Object.fromEntries(
-      [...document.querySelectorAll('.base__art text')].map((t) => [t.textContent, t.getAttribute('transform') ?? '']),
-    ),
-  );
-  expect(turns['UP']).toBe('');
-  expect(turns['DOWN']).toBe('');
-  expect(turns['LEFT']).toMatch(/^rotate\(-90 /);
-  expect(turns['RIGHT']).toMatch(/^rotate\(90 /);
+  // Подписи идут по дугам (`textPath`): UP и DOWN — по горизонтали, LEFT и RIGHT — почти по вертикали (≈ ±76°).
+  const spans = await page.evaluate(() => {
+    const out: Record<string, { dx: number; dy: number }> = {};
+    for (const textPath of document.querySelectorAll('.base__art textPath')) {
+      const path = document.querySelector(textPath.getAttribute('href') ?? '');
+      const nums = (path?.getAttribute('d') ?? '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      if (nums.length >= 6) out[textPath.textContent ?? ''] = { dx: Math.abs(nums[4]! - nums[0]!), dy: Math.abs(nums[5]! - nums[1]!) };
+    }
+    return out;
+  });
+  expect(spans['UP']!.dy).toBeLessThan(0.1);
+  expect(spans['DOWN']!.dy).toBeLessThan(0.1);
+  expect(spans['LEFT']!.dy).toBeGreaterThan(spans['LEFT']!.dx * 3);
+  expect(spans['RIGHT']!.dy).toBeGreaterThan(spans['RIGHT']!.dx * 3);
 });
 
 test('кнопки подсвечиваются от клавиатуры: направления, прыжок, огонь, старт и пауза', async ({ page }) => {

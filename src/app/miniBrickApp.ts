@@ -343,7 +343,6 @@ export function startMiniBrickApp(carry?: Carry, id: 'minibrick' | 'fm38' | 'pri
     setMusicVolume: none,
     setMusic: none,
     toggleGhost: () => {
-      if (!fm && !prince) return;
       hub.updateSettings((s) => {
         s.display.ghost = !ghostOn();
       });
@@ -379,7 +378,6 @@ export function startMiniBrickApp(carry?: Carry, id: 'minibrick' | 'fm38' | 'pri
         applyDisplay();
       },
       toggleGhost: () => {
-        if (!fm && !prince) return;
         hub.updateSettings((s) => {
           s.display.ghost = !ghostOn();
         });
@@ -408,11 +406,9 @@ export function startMiniBrickApp(carry?: Carry, id: 'minibrick' | 'fm38' | 'pri
     const display = hub.settings.display;
     applyTheme(display.theme);
     corner.setTheme(display.theme);
-    // «Сегменты экрана» (призрак погашенных сегментов) есть у FM-38 и Prince; у Mini призрак всегда виден.
-    if (fm || prince) {
-      lcd.setGhost?.(ghostOn());
-      corner.setGhost(ghostOn());
-    } else corner.setGhost(null);
+    // «Сегменты экрана»: призрак погашенных сегментов можно скрыть на всех «кирпичах» с живым ЖК (Mini, FM-38, Prince).
+    lcd.setGhost?.(ghostOn());
+    corner.setGhost(ghostOn());
     brickAudio.setMuted(!display.sound);
     brickAudio.setVolume(display.volume);
     controls.update({

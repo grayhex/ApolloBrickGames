@@ -246,11 +246,11 @@ def legends_svg(z: zipfile.ZipFile) -> str:
         k = EM / 1000.0
         width = n * 1000 * k
         out.append(f'<g transform="translate({cx - width / 2:.1f} {cy + EM * 0.38:.1f}) scale({k:.5f} {-k:.5f})" fill="#4a4d45">{body}</g>')
-    # стрелки поворота у большой кнопки и значок крестовины
+    # стрелки поворота у большой кнопки (нижняя — верхняя, повёрнутая на 180° вокруг центра кнопки) и значок крестовины
     arrows = f"""
 <g fill="none" stroke="#3f4540" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
-<path d="M527 1021Q509 1030 512 1054"/><path d="M503 1046 512 1058 521 1047"/>
-<path d="M630 1207Q652 1210 660 1189"/><path d="M652 1184 662 1186 659 1197"/></g>
+<g id="turn"><path d="M527 1021Q509 1030 512 1054"/><path d="M503 1046 512 1058 521 1047"/></g>
+<use href="#turn" transform="rotate(180 594 1093)"/></g>
 <g fill="#3f4540" opacity=".9" transform="translate({PAD[0]} {PAD[1] - 10})"><circle r="3.2"/><path d="M-19 0 -9 -6V6Z"/><path d="M19 0 9 -6V6Z"/><path d="M0 -17 -6 -8H6Z"/><path d="M0 17 -6 8H6Z"/></g>
 """
     return "<g>" + "".join(out) + arrows + "</g>"

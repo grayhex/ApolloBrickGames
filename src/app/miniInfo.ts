@@ -1,5 +1,6 @@
 import type { GameGuideData, GuideText } from '../brick/guide';
 import { MINI_GAMES } from '../brick/guides/mini';
+import { PRINCE_BUTTONS, PRINCE_BUTTONS_INTRO } from '../brick/guides/prince';
 import { h } from './dom';
 import { deviceCard } from './deviceCard';
 import { compactGuide } from './guidePanel';
@@ -41,6 +42,8 @@ export class MiniInfoPanel {
   private active: string;
   private tabs = new Map<string, HTMLButtonElement>();
   private showTab: ((id: string) => void) | null = null;
+  /** Справка по кнопкам Prince: раскрыта ли (на высоком окне — сразу; выбор пользователя сохраняется при смене языка). */
+  private buttonsOpen = typeof matchMedia === 'function' && matchMedia('(min-height: 1000px)').matches;
 
   constructor(root: HTMLElement, _hub: InputHub, hooks: MiniInfoHooks = {}) {
     this.root = root;
@@ -73,7 +76,45 @@ export class MiniInfoPanel {
         : toy === 'prince118'
           ? h('img', { class: 'about__logo prince-logo', src: `${import.meta.env.BASE_URL}devices/prince118/logo.webp`, width: '540', height: '255', alt: 'Prince 皇太子 118 in 1' })
           : h('div', { class: 'about__sticker' }, miniBrickMark('label', { class: 'minibrick-sticker' }));
-    this.root.replaceChildren(h('h2', { class: 'visually-hidden', id: 'info-title' }, TOYS[toy].name), deviceCard({ toy, logo }), this.gamesSection());
+    this.root.replaceChildren(
+      h('h2', { class: 'visually-hidden', id: 'info-title' }, TOYS[toy].name),
+      deviceCard({ toy, logo }),
+      this.gamesSection(),
+      ...(toy === 'prince118' ? [this.buttonsSection()] : []),
+    );
+  }
+
+  /** Prince: на корпусе подписи иероглифами — перевод, чтение, клавиша клавиатуры и действие каждой кнопки (раскрывающийся блок под играми). */
+  private buttonsSection(): HTMLElement {
+    const lang = getLang();
+    const details = h(
+      'details',
+      { class: 'side__sec pctl', id: 'prince-buttons' },
+      h('summary', { class: 'side__h pctl__sum' }, lang === 'ru' ? 'Кнопки корпуса' : 'Body buttons'),
+      h('p', { class: 'side__text pctl__intro' }, PRINCE_BUTTONS_INTRO[lang]),
+      h(
+        'ul',
+        { class: 'pctl__list' },
+        ...PRINCE_BUTTONS.map((button) =>
+          h(
+            'li',
+            { class: 'pctl__item' },
+            h('span', { class: 'pctl__glyph', lang: 'zh', 'aria-hidden': 'true' }, button.glyph),
+            h(
+              'div',
+              { class: 'pctl__body' },
+              h('div', { class: 'pctl__top' }, h('b', {}, button.cap), h('i', { lang: 'zh-Latn' }, button.pinyin), h('kbd', { class: 'kbd' }, button.keys)),
+              h('p', { class: 'pctl__text' }, button.text[lang]),
+            ),
+          ),
+        ),
+      ),
+    );
+    details.open = this.buttonsOpen;
+    details.addEventListener('toggle', () => {
+      this.buttonsOpen = details.open;
+    });
+    return details;
   }
 
   private gamesSection(): HTMLElement {

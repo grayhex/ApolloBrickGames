@@ -101,7 +101,7 @@ test('Prince: левая панель — карточка с наклейкой
   await expect(page.locator('.gtab').first()).toHaveText('1–61');
   await expect(card.locator('img.prince-logo')).toBeVisible();
   await page.locator('#corner-lang').click();
-  await expect(page.locator('.side__text').last()).toContainText('variations');
+  await expect(page.locator('.gpanel .side__text').last()).toContainText('variations');
 });
 
 test('Prince: «только экран» — одна рамка без кнопок, ЖК крупно', async ({ page }) => {
@@ -131,4 +131,23 @@ test('Prince: переключатель «Сегменты экрана» ск�
   await page.locator('#segments-options label:has(input[value=on])').click();
   await expect(lcd).not.toHaveAttribute('data-ghost', 'off');
   await expect.poll(() => unlit.evaluate((node) => +getComputedStyle(node).opacity)).toBeGreaterThan(0);
+});
+
+test('Prince: справка по кнопкам корпуса в левой панели — иероглифы, перевод, клавиши; раскрытое состояние и язык сохраняются', async ({ page }) => {
+  await open(page);
+  const help = page.locator('#prince-buttons');
+  await expect(help.locator('summary')).toHaveText('Кнопки корпуса');
+  if (!(await help.evaluate((node) => (node as HTMLDetailsElement).open))) await help.locator('summary').click();
+  const items = help.locator('.pctl__item');
+  await expect(items).toHaveCount(9);
+  await expect(items.first().locator('.pctl__glyph')).toHaveText('旋转');
+  await expect(items.first()).toContainText('ROTATE');
+  await expect(items.first()).toContainText('следующая игра');
+  await expect(items.first().locator('kbd')).toHaveText('Space · Z');
+  await expect(help.locator('.pctl__glyph')).toHaveText(['旋转', '上', '下', '左', '右', '开始\n暂停', '复位', '声音', '开关']);
+  // язык: текст переводится, блок остаётся раскрытым
+  await page.locator('#corner-lang').click();
+  await expect(page.locator('#prince-buttons summary')).toHaveText('Body buttons');
+  await expect(page.locator('#prince-buttons')).toHaveJSProperty('open', true);
+  await expect(page.locator('#prince-buttons .pctl__item').first()).toContainText('the next game');
 });

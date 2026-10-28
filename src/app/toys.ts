@@ -138,6 +138,7 @@ export const TOYS: Record<ToyId, ToyModel> = {
     gameKeys: 'digits',
     glyph: 'square',
     panel: 'sea',
+    cast: 'sea',
     deco: 'frame',
     leds: true,
     info: true,

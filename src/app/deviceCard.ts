@@ -50,7 +50,7 @@ const LIST_LIMIT = 7;
 const fact = (name: IconName, label: string, full: string, value: string, unknown: boolean, index: number): HTMLElement =>
   h(
     'div',
-    { class: 'dcard__fact', style: `--i:${index}`, title: unknown ? `${full}: ${t('dcard.unknown')}` : `${full}: ${value}`, ...(unknown ? { 'data-unknown': '' } : {}), ...(value.length >= 4 ? { 'data-wide': '' } : {}) },
+    { class: 'dcard__fact', style: `--i:${index}`, title: unknown ? `${full}: ${t('dcard.unknown')}` : `${full}: ${value}`, ...(unknown ? { 'data-unknown': '' } : {}), ...(value.length >= 3 ? { 'data-wide': '' } : {}) },
     h('dt', { class: 'dcard__flabel' }, label),
     h('dd', { class: 'dcard__fvalue' }, icon(name), h('span', {}, value)),
   );

@@ -48,6 +48,10 @@ body .toy[data-model='minibrick'] .base {
 .minibrick-lcd .lcd-seg[data-on] {
   opacity: 0.94;
 }
+/* «Сегменты экрана» выключены: призрак погашенных сегментов скрыт, рамка стакана остаётся. */
+.minibrick-lcd[data-ghost='off'] .lcd-seg:not([data-on]) {
+  opacity: 0;
+}
 .minibrick-lcd .lcd-cell rect {
   stroke: var(--lcd-ink);
 }
