@@ -36,6 +36,20 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
+  test('картинка сайта — ссылка на универсальный Brick Game: переключает на месте, адрес без параметра toy', async ({ page }) => {
+    await page.goto('./?toy=fm38');
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'fm38');
+    const link = page.locator('a.site-brand__link');
+    await expect(link).toHaveAttribute('href', /\/CrocodileMario\/$/);
+    await expect(link.locator('img')).toHaveAttribute('src', /brick-game-online-collage\.webp$/);
+    await link.click();
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'brickgame');
+    await expect(page.locator('#toy')).toHaveAttribute('data-model', 'brickgame');
+    expect(new URL(page.url()).search).toBe('');
+    await page.goBack();
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'fm38');
+  });
+
   test('логотип справа под панелью настроек; компактная панель выбора устройства над консолью и все модели в каталоге', async ({ page }) => {
     await page.goto(marioUrl(''));
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');

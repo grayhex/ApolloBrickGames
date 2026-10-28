@@ -47,7 +47,10 @@ export function applyFM38Model():LcdView {
   for(const [name,value]of Object.entries({x:WINDOW.x,y:WINDOW.y,w:WINDOW.w,h:WINDOW.h}))toy.style.setProperty(`--native-lcd-${name}`,`${value}cqw`);
   // Вид «только экран»: размеры рамки и окна в долях ширины игрушки (CSS их только раскладывает).
   const k=COMPACT.windowW/frameGeometry.window.w,cqw=(px:number):string=>`${+(px*k).toFixed(3)}cqw`;
-  toy.style.setProperty('--fm-frame-art',`url("${import.meta.env.BASE_URL}devices/fm38/screen-frame.png")`);
+  const frameUrl=`${import.meta.env.BASE_URL}devices/fm38/screen-frame.png`;
+  toy.style.setProperty('--fm-frame-art',`url("${frameUrl}")`);
+  // Картинку рамки декодируем заранее: к щелчку «только экран» она уже готова, и переход не начинается с пустого места.
+  const frameArt=new Image();frameArt.src=frameUrl;void frameArt.decode().catch(()=>undefined);
   for(const [name,value]of Object.entries({'frame-w':cqw(frameGeometry.w),'frame-h':cqw(frameGeometry.h),'win-x':cqw(frameGeometry.window.x),'win-y':cqw(frameGeometry.window.y),'win-w':`${COMPACT.windowW}cqw`,'win-h':cqw(frameGeometry.window.h),pad:`${COMPACT.pad}cqw`}))toy.style.setProperty(`--fm-${name}`,value);
   const lcd=new Fm38Lcd();lcd.element.classList.add('minibrick-lcd--live');lcd.element.setAttribute('preserveAspectRatio','xMinYMid slice');
   document.getElementById('game-area')!.append(lcd.element);

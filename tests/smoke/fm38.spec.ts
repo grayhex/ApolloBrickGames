@@ -142,8 +142,40 @@ test('FM-38 screen-only view: the screen is as large as on the other bricks and 
  const fm=await windowOf('fm38');
  expect(Math.abs(fm.window.width/mini.window.width-1),'ширина экрана как у Mini Brick (±8 %)').toBeLessThan(.08);
  expect(fm.front.height,'вид помещается в окно без прокрутки').toBeLessThan(800);
- expect(await page.evaluate(()=>getComputedStyle(document.getElementById('toy')!,'::before').backgroundImage),'корпус вырезан по рамке экрана').toContain('screen-frame.png');
+ expect(await page.evaluate(()=>{const toy=document.getElementById('toy')!;return{frame:getComputedStyle(toy,'::after').backgroundImage,frameOpacity:getComputedStyle(toy,'::after').opacity,body:getComputedStyle(toy,'::before').opacity};}),'корпус вырезан по рамке экрана').toMatchObject({frameOpacity:'1',body:'0',frame:expect.stringContaining('screen-frame.png')});
+  await expect.poll(()=>page.evaluate(()=>[...document.querySelectorAll('.fm__art')].every((art)=>getComputedStyle(art).visibility==='hidden')),{message:'кнопки в виде «только экран» не торчат из-под рамки'}).toBe(true);
  const lcd=(await page.locator('.minibrick-lcd--live').boundingBox())!;
  expect(lcd.x).toBeGreaterThan(fm.front.x+fm.front.width*.1);
  expect(lcd.x+lcd.width).toBeLessThan(fm.front.x+fm.front.width*.9);
+});
+
+test.describe('FM-38 transition to the screen-only view with real motion',()=>{
+ test.use({reducedMotion:'no-preference'});
+ test('no frame without housing, no loose keys, the screen window ends at its final size',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto('./?toy=fm38&view=full&power=on');
+  await expect(page.locator('#toy')).toHaveAttribute('data-view','full');
+  await page.evaluate(()=>{
+   const toy=document.getElementById('toy')!,win=document.querySelector('.lid__window')!;
+   const log:{cover:number;keys:number;w:number;toyW:number}[]=[];
+   (window as unknown as {__fm:typeof log}).__fm=log;
+   const tick=():void=>{
+    const art=[...document.querySelectorAll('.fm__art')].filter((node)=>getComputedStyle(node).visibility!=='hidden').length;
+    log.push({cover:Math.max(+getComputedStyle(toy,'::before').opacity,+getComputedStyle(toy,'::after').opacity),keys:art,w:win.getBoundingClientRect().width,toyW:toy.getBoundingClientRect().width});
+    if(log.length<240)requestAnimationFrame(tick);
+   };
+   requestAnimationFrame(tick);
+  });
+  await page.locator('#view-screen').click();
+  await page.waitForTimeout(1800);
+  const log=await page.evaluate(()=>(window as unknown as {__fm:{cover:number;keys:number;w:number;toyW:number}[]}).__fm);
+  const after=log.filter((row)=>row.toyW<700&&row.w>0);
+  expect(after.length).toBeGreaterThan(20);
+  expect(Math.min(...log.map((row)=>row.cover)),'в каждом кадре виден корпус или рамка').toBeGreaterThanOrEqual(.45);
+  const start=log.findIndex((row)=>row.keys===0&&row.cover<1);
+  expect(start,'кнопки пропадают сразу, как только начинается переход').toBeGreaterThanOrEqual(0);
+  expect(log.slice(start).every((row)=>row.keys===0),'кнопки не торчат из-под рамки').toBe(true);
+  const last=log[log.length-1]!;
+  expect(last.w/last.toyW,'окно под экран к концу занимает 54,4 % ширины игрушки').toBeCloseTo(.544,2);
+ });
 });

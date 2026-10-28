@@ -3,7 +3,7 @@ import type { AppHandle, Carry } from './lifecycle';
 import { startTetrisApp } from './tetrisApp';
 import { alignDock } from './dockAlign';
 import { mountToySwitch } from './toySwitch';
-import { engineOf, parseToy, TOYS, toyHref, type ToyId } from './toys';
+import { DEFAULT_TOY, engineOf, parseToy, TOYS, toyHref, type ToyId } from './toys';
 
 function byId(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -129,4 +129,16 @@ export async function startHost(initial: ToyId): Promise<void> {
 
   // «Назад» и «вперёд» браузера возвращают к прежней игрушке — тоже на месте.
   window.addEventListener('popstate', () => void switchTo(parseToy(window.location.search), false));
+
+  // Картинка сайта — ссылка на универсальный Brick Game: обычный щелчок переключает на месте, как карточка в каталоге; щелчок с Ctrl/Cmd/средней кнопкой открывает адрес как обычную ссылку.
+  const home = document.getElementById('site-brand') as HTMLAnchorElement | null;
+  if (home) {
+    home.href = toyHref(DEFAULT_TOY, '');
+    home.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      toySwitch.close();
+      void switchTo(DEFAULT_TOY, true);
+    });
+  }
 }

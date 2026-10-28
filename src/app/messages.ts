@@ -5,6 +5,7 @@
  */
 const RU = {
   // ── Уголок страницы и подписи на корпусе ────────────────────────────────
+  'brand.home': 'Brick Game Online — универсальный Brick Game',
   'corner.nav': 'Сервис',
   'corner.settings': 'Настройки управления',
   'corner.help': 'Энциклопедия игр',
@@ -444,6 +445,7 @@ const RU = {
 export type MsgKey = keyof typeof RU;
 
 const EN: Record<MsgKey, string> = {
+  'brand.home': 'Brick Game Online — the universal Brick Game',
   'corner.nav': 'Tools',
   'corner.settings': 'Control settings',
   'corner.help': 'Game encyclopedia',
