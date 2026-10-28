@@ -20,8 +20,23 @@ body[data-chrome='toy'] .arena[data-model='fm38']:not([data-compact]) {--stage-w
   .arena .toy[data-chassis='native'][data-model='fm38'] .fm__art img {transition:none;}
 }
 
-/* «Только экран»: рамка экрана вырезана из той же графики по внешнему контуру синей полосы (`screen-frame.png`, прозрачный фон, сглаженный край), окно под экран — такой ширины, как у остальных «кирпичей». */
-.arena .toy[data-chassis='native'][data-model='fm38'][data-compact]::before {background:var(--fm-frame-art) 0 0 / 100% 100% no-repeat;width:var(--fm-frame-w);height:var(--fm-frame-h);left:calc((100cqw - var(--fm-frame-w)) / 2);right:auto;top:var(--fm-pad);bottom:auto;filter:drop-shadow(0 .8cqw 1.4cqw rgb(0 0 0 / .38));}
+/* «Только экран»: рамка экрана вырезана из той же графики по внешнему контуру синей полосы (`screen-frame.png`, прозрачный фон, сглаженный край), окно под экран — такой ширины, как у остальных «кирпичей».
+   Корпус (`::before`) и рамка (`::after`) лежат в игрушке всегда, а переход — перекрёстное растворение: ни один кадр не остаётся без корпуса (картинка рамки не подставляется на ходу, поэтому её не ждут),
+   окно под экран плавно перетекает из своего места в корпусе на место в рамке, а кнопки пропадают сразу и не торчат из-под рамки. Обратный переход — мгновенный, как и смена ширины игрушки. */
+.arena .toy[data-chassis='native'][data-model='fm38']::after {content:'';position:absolute;pointer-events:none;background:var(--fm-frame-art) 0 0 / 100% 100% no-repeat,linear-gradient(#c2c8b1,#c2c8b1) var(--fm-win-x) var(--fm-win-y) / var(--fm-win-w) var(--fm-win-h) no-repeat;width:var(--fm-frame-w);height:var(--fm-frame-h);left:calc((100cqw - var(--fm-frame-w)) / 2);top:var(--fm-pad);filter:drop-shadow(0 .8cqw 1.4cqw rgb(0 0 0 / .38));opacity:0;}
+.arena .toy[data-chassis='native'][data-model='fm38'] :is(.lid__window,.base) {z-index:1;}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact]::before {opacity:0;transition:opacity calc(var(--morph,0s) * .55) ease;}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact]::after {opacity:1;transition:opacity calc(var(--morph,0s) * .55) ease;}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .base {visibility:hidden;}
 .arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__front {height:calc(var(--fm-frame-h) + 2 * var(--fm-pad));}
-.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] .lid__window {left:calc((100cqw - var(--fm-frame-w)) / 2 + var(--fm-win-x));top:calc(var(--fm-pad) + var(--fm-win-y));width:var(--fm-win-w);height:var(--fm-win-h);}
+/* Положение и размер окна под экран плавно перетекают из корпуса в рамку: число `--fm-k` (0 — полный вид, 1 — «только экран») анимируется, а `calc` каждый кадр пересчитывает окно в долях ширины игрушки
+   (длины в `cqw` при обычном переходе замораживались бы в пикселях на момент старта, пока игрушка ещё растёт). Обратный переход мгновенный, как и смена ширины игрушки. */
+@property --fm-k {syntax:'<number>';inherits:true;initial-value:0;}
+.arena .toy[data-chassis='native'][data-model='fm38'][data-compact] {--fm-k:1;transition:--fm-k var(--morph,0s) var(--morph-ease) calc(var(--morph,0s) * .15);}
+.arena .toy[data-chassis='native'][data-model='fm38'] .lid__window {
+  left:calc(var(--native-lcd-x) * (1 - var(--fm-k)) + ((100cqw - var(--fm-frame-w)) / 2 + var(--fm-win-x)) * var(--fm-k));
+  top:calc(var(--native-lcd-y) * (1 - var(--fm-k)) + (var(--fm-pad) + var(--fm-win-y)) * var(--fm-k));
+  width:calc(var(--native-lcd-w) * (1 - var(--fm-k)) + var(--fm-win-w) * var(--fm-k));
+  height:calc(var(--native-lcd-h) * (1 - var(--fm-k)) + var(--fm-win-h) * var(--fm-k));
+}
 

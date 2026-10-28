@@ -1,0 +1,28 @@
+/* Prince 皇太子 (118 in 1): цельный корпус-«кирпич» (`body.webp` с прозрачным окном), кнопки — отдельные спрайты (`princeModel.ts`), экран — свой ЖК без шкалы значков. */
+body .toy[data-model='prince118'] {--lcd-dim:none;}
+/* Призрак погашенных сегментов включается и выключается настройкой «Сегменты экрана». */
+.toy[data-model='prince118'] .minibrick-lcd[data-ghost='off'] .lcd-seg:not([data-on]) {opacity:0;}
+.arena .toy[data-model='prince118'] .lid__front {height:var(--pr-lid-h);}
+.arena .toy[data-model='prince118'] .toy__lower {height:calc(var(--native-height) - var(--pr-lid-h));}
+body[data-toy='prince118'] #view-state {grid-template-columns:repeat(2,minmax(0,1fr));}
+body[data-toy='prince118'] .lid__screw,body[data-toy='prince118'] .lid__art,body[data-toy='prince118'] .lid__leds {display:none;}
+body[data-chrome='toy'] .arena[data-model='prince118']:not([data-compact]) {--stage-w:clamp(300px,calc((100dvh - var(--head-h) - 30px) / 2.09),540px);}
+/* «Только экран»: остаётся одна рамка (`lid.webp` — со своими гладкими краями и тенью), ширина по высоте окна (отношение высоты к ширине ≈ 0,874). */
+body[data-chrome='toy'] .arena[data-model='prince118'][data-compact] {--stage-w:clamp(280px,calc((100dvh - 30px - var(--head-h)) / .875),950px);}
+.arena .toy[data-chassis='native'][data-model='prince118'] .lid__window {background:#b9bcab;}
+.arena .toy[data-chassis='native'][data-model='prince118'][data-compact]::before {background:var(--pr-lid-art) top / 100% auto no-repeat;height:var(--pr-lid-h);}
+.arena .toy[data-chassis='native'][data-model='prince118'][data-compact] .base {visibility:hidden;}
+.arena .toy[data-chassis='native'][data-model='prince118'] :is(.lid__window,.base) {z-index:1;}
+
+/* Кнопки: нажатие уводит спрайт вглубь (нажатая копия темнее, чуть ниже и меньше), область нажатия повторяет форму кнопки. */
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__key {transform:none;border-radius:0;background:none;box-shadow:none;clip-path:var(--pr-clip);-webkit-tap-highlight-color:transparent;cursor:pointer;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__key[data-pressed],.arena .toy[data-chassis='native'][data-model='prince118'] .pr__key:active {background:none;box-shadow:none;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__art {position:absolute;pointer-events:none;transform-origin:50% 55%;transition:transform 70ms ease-out;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__art img {position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__art .pr__dn {opacity:0;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__key:is([data-pressed],:active)+.pr__art {transform:translateY(2.4%) scale(.965);transition-duration:35ms;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__key:is([data-pressed],:active)+.pr__art .pr__dn {opacity:1;}
+.arena .toy[data-chassis='native'][data-model='prince118'] .pr__key:is([data-pressed],:active)+.pr__art .pr__up {opacity:0;}
+@media (prefers-reduced-motion:reduce) {
+  .arena .toy[data-chassis='native'][data-model='prince118'] .pr__art {transition:none;}
+}

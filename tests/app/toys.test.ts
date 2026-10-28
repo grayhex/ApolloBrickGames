@@ -13,7 +13,7 @@ import { APOLLO_SHELLS } from '../../src/input/settings';
 describe('выбор игрушки', () => {
   it('универсальный Brick Game по умолчанию, реальные модели доступны по адресу ?toy=', () => {
     expect([...APOLLO_IDS]).toEqual(['mario', 'clock99', 'seabattle', 'tank168']);
-    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun', 'fm38']);
+    expect([...TOY_IDS]).toEqual([...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun', 'fm38', 'prince118']);
     expect(parseToy('?toy=alibaba')).toBe('alibaba');
     expect(DEFAULT_TOY).toBe('brickgame');
     expect(parseToy('')).toBe('brickgame');

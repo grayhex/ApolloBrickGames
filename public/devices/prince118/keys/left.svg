@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90.1" height="130.6" viewBox="205.0 1034.7 90.1 130.6" role="img">
+<title>left</title>
+<defs>
+<linearGradient id="fill" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#fff0a6"/><stop offset=".35" stop-color="#f6d453"/><stop offset=".75" stop-color="#e4b631"/><stop offset="1" stop-color="#c9961f"/></linearGradient>
+<radialGradient id="spec" cx=".3" cy=".22" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".62"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<clipPath id="clip"><path d="M224.3 1150.5A110.0 110.0 0 0 1 224.3 1049.5Q228.7 1041.7 236.3 1046.5L280.4 1074.0Q288.1 1078.8 284.2 1086.9A40.0 40.0 0 0 0 284.2 1113.1Q288.1 1121.2 280.4 1126.0L236.3 1153.5Q228.7 1158.3 224.3 1150.5Z"/></clipPath>
+</defs>
+<g fill="url(#fill)" stroke="#3a2d0b" stroke-width="3.4" stroke-linejoin="round"><path d="M224.3 1150.5A110.0 110.0 0 0 1 224.3 1049.5Q228.7 1041.7 236.3 1046.5L280.4 1074.0Q288.1 1078.8 284.2 1086.9A40.0 40.0 0 0 0 284.2 1113.1Q288.1 1121.2 280.4 1126.0L236.3 1153.5Q228.7 1158.3 224.3 1150.5Z"/></g>
+<g clip-path="url(#clip)"><g fill="url(#spec)"><path d="M224.3 1150.5A110.0 110.0 0 0 1 224.3 1049.5Q228.7 1041.7 236.3 1046.5L280.4 1074.0Q288.1 1078.8 284.2 1086.9A40.0 40.0 0 0 0 284.2 1113.1Q288.1 1121.2 280.4 1126.0L236.3 1153.5Q228.7 1158.3 224.3 1150.5Z"/></g>
+<g fill="none" stroke="#fff6c4" stroke-width="2" opacity=".7" transform="translate(-1.6 -1.6)"><path d="M224.3 1150.5A110.0 110.0 0 0 1 224.3 1049.5Q228.7 1041.7 236.3 1046.5L280.4 1074.0Q288.1 1078.8 284.2 1086.9A40.0 40.0 0 0 0 284.2 1113.1Q288.1 1121.2 280.4 1126.0L236.3 1153.5Q228.7 1158.3 224.3 1150.5Z"/></g>
+<g fill="none" stroke="#7a5a10" stroke-width="3" opacity=".35" transform="translate(1.8 2.2)"><path d="M224.3 1150.5A110.0 110.0 0 0 1 224.3 1049.5Q228.7 1041.7 236.3 1046.5L280.4 1074.0Q288.1 1078.8 284.2 1086.9A40.0 40.0 0 0 0 284.2 1113.1Q288.1 1121.2 280.4 1126.0L236.3 1153.5Q228.7 1158.3 224.3 1150.5Z"/></g></g>
+<g fill="none" stroke="#3a2d0b" stroke-width="3.4" stroke-linejoin="round"><path d="M224.3 1150.5A110.0 110.0 0 0 1 224.3 1049.5Q228.7 1041.7 236.3 1046.5L280.4 1074.0Q288.1 1078.8 284.2 1086.9A40.0 40.0 0 0 0 284.2 1113.1Q288.1 1121.2 280.4 1126.0L236.3 1153.5Q228.7 1158.3 224.3 1150.5Z"/></g>
+</svg>

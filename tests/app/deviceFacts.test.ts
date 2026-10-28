@@ -37,6 +37,7 @@ describe('сведения для карточки устройства', () => 
     expect(DEVICE_FACTS.alibaba.variations).toBe(99);
     expect(DEVICE_FACTS.taksun.variations).toBe(9999);
     expect(DEVICE_FACTS.fm38.variations).toBe(2);
+    expect(DEVICE_FACTS.prince118.variations).toBe(118);
   });
 
   it('у каждого источника есть подпись и подсказка на двух языках', () => {

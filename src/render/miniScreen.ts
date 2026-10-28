@@ -11,6 +11,13 @@ import { SEA_CUP_OUTLINE } from './seaCup';
  * GAME A/B, ROTATE, PAUSE), размещено по допущению. Поля вокруг рисунка такие же узкие, как на фото: рамка стакана почти касается левого края стекла.
  */
 export const MINI_LCD_VIEW = { x: 5, y: 19, width: 219, height: 304 } as const;
+/** Экран без шкалы значков (Prince 皇太子): та же раскладка, окно сужено на колонку шкалы справа. */
+export const MINI_LCD_VIEW_NO_SCALE = { x: 5, y: 19, width: 209, height: 304 } as const;
+
+export interface MiniLcdOptions {
+  /** Шкала из 13 значков справа (фрукты): у Mini Brick она есть, у Prince её нет. */
+  scale?: boolean;
+}
 
 const CELL = 13;
 const FIELD = { x: 11, y: 56 } as const;
@@ -197,9 +204,11 @@ export class MiniLcd {
   private readonly labels = new Map<string, Part>();
   private last = '';
 
-  constructor() {
+  constructor(options: MiniLcdOptions = {}) {
+    const withScale = options.scale ?? true;
+    const view = withScale ? MINI_LCD_VIEW : MINI_LCD_VIEW_NO_SCALE;
     const root = svg('svg', {
-      viewBox: `${MINI_LCD_VIEW.x} ${MINI_LCD_VIEW.y} ${MINI_LCD_VIEW.width} ${MINI_LCD_VIEW.height}`,
+      viewBox: `${view.x} ${view.y} ${view.width} ${view.height}`,
       class: 'minibrick-lcd',
       'aria-hidden': 'true',
       focusable: 'false',
@@ -273,7 +282,7 @@ export class MiniLcd {
     label('cup', svg('path', { class: 'lcd-seg', d: SEA_CUP_OUTLINE, 'fill-rule': 'evenodd', transform: 'translate(166 308) scale(0.5)' }));
 
     // Шкала из 13 значков (сверху вниз: корона … вишни), положение каждого — по фото.
-    MINI_ICONS.forEach((icon, index) => {
+    (withScale ? MINI_ICONS : []).forEach((icon, index) => {
       const node = svg('path', {
         class: 'lcd-seg lcd-icon',
         d: icon.d,
@@ -284,6 +293,12 @@ export class MiniLcd {
       this.icons.push(node);
       root.append(node);
     });
+  }
+
+  /** Призрак погашенных сегментов: показать или скрыть (переключатель «Сегменты экрана»; рамка стакана остаётся). */
+  setGhost(on: boolean): void {
+    if (on) this.element.removeAttribute('data-ghost');
+    else this.element.dataset['ghost'] = 'off';
   }
 
   /** Показать состояние; меняются только изменившиеся сегменты. */

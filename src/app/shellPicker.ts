@@ -1,4 +1,5 @@
 import { fm38Mini } from './fm38Model';
+import { princeMini } from './princeModel';
 import { isNativeDevice } from '../devices/catalog';
 import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
@@ -22,6 +23,7 @@ let pickerSerial = 0;
  */
 export function miniConsole(shell: Shell, serial: number, toy: ToyId = 'mario'): SVGSVGElement {
   if(toy==='fm38')return fm38Mini();
+  if(toy==='prince118')return princeMini();
   if (isNativeDevice(toy)) return nativeMini(toy);
   if (toy === 'brickgame') {
     const icon = brickGameMini('full', shell);

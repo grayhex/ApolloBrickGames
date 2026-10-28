@@ -3,7 +3,7 @@ import type { AppHandle, Carry } from './lifecycle';
 import { startTetrisApp } from './tetrisApp';
 import { alignDock } from './dockAlign';
 import { mountToySwitch } from './toySwitch';
-import { engineOf, parseToy, TOYS, toyHref, type ToyId } from './toys';
+import { DEFAULT_TOY, engineOf, parseToy, TOYS, toyHref, type ToyId } from './toys';
 
 function byId(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -62,8 +62,7 @@ export async function startHost(initial: ToyId): Promise<void> {
   const heading = document.querySelector('h1');
   const mount = (id: ToyId, carry?: Carry): Promise<AppHandle> => {
     if (heading) heading.textContent = TOYS[id].name;
-    if (id === 'fm38') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry,true));
-    if (id === 'minibrick') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry));
+    if (id === 'fm38' || id === 'prince118' || id === 'minibrick') return import('./miniBrickApp').then(({ startMiniBrickApp }) => startMiniBrickApp(carry, id));
     if (id === 'alibaba' || id === 'taksun') return import('./exhibitApp').then(({startExhibitApp}) => startExhibitApp(id, carry));
     return engineOf(TOYS[id]) === 'tetris' ? startTetrisApp(id, carry) : startApp('room', carry);
   };
@@ -83,13 +82,13 @@ export async function startHost(initial: ToyId): Promise<void> {
 
   /** Подготовка новой игрушки до того, как прежняя будет снята: данные и картинки уже на месте, поэтому замена пройдёт за один кадр. */
   async function prepare(id: ToyId): Promise<void> {
-    if (id === 'minibrick' || id === 'fm38') await import('./miniBrickApp');
+    if (id === 'minibrick' || id === 'fm38' || id === 'prince118') await import('./miniBrickApp');
     else if (engineOf(TOYS[id]) === 'exhibit') await import('./exhibitApp');
     if (engineOf(TOYS[id]) === 'mario') {
       await preloadRoom();
     } else {
       const image = new Image();
-      image.src = id==='fm38' ? `${import.meta.env.BASE_URL}devices/fm38/body-plain.png` : TOYS[id].nativeDevice ? `${import.meta.env.BASE_URL}devices/${id}-body.svg` : `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : id === 'taksun' ? 'taksun-upper-logo-stencil.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
+      image.src = id==='fm38' ? `${import.meta.env.BASE_URL}devices/fm38/body-plain.png` : id==='prince118' ? `${import.meta.env.BASE_URL}devices/prince118/body.webp` : TOYS[id].nativeDevice ? `${import.meta.env.BASE_URL}devices/${id}-body.svg` : `${import.meta.env.BASE_URL}brand/${id === 'brickgame' ? 'brick-game-wordmark.svg' : id === 'taksun' ? 'taksun-upper-logo-stencil.svg' : engineOf(TOYS[id]) === 'exhibit' ? `${id}-logos.png` : `sticker-${id}.webp`}`;
       await image.decode().catch(() => undefined); // не загрузилась — игрушка всё равно запустится, наклейка появится позже
     }
   }
@@ -129,4 +128,16 @@ export async function startHost(initial: ToyId): Promise<void> {
 
   // «Назад» и «вперёд» браузера возвращают к прежней игрушке — тоже на месте.
   window.addEventListener('popstate', () => void switchTo(parseToy(window.location.search), false));
+
+  // Картинка сайта — ссылка на универсальный Brick Game: обычный щелчок переключает на месте, как карточка в каталоге; щелчок с Ctrl/Cmd/средней кнопкой открывает адрес как обычную ссылку.
+  const home = document.getElementById('site-brand') as HTMLAnchorElement | null;
+  if (home) {
+    home.href = toyHref(DEFAULT_TOY, '');
+    home.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      toySwitch.close();
+      void switchTo(DEFAULT_TOY, true);
+    });
+  }
 }

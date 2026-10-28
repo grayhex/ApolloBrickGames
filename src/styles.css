@@ -4346,8 +4346,14 @@ body[data-chrome='toy'] .arena > .brand {
 .topleft #corner { position:static; display:flex; padding:0 0 0 5px; border-left:1px solid var(--line); gap:3px; }
 .site-brand { display:none; }
 body[data-chrome='toy'] .site-brand { display:block; position:absolute; top:8px; right:clamp(12px,2vw,32px); width:var(--side-w); z-index:4; }
-.site-brand img { display:block; width:100%; height:auto; filter:drop-shadow(0 1px 1px #0003); }
+.site-brand img { display:block; width:100%; height:auto; filter:drop-shadow(0 1px 1px #0003); transition:transform .18s ease, filter .18s ease; }
 :root:not([data-theme='light']) .site-brand img { filter:drop-shadow(0 0 8px #cce4c01a); }
+/* Картинка сайта — ссылка на универсальный Brick Game (главную страницу): при наведении чуть приподнимается. */
+.site-brand__link { display:block; border-radius:10px; }
+.site-brand__link:hover img { transform:translateY(-1px) scale(1.012); }
+.site-brand__link:active img { transform:scale(.995); }
+.site-brand__link:focus-visible { outline:2px solid var(--accent, #7fb069); outline-offset:3px; }
+@media (prefers-reduced-motion: reduce) { .site-brand img { transition:none; } .site-brand__link:hover img, .site-brand__link:active img { transform:none; } }
 body[data-chrome='toy'] { --head-h:82px; }
 body[data-chrome='toy'] .arena > .brand { height:76px; width:min(820px,calc(100vw - 580px)); }
 
@@ -4783,7 +4789,7 @@ body:not([data-booting]) .devpick__trigger { animation: dock-arrive 480ms cubic-
 /* Верхняя панель настроек — в правом столбце над картинкой сайта и пультом, одной с ними ширины (положение по `dockAlign.ts`). Слева панель справки поднимается к верху. */
 @media (min-width:1200px) {
   body[data-chrome='toy'] .site-brand { top:70px; }
-  body[data-chrome='toy'] .side--ctl { margin-top:calc(78px + var(--side-w) * .396); max-height:calc(100dvh - 100px - var(--side-w) * .396); }
+  body[data-chrome='toy'] .side--ctl { margin-top:calc(78px + var(--side-w) * .385); max-height:calc(100dvh - 100px - var(--side-w) * .385); }
   body[data-chrome='toy'] .side--info { margin-top:0; align-self:start; max-height:calc(100dvh - 24px); }
   .topleft[data-aligned] { gap:3px; padding:4px; }
   .topleft[data-aligned] .devs { gap:3px; }

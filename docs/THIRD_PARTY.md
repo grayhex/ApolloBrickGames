@@ -53,3 +53,7 @@ SOFTWARE.
 ## FM-38 owner graphics
 
 `public/devices/fm38/body.png` and `logo.png` are supplied by the project owner in `docs/research/fm-38.zip`, with explicit permission to use them for this model. They are not assets from BrickEmuPy.
+
+## Prince owner graphics
+
+`public/devices/prince118/*` is built by `scripts/research/prince_build.py` from the owner's `docs/research/Prince-front-panel.webp` (photo of the original front panel) and `docs/research/Prince-118-AX128-graphics.zip`, plus the owner's photos of the device, all supplied by the project owner for this project. The tunes are public-domain themes (Rossini, William Tell finale; Ukrainian folk song) transcribed from open ABC / MIDI notations, synthesised as one voice; no recordings are included.

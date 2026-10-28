@@ -36,6 +36,20 @@ async function open(page: Page, toy: string, extra = ''): Promise<void> {
 }
 
 test.describe('шапка и переключатель', () => {
+  test('картинка сайта — ссылка на универсальный Brick Game: переключает на месте, адрес без параметра toy', async ({ page }) => {
+    await page.goto('./?toy=fm38');
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'fm38');
+    const link = page.locator('a.site-brand__link');
+    await expect(link).toHaveAttribute('href', /\/CrocodileMario\/$/);
+    await expect(link.locator('img')).toHaveAttribute('src', /brick-game-online-collage\.webp$/);
+    await link.click();
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'brickgame');
+    await expect(page.locator('#toy')).toHaveAttribute('data-model', 'brickgame');
+    expect(new URL(page.url()).search).toBe('');
+    await page.goBack();
+    await expect(pickerTrigger(page)).toHaveAttribute('data-toy', 'fm38');
+  });
+
   test('логотип справа под панелью настроек; компактная панель выбора устройства над консолью и все модели в каталоге', async ({ page }) => {
     await page.goto(marioUrl(''));
     await expect(page.locator('#arena')).toHaveAttribute('data-view', 'closed');
@@ -47,10 +61,10 @@ test.describe('шапка и переключатель', () => {
     await expect(pickerTrigger(page).locator('.devpick__model')).toHaveText('Crocodile Mario');
     await openPicker(page);
     const items = page.locator('.devpick__card');
-    await expect(items).toHaveCount(13);
-    await expect(items.locator('.devpick__model')).toHaveText(['Универсальный', 'Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'B0202 · 126 in 1', 'B0302 · 18 in 1', 'TS-995 · 9999 in 1', 'Alibaba Dance 99 in 1', 'Mini Brick Game B\u2011S96', 'E-88 · 8 in 1', 'E-23 · 96 in 1', 'FM-38 · 2 in 1']);
-    await expect(items.locator('svg.devpick__icon')).toHaveCount(13);
-    await expect(items.locator('svg.devpick__icon image[href*="devices/"]')).toHaveCount(5); // моноблоки используют оригинальные векторы
+    await expect(items).toHaveCount(14);
+    await expect(items.locator('.devpick__model')).toHaveText(['Универсальный', 'Crocodile Mario', 'Часы+99', 'Морской бой', '168 в 1 танк', 'B0202 · 126 in 1', 'B0302 · 18 in 1', 'TS-995 · 9999 in 1', 'Alibaba Dance 99 in 1', 'Mini Brick Game B\u2011S96', 'E-88 · 8 in 1', 'E-23 · 96 in 1', 'FM-38 · 2 in 1', 'Prince · 118 in 1']);
+    await expect(items.locator('svg.devpick__icon')).toHaveCount(14);
+    await expect(items.locator('svg.devpick__icon image[href*="devices/"]')).toHaveCount(15); // моноблоки используют оригинальные рисунки: у Prince корпус и девять кнопок
     await expect(page.locator('.devpick__card[aria-current="page"]')).toHaveAttribute('data-toy', 'mario');
     await closePicker(page);
     // Индикаторы — отдельные цветные значки (клавиатура, пауза; геймпад скрыт, пока не подключён) в панели настроек, она стоит в правом столбце над логотипом.

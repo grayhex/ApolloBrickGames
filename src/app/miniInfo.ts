@@ -19,7 +19,7 @@ export interface PanelGame {
 
 export interface MiniInfoHooks {
   /** Какая это игрушка и какие у неё вкладки (по умолчанию — Mini Brick B-S96). */
-  toy?: 'minibrick' | 'fm38';
+  toy?: 'minibrick' | 'fm38' | 'prince118';
   games?: readonly PanelGame[];
   /** Вкладку игры выбрали: консоль в меню переходит к первому номеру этой игры (или к варианту A/B). */
   onChoose?(id: string): void;
@@ -70,7 +70,9 @@ export class MiniInfoPanel {
     const logo =
       toy === 'fm38'
         ? h('img', { class: 'about__logo fm38-logo', src: `${import.meta.env.BASE_URL}devices/fm38/logo.png`, width: '600', height: '600', alt: 'Brick Game 2 in 1' })
-        : h('div', { class: 'about__sticker' }, miniBrickMark('label', { class: 'minibrick-sticker' }));
+        : toy === 'prince118'
+          ? h('img', { class: 'about__logo prince-logo', src: `${import.meta.env.BASE_URL}devices/prince118/logo.webp`, width: '540', height: '255', alt: 'Prince 皇太子 118 in 1' })
+          : h('div', { class: 'about__sticker' }, miniBrickMark('label', { class: 'minibrick-sticker' }));
     this.root.replaceChildren(h('h2', { class: 'visually-hidden', id: 'info-title' }, TOYS[toy].name), deviceCard({ toy, logo }), this.gamesSection());
   }
 

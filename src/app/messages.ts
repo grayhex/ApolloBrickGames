@@ -5,6 +5,7 @@
  */
 const RU = {
   // ── Уголок страницы и подписи на корпусе ────────────────────────────────
+  'brand.home': 'Brick Game Online — универсальный Brick Game',
   'corner.nav': 'Сервис',
   'corner.settings': 'Настройки управления',
   'corner.help': 'Энциклопедия игр',
@@ -15,6 +16,9 @@ const RU = {
   'stage.label.brickgame': 'Игрушка Brick Game',
   'help.fm38.melody': 'Переключает мелодии. Общая громкость и выключение звука — в пульте.',
   'help.fm38.down': 'В демонстрации выбирает A/B; во время партии ускоряет падение.',
+  'help.prince.up': 'вверх (в тетрисе — поворот) · в автоплее — предыдущая игра',
+  'help.prince.down': 'вниз · в автоплее — следующая вариация игры',
+  'help.prince.rotate': 'поворот или огонь · в автоплее — следующая игра',
   'stage.label.clock99': 'Игрушка Часы+99',
   'stage.label.seabattle': 'Игрушка Морской бой',
   'stage.label.tank168': 'Игрушка 168 в 1 танк',
@@ -45,6 +49,7 @@ const RU = {
   'alibaba.details': 'Белый складной корпус, круглая кнопка ROTATE, три кнопки направления и цельный экран в красной рамке. Точное устройство LCD и набор игр ещё изучаются.',
   'alibaba.tip': 'Нажмите на крышку, чтобы открыть. ON/OFF или O — статус разработки. Закрыть и рассмотреть экран можно через пульт справа.',
   'stage.label.taksun': 'TAKSUN TS-995 · 9999 in 1 — корпус по фотографиям',
+  'stage.label.prince118': 'Prince 皇太子 · 118 in 1 — корпус по фотографиям',
   'taksun.description': 'Игры появятся позже: сейчас можно рассмотреть синий складной корпус с розовыми кнопками и рамкой стакана на экране, открыть крышку и повернуть 3D-коробку TS-995.',
   'taksun.details': 'Синий складной корпус, розовые кнопки: крестовина UP / LEFT / RIGHT / DOWN, вытянутая DIR / ROTATE и четыре служебные — PAUSE / START, VOLUME, ON/OFF и RESET (в изогнутой ложбине слева, RESET ниже). На крышке — лучник «9999 in 1 BRICK GAME» и тетрамино по сторонам экрана, внизу — табличка TAKSUN. На экране видна обводка стакана с пунктиром внизу и разделитель справа.',
   'taksun.tip': 'Нажмите на крышку, чтобы открыть. ON/OFF или O — статус разработки. 3D-коробку можно повернуть мышью, пальцем или стрелками.',
@@ -444,6 +449,7 @@ const RU = {
 export type MsgKey = keyof typeof RU;
 
 const EN: Record<MsgKey, string> = {
+  'brand.home': 'Brick Game Online — the universal Brick Game',
   'corner.nav': 'Tools',
   'corner.settings': 'Control settings',
   'corner.help': 'Game encyclopedia',
@@ -454,6 +460,9 @@ const EN: Record<MsgKey, string> = {
   'stage.label.brickgame': 'Brick Game console',
   'help.fm38.melody': 'Cycles music. Volume and mute are in the control panel.',
   'help.fm38.down': 'Selects A/B during the demo; speeds up falling during play.',
+  'help.prince.up': 'up (a turn in Tetris) · in the auto-play — previous game',
+  'help.prince.down': 'down · in the auto-play — next variation of the game',
+  'help.prince.rotate': 'turn or fire · in the auto-play — next game',
   'stage.label.clock99': 'Clock+99 toy',
   'stage.label.seabattle': 'Sea Battle toy',
   'stage.label.tank168': '168 in 1 Tank toy',
@@ -484,6 +493,7 @@ const EN: Record<MsgKey, string> = {
   'alibaba.details': 'White folding shell, a round ROTATE button, three directional buttons and a full LCD in a red frame. The exact LCD layout and game library are still being researched.',
   'alibaba.tip': 'Click the lid to open it. ON/OFF or O shows the development status. Use the panel to close the console or inspect its screen.',
   'stage.label.taksun': 'TAKSUN TS-995 · 9999 in 1 — shell reconstructed from photographs',
+  'stage.label.prince118': 'Prince 皇太子 · 118 in 1 — shell reconstructed from photographs',
   'taksun.description': 'Games will come later: for now you can explore the blue folding shell with pink buttons and the well outline on the screen, open the lid and turn the 3D TS-995 box.',
   'taksun.details': 'Blue folding shell with pink buttons: the UP / LEFT / RIGHT / DOWN cross, an elongated DIR / ROTATE and four system keys — PAUSE / START, VOLUME, ON/OFF and RESET (in a curved groove on the left, RESET below it). The lid carries the “9999 in 1 BRICK GAME” archer and tetrominoes beside the screen, with a TAKSUN plaque below. The screen shows the well outline with a dashed bottom and a divider on the right.',
   'taksun.tip': 'Click the lid to open it. ON/OFF or O shows the development status. Turn the 3D box with the mouse, a finger or the arrow keys.',

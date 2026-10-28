@@ -42,6 +42,8 @@ export interface DeviceCatalogEntry {
 /** Значения по умолчанию (в репозитории); поверх них накладываются настройки из админки. */
 export const DEVICE_DEFAULTS: Readonly<Record<ToyId, DeviceCatalogEntry>> = {
   fm38: {brand:'brickgame',readiness:'reconstructing',title:'FM-38 · 2 in 1',aliases:['FM38','FM-38']},
+  // Корпус и экран по фото и графике владельца, игры и мелодии есть; разбивка 118 вариаций и автоплей приближены (docs/devices/prince118.md).
+  prince118: { brand: DEFAULT_BRAND, readiness: 'reconstructing', title: 'Prince · 118 in 1', aliases: ['Prince', 'Prince 皇太子', '皇太子', 'AX-128', 'AX128', '118 in 1'] },
   mario: { brand: 'apollo', readiness: 'playable', aliases: ['Mario'] },
   clock99: { brand: 'apollo', readiness: 'playable', aliases: ['Clock+99', 'Clock 99'] },
   seabattle: { brand: 'apollo', readiness: 'playable', aliases: ['Sea Battle', 'Seabattle'] },
