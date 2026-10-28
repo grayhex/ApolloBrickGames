@@ -12,12 +12,12 @@ test('открытый каталог устройств сохраняет иг
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./?toy=clock99&power=on');
   await expect(page.locator('#game-area')).toHaveAttribute('data-boot', 'off');
-  await expect(page.locator('.devpick__card')).toHaveCount(13);
+  await expect(page.locator('.devpick__card')).toHaveCount(14);
   await openPicker(page);
   await closePicker(page);
   await expect(page.locator('#toy')).toHaveAttribute('data-model', 'clock99');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'on');
-  await expect(page.locator('.devpick__card')).toHaveCount(13);
+  await expect(page.locator('.devpick__card')).toHaveCount(14);
   await chooseToy(page, 'alibaba');
   await expect(page.locator('#game-area')).toHaveAttribute('data-phase', 'unavailable');
   await expect(page.locator('#toy')).toHaveAttribute('data-power', 'off');

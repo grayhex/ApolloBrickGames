@@ -83,7 +83,7 @@ test('стрелки по бокам панели листают устройс�
   // Имена соседей — в подписи и подсказке; универсальный стоит первым, перед ним по кругу — последняя модель, за ним — Crocodile Mario.
   await expect(next).toHaveAttribute('aria-label', /Crocodile Mario/);
   await expect(next).toHaveAttribute('title', /Crocodile Mario/);
-  await expect(prev).toHaveAttribute('aria-label', /FM-38/);
+  await expect(prev).toHaveAttribute('aria-label', /Prince/);
   const barBox = await page.locator('.devpick__trigger').boundingBox();
   const prevBox = (await prev.boundingBox())!;
   const nextBox = (await next.boundingBox())!;
@@ -100,7 +100,7 @@ test('стрелки по бокам панели листают устройс�
   await prev.click();
   await expect(current).toHaveAttribute('data-toy', 'brickgame');
   await prev.click(); // с первой модели — на последнюю
-  await expect(current).toHaveAttribute('data-toy', 'fm38');
+  await expect(current).toHaveAttribute('data-toy', 'prince118');
   await next.click(); // и обратно по кругу — на первую
   await expect(current).toHaveAttribute('data-toy', 'brickgame');
 });

@@ -295,6 +295,12 @@ export class MiniLcd {
     });
   }
 
+  /** Призрак погашенных сегментов: показать или скрыть (переключатель «Сегменты экрана»; рамка стакана остаётся). */
+  setGhost(on: boolean): void {
+    if (on) this.element.removeAttribute('data-ghost');
+    else this.element.dataset['ghost'] = 'off';
+  }
+
   /** Показать состояние; меняются только изменившиеся сегменты. */
   render(state: MiniLcdState): void {
     const key = [

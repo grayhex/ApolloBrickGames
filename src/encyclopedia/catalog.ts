@@ -52,6 +52,9 @@ export const ENTRIES: EncyclopediaEntry[] = Object.values(GAMES).map(game => {
     sources.push(research('docs/devices/e88-b0202.md',gt('Профили E‑88 1–4: оригинальные фигуры, интервалы падения, очки 10/30/70/150 и препятствие; B0202 H02 — отражённое поле. Звук тетриса E‑88: каналы 0/3/10/11 и обе части мелодии 14/15. Ограничения указаны отдельно.', 'E‑88 profiles 1–4: original shapes, gravity intervals, 10/30/70/150 scoring and obstruction; B0202 H02 flips the field. E‑88 Tetris audio uses channels 0/3/10/11 and both melody parts 14/15. Limitations are listed separately.')));
     scope=gt('Общие правила Tetris сверены по нескольким источникам. Профили E‑88 и B0202 различаются; их ГСЧ, сцены и часть прогрессии остаются адаптацией. Оценка общей игры не означает точность всех вариантов.', 'Shared Tetris rules were cross-checked against several sources. E‑88 and B0202 profiles differ; RNG, scenes and parts of progression remain adapted. The general game rating does not certify every variant.');
   }
+  if(['tetris','racing','tank','frog','arkanoid'].includes(id)){
+    sources.push(research('docs/devices/prince118.md',gt('Prince 皇太子 118 in 1: пять игр после заставки идут в автоплее; разбивка 118 вариаций, кнопки автоплея и сами боты — допущения проекта, дампа устройства нет.', 'Prince 118 in 1: five games run in the attract mode after the intro; the 118-variation split, the auto-play buttons and the bots are project assumptions, there is no device dump.')));
+  }
   if(['snake','shooting-array','shooting-figures','construction','racing'].includes(id)){
     sources.push(research('docs/devices/e23-b0302.md',gt('Назначение пунктов E‑23 и наблюдения B0302 по ROM; конкретные профили пока используют приближённые правила.', 'E‑23 menu assignments and B0302 ROM observations; individual profiles currently use approximate rules.')));
   }

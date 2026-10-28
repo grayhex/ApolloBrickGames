@@ -1,5 +1,7 @@
 /* Prince 皇太子 (118 in 1): цельный корпус-«кирпич» (`body.webp` с прозрачным окном), кнопки — отдельные спрайты (`princeModel.ts`), экран — свой ЖК без шкалы значков. */
 body .toy[data-model='prince118'] {--lcd-dim:none;}
+/* Призрак погашенных сегментов включается и выключается настройкой «Сегменты экрана». */
+.toy[data-model='prince118'] .minibrick-lcd[data-ghost='off'] .lcd-seg:not([data-on]) {opacity:0;}
 .arena .toy[data-model='prince118'] .lid__front {height:var(--pr-lid-h);}
 .arena .toy[data-model='prince118'] .toy__lower {height:calc(var(--native-height) - var(--pr-lid-h));}
 body[data-toy='prince118'] #view-state {grid-template-columns:repeat(2,minmax(0,1fr));}
