@@ -77,6 +77,7 @@ export const DEVICE_FACTS: Readonly<Record<ToyId, DeviceFacts>> = {
   'apollo-b0302': { year: null, power: null, games: [g('Гонки', 'Racing'), TETRIS], variations: 18, sources: ['rom', 'photo'] },
   taksun: { year: null, power: null, games: [], variations: 9999, sources: ['photo'] },
   fm38: { year: null, power: null, games: [g('Тетрис A', 'Tetris A'), g('Тетрис B', 'Tetris B')], variations: 2, sources: ['photo', 'owner'] },
+  prince118: { year: null, power: null, games: [TETRIS, g('Гонки', 'Racing'), g('Танки', 'Tanks'), g('Фроггер', 'Frogger'), g('Арканоид', 'Arkanoid')], variations: 118, sources: ['photo', 'owner'] },
 };
 
 export const SOURCE_ORDER: readonly SourceKind[] = ['rom', 'photo', 'video', 'wiki', 'owner', 'donor'];

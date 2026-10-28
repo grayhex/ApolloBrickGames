@@ -13,7 +13,7 @@ import type { ToyKeyId } from './toy';
  */
 export const APOLLO_IDS = ['mario', 'clock99', 'seabattle', 'tank168'] as const;
 export type ApolloId = (typeof APOLLO_IDS)[number];
-export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun', 'fm38'] as const;
+export const TOY_IDS = [...APOLLO_IDS, 'alibaba', 'minibrick', 'brickgame', 'e88', 'apollo-b0202', 'e23', 'apollo-b0302', 'taksun', 'fm38', 'prince118'] as const;
 export type ToyFamily = 'apollo' | 'other';
 export type ToyId = (typeof TOY_IDS)[number];
 
@@ -364,6 +364,15 @@ export const TOYS: Record<ToyId, ToyModel> = {
     labels: { round: [{key:'onoff',top:'ON/OFF'},{key:'sp',top:'START',bottom:'PAUSE'},{key:'sound',top:'MUSIC',bottom:'VOICE'},{key:'fire',top:'RESET'}],
       up: '', left: 'LEFT/LEVEL', right: 'RIGHT/SPEED', down: 'DOWN/GAME', big: 'ROTATE' },
     keyWhat: { onoff: 'help.row.onoff', sp: 'help.row.sp', sound: 'help.row.sound', fire: 'help.row.menu', left: 'help.m.left', right: 'help.m.right', down: 'help.mini.down', jump: 'help.mini.rotate' },
+  },
+  // Prince 皇太子 (118 in 1, AX-128): цельный корпус, не раскладушка; подписи кнопок напечатаны иероглифами (复位, 开始/暂停, 声音, 开关, 旋转, 上/下/左/右).
+  prince118: {
+    id: 'prince118', family: 'other', name: 'Prince 皇太子', chassis: 'monoblock',
+    shells: ['white'], defaultShell: 'white', games: [], defaultGame: null, gamesCount: 118, menu: false,
+    gameKeys: 'digits', glyph: 'square', panel: 'sea', deco: 'frame', leds: false, info: true, pack: null, levels: false,
+    lcd: { bg: '#b9bcab', ink: '#2c3430' }, stageLabel: 'stage.label.prince118',
+    labels: { round: [{ key: 'onoff', top: '开关' }, { key: 'sp', top: '开始', bottom: '暂停' }, { key: 'sound', top: '声音' }, { key: 'fire', top: '复位' }], up: '上', left: '左', right: '右', down: '下', big: '旋转' },
+    keyWhat: { onoff: 'help.row.onoff', sp: 'help.row.sp', sound: 'help.row.sound', fire: 'help.row.menu', up: 'help.prince.up', left: 'help.m.left', right: 'help.m.right', down: 'help.prince.down', jump: 'help.prince.rotate' },
   },
   fm38: {
     id:'fm38',family:'other',name:'Brick Game FM-38',chassis:'monoblock',

@@ -23,12 +23,14 @@ export function brickSound(event: BrickEvent, game: string, inMenu: boolean, nat
       if (event.type === 'hit' || event.type === 'shot') return 'sea_splash';
     }
   }
-  if (nativeProfile === 'mini') {
+  if (nativeProfile === 'mini' || nativeProfile === 'prince') {
     // Mini Brick Game B-S96: монофоническая музыка один раз на партию («Коробейники»), остальное — короткие сигналы (`miniTunes.ts`).
-    if (event.type === 'intro') return 'mini_intro';
+    // Prince 皇太子: при включении один раз «Финал» увертюры «Вильгельм Телль», в начале партии один раз куплет «Ти ж мене підманула» (`princeTunes.ts`); сигналы те же.
+    const prince = nativeProfile === 'prince';
+    if (event.type === 'intro') return prince ? 'prince_tell' : 'mini_intro';
     if (inMenu) return event.type === 'move' ? 'mini_select' : null;
     switch (event.type) {
-      case 'started': return 'mini_korobeiniki';
+      case 'started': return prince ? 'prince_verse' : 'mini_korobeiniki';
       case 'move': return 'mini_move';
       case 'rotate': return 'mini_turn';
       case 'lock': case 'drop': return 'mini_lock';
@@ -116,7 +118,7 @@ export function seekTones(notes:readonly BrickTone[],offsetMs:number):BrickTone[
   return out;
 }
 /** Фоновая музыка с отдельными голосами: поверх неё звучат обычные сигналы, пауза и продолжение сохраняют место. */
-const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'b0302_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki', 'fm38_korobeiniki', 'fm38_joy']);
+const BACKGROUND_MUSIC = new Set<BrickSound>(['e88_tetris_music', 'b0302_tetris_music', 'sea_intro', 'sea_intro_once', 'sea_romeo_music', 'mini_korobeiniki', 'fm38_korobeiniki', 'fm38_joy', 'prince_tell', 'prince_verse']);
 const PAD_HZ = [523, 659, 392, 330] as const;
 const MUSIC = new Set<BrickSound>(['welcome', 'start', 'win', 'game_over', 'kaboom', 'tetris']);
 const PRIORITY = (sound: BrickSound): number =>

@@ -1,4 +1,5 @@
 import { fm38Mini } from './fm38Model';
+import { princeMini } from './princeModel';
 import { isNativeDevice } from '../devices/catalog';
 import { nativeMini } from './nativeModel';
 import { brickGameMini } from './brickGameModel';
@@ -100,6 +101,7 @@ function base(toy: ToyId, closed: boolean): SVGGElement {
 /** Миниатюры используют реальные рисунки крышки, кнопок, динамика и наклеек выбранной модели. */
 export function miniView(view: View, toy: ToyId = 'mario'): SVGSVGElement {
   if(toy==='fm38')return fm38Mini(view);
+  if(toy==='prince118')return princeMini(view);
   if (isNativeDevice(toy)) return nativeMini(toy,view);
   if (toy === 'brickgame') return brickGameMini(view);
   if (toy === 'alibaba') return alibabaMini(view);

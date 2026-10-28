@@ -1,4 +1,7 @@
 import { FMConsole } from '../brick/fmConsole';
+import { PRINCE_PANEL_GAMES } from '../brick/guides/prince';
+import { PrinceConsole } from '../brick/princeConsole';
+import { applyPrinceModel } from './princeModel';
 import { FM38_GAMES } from '../brick/guides/fm38';
 import { applyFM38Model } from './fm38Model';
 import './exhibit.css';
@@ -33,8 +36,9 @@ const PAUSE = actionBit('pause');
 const LEFT = actionBit('left');
 const RIGHT = actionBit('right');
 const DOWN = actionBit('down');
-/** На корпусе нет отдельной «вверх»: клавиша ↑ и большая ROTATE — одна кнопка. */
+/** На корпусе Mini и FM-38 нет отдельной «вверх»: клавиша ↑ и большая ROTATE — одна кнопка. У Prince стрелка вверх есть, и это отдельное действие. */
 const ROTATE = actionBit('jump') | actionBit('up');
+const UP = actionBit('up');
 /** Кнопки корпуса и их игровые действия; RESET (`fire`) возвращает в меню, ON/OFF, MUSIC/VOICE и START/PAUSE — отдельно. */
 const KEY_ACTIONS: Partial<Record<ToyKeyId, number>> = {
   left: maskOf('left'),
@@ -51,6 +55,7 @@ const BLINK_MS = 500;
 const hiKey = (number: number): string => `crocodile-mario:minibrick:${String(number).padStart(2, '0')}:${number<2?'r2:':''}hi`;
 const lineKey = (number:number):string => `crocodile-mario:minibrick:${number}:lines-hi`;
 const fmHiKey = (number:number):string => `crocodile-mario:fm38:${number}:hi`;
+const princeHiKey = (number:number):string => `crocodile-mario:prince118:${String(number+1).padStart(3,'0')}:hi`;
 function loadLines(number:number):number {
   try {return Math.max(0,Math.min(MAX_SCORE,Number.parseInt(browserStorage()?.getItem(lineKey(number))??'',10)||0));}catch{return 0;}
 }
@@ -71,13 +76,15 @@ function saveHi(number: number, value: number): void {
 }
 
 /** Кадр ввода такта в действия движка: направления, ROTATE (она же ↑); «вверх» как отдельного действия у игр нет. */
-function brickInput(frame: InputFrame): ReturnType<typeof makeBrickInput> {
+function brickInput(frame: InputFrame, separateUp = false): ReturnType<typeof makeBrickInput> {
+  const rotate = separateUp ? actionBit('jump') : ROTATE;
   const actions = (mask: number): BrickAction[] => {
     const out: BrickAction[] = [];
     if (mask & LEFT) out.push('left');
     if (mask & RIGHT) out.push('right');
     if (mask & DOWN) out.push('down');
-    if (mask & ROTATE) out.push('rotate');
+    if (separateUp && mask & UP) out.push('up');
+    if (mask & rotate) out.push('rotate');
     return out;
   };
   return makeBrickInput(actions(frame.pressed), actions(frame.held));
@@ -88,13 +95,15 @@ function brickInput(frame: InputFrame): ReturnType<typeof makeBrickInput> {
  * (`MiniConsole`: заставка рожица → «96», меню номеров 00–96, партия), но та же оболочка страницы: вид, питание, звук, пульт, справка.
  * Движок общий с остальными игрушками (`BrickGame`), без кабинета, рейтингов и админки: у модели нет набора игр для настройки.
  */
-export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
+export function startMiniBrickApp(carry?: Carry, id: 'minibrick' | 'fm38' | 'prince118' = 'minibrick'): AppHandle {
   const life = new Lifecycle();
   const { signal } = life;
-  const model = fm?TOYS.fm38:TOYS.minibrick;
+  const fm = id === 'fm38';
+  const prince = id === 'prince118';
+  const model = TOYS[id];
   document.body.dataset['chrome'] = 'toy';
   document.body.dataset['motion'] = 'off';
-  const lcd: LcdView = fm?applyFM38Model():applyMiniBrickModel();
+  const lcd: LcdView = fm ? applyFM38Model() : prince ? applyPrinceModel() : applyMiniBrickModel();
   const toy = byId('toy');
   const arena = byId('arena');
   const area = byId('game-area');
@@ -104,27 +113,28 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   const base = byId('base');
   const params = new URLSearchParams(location.search);
   let view: View = carry?.view ?? parseView(params.get('view'), params.get('power') === 'on');
-  if(fm && view==='closed')view='full';
+  if((fm||prince) && view==='closed')view='full';
   let powered = carry ? carry.powered : params.get('power') === 'on';
   if (powered && view === 'closed') view = 'full';
   const lid = byId('lid');
   lid.style.setProperty('--lcd-bg', model.lcd.bg);
-  lid.style.setProperty('--lcd-aspect', '254 / 314');
+  lid.style.setProperty('--lcd-aspect', prince ? '311 / 447' : '254 / 314');
   byId('stage').dataset['i18nAttrs'] = `aria-label=${model.stageLabel}`;
   area.dataset['boot'] = 'off';
   area.dataset['menu'] = 'none';
   area.dataset['music'] = 'none';
 
   const seed = Number.parseInt(params.get('seed') ?? '', 10) || Date.now() % 0x7fffffff || 1;
+  const otherHiKey = fm ? fmHiKey : prince ? princeHiKey : null;
   const readHi=(n:number):number=>{
-    if(!fm)return loadHi(n);
+    if(!otherHiKey)return loadHi(n);
     try {
-      const value=Number.parseInt(browserStorage()?.getItem(fmHiKey(n))??'',10);
+      const value=Number.parseInt(browserStorage()?.getItem(otherHiKey(n))??'',10);
       return Number.isFinite(value)?Math.min(MAX_SCORE,Math.max(0,value)):0;
     } catch {return 0;}
   };
-  const mini = fm?new FMConsole({seed,hiScore:readHi}):new MiniConsole({ seed, hiScore:readHi });
-  if (params.has('debug')) Object.defineProperty(window, fm?'__fm38':'__minibrick', { configurable: true, get: () => mini });
+  const mini = fm ? new FMConsole({ seed, hiScore: readHi }) : prince ? new PrinceConsole({ seed, hiScore: readHi }) : new MiniConsole({ seed, hiScore: readHi });
+  if (params.has('debug')) Object.defineProperty(window, fm ? '__fm38' : prince ? '__prince118' : '__minibrick', { configurable: true, get: () => mini });
 
   /** Диалог создаётся после ввода (ему нужен `hub`), а ввод спрашивает, не открыт ли он: держатель ссылки разрывает круг. */
   const ui: { settings: SettingsDialog | null } = { settings: null };
@@ -138,7 +148,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   const stepper = new FixedStepper(1000 / BRICK_TICK_HZ);
   const brickAudio = new BrickAudio();
   let fmMelody = 0;
-  const audioProfile = ():string => fm?`fm38-${fmMelody}`:'mini';
+  const audioProfile = ():string => fm ? `fm38-${fmMelody}` : prince ? 'prince' : 'mini';
   life.onDispose(() => brickAudio.dispose());
   const unlockAudio = (): void => brickAudio.unlock();
   window.addEventListener('keydown', unlockAudio, { signal });
@@ -162,7 +172,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     savedHi.set(mini.gameNumber, stored);
     if (mini.hiScore > stored) {
       savedHi.set(mini.gameNumber, mini.hiScore);
-      if(fm){try{browserStorage()?.setItem(fmHiKey(mini.gameNumber),String(mini.hiScore));}catch{/* storage unavailable */}}else saveHi(mini.gameNumber, mini.hiScore);
+      if(otherHiKey){try{browserStorage()?.setItem(otherHiKey(mini.gameNumber),String(mini.hiScore));}catch{/* storage unavailable */}}else saveHi(mini.gameNumber, mini.hiScore);
     }
   };
   /** Число снятых рядов партии (две последние цифры верхней строки): набирается по событиям `lines`, с новой партией обнуляется. */
@@ -172,7 +182,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
       if (event.type === 'started') lines = 0;
       else if (event.type === 'lines') {
         lines += event.count;
-        if(!fm && lines>lineRecord(mini.gameNumber)){savedLines.set(mini.gameNumber,lines);try{browserStorage()?.setItem(lineKey(mini.gameNumber),String(lines));}catch{/* unavailable storage does not stop play */}}
+        if(!fm && !prince && lines>lineRecord(mini.gameNumber)){savedLines.set(mini.gameNumber,lines);try{browserStorage()?.setItem(lineKey(mini.gameNumber),String(lines));}catch{/* unavailable storage does not stop play */}}
       }
       brickAudio.play(event, mini.game?.id ?? mini.id, mini.inMenu, audioProfile());
     }
@@ -216,7 +226,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const pause = (raw.pressed & PAUSE) !== 0;
     if (mini.inMenu) {
       if (start) emit(mini.start());
-      else emit(mini.menu(brickInput(raw)));
+      else emit(mini.menu(brickInput(raw, prince)));
       return;
     }
     switch (mini.phase) {
@@ -230,7 +240,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
       case 'playing':
         if (pause) emit(mini.pause());
         else if (start) emit(mini.startButton());
-        else emit(mini.step(brickInput(raw)));
+        else emit(mini.step(brickInput(raw, prince)));
         break;
     }
   }
@@ -264,7 +274,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     powered: () => powered,
     onPower: () => setPower(!powered),
     onSound: pressMelody,
-    keyActions: KEY_ACTIONS,
+    keyActions: prince ? { ...KEY_ACTIONS, up: maskOf('up') } : KEY_ACTIONS,
     // RESET возвращает в меню; игрового действия у него нет.
     onPress: (id) => {
       if (id !== 'fire') return false;
@@ -310,7 +320,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
   };
   const setView = (next: View): void => {
     if (next === view) return;
-    if(fm && next==='closed')next='full';
+    if((fm||prince) && next==='closed')next='full';
     if (next === 'closed' && powered) return; // включённую игрушку не закрыть: сначала ON/OFF
     view = next;
     applyView();
@@ -345,7 +355,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     pickUser: none,
   };
   const controls = new ControlPanel(byId('side-ctl'), {
-    toy: fm?'fm38':'minibrick',
+    toy: id,
     shells: model.shells,
     slots: [],
     bundled: [],
@@ -419,8 +429,8 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
 
   // Левая панель — как у остальных игрушек: карточка устройства и вкладки игр (Mini: гонки и тетрис; FM-38: тетрис A и B); сама следит за языком и привязками клавиш.
   const info = new MiniInfoPanel(byId('side-info'), hub, {
-    toy: fm ? 'fm38' : 'minibrick',
-    ...(fm ? { games: FM38_GAMES } : {}),
+    toy: id,
+    ...(fm ? { games: FM38_GAMES } : prince ? { games: PRINCE_PANEL_GAMES } : {}),
     onChoose: (id) => {
       if (powered) mini.selectGame(id);
     },
@@ -448,7 +458,7 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     { signal },
   );
   byId('corner-settings').addEventListener('click', () => settings.open(), { signal });
-  byId('corner-help').addEventListener('click', () => openEncyclopedia(fm?'fm38':'minibrick'), { signal });
+  byId('corner-help').addEventListener('click', () => openEncyclopedia(id), { signal });
   cover.addEventListener('click', () => setView('full'), { signal });
   window.addEventListener(
     'keydown',
@@ -505,6 +515,14 @@ export function startMiniBrickApp(carry?: Carry, fm=false): AppHandle {
     const stage = mini.screenStage;
     const idle = mini.idleDisplay;
     const base = { powered: true, cells: mini.cells(), blink: Math.floor(now / BLINK_MS) % 2 === 0, note: hub.settings.display.sound } as const;
+    if (prince) {
+      // Prince: заставка — только картинка на матрице; автоплей — идущая сама партия, номер вариации в верхнем ряду, скорость и уровень выбираются; в партии — как у Mini без шкалы значков.
+      if (stage === 'intro') return { ...base, preview: null, score: null, lines: null, label: null, linesLabel: false, next: false, speed: null, level: null, scale: 0, pause: false, gameOver: false };
+      if (stage === 'menu') return { ...base, preview: mini.preview(), score: mini.gameNumber + 1, lines: null, label: null, linesLabel: false, next: mini.preview() !== null, speed: mini.displaySpeed, level: mini.displayLevel, scale: 0, pause: false, gameOver: false };
+      const blocks = mini.gameId === 'tetris';
+      const showLines = blocks && mini.phase !== 'over' && idle.lines;
+      return { ...base, preview: mini.preview(), score: mini.score, lines: showLines ? lines : null, label: 'score', linesLabel: showLines, next: mini.preview() !== null, speed: mini.displaySpeed, level: blocks ? mini.displayLevel : null, scale: 0, pause: mini.phase === 'paused', gameOver: mini.phase === 'over' };
+    }
     if(fm)return {...base,variant:mini.gameNumber?'B':'A',preview:mini.preview(),score:null,lines:mini.inMenu?0:lines,label:null,linesLabel:true,next:true,speed:mini.displaySpeed,level:mini.displayLevel,scale:mini.displayLevel+1,pause:mini.phase==='paused',gameOver:mini.phase==='over',rotate:mini.phase!=='over'};
     // Заставка по фото владельца: горят HI-SCORE с нулём, LINES, NEXT, GAME OVER, SPEED с нулём и вся шкала значков.
     if (stage === 'intro') {
