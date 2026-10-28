@@ -131,7 +131,7 @@
 .dcard__fvalue { display: flex; align-items: center; gap: 5px; min-width: 0; margin: 0; font-size: 14px; font-weight: 700; line-height: 1.25; color: var(--text); font-variant-numeric: tabular-nums; }
 .dcard__fvalue span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dcard__fvalue .dcard__ic { flex: none; width: 14px; height: 14px; }
-.dcard__fact[data-wide] .dcard__fvalue .dcard__ic { display: none; } /* четыре цифры (9999) занимают всю ячейку */
+.dcard__fact[data-wide] .dcard__fvalue .dcard__ic { display: none; } /* три и четыре цифры (118, 9999) занимают всю ячейку */
 .dcard__fact[data-unknown] .dcard__fvalue { color: var(--muted); font-weight: 500; }
 .dcard__fact[data-unknown] .dcard__fvalue .dcard__ic { opacity: .45; filter: grayscale(.6); }
 .dcard__fact:hover .dcard__fvalue .dcard__ic { animation: dcard-wiggle 520ms ease; }

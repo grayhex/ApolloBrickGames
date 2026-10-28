@@ -36,3 +36,31 @@ export const PRINCE_PANEL_GAMES: readonly PrinceGameInfo[] = PRINCE_GAMES.map((g
     ),
   };
 });
+
+/** Кнопка корпуса Prince: иероглиф(ы) с корпуса, чтение (пиньинь), подпись на английском, клавиша клавиатуры и что она делает в игрушке. */
+export interface PrinceButtonInfo {
+  glyph: string;
+  pinyin: string;
+  cap: string;
+  keys: string;
+  text: GuideText;
+}
+
+/** Справка по кнопкам для левой панели: на корпусе только иероглифы, поэтому перевод и действие — здесь. Действия в автоплее — допущения проекта (`docs/devices/prince118.md`). */
+export const PRINCE_BUTTONS: readonly PrinceButtonInfo[] = [
+  { glyph: '旋转', pinyin: 'xuánzhuǎn', cap: 'ROTATE', keys: 'Space · Z', text: gt('«Поворот» — большая кнопка. В партии поворачивает фигуру (или стреляет). В автоплее — следующая игра.', '“Rotate” — the big button. In a game it turns the piece (or fires). In the auto-play — the next game.') },
+  { glyph: '上', pinyin: 'shàng', cap: '↑', keys: '↑ · W', text: gt('«Вверх». В тетрисе — тоже поворот. В автоплее — предыдущая игра.', '“Up”. In Tetris it also rotates. In the auto-play — the previous game.') },
+  { glyph: '下', pinyin: 'xià', cap: '↓', keys: '↓ · S', text: gt('«Вниз», удержание ускоряет падение. В автоплее — следующая вариация игры.', '“Down”, holding speeds up the fall. In the auto-play — the next variation of the game.') },
+  { glyph: '左', pinyin: 'zuǒ', cap: '←', keys: '← · A', text: gt('«Влево». В автоплее — уровень.', '“Left”. In the auto-play — the level.') },
+  { glyph: '右', pinyin: 'yòu', cap: '→', keys: '→ · D', text: gt('«Вправо». В автоплее — скорость.', '“Right”. In the auto-play — the speed.') },
+  { glyph: '开始\n暂停', pinyin: 'kāishǐ · zàntíng', cap: 'START/PAUSE', keys: 'Enter · P', text: gt('«Старт / пауза». В автоплее начинает партию, в партии ставит на паузу и продолжает.', '“Start / pause”. In the auto-play it starts a game; in a game it pauses and resumes.') },
+  { glyph: '复位', pinyin: 'fùwèi', cap: 'RESET', keys: 'X', text: gt('«Сброс». Из партии — назад в автоплей.', '“Reset”. From a game — back to the auto-play.') },
+  { glyph: '声音', pinyin: 'shēngyīn', cap: 'SOUND', keys: 'M', text: gt('«Звук» — включить или выключить.', '“Sound” — on or off.') },
+  { glyph: '开关', pinyin: 'kāiguān', cap: 'ON/OFF', keys: 'O', text: gt('«Выключатель» — включить или выключить игрушку.', '“Switch” — power the toy on or off.') },
+];
+
+/** Подводка к справке по кнопкам. */
+export const PRINCE_BUTTONS_INTRO: GuideText = gt(
+  'Подписи на корпусе — иероглифы; ниже перевод и что делает кнопка здесь. Справа — клавиши клавиатуры.',
+  'The labels on the body are Chinese characters; below are their meaning and what each button does here. Keyboard keys are on the right.',
+);

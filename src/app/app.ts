@@ -48,6 +48,7 @@ import { Speedrun } from './speedrun';
 import { applyTheme } from './theme';
 import { ToyPanel } from './toy';
 import { FixedStepper } from './stepper';
+import { applySeaBody } from './seaBody';
 import { shellFor, TOYS } from './toys';
 import { parseView, type View } from './view';
 import {
@@ -174,6 +175,8 @@ export async function startApp(routeName: 'room' | 'tech', carryIn?: Carry): Pro
     btnDebugRestart: byId<HTMLButtonElement>('btn-debug-restart'),
     settings: byId<HTMLDialogElement>('settings'),
   };
+  // Нижняя половина Crocodile Mario отлита так же, как у других складных Apollo (владелец): форма кнопок, крестовины и отверстий динамика — общая (`seaBody.ts`), подписи и цвета свои.
+  if (route.lid) applySeaBody(refs.base, TOYS.mario);
 
   // Вид страницы: игрушка (комната, клип) или техническая страница. `?debug` возвращает панели разработчика.
   document.body.dataset['chrome'] = route.lid ? 'toy' : 'tech';

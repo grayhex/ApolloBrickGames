@@ -1,7 +1,5 @@
 /* Prince 皇太子 (118 in 1): цельный корпус-«кирпич» (`body.webp` с прозрачным окном), кнопки — отдельные спрайты (`princeModel.ts`), экран — свой ЖК без шкалы значков. */
 body .toy[data-model='prince118'] {--lcd-dim:none;}
-/* Призрак погашенных сегментов включается и выключается настройкой «Сегменты экрана». */
-.toy[data-model='prince118'] .minibrick-lcd[data-ghost='off'] .lcd-seg:not([data-on]) {opacity:0;}
 .arena .toy[data-model='prince118'] .lid__front {height:var(--pr-lid-h);}
 .arena .toy[data-model='prince118'] .toy__lower {height:calc(var(--native-height) - var(--pr-lid-h));}
 body[data-toy='prince118'] #view-state {grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -25,4 +23,25 @@ body[data-chrome='toy'] .arena[data-model='prince118'][data-compact] {--stage-w:
 .arena .toy[data-chassis='native'][data-model='prince118'] .pr__key:is([data-pressed],:active)+.pr__art .pr__up {opacity:0;}
 @media (prefers-reduced-motion:reduce) {
   .arena .toy[data-chassis='native'][data-model='prince118'] .pr__art {transition:none;}
+}
+
+/* Левая панель: справка по кнопкам корпуса (на корпусе — иероглифы). */
+.pctl {margin-top:8px;}
+.pctl__sum {display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;user-select:none;}
+.pctl__sum::-webkit-details-marker {display:none;}
+.pctl__sum::before {content:'';width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s;opacity:.7;}
+.pctl[open] > .pctl__sum::before {transform:rotate(45deg);}
+.pctl__sum:focus-visible {outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
+.pctl__intro {margin:6px 0 0;}
+.pctl__list {display:flex;flex-direction:column;gap:7px;margin:8px 0 0;padding:0 2px 0 0;list-style:none;max-height:clamp(150px,26vh,300px);overflow:auto;scrollbar-width:thin;font-size:.68rem;line-height:1.35;}
+.pctl__item {display:grid;grid-template-columns:2.5rem 1fr;gap:8px;align-items:start;}
+.pctl__glyph {text-align:center;font:600 1.05rem/1.15 'Noto Sans CJK SC','PingFang SC','Microsoft YaHei','WenQuanYi Zen Hei',system-ui,sans-serif;color:var(--accent);white-space:pre-line;}
+.pctl__top {display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 7px;}
+.pctl__top b {font-size:.68rem;letter-spacing:.04em;}
+.pctl__top i {font-style:normal;opacity:.62;font-size:.62rem;}
+.pctl__top .kbd {margin-left:auto;}
+.pctl__text {margin:2px 0 0;}
+/* У панели Prince три видимых блока: карточка, игры (занимают остаток высоты) и раскрывающаяся справка по кнопкам; на низком окне панель прокручивается, ничего не налезает. */
+@media (min-width:900px) {
+  body .side--info[data-toy='prince118'] {grid-template-rows:auto minmax(250px,1fr) auto;}
 }
